@@ -61,7 +61,8 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 
 	check = func(v interface{}) {
 		if s, ok := v.(string); ok {
-			op, err := ParseOpcall(phase, s)
+			DEBUG("evaluator check: examining string value '%s' at %s", s, ev.Here.String())
+			op, err := ParseOpcallCompat(phase, s)
 			if err != nil {
 				errors.Append(err)
 			} else if op != nil {
@@ -90,10 +91,17 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 				ev.Here.Pop()
 			}
 
+		case map[string]interface{}:
+			for k, v := range o.(map[string]interface{}) {
+				ev.Here.Push(k)
+				check(v)
+				ev.Here.Pop()
+			}
+
 		case []interface{}:
 			for i, v := range o.([]interface{}) {
 				name := nameOfObj(v, fmt.Sprintf("%d", i))
-				op, _ := ParseOpcall(phase, name)
+				op, _ := ParseOpcallCompat(phase, name)
 				if op == nil {
 					ev.Here.Push(name)
 				} else {
@@ -233,7 +241,7 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 		for i, s := range ev.Only {
 			c, err := tree.ParseCursor(s)
 			if err != nil {
-				panic(err) // FIXME
+				return nil, ansi.Errorf("@*{invalid --cherry-pick path '%s': %s}", s, err)
 			}
 			picks[i] = c
 		}
@@ -246,7 +254,7 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 			for _, pickedPath := range ev.Only {
 				cursor, err := tree.ParseCursor(pickedPath)
 				if err != nil {
-					panic(err) // FIXME
+					return nil, ansi.Errorf("@*{invalid --cherry-pick path '%s': %s}", pickedPath, err)
 				}
 				if cursor.Contains(op.canonical) {
 					newAll[path] = op
@@ -611,6 +619,9 @@ func (ev *Evaluator) RunOp(op *Opcall) error {
 
 		case map[interface{}]interface{}:
 			o.(map[interface{}]interface{})[key] = resp.Value
+
+		case map[string]interface{}:
+			o.(map[string]interface{})[key] = resp.Value
 
 		default:
 			err := tree.TypeMismatchError{

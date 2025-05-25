@@ -768,9 +768,9 @@ bar: (( grab meta.xyzzy || "bar?" || meta.boz ))
 
 ---
 dataflow:
-- bar: (( grab meta.xyzzy || "bar?" || meta.boz ))
 - meta.bar: (( grab meta.foo ))
 - meta.boz: (( grab meta.foo ))
+- bar: (( grab meta.xyzzy || "bar?" || meta.boz ))
 - foo: (( grab meta.bar || "foo?" || meta.boz ))
 
 ---

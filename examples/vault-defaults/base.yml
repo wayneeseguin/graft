@@ -1,0 +1,38 @@
+# Application configuration with vault lookups and defaults
+meta:
+  environment: (( grab defaults.app.environment ))
+
+# Database configuration
+database:
+  # Literal default
+  host: (( vault "secret/database:host" || "localhost" ))
+  
+  # Reference default
+  port: (( vault "secret/database:port" || defaults.database.port ))
+  
+  # Environment variable default (falls back to $USER)
+  username: (( vault "secret/database:username" || $USER ))
+  
+  # Concatenated path with default
+  password: (( vault "secret/" meta.environment "/database:password" || defaults.database.password ))
+
+# Redis configuration using vault-try
+redis:
+  # Try production first, then common, then use default
+  host: (( vault-try "secret/prod/redis:host" "secret/common/redis:host" defaults.redis.host ))
+  port: (( vault-try "secret/prod/redis:port" "secret/common/redis:port" defaults.redis.port ))
+  
+  # Nil default
+  password: (( vault "secret/redis:password" || nil ))
+
+# Intermediate variables for complex defaults (workaround)
+app_name_default: (( grab defaults.app.name ))
+app_url_default: (( concat "https://" defaults.app.name ".example.com" ))
+
+# Application settings
+app:
+  # Using intermediate variable workaround
+  name: (( vault "secret/app:name" || app_name_default ))
+  
+  # Complex default using concat (workaround)
+  url: (( vault "secret/app:url" || app_url_default ))

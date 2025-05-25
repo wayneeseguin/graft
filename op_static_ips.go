@@ -388,7 +388,8 @@ func (s StaticIPOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 			break
 		}
 
-		v, err := arg.Resolve(ev.Tree)
+		// Use ResolveOperatorArgument to support nested expressions
+		val, err := ResolveOperatorArgument(ev, arg)
 		if err != nil {
 			DEBUG("  arg[%d]: failed to resolve expression to a concrete value", i)
 			DEBUG("     [%d]: error was: %s", i, err)
@@ -400,25 +401,34 @@ func (s StaticIPOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		// parse argument, could be in form of <az>:<number>, or just <number>
 		var offset int64
 		az := UNDEFINED_AZ
-		a, ok := v.Literal.(string)
-		if !ok {
-			offset, ok = v.Literal.(int64)
-			if !ok {
-				DEBUG("  arg[%d]: '%v' is not a number literal\n", i, arg)
-				return nil, fmt.Errorf("static_ips operator arguments must have format <az>:<number> or <number>")
-			}
-		} else {
-			if strings.Contains(a, ":") {
+		
+		switch v := val.(type) {
+		case string:
+			if strings.Contains(v, ":") {
 				// must be of format <az>:<number>
-				params := strings.SplitN(a, ":", 2)
+				params := strings.SplitN(v, ":", 2)
 				az = params[0]
-				a = params[1]
+				offset, err = strconv.ParseInt(params[1], 10, 64)
+				if err != nil {
+					DEBUG("  arg[%d]: '%v' is not a number literal\n", i, v)
+					return nil, fmt.Errorf("static_ips operator arguments must have format <az>:<number> or <number>")
+				}
+			} else {
+				offset, err = strconv.ParseInt(v, 10, 64)
+				if err != nil {
+					DEBUG("  arg[%d]: '%v' is not a number literal\n", i, v)
+					return nil, fmt.Errorf("static_ips operator arguments must have format <az>:<number> or <number>")
+				}
 			}
-			offset, err = strconv.ParseInt(a, 10, 64)
-			if err != nil {
-				DEBUG("  arg[%d]: '%v' is not a number literal\n", i, arg)
-				return nil, fmt.Errorf("static_ips operator arguments must have format <az>:<number> or <number>")
-			}
+		case int:
+			offset = int64(v)
+		case int64:
+			offset = v
+		case float64:
+			offset = int64(v)
+		default:
+			DEBUG("  arg[%d]: '%v' is not a valid static_ips argument\n", i, val)
+			return nil, fmt.Errorf("static_ips operator arguments must have format <az>:<number> or <number>")
 		}
 
 		// get IPs to use
@@ -437,6 +447,7 @@ func (s StaticIPOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 				return nil, ansi.Errorf("@R{could not find AZ} @c{%s} @R{in instance_groups AZS} @c{%v}", az, azs)
 			}
 
+			var ok bool
 			pool, ok = pools[az]
 			if !ok {
 				DEBUG("  could not find pool: %s\n", az)
@@ -465,6 +476,9 @@ func (s StaticIPOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 		// claim this address for ourselves
 		DEBUG("     [%d]: claiming %s for job %s", i, ip, current)
+		if UsedIPs == nil {
+			UsedIPs = make(map[string]string)
+		}
 		UsedIPs[ip] = current
 		ips = append(ips, ip)
 

@@ -1,0 +1,41 @@
+# Comparison Operators Example
+# Shows how to use comparison operators for conditional logic
+
+user:
+  age: 25
+  role: "admin"
+  score: 85
+  active: true
+
+limits:
+  min_age: 18
+  max_age: 65
+  passing_score: 70
+  admin_roles: ["admin", "superuser"]
+
+# Basic comparisons
+validations:
+  is_adult: (( user.age >= limits.min_age ))
+  is_senior: (( user.age > limits.max_age ))
+  age_in_range: (( user.age >= limits.min_age && user.age <= limits.max_age ))
+  
+  passed_test: (( user.score >= limits.passing_score ))
+  perfect_score: (( user.score == 100 ))
+  needs_retake: (( user.score < limits.passing_score ))
+
+# String comparisons
+access_control:
+  is_admin: (( user.role == "admin" ))
+  not_guest: (( user.role != "guest" ))
+  
+# Complex comparisons
+eligibility:
+  can_vote: (( user.age >= 18 && user.active ))
+  qualifies_for_discount: (( user.age < 18 || user.age > 65 ))
+  premium_user: (( user.score > 90 && user.role == "admin" ))
+
+# Using comparisons with ternary
+messages:
+  age_group: (( user.age < 18 ? "minor" : (user.age > 65 ? "senior" : "adult") ))
+  access_level: (( user.role == "admin" ? "full" : "limited" ))
+  grade: (( user.score >= 90 ? "A" : (user.score >= 80 ? "B" : (user.score >= 70 ? "C" : "F")) ))

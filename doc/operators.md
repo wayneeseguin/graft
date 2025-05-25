@@ -1,5 +1,13 @@
 ## What are all the Spruce operators?
 
+> **Enhanced Parser Note**: Spruce now uses an enhanced parser by default that supports additional expression operators. See the [Expression Operators](#expression-operators) section for details on boolean logic, comparisons, ternary operator, and more.
+
+- [Arithmetic Operators](#-arithmetic-operators-)
+  - [+ (addition)](#--addition-)
+  - [- (subtraction)](#---subtraction-)
+  - [* (multiplication)](#--multiplication-)
+  - [/ (division)](#--division-)
+  - [% (modulo)](#--modulo-)
 - [calc](#-calc-)
 - [cartesian-product](#-cartesian-product-)
 - [concat](#-concat-)
@@ -20,6 +28,7 @@
 - [static_ips](#-static_ips-)
 - [stringify](#-stringify-)
 - [vault](#-vault-)
+- [vault-try](#-vault-try-)
 - [awsparam](#-awsparam-)
 - [awssecret](#-awssecret-)
 - [base64](#-base64-)
@@ -55,6 +64,114 @@ literal values (strings/numbers/booleans), references (paths defining a datastru
  the root document), and environment variables. Arguments can also make use of a logical-or
 (`||`) to failover to other values. See our notes on [environment variables and default values][env-var]
 for more information on environment variables and the logical-or.
+
+## Arithmetic Operators
+
+Spruce supports basic arithmetic operations using infix notation. These operators follow standard mathematical precedence rules (multiplication and division before addition and subtraction) and support parentheses for grouping.
+
+### (( + )) - Addition
+
+Usage: `(( OPERAND1 + OPERAND2 ))`
+
+The addition operator adds two numeric values or concatenates strings.
+
+**Examples:**
+```yaml
+# Numeric addition
+simple: (( 1 + 2 ))                    # 3
+float_add: (( 3.14 + 2.86 ))          # 6.0
+mixed: (( 10 + 2.5 ))                 # 12.5
+
+# String concatenation
+greeting: (( "Hello, " + "World!" ))   # "Hello, World!"
+mixed_concat: (( "Value: " + 42 ))     # "Value: 42"
+
+# With references
+values:
+  a: 10
+  b: 25
+result: (( values.a + values.b ))      # 35
+```
+
+### (( - )) - Subtraction
+
+Usage: `(( OPERAND1 - OPERAND2 ))`
+
+The subtraction operator subtracts the second operand from the first.
+
+**Examples:**
+```yaml
+simple: (( 10 - 3 ))                   # 7
+negative: (( 5 - 8 ))                  # -3
+float_sub: (( 10.5 - 2.5 ))           # 8.0
+```
+
+### (( * )) - Multiplication
+
+Usage: `(( OPERAND1 * OPERAND2 ))`
+
+The multiplication operator multiplies two numbers or repeats a string.
+
+**Examples:**
+```yaml
+# Numeric multiplication
+simple: (( 6 * 7 ))                    # 42
+float_mult: (( 2.5 * 4 ))             # 10.0
+
+# String repetition
+repeat: (( "ha" * 3 ))                 # "hahaha"
+pattern: (( "-" * 10 ))                # "----------"
+```
+
+### (( / )) - Division
+
+Usage: `(( OPERAND1 / OPERAND2 ))`
+
+The division operator divides the first operand by the second. Division by zero results in an error.
+
+**Examples:**
+```yaml
+simple: (( 10 / 2 ))                   # 5.0
+float_div: (( 7 / 2 ))                # 3.5
+precise: (( 1 / 3 ))                  # 0.3333333...
+```
+
+### (( % )) - Modulo
+
+Usage: `(( OPERAND1 % OPERAND2 ))`
+
+The modulo operator returns the remainder of integer division. Both operands must be integers.
+
+**Examples:**
+```yaml
+simple: (( 10 % 3 ))                   # 1
+even_check: (( 8 % 2 ))               # 0
+negative: (( -7 % 3 ))                # -1
+```
+
+### Complex Expressions
+
+Arithmetic operators can be combined and support standard mathematical precedence:
+
+```yaml
+# Precedence examples
+no_parens: (( 2 + 3 * 4 ))           # 14 (multiplication first)
+with_parens: (( (2 + 3) * 4 ))       # 20 (parentheses first)
+
+# Complex expressions
+formula: (( (10 + 5) * 2 - 8 / 4 ))  # 28.0
+
+# With references
+values:
+  base: 100
+  rate: 0.15
+  bonus: 50
+total: (( values.base * (1 + values.rate) + values.bonus ))  # 165.0
+
+# Combining with other operators
+concatenated: (( concat "Result: " (10 + 5) ))  # "Result: 15"
+grabbed_calc: (( (grab meta.count) * 2 + 1 ))   # Uses grabbed value in calculation
+```
 
 ## (( calc ))
 
@@ -345,7 +462,7 @@ from the end of the given network.
 
 ## (( vault ))
 
-Usage: `(( vault LITERAL|REFERENCE ... ))`
+Usage: `(( vault LITERAL|REFERENCE ... [|| DEFAULT] ))`
 
 Have sensitive material in your manifests that you don't want stored in the repo that your
 configs are in? What do you mean 'No'? Everybody does. The `(( vault ))` operator lets you
@@ -354,7 +471,50 @@ specify a vault path in the `secret` backend as the argument, and away it goes. 
 you can pull in references to concatenate with info, resulting in an easy way to dynamically
 look up Vault paths.
 
-[Example][vault-example]
+### Default Values (v1.31.0+)
+
+The vault operator supports default values using the logical OR (`||`) syntax:
+
+```yaml
+password: (( vault "secret/myapp:password" || "default-password" ))
+```
+
+If the secret doesn't exist in Vault, the default value will be used instead of failing.
+
+Supported default types:
+- String literals: `|| "default"`
+- References: `|| some.other.value`
+- Environment variables: `|| $ENV_VAR`
+- Nil/null: `|| nil`
+
+[Example][vault-example] | [Default Values Documentation][vault-defaults-doc]
+
+## (( vault-try ))
+
+Usage: `(( vault-try PATH1 PATH2 ... DEFAULT ))`
+
+The `vault-try` operator attempts to retrieve secrets from multiple Vault paths in order,
+falling back to a default value if none of the paths succeed. This is useful when you
+have secrets that might be stored in different locations (e.g., environment-specific paths).
+
+Unlike the regular `vault` operator, `vault-try`:
+- Requires at least 2 arguments (at least one path + one default)
+- Tries each path in order until one succeeds
+- Uses the last argument as the default if all paths fail
+- Falls back to the default even for malformed paths (more forgiving)
+
+```yaml
+# Try production path first, then staging, then use default
+password: (( vault-try "secret/prod:password" "secret/staging:password" "default-pass" ))
+
+# With references
+paths:
+  primary: secret/prod/db:password
+  secondary: secret/common/db:password
+password: (( vault-try paths.primary paths.secondary "changeme" ))
+```
+
+[Example][vault-try-example] | [Default Values Documentation][vault-defaults-doc]
 
 ## (( awsparam ))
 
@@ -429,7 +589,14 @@ encoded_properties_file_contents: (( base64 decoded_properties_file_contents ))
 [static_ips-example]: http://play.spruce.cf/#ce52f99a0c7470aa2a1e8fd4dddbafff
 [stringify-example]:  https://play.spruce.cf/#f302027e6a6d6f77c04437d18a420db0
 [vault-example]:      https://github.com/geofffranks/spruce/blob/master/doc/pulling-creds-from-vault.md
+[vault-try-example]:  https://github.com/geofffranks/spruce/blob/master/examples/vault-defaults/
+[vault-defaults-doc]: https://github.com/geofffranks/spruce/blob/master/doc/vault-defaults.md
 [ips-example]:        https://spruce.cf/#568526af82aec5448ddf34740dbd70a3
 [awsparam-example]:   values-from-aws-parameter-store.md
 [awssecret-example]:  values-from-aws-secrets-manager.md
 [base64-example]:     https://spruce.cf/#0aa8626b70fd5757fd148d7da4ffec37?update/with/new/version/when/released
+
+
+## Expression Operators
+
+For details on expression operators (boolean logic, comparisons, ternary operator), see [Expression Operators Documentation](expression-operators.md).

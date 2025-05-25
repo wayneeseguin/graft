@@ -113,6 +113,7 @@ type Expr struct {
 	Name      string
 	Left      *Expr
 	Right     *Expr
+	Pos       Position // Position in source for error reporting
 }
 
 func (e *Expr) String() string {
@@ -134,6 +135,13 @@ func (e *Expr) String() string {
 
 	case LogicalOr:
 		return fmt.Sprintf("%s || %s", e.Left, e.Right)
+
+	case OperatorCall:
+		// Reconstruct operator call syntax
+		if e.Left != nil {
+			return fmt.Sprintf("%s %s", e.Name, e.Left.String())
+		}
+		return e.Name
 
 	default:
 		return "<!! unknown !!>"
@@ -165,6 +173,11 @@ func (e *Expr) Reduce() (*Expr, error) {
 				Left:  l,
 				Right: r,
 			}, short, more
+			
+		case OperatorCall:
+			// OperatorCall expressions should be preserved as-is
+			// They will be evaluated later in the evaluation phase
+			return e, nil, false
 		}
 		return nil, nil, false
 	}
@@ -208,6 +221,12 @@ func (e *Expr) Resolve(tree map[interface{}]interface{}) (*Expr, error) {
 			return o, nil
 		}
 		return e.Right.Resolve(tree)
+		
+	case OperatorCall:
+		// For OperatorCall expressions, we can't "resolve" them in the traditional sense
+		// They need to be evaluated by the operator that receives them
+		// For now, return the expression as-is
+		return e, nil
 	}
 	return nil, ansi.Errorf("@R{unknown expression operand type (}@c{%d}@R{)}", e.Type)
 }
@@ -246,6 +265,10 @@ func (e *Expr) Evaluate(tree map[interface{}]interface{}) (interface{}, error) {
 
 // Dependencies ...
 func (e *Expr) Dependencies(ev *Evaluator, locs []*tree.Cursor) []*tree.Cursor {
+	if e == nil {
+		return []*tree.Cursor{}
+	}
+	
 	l := []*tree.Cursor{}
 
 	canonicalize := func(c *tree.Cursor) {
@@ -289,6 +312,19 @@ type Opcall struct {
 
 // ParseOpcall ...
 func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
+	// Use enhanced parser if enabled or beneficial
+	if UseEnhancedParser || shouldUseEnhancedParserForExpression(src) {
+		DEBUG("ParseOpcall: attempting enhanced parser for: %s", src)
+		result, err := parseOpcallWithEnhancedParser(phase, src)
+		if err == nil && result != nil {
+			DEBUG("ParseOpcall: enhanced parser succeeded")
+			return result, nil
+		}
+		DEBUG("ParseOpcall: enhanced parser failed with: %v, falling back to original", err)
+		// Fall back to original parser if enhanced parser fails
+		// This ensures backward compatibility during transition
+	}
+	DEBUG("ParseOpcall: using original parser")
 	split := func(src string) []string {
 		list := make([]string, 0, 0)
 
@@ -471,7 +507,15 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 					fmt.Fprintf(os.Stdout, "warning: %s\n", err)
 				}
 			}
-			args = append(args, reduced)
+			// Special case: preserve LogicalOr expressions for operators that can handle them
+			// This allows operators like vault to implement their own || handling
+			if e.Type == LogicalOr && reduced.Type != LogicalOr {
+				// The expression was reduced from LogicalOr to something else
+				// Check if this might be for an operator that wants to handle || itself
+				args = append(args, e) // Use original instead of reduced
+			} else {
+				args = append(args, reduced)
+			}
 		}
 
 		return args, nil
@@ -519,8 +563,10 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 func (op *Opcall) Dependencies(ev *Evaluator, locs []*tree.Cursor) []*tree.Cursor {
 	l := []*tree.Cursor{}
 	for _, arg := range op.args {
-		for _, c := range arg.Dependencies(ev, locs) {
-			l = append(l, c)
+		if arg != nil {
+			for _, c := range arg.Dependencies(ev, locs) {
+				l = append(l, c)
+			}
 		}
 	}
 

@@ -1,0 +1,67 @@
+# Boolean Logic Example
+# Demonstrates AND, OR, and NOT operators
+
+# System state
+system:
+  is_production: true
+  maintenance_mode: false
+  feature_flags:
+    beta_features: true
+    experimental: false
+  health:
+    database: true
+    cache: true
+    api: false
+
+# User state
+user:
+  authenticated: true
+  is_admin: false
+  is_beta_tester: true
+  subscription: "premium"
+
+# Boolean AND (&&) - all conditions must be true
+permissions:
+  can_access_beta: (( user.authenticated && user.is_beta_tester && system.feature_flags.beta_features ))
+  can_modify_system: (( user.is_admin && !system.maintenance_mode ))
+  system_healthy: (( system.health.database && system.health.cache && system.health.api ))
+
+# Boolean OR (||) - at least one condition must be true  
+access:
+  has_premium_access: (( user.subscription == "premium" || user.is_admin ))
+  needs_attention: (( system.maintenance_mode || !system.health.api ))
+  can_see_feature: (( system.feature_flags.beta_features || system.feature_flags.experimental ))
+
+# Logical NOT (!) - negation
+restrictions:
+  cannot_modify: (( !user.is_admin ))
+  not_in_maintenance: (( !system.maintenance_mode ))
+  api_down: (( !system.health.api ))
+
+# Complex boolean expressions
+decisions:
+  allow_operation: (( !system.maintenance_mode && system.health.database && (user.is_admin || user.authenticated) ))
+  show_warning: (( (system.maintenance_mode || !system.health.api) && user.authenticated ))
+  enable_feature: (( system.is_production && !system.maintenance_mode && (user.is_beta_tester || user.is_admin) ))
+
+# Short-circuit evaluation examples
+safety_checks:
+  # Right side only evaluated if left is true
+  safe_api_call: (( system.health.api && system.health.database ))
+  
+  # Right side only evaluated if left is false  
+  fallback_enabled: (( !system.health.cache || system.maintenance_mode ))
+
+# Truthiness examples
+truthiness:
+  # These are all falsy
+  empty_string: (( !"" ))        # true (empty string is falsy)
+  zero: (( !0 ))                 # true (zero is falsy)
+  empty_array: (( ![] ))         # true (empty array is falsy)
+  empty_map: (( !{} ))           # true (empty map is falsy)
+  false_value: (( !false ))      # true (false is falsy)
+  
+  # These are all truthy
+  non_empty_string: (( !"hello" ))  # false ("hello" is truthy)
+  non_zero: (( !42 ))              # false (42 is truthy)
+  filled_array: (( ![1, 2, 3] ))   # false (non-empty array is truthy)

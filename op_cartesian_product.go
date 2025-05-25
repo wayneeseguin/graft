@@ -24,17 +24,22 @@ func (CartesianProductOperator) Phase() OperatorPhase {
 }
 
 // Dependencies ...
-func (CartesianProductOperator) Dependencies(_ *Evaluator, args []*Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+func (CartesianProductOperator) Dependencies(ev *Evaluator, args []*Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
 	l := []*tree.Cursor{}
 
 	for _, arg := range args {
-		if arg.Type != Reference {
-			continue
-		}
-
-		for _, other := range locs {
-			if other.Under(arg.Reference) {
-				l = append(l, other)
+		if arg.Type == Reference {
+			for _, other := range locs {
+				if other.Under(arg.Reference) {
+					l = append(l, other)
+				}
+			}
+		} else if arg.Type == OperatorCall {
+			// Get dependencies from nested operator
+			nestedOp := OperatorFor(arg.Op())
+			if _, ok := nestedOp.(NullOperator); !ok {
+				nestedDeps := nestedOp.Dependencies(ev, arg.Args(), locs, auto)
+				l = append(l, nestedDeps...)
 			}
 		}
 	}
@@ -55,56 +60,53 @@ func (CartesianProductOperator) Run(ev *Evaluator, args []*Expr) (*Response, err
 	var vals [][]string
 
 	for i, arg := range args {
-		v, err := arg.Resolve(ev.Tree)
+		// Use ResolveOperatorArgument to support nested expressions
+		val, err := ResolveOperatorArgument(ev, arg)
 		if err != nil {
 			DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
 			return nil, err
 		}
 
-		switch v.Type {
-		case Literal:
-			DEBUG("  arg[%d]: found string literal '%s'", i, v.Literal)
-			vals = append(vals, []string{v.Literal.(string)})
+		if val == nil {
+			DEBUG("  arg[%d]: resolved to nil", i)
+			return nil, fmt.Errorf("cartesian-product operator argument cannot be nil")
+		}
 
-		case Reference:
-			DEBUG("  arg[%d]: trying to resolve reference $.%s", i, v.Reference)
-			s, err := v.Reference.Resolve(ev.Tree)
-			if err != nil {
-				DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
-				return nil, ansi.Errorf("Unable to resolve `@m{%s}`: %s", v.Reference, err)
-			}
-			switch s.(type) {
-			case []interface{}:
-				var strs []string
+		switch v := val.(type) {
+		case string:
+			DEBUG("  arg[%d]: found string value '%s'", i, v)
+			vals = append(vals, []string{v})
 
-				DEBUG("     [%d]: resolved to a list; verifying", i)
-				for j, sub := range s.([]interface{}) {
-					if _, ok := sub.([]interface{}); ok {
-						DEBUG("       list[%d]: list item is itself a list; error!", j)
-						return nil, fmt.Errorf("cartesian-product operator can only operate on lists of scalar values")
+		case int, int64, float64, bool:
+			DEBUG("  arg[%d]: found scalar value '%v'", i, v)
+			vals = append(vals, []string{fmt.Sprintf("%v", v)})
 
-					} else if _, ok := sub.(map[interface{}]interface{}); ok {
-						DEBUG("       list[%d]: list item is a map; error!", j)
-						return nil, fmt.Errorf("cartesian-product operator can only operate on lists of scalar values")
+		case []interface{}:
+			var strs []string
 
-					}
-					DEBUG("       list[%d]: list item is a scalar: %v", j, sub)
-					strs = append(strs, fmt.Sprintf("%v", sub))
+			DEBUG("  arg[%d]: resolved to a list; verifying", i)
+			for j, sub := range v {
+				if _, ok := sub.([]interface{}); ok {
+					DEBUG("       list[%d]: list item is itself a list; error!", j)
+					return nil, fmt.Errorf("cartesian-product operator can only operate on lists of scalar values")
+
+				} else if _, ok := sub.(map[interface{}]interface{}); ok {
+					DEBUG("       list[%d]: list item is a map; error!", j)
+					return nil, fmt.Errorf("cartesian-product operator can only operate on lists of scalar values")
+
 				}
-				vals = append(vals, strs)
-
-			case map[interface{}]interface{}:
-				DEBUG("     [%d]: resolved to a map; error!", i)
-				return nil, fmt.Errorf("cartesian-product operator only accepts arrays and string values")
-
-			default:
-				DEBUG("     [%d]: resolved to a scalar; appending", i)
-				vals = append(vals, []string{fmt.Sprintf("%v", s)})
+				DEBUG("       list[%d]: list item is a scalar: %v", j, sub)
+				strs = append(strs, fmt.Sprintf("%v", sub))
 			}
+			vals = append(vals, strs)
+
+		case map[interface{}]interface{}, map[string]interface{}:
+			DEBUG("     [%d]: resolved to a map; error!", i)
+			return nil, fmt.Errorf("cartesian-product operator only accepts arrays and string values")
 
 		default:
-			DEBUG("  arg[%d]: I don't know what to do with '%v'", i, arg)
-			return nil, fmt.Errorf("cartesian-product operator only accepts key reference arguments")
+			DEBUG("     [%d]: resolved to a scalar; appending", i)
+			vals = append(vals, []string{fmt.Sprintf("%v", val)})
 		}
 		DEBUG("")
 	}

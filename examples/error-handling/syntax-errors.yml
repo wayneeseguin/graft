@@ -1,0 +1,31 @@
+# This file demonstrates improved error handling in Spruce
+
+# Example 1: Unclosed parenthesis
+unclosed: (( grab meta.name
+
+# Example 2: Missing operator between values  
+missing_op: (( 5 3 ))
+
+# Example 3: Invalid ternary syntax
+bad_ternary: (( x > 5 ? "big" ))
+
+# Example 4: Operator in wrong position
+bad_position: (( + 5 ))
+
+# Example 5: Unknown operator
+unknown: (( magic_op arg1 arg2 ))
+
+# Example 6: Type mismatch in operation
+type_error: (( "hello" + 42 ))
+
+# Example 7: Invalid reference syntax
+bad_ref: (( grab meta..invalid ))
+
+# Example 8: Too many arguments
+too_many: (( concat "a" "b" "c" "d" "e" "f" ))
+
+# Example 9: Multiple errors on one line
+multi_error: (( 5 + + 3 * * 2 ))
+
+# Example 10: Nested expression error
+nested: (( concat "prefix-" (grab meta.undefined.value) "-suffix" ))

@@ -150,120 +150,159 @@ func initializeVaultClient() error {
 // Run executes the `(( vault ... ))` operator call, which entails
 // interacting with the (unsealed) Vault instance to retrieve the
 // given secrets.
-func (VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
+func (o VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	DEBUG("running (( vault ... )) operation at $.%s", ev.Here)
 	defer DEBUG("done with (( vault ... )) operation at $.%s\n", ev.Here)
 
 	// syntax: (( vault "secret/path:key" ))
 	// syntax: (( vault path.object "to concat with" other.object ))
+	// syntax: (( vault "secret/path:key" || "default" ))
+	// syntax: (( vault prefix "/" key ":password" || "default" ))
 	if len(args) < 1 {
 		return nil, fmt.Errorf("vault operator requires at least one argument")
 	}
 
-	var l []string
-	for i, arg := range args {
-		v, err := arg.Resolve(ev.Tree)
-		if err != nil {
-			DEBUG("  arg[%d]: failed to resolve expression to a concrete value", i)
-			DEBUG("     [%d]: error was: %s", i, err)
-			return nil, err
-		}
-
-		switch v.Type {
-		case Literal:
-			DEBUG("  arg[%d]: using string literal '%v'", i, v.Literal)
-			l = append(l, fmt.Sprintf("%v", v.Literal))
-
-		case Reference:
-			DEBUG("  arg[%d]: trying to resolve reference $.%s", i, v.Reference)
-			s, err := v.Reference.Resolve(ev.Tree)
-			if err != nil {
-				DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
-				return nil, fmt.Errorf("Unable to resolve `%s`: %s", v.Reference, err)
+	// Use the new argument processor
+	processor := newVaultArgProcessor(args)
+	
+	// Build the vault path from all arguments
+	key, err := processor.buildVaultPath(ev)
+	if err != nil {
+		// Failed to build path, check if we have a default
+		if processor.hasDefault {
+			DEBUG("vault: failed to build path (%s), evaluating default value", err)
+			defaultValue, evalErr := processor.evaluateDefault(ev)
+			if evalErr != nil {
+				return nil, fmt.Errorf("unable to evaluate default value: %s", evalErr)
 			}
-
-			switch s.(type) {
-			case map[interface{}]interface{}:
-				DEBUG("  arg[%d]: %v is not a string scalar", i, s)
-				return nil, ansi.Errorf("@R{tried to look up} @c{$.%s}@R{, which is not a string scalar}", v.Reference)
-
-			case []interface{}:
-				DEBUG("  arg[%d]: %v is not a string scalar", i, s)
-				return nil, ansi.Errorf("@R{tried to look up} @c{$.%s}@R{, which is not a string scalar}", v.Reference)
-
-			default:
-				l = append(l, fmt.Sprintf("%v", s))
-			}
-
-		default:
-			DEBUG("  arg[%d]: I don't know what to do with '%v'", i, arg)
-			return nil, fmt.Errorf("vault operator only accepts string literals and key reference arguments")
+			return &Response{
+				Type:  Replace,
+				Value: defaultValue,
+			}, nil
 		}
+		return nil, err
 	}
-	key := strings.Join(l, "")
-	DEBUG("     [0]: Using vault key '%s'\n", key)
-
-	//Append the location from which this operator was called to the list of
-	// places from which this key was referenced
+	
+	// Track vault references
 	if refs, found := VaultRefs[key]; !found {
 		VaultRefs[key] = []string{ev.Here.String()}
 	} else {
 		VaultRefs[key] = append(refs, ev.Here.String())
 	}
-
-	secret := "REDACTED"
-	var err error
-
-	if !SkipVault {
-		/*
-		   user is not okay with a redacted manifest.
-		   try to look up vault connection details from:
-		     1. Environment Variables VAULT_ADDR and VAULT_TOKEN
-		     2. ~/.svtoken file, if it exists
-		     3. ~/.vault-token file, if it exists
-		*/
-
-		if kv == nil {
-			err := initializeVaultClient()
-			if err != nil {
-				return nil, fmt.Errorf("Error during Vault client initialization: %s", err)
+	
+	// Perform the vault lookup
+	secret, err := o.performVaultLookup(key)
+	if err != nil {
+		// Check if we should try the default
+		if processor.hasDefault && isVaultNotFound(err) {
+			DEBUG("vault: secret not found, evaluating default value")
+			defaultValue, evalErr := processor.evaluateDefault(ev)
+			if evalErr != nil {
+				return nil, fmt.Errorf("unable to evaluate default value: %s", evalErr)
 			}
+			return &Response{
+				Type:  Replace,
+				Value: defaultValue,
+			}, nil
 		}
-
-		leftPart, rightPart := parsePath(key)
-		if leftPart == "" || rightPart == "" {
-			return nil, ansi.Errorf("@R{invalid argument} @c{%s}@R{; must be in the form} @m{path/to/secret:key}", key)
-		}
-		var fullSecret map[string]interface{}
-		var found bool
-		if fullSecret, found = vaultSecretCache[leftPart]; found {
-			DEBUG("vault: Cache hit for `%s`", leftPart)
-		} else {
-			DEBUG("vault: Cache MISS for `%s`", leftPart)
-			// Secret isn't cached. Grab it from the vault.
-			fullSecret, err = getVaultSecret(leftPart)
-			if err != nil {
-				//Normalize the error messages
-				switch err.(type) {
-				case *vaultkv.ErrNotFound:
-					err = fmt.Errorf("secret %s not found", key)
-				}
-
-				return nil, err
-			}
-			vaultSecretCache[leftPart] = fullSecret
-		}
-
-		secret, err = extractSubkey(fullSecret, leftPart, rightPart)
-		if err != nil {
-			return nil, err
-		}
+		// No default or not a "not found" error
+		return nil, err
 	}
-
+	
+	// Success!
 	return &Response{
 		Type:  Replace,
 		Value: secret,
 	}, nil
+}
+
+// resolveVaultArgs handles the resolution of vault arguments
+func (VaultOperator) resolveVaultArgs(ev *Evaluator, args []*Expr) (string, error) {
+	var l []string
+	for i, arg := range args {
+		// Use ResolveOperatorArgument to support nested expressions
+		val, err := ResolveOperatorArgument(ev, arg)
+		if err != nil {
+			DEBUG("  arg[%d]: failed to resolve expression to a concrete value", i)
+			DEBUG("     [%d]: error was: %s", i, err)
+			return "", err
+		}
+
+		if val == nil {
+			DEBUG("  arg[%d]: resolved to nil", i)
+			return "", fmt.Errorf("vault operator argument cannot be nil")
+		}
+
+		switch v := val.(type) {
+		case string:
+			DEBUG("  arg[%d]: using string value '%v'", i, v)
+			l = append(l, v)
+
+		case int, int64, float64, bool:
+			DEBUG("  arg[%d]: converting %T to string", i, v)
+			l = append(l, fmt.Sprintf("%v", v))
+
+		case map[interface{}]interface{}, map[string]interface{}:
+			DEBUG("  arg[%d]: %v is not a string scalar", i, v)
+			return "", ansi.Errorf("@R{vault operator argument is not a string scalar}")
+
+		case []interface{}:
+			DEBUG("  arg[%d]: %v is not a string scalar", i, v)
+			return "", ansi.Errorf("@R{vault operator argument is not a string scalar}")
+
+		default:
+			DEBUG("  arg[%d]: using value of type %T as string", i, val)
+			l = append(l, fmt.Sprintf("%v", val))
+		}
+	}
+	key := strings.Join(l, "")
+	DEBUG("     [0]: Using vault key '%s'\n", key)
+	return key, nil
+}
+
+// performVaultLookup performs the actual vault lookup
+func (VaultOperator) performVaultLookup(key string) (string, error) {
+	if SkipVault {
+		return "REDACTED", nil
+	}
+
+	if kv == nil {
+		err := initializeVaultClient()
+		if err != nil {
+			return "", fmt.Errorf("Error during Vault client initialization: %s", err)
+		}
+	}
+
+	leftPart, rightPart := parsePath(key)
+	if leftPart == "" || rightPart == "" {
+		return "", ansi.Errorf("@R{invalid argument} @c{%s}@R{; must be in the form} @m{path/to/secret:key}", key)
+	}
+
+	var fullSecret map[string]interface{}
+	var found bool
+	if fullSecret, found = vaultSecretCache[leftPart]; found {
+		DEBUG("vault: Cache hit for `%s`", leftPart)
+	} else {
+		DEBUG("vault: Cache MISS for `%s`", leftPart)
+		// Secret isn't cached. Grab it from the vault.
+		var err error
+		fullSecret, err = getVaultSecret(leftPart)
+		if err != nil {
+			//Normalize the error messages
+			switch err.(type) {
+			case *vaultkv.ErrNotFound:
+				err = fmt.Errorf("secret %s not found", key)
+			}
+			return "", err
+		}
+		vaultSecretCache[leftPart] = fullSecret
+	}
+
+	secret, err := extractSubkey(fullSecret, leftPart, rightPart)
+	if err != nil {
+		return "", err
+	}
+	return secret, nil
 }
 
 func init() {

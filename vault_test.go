@@ -302,7 +302,7 @@ secret: (( vault $.meta ))
 
 ---
 1 error(s) detected:
- - $.secret: tried to look up $.meta, which is not a string scalar
+ - $.secret: $.meta is a map; only scalars are supported for vault paths
 
 ##################################################  fails on list reference
 ---
@@ -312,7 +312,7 @@ secret: (( vault $.meta ))
 
 ---
 1 error(s) detected:
- - $.secret: tried to look up $.meta, which is not a string scalar
+ - $.secret: $.meta is a list; only scalars are supported for vault paths
 
 #########################################  fails on non-existent credentials
 ---

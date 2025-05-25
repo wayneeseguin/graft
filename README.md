@@ -9,6 +9,8 @@
       ^^^[_]^^^                                                   ^^^[_]^^^
 ```
 
+> **Note**: As of version 1.31.0, Spruce uses an enhanced parser by default that supports additional operators including boolean logic (`&&`, `||`), comparisons (`==`, `!=`, `<`, `>`, `<=`, `>=`), ternary operator (`? :`), and negation (`!`). To use the legacy parser, set the environment variable `SPRUCE_LEGACY_PARSER=1` or use the `--legacy-parser` flag.
+
 [![Slack][slack-badge]][slack-channel] ( We'll be in `#spruce`)
 
 ## Introducing Spruce
@@ -74,14 +76,17 @@ check out [this example on play.spruce.cf][play.spruce-example]
 ## Documentation
 
 - [What are all the spruce operators, and how do they work?][operator-docs]
+- [How do I use expression operators (arithmetic, boolean, comparisons)?][expression-operators]
 - [What are the merge semantics of spruce?][merge-semantics]
 - [How can I manipulate arrays with spruce?][array-merge]
 - [Can I specify defaults for an operation, or use environment variables?][env-var-defaults]
 - [Can I use spruce with go-patch files?][go-patch-support]
 - [Can I use spruce with CredHub?][credhub-support]
 - [Can I use spruce with Vault?][vault-support]
+- [How can I use default values with Vault?][vault-defaults]
 - [How can I generate spruce templates with spruce itself?][defer]
 - [How can I use spruce with BOSH's Cloud Config?][cloud-config-support]
+- [How do I create new operators?][operator-api]
 
 ## What else can Spruce do for you?
 
@@ -111,13 +116,16 @@ Licensed under [the MIT License][license]
 [dry-definition]:       https://en.wikipedia.org/wiki/Don%27t_repeat_yourself
 [releases]:             https://github.com/geofffranks/spruce/releases/
 [operator-docs]:        https://github.com/geofffranks/spruce/blob/master/doc/operators.md
+[expression-operators]: https://github.com/geofffranks/spruce/blob/master/doc/expression-operators.md
 [merge-semantics]:      https://github.com/geofffranks/spruce/blob/master/doc/merging.md
 [array-merge]:          https://github.com/geofffranks/spruce/blob/master/doc/array-merging.md
 [env-var-defaults]:     https://github.com/geofffranks/spruce/blob/master/doc/environment-variables-and-defaults.md
 [go-patch-support]:     https://github.com/geofffranks/spruce/blob/master/doc/merging-go-patch-files.md
 [credhub-support]:      https://github.com/geofffranks/spruce/blob/master/doc/integrating-with-credhub.md
 [vault-support]:        https://github.com/geofffranks/spruce/blob/master/doc/pulling-creds-from-vault.md
+[vault-defaults]:       https://github.com/geofffranks/spruce/blob/master/doc/vault-defaults.md
 [defer]:                https://github.com/geofffranks/spruce/blob/master/doc/generating-spruce-with-spruce.md
 [cloud-config-support]: https://github.com/geofffranks/spruce/blob/master/doc/integrating-with-cloud-config.md
+[operator-api]:         https://github.com/geofffranks/spruce/blob/master/doc/operator-api.md
 [license]:              https://github.com/geofffranks/spruce/blob/master/LICENSE
 [install-go]:           https://golang.org/doc/install

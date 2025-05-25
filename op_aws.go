@@ -166,42 +166,39 @@ func (o AwsOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 	var l []string
 	for i, arg := range args {
-		v, err := arg.Resolve(ev.Tree)
+		// Use ResolveOperatorArgument to support nested expressions
+		val, err := ResolveOperatorArgument(ev, arg)
 		if err != nil {
 			DEBUG("  arg[%d]: failed to resolve expression to a concrete value", i)
 			DEBUG("     [%d]: error was: %s", i, err)
 			return nil, err
 		}
 
-		switch v.Type {
-		case Literal:
-			DEBUG("  arg[%d]: using string literal '%v'", i, v.Literal)
-			l = append(l, fmt.Sprintf("%v", v.Literal))
+		if val == nil {
+			DEBUG("  arg[%d]: resolved to nil", i)
+			return nil, fmt.Errorf("%s operator argument cannot be nil", o.variant)
+		}
 
-		case Reference:
-			DEBUG("  arg[%d]: trying to resolve reference $.%s", i, v.Reference)
-			s, err := v.Reference.Resolve(ev.Tree)
-			if err != nil {
-				DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
-				return nil, fmt.Errorf("Unable to resolve `%s`: %s", v.Reference, err)
-			}
+		switch v := val.(type) {
+		case string:
+			DEBUG("  arg[%d]: using string value '%v'", i, v)
+			l = append(l, v)
 
-			switch s.(type) {
-			case map[interface{}]interface{}:
-				DEBUG("  arg[%d]: %v is not a string scalar", i, s)
-				return nil, ansi.Errorf("@c{$.%s}@R{ is a map; only scalars are supported here}", v.Reference)
+		case int, int64, float64, bool:
+			DEBUG("  arg[%d]: converting %T to string", i, v)
+			l = append(l, fmt.Sprintf("%v", v))
 
-			case []interface{}:
-				DEBUG("  arg[%d]: %v is not a string scalar", i, s)
-				return nil, ansi.Errorf("@c{$.%s}@R{ is a list; only scalars are supported here}", v.Reference)
+		case map[interface{}]interface{}, map[string]interface{}:
+			DEBUG("  arg[%d]: %v is not a string scalar", i, v)
+			return nil, ansi.Errorf("@R{%s operator argument is a map; only scalars are supported here}", o.variant)
 
-			default:
-				l = append(l, fmt.Sprintf("%v", s))
-			}
+		case []interface{}:
+			DEBUG("  arg[%d]: %v is not a string scalar", i, v)
+			return nil, ansi.Errorf("@R{%s operator argument is a list; only scalars are supported here}", o.variant)
 
 		default:
-			DEBUG("  arg[%d]: I don't know what to do with '%v'", i, arg)
-			return nil, fmt.Errorf("%s operator only accepts string literals and key reference arguments", o.variant)
+			DEBUG("  arg[%d]: using value of type %T as string", i, val)
+			l = append(l, fmt.Sprintf("%v", val))
 		}
 	}
 

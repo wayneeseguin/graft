@@ -1,0 +1,32 @@
+# Expected output when vault secrets are available
+# (This is what you would see if all the vault paths existed)
+
+app:
+  name: production-app        # from vault
+  url: https://prod.example.com  # from vault
+app_name_default: my-app
+app_url_default: https://my-app.example.com
+database:
+  host: db.prod.example.com   # from vault
+  password: super-secret-pass  # from vault
+  port: 5432                  # from vault
+  username: dbadmin           # from vault
+defaults:
+  app:
+    environment: development
+    name: my-app
+  database:
+    host: localhost
+    password: changeme
+    port: 5432
+    username: postgres
+  redis:
+    host: localhost
+    password: null
+    port: 6379
+meta:
+  environment: development
+redis:
+  host: redis.prod.example.com  # from vault
+  password: redis-secret         # from vault
+  port: 6380                     # from vault

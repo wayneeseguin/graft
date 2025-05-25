@@ -1,0 +1,38 @@
+# Arithmetic Operations Example
+# Demonstrates the new arithmetic operators in Spruce
+
+# Basic values for calculations
+values:
+  base_price: 100
+  tax_rate: 0.08
+  discount_percent: 15
+  quantity: 3
+
+# Simple arithmetic
+calculations:
+  # Addition
+  subtotal: (( values.base_price * values.quantity ))
+  tax_amount: (( calculations.subtotal * values.tax_rate ))
+  total_with_tax: (( calculations.subtotal + calculations.tax_amount ))
+  
+  # Using parentheses for clarity
+  total_alt: (( values.base_price * values.quantity * (1 + values.tax_rate) ))
+  
+  # Subtraction  
+  discount_amount: (( calculations.subtotal * (values.discount_percent / 100) ))
+  final_price: (( calculations.total_with_tax - calculations.discount_amount ))
+  
+  # Division and modulo
+  price_per_item: (( calculations.final_price / values.quantity ))
+  remainder: (( calculations.final_price % 10 ))
+
+# String concatenation with arithmetic
+summary:
+  message: (( "Total: $" + calculations.final_price ))
+  items: (( values.quantity + " items at $" + values.base_price + " each" ))
+
+# Mixed type arithmetic
+mixed_types:
+  int_plus_float: (( 10 + 2.5 ))        # 12.5
+  string_to_number: (( "42" * 2 ))      # 84
+  concatenation: (( "Result: " + 100 )) # "Result: 100"

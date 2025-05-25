@@ -1,0 +1,16 @@
+# Default values that can be referenced
+defaults:
+  database:
+    host: localhost
+    port: 5432
+    username: postgres
+    password: changeme
+  
+  redis:
+    host: localhost
+    port: 6379
+    password: ~  # nil/null
+  
+  app:
+    name: my-app
+    environment: development

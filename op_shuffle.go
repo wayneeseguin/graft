@@ -36,42 +36,32 @@ func (ShuffleOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	var vals []interface{}
 
 	for i, arg := range args {
-		v, err := arg.Resolve(ev.Tree)
+		// Use ResolveOperatorArgument to support nested expressions
+		val, err := ResolveOperatorArgument(ev, arg)
 		if err != nil {
 			DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
 			return nil, err
 		}
 
-		switch v.Type {
-		case Literal:
-			DEBUG("  arg[%d]: found string literal '%s'", i, v.Literal)
-			vals = append(vals, v.Literal)
+		if val == nil {
+			DEBUG("  arg[%d]: resolved to nil", i)
+			return nil, fmt.Errorf("shuffle operator argument cannot be nil")
+		}
 
-		case Reference:
-			DEBUG("  arg[%d]: trying to resolve reference $.%s", i, v.Reference)
-			s, err := v.Reference.Resolve(ev.Tree)
-			if err != nil {
-				DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
-				return nil, fmt.Errorf("Unable to resolve `%s`: %s", v.Reference, err)
+		switch v := val.(type) {
+		case []interface{}:
+			DEBUG("  arg[%d]: found list value", i)
+			for _, thing := range v {
+				vals = append(vals, thing)
 			}
 
-			switch s.(type) {
-			case []interface{}:
-				for _, thing := range s.([]interface{}) {
-					vals = append(vals, thing)
-				}
-
-			case map[interface{}]interface{}:
-				DEBUG("     [%d]: resolved to a map; error!", i)
-				return nil, fmt.Errorf("shuffle only accepts arrays and string values")
-
-			default:
-				vals = append(vals, s.(interface{}))
-			}
+		case map[interface{}]interface{}, map[string]interface{}:
+			DEBUG("     [%d]: resolved to a map; error!", i)
+			return nil, fmt.Errorf("shuffle only accepts arrays and scalar values")
 
 		default:
-			DEBUG("  arg[%d]: I don't know what to do with '%v'", i, arg)
-			return nil, fmt.Errorf("shuffle operator only accepts key reference arguments")
+			DEBUG("  arg[%d]: found scalar value '%v'", i, val)
+			vals = append(vals, val)
 		}
 		DEBUG("")
 	}

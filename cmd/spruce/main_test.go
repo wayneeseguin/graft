@@ -2144,7 +2144,8 @@ warning: Falling back to inline merge strategy
 				stderr = ""
 				main()
 				So(stderr, ShouldEqual, "")
-				So(stdout, ShouldEqual, "foo: -> 6.239871649276491e+24 <-\n\n")
+				// Enhanced parser preserves exact integer values instead of converting to float
+				So(stdout, ShouldEqual, "foo: -> 6239871649276491287621342 <-\n\n")
 			})
 		})
 

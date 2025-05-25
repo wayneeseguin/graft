@@ -25,17 +25,22 @@ func (IpsOperator) Phase() OperatorPhase {
 }
 
 // Dependencies ...
-func (IpsOperator) Dependencies(_ *Evaluator, args []*Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+func (IpsOperator) Dependencies(ev *Evaluator, args []*Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
 	l := []*tree.Cursor{}
 
 	for _, arg := range args {
-		if arg.Type != Reference {
-			continue
-		}
-
-		for _, other := range locs {
-			if other.Under(arg.Reference) {
-				l = append(l, other)
+		if arg.Type == Reference {
+			for _, other := range locs {
+				if other.Under(arg.Reference) {
+					l = append(l, other)
+				}
+			}
+		} else if arg.Type == OperatorCall {
+			// Get dependencies from nested operator
+			nestedOp := OperatorFor(arg.Op())
+			if _, ok := nestedOp.(NullOperator); !ok {
+				nestedDeps := nestedOp.Dependencies(ev, arg.Args(), locs, auto)
+				l = append(l, nestedDeps...)
 			}
 		}
 	}
@@ -82,41 +87,32 @@ func (IpsOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	var vals []interface{}
 
 	for i, arg := range args {
-		v, err := arg.Resolve(ev.Tree)
-
+		// Use ResolveOperatorArgument to support nested expressions
+		val, err := ResolveOperatorArgument(ev, arg)
 		if err != nil {
 			DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
 			return nil, err
 		}
 
-		switch v.Type {
-		case Literal:
-			DEBUG("  arg[%d]: found string literal '%s'", i, v.Literal)
-			vals = append(vals, v.Literal)
-
-		case Reference:
-			DEBUG("  arg[%d]: trying to resolve reference $.%s", i, v.Reference)
-			s, err := v.Reference.Resolve(ev.Tree)
-			if err != nil {
-				DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
-				return nil, fmt.Errorf("Unable to resolve `%s`: %s", v.Reference, err)
-			}
-			DEBUG("     [%d]: resolved to a value (could be a map, a list or a scalar); appending", i)
-			vals = append(vals, s)
-
-		default:
-			DEBUG("  arg[%d]: I don't know what to do with '%v'", i, arg)
-			return nil, fmt.Errorf("ips operator only accepts literals and key reference arguments")
+		if val == nil {
+			DEBUG("  arg[%d]: resolved to nil", i)
+			return nil, fmt.Errorf("ips operator argument cannot be nil")
 		}
+
+		DEBUG("  arg[%d]: resolved to value (type: %T)", i, val)
+		vals = append(vals, val)
 		DEBUG("")
 	}
 
-	ip, ipnet, err := net.ParseCIDR(vals[0].(string))
+	// Convert first argument to string (IP or CIDR)
+	ipStr := fmt.Sprintf("%v", vals[0])
+	
+	ip, ipnet, err := net.ParseCIDR(ipStr)
 	if err != nil {
-		ip = net.ParseIP(vals[0].(string))
-	  if ip == nil {
-		DEBUG("     [n]: failed to parse IP or CIDR \"%s\": %s", vals[0], err)
-		return nil, err
+		ip = net.ParseIP(ipStr)
+		if ip == nil {
+			DEBUG("     [0]: failed to parse IP or CIDR \"%s\": %s", ipStr, err)
+			return nil, fmt.Errorf("first argument must be a valid IP or CIDR: %s", ipStr)
 		}
 	}
 

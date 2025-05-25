@@ -40,4 +40,18 @@ In the above example, there was a path in the Vault `secret` backend of
 `secret/my/credentials/admin`. That path contained two keys `username`,
 and `password`, set to `adminUserNamePulledFromVault`, and `thisPasswordWasPulledFromVault`.
 
+### Default Values (v1.31.0+)
+
+The vault operator now supports default values for cases where secrets might not exist:
+
+```yaml
+credentials:
+- username: (( vault "secret/my/credentials/admin:username" || "admin" ))
+  password: (( vault "secret/my/credentials/admin:password" || grab defaults.password ))
+```
+
+If the vault lookup fails (secret doesn't exist), the default value after `||` will be used.
+For more details, see the [vault defaults documentation][vault-defaults].
+
 [operator-docs]:        https://github.com/geofffranks/spruce/blob/master/doc/operators.md#-vault-
+[vault-defaults]:       https://github.com/geofffranks/spruce/blob/master/doc/vault-defaults.md

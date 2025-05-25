@@ -3147,6 +3147,21 @@ func TestOperators(t *testing.T) {
 	}
 
 	Convey("Parser", t, func() {
+		// These tests specifically test parsing of unknown operators
+		// so we need to disable the enhanced parser which registers additional operators
+		oldUseEnhanced := UseEnhancedParser
+		UseEnhancedParser = false
+		defer func() { UseEnhancedParser = oldUseEnhanced }()
+		
+		// Also need to temporarily remove the null operator from registry
+		oldNullOp := OpRegistry["null"]
+		delete(OpRegistry, "null")
+		defer func() { 
+			if oldNullOp != nil {
+				OpRegistry["null"] = oldNullOp
+			}
+		}()
+		
 		Convey("parses op calls in their entirety", func() {
 			phase := EvalPhase
 
@@ -5098,13 +5113,13 @@ meta:
 			Convey("should not allow references to maps", func() {
 				_, err := op.Run(ev, []*Expr{num(1), num(2), ref("testmap")})
 				So(err, ShouldNotBeNil)
-				So(err.Error(), ShouldEqual, "$.testmap is a map; only scalars are supported here")
+				So(err.Error(), ShouldEqual, "awsparam operator argument is a map; only scalars are supported here")
 			})
 
 			Convey("should not allow references to arrays", func() {
 				_, err := op.Run(ev, []*Expr{num(1), num(2), ref("testarr")})
 				So(err, ShouldNotBeNil)
-				So(err.Error(), ShouldEqual, "$.testarr is a list; only scalars are supported here")
+				So(err.Error(), ShouldEqual, "awsparam operator argument is a list; only scalars are supported here")
 			})
 
 			Convey("without key", func() {
