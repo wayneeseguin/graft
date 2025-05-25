@@ -21,8 +21,23 @@ func (NegateOperator) Phase() OperatorPhase {
 }
 
 // Dependencies ...
-func (NegateOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	return auto
+func (NegateOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+	deps := auto
+	
+	for _, arg := range args {
+		if arg.Type == OperatorCall {
+			// Get dependencies from nested operator
+			nestedOp := OperatorFor(arg.Op())
+			if _, ok := nestedOp.(NullOperator); !ok {
+				nestedDeps := nestedOp.Dependencies(ev, arg.Args(), nil, nil)
+				deps = append(deps, nestedDeps...)
+			}
+		} else if arg.Type == Reference {
+			deps = append(deps, arg.Reference)
+		}
+	}
+	
+	return deps
 }
 
 // Run ...
@@ -34,45 +49,25 @@ func (NegateOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		return nil, fmt.Errorf("negate operator requires exactly one reference argument")
 	}
 
-	var arg = args[0]
-	var val bool
-	v, err := arg.Resolve(ev.Tree)
+	// Use ResolveOperatorArgument to support nested expressions
+	resolved, err := ResolveOperatorArgument(ev, args[0])
 	if err != nil {
 		log.DEBUG(" resolution failed\n error: %s", err)
 		return nil, err
 	}
-	switch v.Type {
-	case Reference:
-		log.DEBUG(" trying to resolve reference $.%s", v.Reference)
-		s, err := v.Reference.Resolve(ev.Tree)
-		if err != nil {
-			log.DEBUG(" resolution failed\n error: %s", err)
-			return nil, fmt.Errorf("Unable to resolve `%s`: %s", v.Reference, err)
-		}
-		log.DEBUG("  resolved to a value")
-		switch s2 := s.(type) {
-		case bool:
-			val = !s2
-		default:
-			return nil, fmt.Errorf("negate operator only accepts references to bools")
-		}
-	case Literal:
-		switch literal := v.Literal.(type) {
-		case bool:
-			val = !literal
-		default:
-			return nil, fmt.Errorf("negate operator only operates on bools")
-		}
 
+	// Check if it's a boolean
+	switch v := resolved.(type) {
+	case bool:
+		log.DEBUG("  resolved to boolean value: %v", v)
+		return &Response{
+			Type:  Replace,
+			Value: !v,
+		}, nil
 	default:
-		log.DEBUG(" unsupported expression type %v, only references are allowed: '%v'", v.Type, arg)
-		return nil, fmt.Errorf("negate operator only accepts reference arguments")
+		log.DEBUG("  resolved to non-boolean value: %T", resolved)
+		return nil, fmt.Errorf("negate operator only operates on bools, got %T", resolved)
 	}
-
-	return &Response{
-		Type:  Replace,
-		Value: val,
-	}, nil
 }
 
 func init() {

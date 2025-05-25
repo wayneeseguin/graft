@@ -23,8 +23,23 @@ func (GrabOperator) Phase() OperatorPhase {
 }
 
 // Dependencies ...
-func (GrabOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	return auto
+func (GrabOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+	deps := auto
+	
+	for _, arg := range args {
+		if arg.Type == OperatorCall {
+			// Get dependencies from nested operator
+			nestedOp := OperatorFor(arg.Op())
+			if _, ok := nestedOp.(NullOperator); !ok {
+				nestedDeps := nestedOp.Dependencies(ev, arg.Args(), nil, nil)
+				deps = append(deps, nestedDeps...)
+			}
+		} else if arg.Type == Reference {
+			deps = append(deps, arg.Reference)
+		}
+	}
+	
+	return deps
 }
 
 // Run ...
@@ -35,30 +50,26 @@ func (GrabOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	var vals []interface{}
 
 	for i, arg := range args {
-		v, err := arg.Resolve(ev.Tree)
-		if err != nil {
-			DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
-			return nil, err
-		}
-
-		switch v.Type {
-		case Literal:
-			DEBUG("  arg[%d]: found string literal '%s'", i, v.Literal)
-			vals = append(vals, v.Literal)
-
-		case Reference:
-			DEBUG("  arg[%d]: trying to resolve reference $.%s", i, v.Reference)
-			s, err := v.Reference.Resolve(ev.Tree)
+		// Special handling for references to preserve environment variable expansion
+		if arg.Type == Reference {
+			DEBUG("  arg[%d]: trying to resolve reference $.%s", i, arg.Reference)
+			s, err := arg.Reference.Resolve(ev.Tree)
 			if err != nil {
 				DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
-				return nil, fmt.Errorf("Unable to resolve `%s`: %s", v.Reference, err)
+				return nil, fmt.Errorf("Unable to resolve `%s`: %s", arg.Reference, err)
 			}
 			DEBUG("     [%d]: resolved to a value (could be a map, a list or a scalar); appending", i)
 			vals = append(vals, s)
-
-		default:
-			DEBUG("  arg[%d]: I don't know what to do with '%v'", i, arg)
-			return nil, fmt.Errorf("grab operator only accepts key reference arguments")
+		} else {
+			// Use ResolveOperatorArgument for other expression types
+			val, err := ResolveOperatorArgument(ev, arg)
+			if err != nil {
+				DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
+				return nil, err
+			}
+			
+			DEBUG("     [%d]: resolved to a value (could be a map, a list or a scalar); appending", i)
+			vals = append(vals, val)
 		}
 		DEBUG("")
 	}

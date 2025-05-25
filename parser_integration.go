@@ -228,52 +228,56 @@ func ParseArgumentsEnhanced(phase OperatorPhase, src string) ([]*Expr, error) {
 func createOperatorRegistry() *OperatorRegistry {
 	registry := NewOperatorRegistry()
 	
-	// Register all known operators
-	// TODO: This should be generated from the actual operator registry
-	operators := []struct {
-		name string
-		minArgs int
-		maxArgs int
-		phase OperatorPhase
-	}{
-		{"calc", 1, 1, EvalPhase},
-		{"cartesian-product", 1, -1, EvalPhase},
-		{"concat", 1, -1, EvalPhase},
-		{"defer", 1, 1, MergePhase},
-		{"empty", 1, 1, EvalPhase},
-		{"file", 1, 2, EvalPhase},
-		{"grab", 1, 1, EvalPhase},
-		{"inject", 1, 1, MergePhase},
-		{"ips", 3, 6, EvalPhase},
-		{"join", 1, -1, MergePhase},
-		{"keys", 1, 1, MergePhase},
-		{"load", 1, 1, MergePhase},
-		{"param", 1, 1, ParamPhase},
-		{"prune", 1, -1, MergePhase},
-		{"shuffle", 1, -1, EvalPhase},
-		{"sort", 1, 2, MergePhase},
-		{"static_ips", 1, -1, EvalPhase},
-		{"stringify", 1, 1, EvalPhase},
-		{"vault", 1, -1, EvalPhase},
-		{"vault-try", 2, -1, EvalPhase},
-		// AWS operators
-		{"awsparam", 1, 3, EvalPhase},
-		{"awssecret", 1, 3, EvalPhase},
-		// Arithmetic operators (future)
-		{"+", 2, 2, EvalPhase},
-		{"-", 2, 2, EvalPhase},
-		{"*", 2, 2, EvalPhase},
-		{"/", 2, 2, EvalPhase},
-		{"%", 2, 2, EvalPhase},
-	}
-	
-	for _, op := range operators {
+	// Register all operators from the actual OpRegistry
+	for name, op := range OpRegistry {
+		// Determine min/max args based on operator type
+		// This is a heuristic approach since operators don't declare their arg counts
+		minArgs := 1
+		maxArgs := -1 // unlimited by default
+		
+		// Special cases based on known operators
+		switch name {
+		case "calc", "empty", "grab", "param", "defer", "stringify", "negate", "null":
+			maxArgs = 1
+		case "base64", "base64-decode":
+			maxArgs = 1
+		case "file":
+			maxArgs = 2
+		case "sort":
+			minArgs = 1
+			maxArgs = 2
+		case "ips":
+			minArgs = 3
+			maxArgs = 6
+		case "inject", "keys", "load":
+			minArgs = 1
+			maxArgs = 1
+		case "vault-try":
+			minArgs = 2
+		case "awsparam", "awssecret":
+			minArgs = 1
+			maxArgs = 3
+		case "?:": // ternary
+			minArgs = 3
+			maxArgs = 3
+		case "+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||":
+			minArgs = 2
+			maxArgs = 2
+		case "!":
+			minArgs = 1
+			maxArgs = 1
+		}
+		
+		// Get the phase from the operator
+		phase := op.Phase()
+		
+		// Register the operator
 		registry.Register(&OperatorInfo{
-			Name:       op.name,
+			Name:       name,
 			Precedence: PrecedencePostfix,
-			MinArgs:    op.minArgs,
-			MaxArgs:    op.maxArgs,
-			Phase:      op.phase,
+			MinArgs:    minArgs,
+			MaxArgs:    maxArgs,
+			Phase:      phase,
 		})
 	}
 	

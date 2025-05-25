@@ -26,8 +26,23 @@ func (FileOperator) Phase() OperatorPhase {
 }
 
 // Dependencies ...
-func (FileOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	return auto
+func (FileOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+	deps := auto
+	
+	for _, arg := range args {
+		if arg.Type == OperatorCall {
+			// Get dependencies from nested operator
+			nestedOp := OperatorFor(arg.Op())
+			if _, ok := nestedOp.(NullOperator); !ok {
+				nestedDeps := nestedOp.Dependencies(ev, arg.Args(), nil, nil)
+				deps = append(deps, nestedDeps...)
+			}
+		} else if arg.Type == Reference {
+			deps = append(deps, arg.Reference)
+		}
+	}
+	
+	return deps
 }
 
 // Run ...
@@ -39,51 +54,34 @@ func (FileOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		return nil, fmt.Errorf("file operator requires exactly one string or reference argument")
 	}
 
-	var fname string
 	fbasepath := os.Getenv("SPRUCE_FILE_BASE_PATH")
 
-	arg := args[0]
-	i := 0
-	v, err := arg.Resolve(ev.Tree)
+	// Use ResolveOperatorArgument to support nested expressions
+	val, err := ResolveOperatorArgument(ev, args[0])
 	if err != nil {
-		DEBUG("  arg[%d]: failed to resolve expression to a concrete value", i)
-		DEBUG("     [%d]: error was: %s", i, err)
+		DEBUG("  arg[0]: failed to resolve expression to a concrete value")
+		DEBUG("     [0]: error was: %s", err)
 		return nil, err
 	}
 
-	switch v.Type {
-	case Literal:
-		DEBUG("  arg[%d]: using string literal '%v'", i, v.Literal)
-		DEBUG("     [%d]: appending '%v' to resultant string", i, v.Literal)
-		fname = fmt.Sprintf("%v", v.Literal)
-
-	case Reference:
-		DEBUG("  arg[%d]: trying to resolve reference $.%s", i, v.Reference)
-		s, err := v.Reference.Resolve(ev.Tree)
-		if err != nil {
-			DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
-			return nil, fmt.Errorf("Unable to resolve `%s`: %s", v.Reference, err)
-		}
-
-		switch s.(type) {
-		case map[interface{}]interface{}:
-			DEBUG("  arg[%d]: %v is not a string scalar", i, s)
-			return nil, ansi.Errorf("@R{tried to read file} @c{%s}@R{, which is not a string scalar}", v.Reference)
-
-		case []interface{}:
-			DEBUG("  arg[%d]: %v is not a string scalar", i, s)
-			return nil, ansi.Errorf("@R{tried to read file} @c{%s}@R{, which is not a string scalar}", v.Reference)
-
-		default:
-			DEBUG("     [%d]: appending '%s' to resultant string", i, s)
-			fname = fmt.Sprintf("%v", s)
-		}
-
-	default:
-		DEBUG("  arg[%d]: I don't know what to do with '%v'", i, arg)
-		return nil, fmt.Errorf("file operator only accepts string literals and key reference argument")
+	// Check if it's a non-scalar type
+	switch val.(type) {
+	case map[interface{}]interface{}, map[string]interface{}:
+		DEBUG("  arg[0]: %v is not a string scalar", val)
+		return nil, ansi.Errorf("@R{tried to read file} @c{%v}@R{, which is not a string scalar}", val)
+	case []interface{}:
+		DEBUG("  arg[0]: %v is not a string scalar", val)
+		return nil, ansi.Errorf("@R{tried to read file} @c{%v}@R{, which is not a string scalar}", val)
 	}
-	DEBUG("")
+
+	// Convert to string
+	fname, err := AsString(val)
+	if err != nil {
+		DEBUG("  arg[0]: %v cannot be converted to string", val)
+		return nil, ansi.Errorf("@R{tried to read file} @c{%v}@R{, which cannot be converted to string}", val)
+	}
+	
+	DEBUG("  resolved argument to filename: %s", fname)
 
 	if !filepath.IsAbs(fname) {
 		fname = filepath.Join(fbasepath, fname)

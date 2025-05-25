@@ -67,15 +67,34 @@ func TestParserIntegration(t *testing.T) {
 				opcall, err := ParseOpcallEnhanced(EvalPhase, `(( concat "hello" " " "world" ))`)
 				So(err, ShouldBeNil)
 				So(opcall, ShouldNotBeNil)
-				// TODO: Fix comma-separated argument handling
-				// So(len(opcall.args), ShouldEqual, 3)
+				So(len(opcall.args), ShouldEqual, 3)
+				So(opcall.args[0].Type, ShouldEqual, Literal)
+				So(opcall.args[0].Literal, ShouldEqual, "hello")
+				So(opcall.args[1].Type, ShouldEqual, Literal)
+				So(opcall.args[1].Literal, ShouldEqual, " ")
+				So(opcall.args[2].Type, ShouldEqual, Literal)
+				So(opcall.args[2].Literal, ShouldEqual, "world")
 			})
 			
 			Convey("Parses nested operator calls", func() {
 				opcall, err := ParseOpcallEnhanced(EvalPhase, `(( concat (grab prefix) "-" (grab suffix) ))`)
 				So(err, ShouldBeNil)
 				So(opcall, ShouldNotBeNil)
-				// TODO: Verify nested structure
+				So(len(opcall.args), ShouldEqual, 3)
+				
+				// First argument should be a nested grab operator
+				So(opcall.args[0].Type, ShouldEqual, OperatorCall)
+				So(opcall.args[0].Op(), ShouldEqual, "grab")
+				So(len(opcall.args[0].Args()), ShouldEqual, 1)
+				
+				// Second argument should be a literal
+				So(opcall.args[1].Type, ShouldEqual, Literal)
+				So(opcall.args[1].Literal, ShouldEqual, "-")
+				
+				// Third argument should be another nested grab operator
+				So(opcall.args[2].Type, ShouldEqual, OperatorCall)
+				So(opcall.args[2].Op(), ShouldEqual, "grab")
+				So(len(opcall.args[2].Args()), ShouldEqual, 1)
 			})
 			
 			Convey("Respects operator phases", func() {

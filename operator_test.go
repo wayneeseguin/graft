@@ -3091,6 +3091,34 @@ func (m *mockedSecretsManager) GetSecretValue(input *secretsmanager.GetSecretVal
 	return m.MockGetSecretValue(input)
 }
 
+// shouldHaveDeps is a test helper for verifying operator dependencies
+func shouldHaveDeps(actual interface{}, expected ...interface{}) string {
+	deps := actual.([]*tree.Cursor)
+	paths := []string{}
+	for _, path := range expected {
+		normalizedPath, err := tree.ParseCursor(path.(string))
+		if err != nil {
+			panic(fmt.Sprintf("improper path %s passed to test", path.(string)))
+		}
+		paths = append(paths, normalizedPath.String())
+	}
+	actualPaths := []string{}
+	//make an array so we can give some coherent output on error
+	for _, dep := range deps {
+		//Pass through tree so that tests can tolerate changes to the cursor lib
+		actualPaths = append(actualPaths, dep.String())
+	}
+	//sort and compare
+	sort.Strings(actualPaths)
+	sort.Strings(paths)
+	match := reflect.DeepEqual(actualPaths, paths)
+	//give result
+	if !match {
+		return fmt.Sprintf("actual: %+v\n expected: %+v", actualPaths, paths)
+	}
+	return ""
+}
+
 func TestOperators(t *testing.T) {
 	cursor := func(s string) *tree.Cursor {
 		c, err := tree.ParseCursor(s)
@@ -4641,34 +4669,6 @@ meta:
 		})
 
 		Convey("calculates dependencies correctly", func() {
-
-			//TODO: Move this to a higher scope when more dependencies tests are added
-			shouldHaveDeps := func(actual interface{}, expected ...interface{}) string {
-				deps := actual.([]*tree.Cursor)
-				paths := []string{}
-				for _, path := range expected {
-					normalizedPath, err := tree.ParseCursor(path.(string))
-					if err != nil {
-						panic(fmt.Sprintf("improper path %s passed to test", path.(string)))
-					}
-					paths = append(paths, normalizedPath.String())
-				}
-				actualPaths := []string{}
-				//make an array so we can give some coherent output on error
-				for _, dep := range deps {
-					//Pass through tree so that tests can tolerate changes to the cursor lib
-					actualPaths = append(actualPaths, dep.String())
-				}
-				//sort and compare
-				sort.Strings(actualPaths)
-				sort.Strings(paths)
-				match := reflect.DeepEqual(actualPaths, paths)
-				//give result
-				if !match {
-					return fmt.Sprintf("actual: %+v\n expected: %+v", actualPaths, paths)
-				}
-				return ""
-			}
 
 			Convey("with a single list", func() {
 				deps := op.Dependencies(ev, []*Expr{

@@ -62,9 +62,26 @@ func (InjectOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	var vals []map[interface{}]interface{}
 
 	for i, arg := range args {
-		// For inject, we need to handle this specially since it expects references
-		if arg.Type == OperatorCall {
-			// Use ResolveOperatorArgument for nested expressions
+		// Special handling for references vs expressions
+		if arg.Type == Reference {
+			// Direct reference - resolve it directly
+			DEBUG("  arg[%d]: trying to resolve reference $.%s", i, arg.Reference)
+			s, err := arg.Reference.Resolve(ev.Tree)
+			if err != nil {
+				DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
+				return nil, err
+			}
+
+			m, ok := s.(map[interface{}]interface{})
+			if !ok {
+				DEBUG("     [%d]: resolved to something that is not a map.  that is unacceptable.", i)
+				return nil, ansi.Errorf("@c{%s} @R{is not a map}", arg.Reference)
+			}
+
+			DEBUG("     [%d]: resolved to a map; appending to the list of maps to merge/inject", i)
+			vals = append(vals, m)
+		} else {
+			// Use ResolveOperatorArgument for all other expressions (including nested operators)
 			val, err := ResolveOperatorArgument(ev, arg)
 			if err != nil {
 				DEBUG("  arg[%d]: failed to resolve expression to a concrete value", i)
@@ -95,43 +112,6 @@ func (InjectOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 			DEBUG("     [%d]: resolved to a map; appending to the list of maps to merge/inject", i)
 			vals = append(vals, m)
-
-		} else {
-			// Handle regular references
-			v, err := arg.Resolve(ev.Tree)
-			if err != nil {
-				DEBUG("  arg[%d]: failed to resolve expression to a concrete value", i)
-				DEBUG("     [%d]: error was: %s", i, err)
-				return nil, err
-			}
-
-			switch v.Type {
-			case Literal:
-				DEBUG("  arg[%d]: found string literal '%s'", i, v.Literal)
-				DEBUG("           (inject operator only handles references to other parts of the YAML tree)")
-				return nil, fmt.Errorf("inject operator only accepts key reference arguments")
-
-			case Reference:
-				DEBUG("  arg[%d]: trying to resolve reference $.%s", i, v.Reference)
-				s, err := v.Reference.Resolve(ev.Tree)
-				if err != nil {
-					DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
-					return nil, err
-				}
-
-				m, ok := s.(map[interface{}]interface{})
-				if !ok {
-					DEBUG("     [%d]: resolved to something that is not a map.  that is unacceptable.", i)
-					return nil, ansi.Errorf("@c{%s} @R{is not a map}", v.Reference)
-				}
-
-				DEBUG("     [%d]: resolved to a map; appending to the list of maps to merge/inject", i)
-				vals = append(vals, m)
-
-			default:
-				DEBUG("  arg[%d]: I don't know what to do with '%v'", i, arg)
-				return nil, fmt.Errorf("inject operator only accepts key reference arguments")
-			}
 		}
 		DEBUG("")
 	}

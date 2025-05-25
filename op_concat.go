@@ -25,8 +25,23 @@ func (ConcatOperator) Phase() OperatorPhase {
 }
 
 // Dependencies ...
-func (ConcatOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	return auto
+func (ConcatOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+	deps := auto
+	
+	for _, arg := range args {
+		if arg.Type == OperatorCall {
+			// Get dependencies from nested operator
+			nestedOp := OperatorFor(arg.Op())
+			if _, ok := nestedOp.(NullOperator); !ok {
+				nestedDeps := nestedOp.Dependencies(ev, arg.Args(), nil, nil)
+				deps = append(deps, nestedDeps...)
+			}
+		} else if arg.Type == Reference {
+			deps = append(deps, arg.Reference)
+		}
+	}
+	
+	return deps
 }
 
 // Run ...
@@ -41,46 +56,33 @@ func (ConcatOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	}
 
 	for i, arg := range args {
-		v, err := arg.Resolve(ev.Tree)
+		// Use ResolveOperatorArgument to support nested expressions
+		val, err := ResolveOperatorArgument(ev, arg)
 		if err != nil {
 			DEBUG("  arg[%d]: failed to resolve expression to a concrete value", i)
 			DEBUG("     [%d]: error was: %s", i, err)
 			return nil, err
 		}
 
-		switch v.Type {
-		case Literal:
-			DEBUG("  arg[%d]: using string literal '%v'", i, v.Literal)
-			DEBUG("     [%d]: appending '%v' to resultant string", i, v.Literal)
-			l = append(l, fmt.Sprintf("%v", v.Literal))
-
-		case Reference:
-			DEBUG("  arg[%d]: trying to resolve reference $.%s", i, v.Reference)
-			s, err := v.Reference.Resolve(ev.Tree)
-			if err != nil {
-				DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
-				return nil, fmt.Errorf("Unable to resolve `%s`: %s", v.Reference, err)
-			}
-
-			switch s.(type) {
-			case map[interface{}]interface{}:
-				DEBUG("  arg[%d]: %v is not a string scalar", i, s)
-				return nil, ansi.Errorf("@R{tried to concat} @c{%s}@R{, which is not a string scalar}", v.Reference)
-
-			case []interface{}:
-				DEBUG("  arg[%d]: %v is not a string scalar", i, s)
-				return nil, ansi.Errorf("@R{tried to concat} @c{%s}@R{, which is not a string scalar}", v.Reference)
-
-			default:
-				DEBUG("     [%d]: appending '%s' to resultant string", i, s)
-				l = append(l, fmt.Sprintf("%v", s))
-			}
-
-		default:
-			DEBUG("  arg[%d]: I don't know what to do with '%v'", i, arg)
-			return nil, fmt.Errorf("concat operator only accepts string literals and key reference arguments")
+		// Check if it's a non-scalar type
+		switch val.(type) {
+		case map[interface{}]interface{}, map[string]interface{}:
+			DEBUG("  arg[%d]: %v is not a string scalar", i, val)
+			return nil, ansi.Errorf("@R{tried to concat} @c{%v}@R{, which is not a string scalar}", val)
+		case []interface{}:
+			DEBUG("  arg[%d]: %v is not a string scalar", i, val)
+			return nil, ansi.Errorf("@R{tried to concat} @c{%v}@R{, which is not a string scalar}", val)
 		}
-		DEBUG("")
+
+		// Convert to string
+		str, err := AsString(val)
+		if err != nil {
+			DEBUG("  arg[%d]: %v cannot be converted to string", i, val)
+			return nil, ansi.Errorf("@R{tried to concat} @c{%v}@R{, which cannot be converted to string}", val)
+		}
+		
+		DEBUG("  arg[%d]: appending '%s' to resultant string", i, str)
+		l = append(l, str)
 	}
 
 	final := strings.Join(l, "")

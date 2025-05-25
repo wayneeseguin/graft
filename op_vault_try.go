@@ -110,60 +110,27 @@ func (o VaultTryOperator) tryVaultPath(ev *Evaluator, pathExpr *Expr) (*Response
 
 // resolvePathExpression resolves an expression to a vault path string
 func (o VaultTryOperator) resolvePathExpression(ev *Evaluator, expr *Expr) (string, error) {
-	// Handle nested operator calls
-	if expr.Type == OperatorCall {
-		val, err := ResolveOperatorArgument(ev, expr)
-		if err != nil {
-			return "", err
-		}
-		if val == nil {
-			return "", fmt.Errorf("vault path cannot be nil")
-		}
-		path := fmt.Sprintf("%v", val)
-		if path == "" {
-			return "", fmt.Errorf("vault path cannot be empty")
-		}
-		return path, nil
-	}
-	
-	resolved, err := expr.Resolve(ev.Tree)
+	// Use ResolveOperatorArgument to support all expression types including nested operators
+	val, err := ResolveOperatorArgument(ev, expr)
 	if err != nil {
 		return "", err
 	}
-
-	switch resolved.Type {
-	case Literal:
-		if resolved.Literal == nil {
-			return "", fmt.Errorf("vault path cannot be nil")
-		}
-		path := fmt.Sprintf("%v", resolved.Literal)
-		if path == "" {
-			return "", fmt.Errorf("vault path cannot be empty")
-		}
-		return path, nil
-
-	case Reference:
-		value, err := resolved.Reference.Resolve(ev.Tree)
-		if err != nil {
-			return "", fmt.Errorf("unable to resolve reference %s: %s", resolved.Reference, err)
-		}
-		
-		// Ensure it's a string scalar
-		switch v := value.(type) {
-		case string:
-			if v == "" {
-				return "", fmt.Errorf("vault path cannot be empty")
-			}
-			return v, nil
-		case int, int64, float64, bool:
-			return fmt.Sprintf("%v", v), nil
-		default:
-			return "", fmt.Errorf("vault path must be a string scalar, not %T", v)
-		}
-
-	default:
-		return "", fmt.Errorf("vault-try expects string literals or references to strings")
+	
+	if val == nil {
+		return "", fmt.Errorf("vault path cannot be nil")
 	}
+	
+	// Convert to string
+	path, err := AsString(val)
+	if err != nil {
+		return "", fmt.Errorf("vault path must be a string scalar: %s", err)
+	}
+	
+	if path == "" {
+		return "", fmt.Errorf("vault path cannot be empty")
+	}
+	
+	return path, nil
 }
 
 // validateVaultPath checks if a path looks like a valid vault path

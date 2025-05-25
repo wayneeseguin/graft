@@ -21,8 +21,23 @@ func (StringifyOperator) Phase() OperatorPhase {
 }
 
 // Dependencies ...
-func (StringifyOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	return auto
+func (StringifyOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+	deps := auto
+	
+	for _, arg := range args {
+		if arg.Type == OperatorCall {
+			// Get dependencies from nested operator
+			nestedOp := OperatorFor(arg.Op())
+			if _, ok := nestedOp.(NullOperator); !ok {
+				nestedDeps := nestedOp.Dependencies(ev, arg.Args(), nil, nil)
+				deps = append(deps, nestedDeps...)
+			}
+		} else if arg.Type == Reference {
+			deps = append(deps, arg.Reference)
+		}
+	}
+	
+	return deps
 }
 
 // Run ...
@@ -34,37 +49,32 @@ func (StringifyOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		return nil, fmt.Errorf("stringify operator requires exactly one reference argument")
 	}
 
-	var arg = args[0]
-	var val interface{}
-	v, err := arg.Resolve(ev.Tree)
+	// Use ResolveOperatorArgument to support nested expressions
+	resolved, err := ResolveOperatorArgument(ev, args[0])
 	if err != nil {
 		log.DEBUG(" resolution failed\n error: %s", err)
 		return nil, err
 	}
 
-	switch v.Type {
-	case Literal:
-		log.DEBUG(" found literal '%s'", v.Literal)
-		val = v.Literal
-
-	case Reference:
-		log.DEBUG(" trying to resolve reference $.%s", v.Reference)
-		s, err := v.Reference.Resolve(ev.Tree)
-		if err != nil {
-			log.DEBUG(" resolution failed\n error: %s", err)
-			return nil, fmt.Errorf("Unable to resolve `%s`: %s", v.Reference, err)
-		}
+	var val interface{}
+	
+	// Special case for nil values
+	if resolved == nil {
+		log.DEBUG(" found nil value")
+		val = nil
+	} else if str, ok := resolved.(string); ok {
+		// Check if it's already a string (literal case)
+		log.DEBUG(" found literal string '%s'", str)
+		val = str
+	} else {
+		// For non-strings, marshal to YAML
 		log.DEBUG("  resolved to a value (could be a map, a list or a scalar)")
-		data, err := yaml.Marshal(s)
+		data, err := yaml.Marshal(resolved)
 		if err != nil {
 			log.DEBUG("   marshaling failed\n   error: %s", err)
-			return nil, fmt.Errorf("Unable to marshal `%s`: %s", v.Reference, err)
+			return nil, fmt.Errorf("Unable to marshal value: %s", err)
 		}
 		val = string(data)
-
-	default:
-		log.DEBUG(" unsupported expression type, only references are allowed: '%v'", arg)
-		return nil, fmt.Errorf("stringify operator only accepts reference arguments")
 	}
 	log.DEBUG("")
 

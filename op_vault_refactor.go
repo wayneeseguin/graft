@@ -41,40 +41,18 @@ func newVaultArgProcessor(args []*Expr) *vaultArgProcessor {
 
 // resolveToString resolves an expression and converts it to a string
 func (p *vaultArgProcessor) resolveToString(ev *Evaluator, expr *Expr) (string, error) {
-	resolved, err := expr.Resolve(ev.Tree)
+	// Use ResolveOperatorArgument to support nested expressions
+	value, err := ResolveOperatorArgument(ev, expr)
 	if err != nil {
 		return "", err
 	}
 	
-	switch resolved.Type {
-	case Literal:
-		if resolved.Literal == nil {
-			return "", fmt.Errorf("cannot use nil as vault path component")
-		}
-		return fmt.Sprintf("%v", resolved.Literal), nil
-		
-	case Reference:
-		value, err := resolved.Reference.Resolve(ev.Tree)
-		if err != nil {
-			return "", fmt.Errorf("Unable to resolve `%s`: %s", resolved.Reference, err)
-		}
-		
-		switch v := value.(type) {
-		case string:
-			return v, nil
-		case int, int64, float64, bool:
-			return fmt.Sprintf("%v", v), nil
-		case map[interface{}]interface{}:
-			return "", fmt.Errorf("$.%s is a map; only scalars are supported for vault paths", resolved.Reference)
-		case []interface{}:
-			return "", fmt.Errorf("$.%s is a list; only scalars are supported for vault paths", resolved.Reference)
-		default:
-			return fmt.Sprintf("%v", v), nil
-		}
-		
-	default:
-		return "", fmt.Errorf("vault operator only accepts string literals and key reference arguments")
+	if value == nil {
+		return "", fmt.Errorf("cannot use nil as vault path component")
 	}
+	
+	// Convert resolved value to string
+	return AsString(value)
 }
 
 // buildVaultPath resolves all arguments and concatenates them into a vault path
@@ -107,7 +85,8 @@ func (p *vaultArgProcessor) evaluateDefault(ev *Evaluator) (interface{}, error) 
 	}
 	
 	DEBUG("  evaluating default expression")
-	value, err := p.defaultExpr.Evaluate(ev.Tree)
+	// Use ResolveOperatorArgument to support nested expressions in defaults
+	value, err := ResolveOperatorArgument(ev, p.defaultExpr)
 	if err != nil {
 		return nil, fmt.Errorf("unable to evaluate default value: %s", err)
 	}
