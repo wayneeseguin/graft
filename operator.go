@@ -114,6 +114,7 @@ type Expr struct {
 	Left      *Expr
 	Right     *Expr
 	Pos       Position // Position in source for error reporting
+	Modifiers map[string]bool // Operator modifiers like "nocache"
 }
 
 func (e *Expr) String() string {

@@ -111,3 +111,38 @@ func (e *Expr) GetOperatorCallFields() (op string, args []*Expr) {
 	}
 	return "", nil
 }
+
+// Modifier handling methods
+
+// HasModifier checks if an expression has a specific modifier
+func (e *Expr) HasModifier(modifier string) bool {
+	if e.Modifiers == nil {
+		return false
+	}
+	return e.Modifiers[modifier]
+}
+
+// SetModifier sets a modifier on an expression
+func (e *Expr) SetModifier(modifier string, value bool) {
+	if e.Modifiers == nil {
+		e.Modifiers = make(map[string]bool)
+	}
+	e.Modifiers[modifier] = value
+}
+
+// GetModifiers returns all modifiers
+func (e *Expr) GetModifiers() map[string]bool {
+	if e.Modifiers == nil {
+		return make(map[string]bool)
+	}
+	result := make(map[string]bool)
+	for k, v := range e.Modifiers {
+		result[k] = v
+	}
+	return result
+}
+
+// IsNoCache checks if this expression should skip caching
+func (e *Expr) IsNoCache() bool {
+	return e.HasModifier("nocache")
+}

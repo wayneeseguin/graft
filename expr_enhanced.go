@@ -114,9 +114,17 @@ type OperatorRegistry struct {
 
 // NewOperatorRegistry creates a new operator registry
 func NewOperatorRegistry() *OperatorRegistry {
-	return &OperatorRegistry{
+	registry := &OperatorRegistry{
 		operators: make(map[string]*OperatorInfo),
 	}
+	
+	// Populate with all known operators
+	for name, info := range OperatorInfoRegistry {
+		infoCopy := info // Copy to avoid pointer issues
+		registry.operators[name] = &infoCopy
+	}
+	
+	return registry
 }
 
 // Register adds an operator to the registry
@@ -132,13 +140,6 @@ func (r *OperatorRegistry) Get(name string) *OperatorInfo {
 // OperatorInfoRegistry contains metadata for all operators
 // This will be populated during initialization
 var OperatorInfoRegistry = map[string]OperatorInfo{
-	"vault": {
-		Name:       "vault",
-		Precedence: PrecedenceCall,
-		MinArgs:    1,
-		MaxArgs:    -1, // unlimited args for concatenation
-		Phase:      EvalPhase,
-	},
 	"vault-try": {
 		Name:       "vault-try",
 		Precedence: PrecedenceCall,
@@ -243,6 +244,13 @@ var OperatorInfoRegistry = map[string]OperatorInfo{
 		MinArgs:    1,
 		MaxArgs:    1,
 		Phase:      ParamPhase,
+	},
+	"vault": {
+		Name:       "vault",
+		Precedence: PrecedenceCall,
+		MinArgs:    1,
+		MaxArgs:    2,
+		Phase:      EvalPhase,
 	},
 	// Arithmetic operators
 	"+": {

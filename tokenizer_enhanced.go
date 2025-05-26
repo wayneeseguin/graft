@@ -295,9 +295,16 @@ func (t *EnhancedTokenizer) Tokenize() []Token {
 			t.advance()
 			
 		case ':':
-			t.flushCurrent(&current)
-			t.addToken(":", TokenColon)
-			t.advance()
+			// Special handling for colons within operator names (e.g., vault:nocache)
+			if current.Len() > 0 && t.isOperatorChar(t.peek()) {
+				// Part of an operator name with modifiers
+				current.WriteByte(ch)
+				t.advance()
+			} else {
+				t.flushCurrent(&current)
+				t.addToken(":", TokenColon)
+				t.advance()
+			}
 			
 		default:
 			current.WriteByte(ch)
@@ -395,6 +402,14 @@ func (t *EnhancedTokenizer) classifyToken(value string) TokenType {
 	// Check if it's a registered operator
 	if IsRegisteredOperator(value) {
 		return TokenOperator
+	}
+	
+	// Check if it's an operator with modifiers (e.g., "vault:nocache")
+	if strings.Contains(value, ":") {
+		parts := strings.Split(value, ":")
+		if len(parts) > 1 && IsRegisteredOperator(parts[0]) {
+			return TokenOperator
+		}
 	}
 	
 	// Check if it's a number

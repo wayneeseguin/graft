@@ -82,6 +82,16 @@ func (p *EnhancedParser) Parse() (*Expr, error) {
 	return expr, nil
 }
 
+// ParseExpression is a convenience function that uses memoization for common expressions
+func ParseExpression(input string, registry *OperatorRegistry) (*Expr, error) {
+	// Record pattern for analytics
+	GlobalPatternTracker.RecordPattern(input)
+	
+	// Use memoized parser
+	parser := NewMemoizedEnhancedParser(input, registry)
+	return parser.Parse()
+}
+
 // ParseMultiple parses multiple space-separated expressions
 // This is used for parsing operator arguments
 func (p *EnhancedParser) ParseMultiple() ([]*Expr, error) {
@@ -403,9 +413,13 @@ func (p *EnhancedParser) parseOperatorCall() (*Expr, error) {
 		return nil, p.syntaxError("expected operator name", p.tokenPosition(token))
 	}
 	
-	opInfo := p.registry.Get(opName)
+	// Extract operator name and modifiers
+	opNameParts := strings.Split(opName, ":")
+	baseOpName := opNameParts[0]
+	
+	opInfo := p.registry.Get(baseOpName)
 	if opInfo == nil {
-		return nil, p.syntaxError(fmt.Sprintf("unknown operator '%s'", opName), p.tokenPosition(token))
+		return nil, p.syntaxError(fmt.Sprintf("unknown operator '%s'", baseOpName), p.tokenPosition(token))
 	}
 	
 	p.advance() // consume operator
@@ -461,7 +475,7 @@ func (p *EnhancedParser) parseOperatorCall() (*Expr, error) {
 			var arg *Expr
 			var err error
 			
-			if argIndex == 0 && p.isReferenceExpectingOperator(opName) && token.Type == TokenOperator {
+			if argIndex == 0 && p.isReferenceExpectingOperator(baseOpName) && token.Type == TokenOperator {
 				// First argument of grab, param, etc. should be treated as a reference
 				// even if it matches an operator name
 				p.advance()
@@ -490,15 +504,25 @@ func (p *EnhancedParser) parseOperatorCall() (*Expr, error) {
 	
 	// Validate argument count
 	if opInfo.MinArgs >= 0 && len(args) < opInfo.MinArgs {
-		return nil, p.syntaxError(fmt.Sprintf("operator '%s' requires at least %d arguments, got %d", opInfo.Name, opInfo.MinArgs, len(args)), 
+		return nil, p.syntaxError(fmt.Sprintf("operator '%s' requires at least %d arguments, got %d", baseOpName, opInfo.MinArgs, len(args)), 
 			p.tokenPosition(p.currentToken())).WithContext("not enough arguments")
 	}
 	if opInfo.MaxArgs >= 0 && len(args) > opInfo.MaxArgs {
-		return nil, p.syntaxError(fmt.Sprintf("operator '%s' accepts at most %d arguments, got %d", opInfo.Name, opInfo.MaxArgs, len(args)),
+		return nil, p.syntaxError(fmt.Sprintf("operator '%s' accepts at most %d arguments, got %d", baseOpName, opInfo.MaxArgs, len(args)),
 			p.tokenPosition(p.currentToken())).WithContext("too many arguments")
 	}
 	
-	return NewOperatorCallWithPos(opInfo.Name, args, p.tokenPosition(token)), nil
+	expr := NewOperatorCallWithPos(baseOpName, args, p.tokenPosition(token))
+	
+	// Parse operator modifiers (if any)
+	modifiers := p.parseOperatorModifiers(opName)
+	if len(modifiers) > 0 {
+		for modifier, value := range modifiers {
+			expr.SetModifier(modifier, value)
+		}
+	}
+	
+	return expr, nil
 }
 
 // parseLiteral parses a literal value (string, number, boolean, null)
@@ -689,6 +713,26 @@ func (p *EnhancedParser) expectToken(tokenType TokenType, context string) error 
 	
 	p.advance()
 	return nil
+}
+
+// parseOperatorModifiers parses operator modifiers like :nocache
+func (p *EnhancedParser) parseOperatorModifiers(opName string) map[string]bool {
+	modifiers := make(map[string]bool)
+	
+	// Check if the operator name contains modifiers (format: "operator:modifier1:modifier2")
+	parts := strings.Split(opName, ":")
+	if len(parts) > 1 {
+		// The first part is the actual operator name
+		// The rest are modifiers
+		for i := 1; i < len(parts); i++ {
+			modifier := strings.TrimSpace(parts[i])
+			if modifier != "" {
+				modifiers[modifier] = true
+			}
+		}
+	}
+	
+	return modifiers
 }
 
 // tokenTypeString returns a human-readable name for a token type
