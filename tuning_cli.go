@@ -297,7 +297,6 @@ func (cli *TuningCLI) importConfig(args []string) error {
 // validateConfig validates a configuration file
 func (cli *TuningCLI) validateConfig(args []string) error {
 	var config *PerformanceConfig
-	var err error
 
 	if len(args) > 0 {
 		// Validate external file
