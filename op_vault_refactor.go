@@ -44,6 +44,10 @@ func (p *vaultArgProcessor) resolveToString(ev *Evaluator, expr *Expr) (string, 
 	// Use ResolveOperatorArgument to support nested expressions
 	value, err := ResolveOperatorArgument(ev, expr)
 	if err != nil {
+		// Maintain backward compatibility with error messages
+		if expr.Type == Reference {
+			return "", fmt.Errorf("Unable to resolve `%s`: %s", expr.Reference, err)
+		}
 		return "", err
 	}
 	
@@ -51,8 +55,25 @@ func (p *vaultArgProcessor) resolveToString(ev *Evaluator, expr *Expr) (string, 
 		return "", fmt.Errorf("cannot use nil as vault path component")
 	}
 	
-	// Convert resolved value to string
-	return AsString(value)
+	// Convert resolved value to string with vault-specific error messages
+	switch v := value.(type) {
+	case string:
+		return v, nil
+	case int, int64, float32, float64, bool:
+		return fmt.Sprintf("%v", v), nil
+	case map[interface{}]interface{}, map[string]interface{}:
+		if expr.Type == Reference {
+			return "", fmt.Errorf("$.%s is a map; only scalars are supported for vault paths", expr.Reference)
+		}
+		return "", fmt.Errorf("value is a map; only scalars are supported for vault paths")
+	case []interface{}:
+		if expr.Type == Reference {
+			return "", fmt.Errorf("$.%s is a list; only scalars are supported for vault paths", expr.Reference)
+		}
+		return "", fmt.Errorf("value is a list; only scalars are supported for vault paths")
+	default:
+		return fmt.Sprintf("%v", v), nil
+	}
 }
 
 // buildVaultPath resolves all arguments and concatenates them into a vault path
