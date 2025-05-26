@@ -1,0 +1,185 @@
+---
+# Percentage-based Calculations and Scaling in Spruce
+# This file demonstrates percentage calculations and scaling scenarios
+
+# Basic percentage calculations
+percentages:
+  # Calculate percentages
+  basics:
+    total: 200
+    part: 50
+    percentage: (( percentages.basics.part / percentages.basics.total * 100 ))     # 25
+    
+    # Finding a percentage of a value
+    value: 150
+    percent: 20
+    result: (( percentages.basics.value * percentages.basics.percent / 100 ))      # 30
+    
+    # Percentage increase/decrease
+    original: 100
+    increase_percent: 25
+    increased_value: (( percentages.basics.original * (100 + percentages.basics.increase_percent) / 100 ))  # 125
+    decrease_percent: 10
+    decreased_value: (( percentages.basics.original * (100 - percentages.basics.decrease_percent) / 100 ))  # 90
+
+# Auto-scaling calculations
+autoscaling:
+  # Current state
+  current:
+    instances: 10
+    cpu_utilization: 75
+    memory_utilization: 60
+    
+  # Scaling thresholds
+  thresholds:
+    scale_up_cpu: 80
+    scale_down_cpu: 30
+    scale_up_memory: 70
+    scale_down_memory: 40
+    
+  # Scaling factors
+  scaling:
+    up_factor: 1.5      # Scale up by 50%
+    down_factor: 0.75   # Scale down by 25%
+    
+    # Calculate new instance count based on CPU
+    cpu_based_scaling: (( autoscaling.current.instances * autoscaling.scaling.up_factor ))  # 15
+    
+    # Calculate based on utilization target (aim for 60% CPU utilization)
+    target_cpu_utilization: 60
+    optimal_instances: (( autoscaling.current.instances * autoscaling.current.cpu_utilization / autoscaling.scaling.target_cpu_utilization ))  # 12.5 -> 13
+    
+    # Percentage change calculation
+    instance_increase: (( autoscaling.scaling.cpu_based_scaling - autoscaling.current.instances ))  # 5
+    percentage_increase: (( autoscaling.scaling.instance_increase / autoscaling.current.instances * 100 ))  # 50
+
+# Resource allocation with percentages
+resource_allocation:
+  # Total pool
+  total_resources:
+    cpu_cores: 1000
+    memory_gb: 4000
+    storage_tb: 100
+    
+  # Department allocations (in percentages)
+  departments:
+    engineering:
+      percentage: 40
+      cpu_cores: (( resource_allocation.total_resources.cpu_cores * resource_allocation.departments.engineering.percentage / 100 ))      # 400
+      memory_gb: (( resource_allocation.total_resources.memory_gb * resource_allocation.departments.engineering.percentage / 100 ))      # 1600
+      storage_tb: (( resource_allocation.total_resources.storage_tb * resource_allocation.departments.engineering.percentage / 100 ))    # 40
+      
+    sales:
+      percentage: 25
+      cpu_cores: (( resource_allocation.total_resources.cpu_cores * resource_allocation.departments.sales.percentage / 100 ))           # 250
+      memory_gb: (( resource_allocation.total_resources.memory_gb * resource_allocation.departments.sales.percentage / 100 ))           # 1000
+      storage_tb: (( resource_allocation.total_resources.storage_tb * resource_allocation.departments.sales.percentage / 100 ))         # 25
+      
+    operations:
+      percentage: 35
+      cpu_cores: (( resource_allocation.total_resources.cpu_cores * resource_allocation.departments.operations.percentage / 100 ))      # 350
+      memory_gb: (( resource_allocation.total_resources.memory_gb * resource_allocation.departments.operations.percentage / 100 ))      # 1400
+      storage_tb: (( resource_allocation.total_resources.storage_tb * resource_allocation.departments.operations.percentage / 100 ))    # 35
+  
+  # Verification
+  total_percentage: (( resource_allocation.departments.engineering.percentage + resource_allocation.departments.sales.percentage + resource_allocation.departments.operations.percentage ))  # 100
+
+# Performance scaling
+performance:
+  # Baseline metrics
+  baseline:
+    requests_per_second: 1000
+    response_time_ms: 50
+    error_rate_percent: 0.1
+    
+  # Load increase scenarios
+  load_scenarios:
+    # 50% increase in load
+    scenario_1:
+      load_increase_percent: 50
+      new_rps: (( performance.baseline.requests_per_second * (100 + performance.load_scenarios.scenario_1.load_increase_percent) / 100 ))  # 1500
+      # Assuming linear degradation - response time increases by 30% of load increase
+      response_degradation_factor: 0.3
+      new_response_time: (( performance.baseline.response_time_ms * (100 + performance.load_scenarios.scenario_1.load_increase_percent * performance.load_scenarios.scenario_1.response_degradation_factor) / 100 ))  # 57.5
+      
+    # 100% increase in load
+    scenario_2:
+      load_increase_percent: 100
+      new_rps: (( performance.baseline.requests_per_second * (100 + performance.load_scenarios.scenario_2.load_increase_percent) / 100 ))  # 2000
+      response_degradation_factor: 0.4
+      new_response_time: (( performance.baseline.response_time_ms * (100 + performance.load_scenarios.scenario_2.load_increase_percent * performance.load_scenarios.scenario_2.response_degradation_factor) / 100 ))  # 70
+
+# Capacity planning with growth rates
+capacity_planning:
+  # Current usage
+  current:
+    users: 10000
+    storage_gb: 5000
+    bandwidth_mbps: 1000
+    
+  # Growth rates (monthly)
+  growth_rates:
+    user_growth_percent: 5
+    storage_growth_percent: 8
+    bandwidth_growth_percent: 6
+    
+  # Projections (compound growth)
+  projections:
+    # 3 months
+    months_3:
+      users: (( capacity_planning.current.users * (100 + capacity_planning.growth_rates.user_growth_percent) / 100 * (100 + capacity_planning.growth_rates.user_growth_percent) / 100 * (100 + capacity_planning.growth_rates.user_growth_percent) / 100 ))  # ~11576
+      storage_gb: (( capacity_planning.current.storage_gb * (100 + capacity_planning.growth_rates.storage_growth_percent) / 100 * (100 + capacity_planning.growth_rates.storage_growth_percent) / 100 * (100 + capacity_planning.growth_rates.storage_growth_percent) / 100 ))  # ~6298
+      bandwidth_mbps: (( capacity_planning.current.bandwidth_mbps * (100 + capacity_planning.growth_rates.bandwidth_growth_percent) / 100 * (100 + capacity_planning.growth_rates.bandwidth_growth_percent) / 100 * (100 + capacity_planning.growth_rates.bandwidth_growth_percent) / 100 ))  # ~1191
+    
+    # Growth percentages from baseline
+    growth_percent_3m:
+      users: (( (capacity_planning.projections.months_3.users - capacity_planning.current.users) / capacity_planning.current.users * 100 ))  # ~15.76
+      storage: (( (capacity_planning.projections.months_3.storage_gb - capacity_planning.current.storage_gb) / capacity_planning.current.storage_gb * 100 ))  # ~25.97
+      bandwidth: (( (capacity_planning.projections.months_3.bandwidth_mbps - capacity_planning.current.bandwidth_mbps) / capacity_planning.current.bandwidth_mbps * 100 ))  # ~19.10
+
+# SLA and availability calculations
+sla:
+  # Target SLA percentages
+  targets:
+    availability_percent: 99.95
+    performance_sla_percent: 99.9
+    
+  # Convert to allowed downtime
+  calculations:
+    # Monthly calculations (assuming 30 days)
+    minutes_per_month: (( 30 * 24 * 60 ))                                                          # 43200
+    allowed_downtime_minutes: (( sla.calculations.minutes_per_month * (100 - sla.targets.availability_percent) / 100 ))  # 21.6
+    
+    # Yearly calculations
+    minutes_per_year: (( 365 * 24 * 60 ))                                                          # 525600
+    allowed_downtime_minutes_yearly: (( sla.calculations.minutes_per_year * (100 - sla.targets.availability_percent) / 100 ))  # 262.8
+    allowed_downtime_hours_yearly: (( sla.calculations.allowed_downtime_minutes_yearly / 60 ))     # 4.38
+
+# Discount and pricing calculations
+pricing:
+  # Base pricing
+  base:
+    monthly_cost: 10000
+    
+  # Volume discounts
+  discounts:
+    tier1_threshold: 5000
+    tier1_discount_percent: 10
+    tier2_threshold: 10000
+    tier2_discount_percent: 20
+    tier3_threshold: 20000
+    tier3_discount_percent: 30
+    
+  # Calculate discounted prices
+  tier_pricing:
+    tier1_cost: (( pricing.base.monthly_cost * (100 - pricing.discounts.tier1_discount_percent) / 100 ))  # 9000
+    tier2_cost: (( pricing.base.monthly_cost * (100 - pricing.discounts.tier2_discount_percent) / 100 ))  # 8000
+    tier3_cost: (( pricing.base.monthly_cost * (100 - pricing.discounts.tier3_discount_percent) / 100 ))  # 7000
+    
+    # Savings calculations
+    tier1_savings: (( pricing.base.monthly_cost - pricing.tier_pricing.tier1_cost ))               # 1000
+    tier2_savings: (( pricing.base.monthly_cost - pricing.tier_pricing.tier2_cost ))               # 2000
+    tier3_savings: (( pricing.base.monthly_cost - pricing.tier_pricing.tier3_cost ))               # 3000
+    
+    # Annual savings
+    tier3_annual_savings: (( pricing.tier_pricing.tier3_savings * 12 ))                            # 36000

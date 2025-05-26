@@ -1,0 +1,498 @@
+# Resource Sizing with Ternary Operator
+#
+# Dynamic resource allocation based on environment and workload
+
+# Environment and workload context
+context:
+  environment: "production"  # development, staging, production
+  workload: "high"          # low, medium, high, critical
+  region: "us-east-1"
+  availability_zones: 3
+  peak_hours: true
+  cost_optimization: false
+  
+  # Computed context
+  is_production: (( context.environment == "production" ? true : false ))
+  is_critical: (( context.workload == "critical" ? true : false ))
+  needs_ha: (( context.is_production || context.workload == "high" || context.workload == "critical" ? true : false ))
+
+# Compute resources
+compute:
+  # Instance sizing
+  instances:
+    web:
+      type: (( 
+        context.workload == "critical" ? "c5.4xlarge" :
+        context.workload == "high" ? "c5.2xlarge" :
+        context.workload == "medium" ? "c5.xlarge" :
+        context.is_production ? "c5.large" :
+        "t3.medium"
+      ))
+      
+      count: (( 
+        context.workload == "critical" ? 12 :
+        context.workload == "high" ? 8 :
+        context.workload == "medium" ? 4 :
+        context.is_production ? 3 :
+        1
+      ))
+      
+      # Auto-scaling
+      autoscaling:
+        enabled: (( context.needs_ha ? true : false ))
+        min: (( compute.instances.web.count ))
+        max: (( 
+          context.workload == "critical" ? 50 :
+          context.workload == "high" ? 20 :
+          context.is_production ? 10 :
+          3
+        ))
+        target_cpu: (( 
+          context.workload == "critical" ? 60 :
+          context.workload == "high" ? 70 :
+          80
+        ))
+    
+    worker:
+      type: (( 
+        context.workload == "critical" ? "m5.2xlarge" :
+        context.workload == "high" ? "m5.xlarge" :
+        context.is_production ? "m5.large" :
+        "t3.small"
+      ))
+      
+      count: (( 
+        context.workload == "critical" ? 8 :
+        context.workload == "high" ? 4 :
+        context.is_production ? 2 :
+        1
+      ))
+      
+      # Spot instances for workers
+      spot_enabled: (( 
+        !context.is_critical && 
+        context.cost_optimization ? 
+        true : false
+      ))
+      spot_percentage: (( 
+        compute.instances.worker.spot_enabled ?
+        (context.is_production ? 30 : 50) :
+        0
+      ))
+  
+  # Container resources
+  containers:
+    web:
+      cpu: (( 
+        context.workload == "critical" ? "4000m" :
+        context.workload == "high" ? "2000m" :
+        context.workload == "medium" ? "1000m" :
+        "500m"
+      ))
+      
+      memory: (( 
+        context.workload == "critical" ? "8Gi" :
+        context.workload == "high" ? "4Gi" :
+        context.workload == "medium" ? "2Gi" :
+        "1Gi"
+      ))
+      
+      replicas: (( 
+        context.workload == "critical" ? 20 :
+        context.workload == "high" ? 10 :
+        context.is_production ? 3 :
+        1
+      ))
+      
+      # Resource limits
+      limits:
+        cpu: (( concat (calc "(grab containers.web.cpu | split 'm' | elem 0) * 1.5") "m" ))
+        memory: (( concat (calc "(grab containers.web.memory | split 'Gi' | elem 0) * 1.2") "Gi" ))
+    
+    worker:
+      cpu: (( 
+        context.workload == "critical" ? "2000m" :
+        context.workload == "high" ? "1000m" :
+        "500m"
+      ))
+      
+      memory: (( 
+        context.workload == "critical" ? "4Gi" :
+        context.workload == "high" ? "2Gi" :
+        "1Gi"
+      ))
+      
+      replicas: (( 
+        context.workload == "critical" ? 10 :
+        context.workload == "high" ? 5 :
+        context.is_production ? 2 :
+        1
+      ))
+
+# Database resources
+database:
+  # Primary database
+  primary:
+    instance_class: (( 
+      context.workload == "critical" ? "db.r5.4xlarge" :
+      context.workload == "high" ? "db.r5.2xlarge" :
+      context.workload == "medium" ? "db.r5.xlarge" :
+      context.is_production ? "db.r5.large" :
+      "db.t3.medium"
+    ))
+    
+    storage_gb: (( 
+      context.workload == "critical" ? 2000 :
+      context.workload == "high" ? 1000 :
+      context.workload == "medium" ? 500 :
+      context.is_production ? 200 :
+      50
+    ))
+    
+    iops: (( 
+      context.workload == "critical" ? 20000 :
+      context.workload == "high" ? 10000 :
+      context.is_production ? 3000 :
+      0  # Use standard storage
+    ))
+    
+    multi_az: (( context.needs_ha ? true : false ))
+    
+    backup:
+      enabled: true
+      retention_days: (( 
+        context.is_production ? 30 :
+        7
+      ))
+      window: (( 
+        context.is_production ? "03:00-04:00" :
+        "05:00-06:00"
+      ))
+  
+  # Read replicas
+  replicas:
+    enabled: (( context.needs_ha ? true : false ))
+    count: (( 
+      !database.replicas.enabled ? 0 :
+      context.workload == "critical" ? 3 :
+      context.workload == "high" ? 2 :
+      context.is_production ? 1 :
+      0
+    ))
+    
+    instance_class: (( 
+      database.replicas.count == 0 ? "" :
+      context.workload == "critical" ? database.primary.instance_class :
+      "db.r5.large"
+    ))
+    
+    cross_region: (( 
+      context.workload == "critical" && context.is_production ? 
+      true : false
+    ))
+  
+  # Connection pooling
+  pool:
+    size: (( 
+      context.workload == "critical" ? 200 :
+      context.workload == "high" ? 100 :
+      context.is_production ? 50 :
+      20
+    ))
+    
+    overflow: (( database.pool.size * 0.2 ))
+    timeout: (( context.is_production ? 10 : 30 ))
+
+# Cache resources
+cache:
+  # Redis configuration
+  redis:
+    node_type: (( 
+      context.workload == "critical" ? "cache.r6g.2xlarge" :
+      context.workload == "high" ? "cache.r6g.xlarge" :
+      context.is_production ? "cache.r6g.large" :
+      "cache.t3.micro"
+    ))
+    
+    num_nodes: (( 
+      context.workload == "critical" ? 3 :
+      context.needs_ha ? 2 :
+      1
+    ))
+    
+    cluster_mode: (( 
+      context.workload == "critical" || 
+      context.workload == "high" ? 
+      true : false
+    ))
+    
+    shards: (( 
+      cache.redis.cluster_mode ?
+      (context.workload == "critical" ? 4 : 2) :
+      1
+    ))
+    
+    replicas_per_shard: (( 
+      cache.redis.cluster_mode ?
+      (context.is_production ? 2 : 1) :
+      0
+    ))
+    
+    # Memory and eviction
+    maxmemory_policy: (( 
+      context.is_production ? "volatile-lru" : "allkeys-lru"
+    ))
+    
+    persistence:
+      enabled: (( context.is_production ? true : false ))
+      snapshot_retention: (( 
+        context.is_production ? 7 : 1
+      ))
+  
+  # CDN configuration
+  cdn:
+    enabled: (( context.is_production ? true : false ))
+    
+    # Edge locations
+    price_class: (( 
+      context.workload == "critical" ? "PriceClass_All" :
+      context.is_production ? "PriceClass_100" :
+      "PriceClass_100"
+    ))
+    
+    # Cache behaviors
+    default_ttl: (( 
+      context.is_production ? 86400 : 3600
+    ))
+    
+    max_ttl: (( 
+      context.is_production ? 31536000 : 86400
+    ))
+
+# Storage resources
+storage:
+  # Object storage
+  s3:
+    storage_class: (( 
+      context.cost_optimization && !context.is_critical ?
+      "INTELLIGENT_TIERING" :
+      "STANDARD"
+    ))
+    
+    versioning: (( context.is_production ? true : false ))
+    
+    lifecycle:
+      enabled: (( context.is_production ? true : false ))
+      
+      transitions:
+        - days: (( context.is_production ? 30 : 7 ))
+          storage_class: "STANDARD_IA"
+        - days: (( context.is_production ? 90 : 30 ))
+          storage_class: "GLACIER"
+      
+      expiration: (( 
+        context.is_production ? 365 : 30
+      ))
+    
+    replication:
+      enabled: (( 
+        context.workload == "critical" && 
+        context.is_production ? 
+        true : false
+      ))
+      destination_region: "us-west-2"
+  
+  # Block storage (EBS)
+  ebs:
+    web_servers:
+      type: (( 
+        context.workload == "critical" ? "io2" :
+        context.workload == "high" ? "gp3" :
+        "gp2"
+      ))
+      
+      size_gb: (( 
+        context.is_production ? 100 : 50
+      ))
+      
+      iops: (( 
+        storage.ebs.web_servers.type == "io2" ? 10000 :
+        storage.ebs.web_servers.type == "gp3" ? 3000 :
+        0
+      ))
+      
+      throughput: (( 
+        storage.ebs.web_servers.type == "gp3" ? 250 : 0
+      ))
+    
+    database:
+      type: (( 
+        context.workload == "critical" ? "io2" :
+        context.is_production ? "gp3" :
+        "gp2"
+      ))
+      
+      size_gb: (( database.primary.storage_gb ))
+      
+      encryption: (( context.is_production ? true : false ))
+
+# Network resources
+network:
+  # Load balancer
+  load_balancer:
+    type: (( context.needs_ha ? "application" : "network" ))
+    
+    # Cross-zone load balancing
+    cross_zone: (( context.is_production ? true : false ))
+    
+    # Connection draining
+    deregistration_delay: (( 
+      context.is_production ? 300 : 30
+    ))
+    
+    # Health checks
+    health_check:
+      interval: (( context.is_production ? 10 : 30 ))
+      timeout: (( context.is_production ? 5 : 10 ))
+      healthy_threshold: (( context.is_production ? 2 : 3 ))
+      unhealthy_threshold: (( context.is_production ? 2 : 3 ))
+  
+  # VPN/Direct Connect
+  dedicated_connection:
+    enabled: (( 
+      context.workload == "critical" && 
+      context.is_production ? 
+      true : false
+    ))
+    
+    bandwidth: (( 
+      network.dedicated_connection.enabled ?
+      (context.workload == "critical" ? "10Gbps" : "1Gbps") :
+      ""
+    ))
+  
+  # Network ACLs and Security Groups
+  security:
+    waf_enabled: (( context.is_production ? true : false ))
+    
+    ddos_protection: (( 
+      context.workload == "critical" || 
+      context.workload == "high" ? 
+      true : false
+    ))
+    
+    vpc_flow_logs: (( context.is_production ? true : false ))
+
+# Monitoring and logging resources
+monitoring:
+  # Metrics retention
+  metrics:
+    retention_days: (( 
+      context.is_production ? 90 : 7
+    ))
+    
+    resolution: (( 
+      context.workload == "critical" ? 1 :
+      context.is_production ? 5 :
+      60
+    ))
+    
+    custom_metrics_enabled: (( 
+      context.is_production ? true : false
+    ))
+  
+  # Log aggregation
+  logs:
+    retention_days: (( 
+      context.workload == "critical" ? 365 :
+      context.is_production ? 90 :
+      7
+    ))
+    
+    # Log streaming
+    real_time_processing: (( 
+      context.workload == "critical" || 
+      context.workload == "high" ? 
+      true : false
+    ))
+    
+    # Log analysis
+    insights_enabled: (( context.is_production ? true : false ))
+  
+  # APM
+  apm:
+    enabled: (( context.is_production ? true : false ))
+    
+    sampling_rate: (( 
+      context.workload == "critical" ? 1.0 :
+      context.is_production ? 0.1 :
+      0.01
+    ))
+    
+    trace_retention_days: (( 
+      context.is_production ? 30 : 7
+    ))
+
+# Cost estimation
+cost_estimate:
+  # Monthly estimates (simplified)
+  compute: (( 
+    context.workload == "critical" ? 15000 :
+    context.workload == "high" ? 8000 :
+    context.workload == "medium" ? 4000 :
+    context.is_production ? 2000 :
+    500
+  ))
+  
+  database: (( 
+    context.workload == "critical" ? 5000 :
+    context.workload == "high" ? 2500 :
+    context.is_production ? 1000 :
+    200
+  ))
+  
+  storage: (( 
+    context.workload == "critical" ? 2000 :
+    context.is_production ? 500 :
+    100
+  ))
+  
+  network: (( 
+    context.workload == "critical" ? 3000 :
+    context.is_production ? 1000 :
+    200
+  ))
+  
+  total: (( 
+    cost_estimate.compute + 
+    cost_estimate.database + 
+    cost_estimate.storage + 
+    cost_estimate.network
+  ))
+  
+  # Cost optimization suggestions
+  optimizations:
+    - (( context.cost_optimization ? ~ : "Enable cost optimization mode" ))
+    - (( compute.instances.worker.spot_enabled ? ~ : "Consider spot instances for workers" ))
+    - (( storage.s3.storage_class == "INTELLIGENT_TIERING" ? ~ : "Use S3 Intelligent-Tiering" ))
+    - (( context.peak_hours ? "Consider scheduled scaling" : ~ ))
+
+# Resource summary
+summary:
+  environment: (( context.environment ))
+  workload: (( context.workload ))
+  
+  total_instances: (( 
+    compute.instances.web.count + 
+    compute.instances.worker.count
+  ))
+  
+  total_containers: (( 
+    compute.containers.web.replicas + 
+    compute.containers.worker.replicas
+  ))
+  
+  high_availability: (( context.needs_ha ))
+  multi_region: (( database.replicas.cross_region ))
+  
+  estimated_monthly_cost: (( concat "$" cost_estimate.total ))

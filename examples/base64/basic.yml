@@ -1,0 +1,62 @@
+---
+# Basic base64 encoding and decoding examples
+
+# Simple string encoding
+examples:
+  # Encode a simple string
+  hello_encoded: (( base64 "Hello, World!" ))
+  # Result: "SGVsbG8sIFdvcmxkIQ=="
+  
+  # Encode with special characters
+  special_chars: (( base64 "user@example.com:p@ssw0rd!" ))
+  # Result: "dXNlckBleGFtcGxlLmNvbTpwQHNzdzByZCE="
+  
+  # Encode empty string
+  empty: (( base64 "" ))
+  # Result: ""
+  
+  # Encode multiline content
+  multiline: (( base64 "line1\nline2\nline3" ))
+
+# Decoding examples
+decoded:
+  # Decode back to original
+  hello: (( base64-decode "SGVsbG8sIFdvcmxkIQ==" ))
+  # Result: "Hello, World!"
+  
+  # Decode credentials
+  creds: (( base64-decode "dXNlckBleGFtcGxlLmNvbTpwQHNzdzByZCE=" ))
+  # Result: "user@example.com:p@ssw0rd!"
+
+# Round-trip encoding/decoding
+roundtrip:
+  original: "My secret data!"
+  encoded: (( base64 (grab roundtrip.original) ))
+  decoded: (( base64-decode (grab roundtrip.encoded) ))
+  # decoded will equal original
+
+# Combining with other operators
+combined:
+  # Encode concatenated strings
+  auth_header: (( base64 (concat "user" ":" "pass123") ))
+  # Result: base64 of "user:pass123"
+  
+  # Encode grabbed values
+  config_data: (( base64 (grab config.data) ))
+
+config:
+  data: |
+    server: production.example.com
+    port: 8080
+    ssl: true
+
+# Common patterns
+patterns:
+  # Basic auth header
+  authorization: (( concat "Basic " (base64 (concat "admin" ":" "secret")) ))
+  # Result: "Basic YWRtaW46c2VjcmV0"
+  
+  # JSON encoding
+  json_data: |
+    {"username": "admin", "role": "superuser"}
+  json_encoded: (( base64 (grab patterns.json_data) ))

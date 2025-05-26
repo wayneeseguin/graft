@@ -1,0 +1,25 @@
+---
+# Redis configuration
+default:
+  host: localhost
+  port: 6379
+  db: 0
+  password: null
+  
+cache:
+  host: localhost
+  port: 6379
+  db: 1
+  ttl: 3600
+  
+sessions:
+  host: localhost
+  port: 6379
+  db: 2
+  ttl: 86400
+  
+queues:
+  host: localhost
+  port: 6379
+  db: 3
+  max_retries: 3

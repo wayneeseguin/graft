@@ -1,0 +1,80 @@
+---
+# Building modular configurations with load operator
+
+# Load individual service configurations
+services:
+  database: (( load "configs/database.yml" ))
+  cache: (( load "configs/redis.yml" ))
+  features: (( load "configs/features.json" ))
+  
+# Load user and permission data
+access_control:
+  users: (( load "data/users.yml" ))
+  # In real scenario, might also load:
+  # roles: (( load "data/roles.yml" ))
+  # permissions: (( load "data/permissions.yml" ))
+
+# Build application configuration from modules
+application:
+  name: my-awesome-app
+  version: 2.1.0
+  
+  # Select specific database from loaded config
+  database:
+    primary: (( grab services.database.postgres ))
+    analytics: (( grab services.database.mongodb ))
+  
+  # Configure caching layers
+  cache:
+    default: (( grab services.cache.cache ))
+    sessions: (( grab services.cache.sessions ))
+    
+  # Feature configuration
+  features: (( grab services.features.features ))
+  experiments: (( grab services.features.experiments ))
+  
+  # User management
+  users:
+    admins: (( grab access_control.users.admins ))
+    developers: (( grab access_control.users.developers ))
+    # Combine all users into one list
+    all: (( concat 
+      (grab access_control.users.admins)
+      (grab access_control.users.developers)
+      (grab access_control.users.readonly_users)
+    ))
+
+# Environment-specific overrides
+environments:
+  development:
+    debug: true
+    database:
+      host: localhost
+      ssl: false
+  
+  production:
+    debug: false
+    database:
+      host: prod-db.example.com
+      ssl: true
+      
+# Current environment config (would be set via ENV var)
+current_env: development
+
+# Final configuration merging modules with environment overrides
+final_config:
+  app: (( grab application ))
+  
+  # Override database host for current environment
+  database:
+    # Start with loaded config
+    config: (( grab application.database.primary ))
+    # Override with environment-specific values
+    host: (( grab environments.(grab current_env).database.host ))
+    ssl: (( grab environments.(grab current_env).database.ssl ))
+  
+  # Features remain the same across environments
+  features: (( grab application.features ))
+  
+  # Debug mode from environment
+  debug: (( grab environments.(grab current_env).debug ))

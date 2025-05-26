@@ -1,0 +1,763 @@
+# Validation Rules with Boolean Operators
+#
+# Complex validation logic using boolean operators
+
+# User input validation
+user_validation:
+  # Sample user input
+  input:
+    username: "john_doe123"
+    email: "john.doe@example.com"
+    password: "SecureP@ss123!"
+    confirm_password: "SecureP@ss123!"
+    age: 25
+    phone: "+1-555-123-4567"
+    country: "US"
+    postal_code: "12345"
+    terms_accepted: true
+    newsletter: false
+    
+  # Validation rules
+  rules:
+    # Username validation
+    username:
+      min_length: 3
+      max_length: 20
+      
+      length_valid: (( 
+        user_validation.input.username && 
+        (user_validation.input.username | length) >= user_validation.rules.username.min_length &&
+        (user_validation.input.username | length) <= user_validation.rules.username.max_length
+      ))
+      # Would be: true (11 characters)
+      
+      # Check for valid characters (simulated)
+      contains_valid_chars: true  # Would use regex in real implementation
+      
+      not_empty: (( user_validation.input.username != "" ))
+      # Result: true
+      
+      is_valid: (( 
+        user_validation.rules.username.not_empty &&
+        user_validation.rules.username.length_valid &&
+        user_validation.rules.username.contains_valid_chars
+      ))
+      # Would be: true
+    
+    # Email validation
+    email:
+      not_empty: (( user_validation.input.email != "" ))
+      # Result: true
+      
+      contains_at: (( user_validation.input.email | contains "@" ))
+      # Would check for @ symbol
+      
+      contains_dot: (( user_validation.input.email | contains "." ))
+      # Would check for . after @
+      
+      min_length: (( (user_validation.input.email | length) >= 5 ))
+      # Would be: true
+      
+      # Simplified email validation
+      is_valid: (( 
+        user_validation.rules.email.not_empty &&
+        user_validation.rules.email.min_length
+      ))
+      # Would include all checks in real implementation
+    
+    # Password validation
+    password:
+      min_length: 8
+      max_length: 128
+      requires_uppercase: true
+      requires_lowercase: true
+      requires_number: true
+      requires_special: true
+      
+      length_valid: (( 
+        user_validation.input.password &&
+        (user_validation.input.password | length) >= user_validation.rules.password.min_length &&
+        (user_validation.input.password | length) <= user_validation.rules.password.max_length
+      ))
+      # Would be: true
+      
+      # Character type checks (simulated)
+      has_uppercase: true  # 'S' and 'P'
+      has_lowercase: true  # 'ecure', 'ass'
+      has_number: true     # '123'
+      has_special: true    # '@' and '!'
+      
+      complexity_valid: (( 
+        (!user_validation.rules.password.requires_uppercase || user_validation.rules.password.has_uppercase) &&
+        (!user_validation.rules.password.requires_lowercase || user_validation.rules.password.has_lowercase) &&
+        (!user_validation.rules.password.requires_number || user_validation.rules.password.has_number) &&
+        (!user_validation.rules.password.requires_special || user_validation.rules.password.has_special)
+      ))
+      # Result: true
+      
+      matches_confirmation: (( user_validation.input.password == user_validation.input.confirm_password ))
+      # Result: true
+      
+      is_valid: (( 
+        user_validation.rules.password.length_valid &&
+        user_validation.rules.password.complexity_valid &&
+        user_validation.rules.password.matches_confirmation
+      ))
+      # Result: true
+    
+    # Age validation
+    age:
+      min_age: 13
+      max_age: 120
+      
+      is_number: (( user_validation.input.age >= 0 ))  # Basic number check
+      # Result: true
+      
+      in_range: (( 
+        user_validation.input.age >= user_validation.rules.age.min_age &&
+        user_validation.input.age <= user_validation.rules.age.max_age
+      ))
+      # Result: true (25 is between 13 and 120)
+      
+      is_adult: (( user_validation.input.age >= 18 ))
+      # Result: true
+      
+      is_valid: (( 
+        user_validation.rules.age.is_number &&
+        user_validation.rules.age.in_range
+      ))
+      # Result: true
+    
+    # Location validation
+    location:
+      # Supported countries
+      supported_countries: ["US", "CA", "UK", "AU", "NZ"]
+      
+      country_supported: (( 
+        user_validation.input.country == "US" ||
+        user_validation.input.country == "CA" ||
+        user_validation.input.country == "UK" ||
+        user_validation.input.country == "AU" ||
+        user_validation.input.country == "NZ"
+      ))
+      # Result: true
+      
+      # Postal code validation (simplified)
+      postal_code_length: (( 
+        (user_validation.input.country == "US" && (user_validation.input.postal_code | length) == 5) ||
+        (user_validation.input.country == "CA" && (user_validation.input.postal_code | length) == 6) ||
+        (user_validation.input.country == "UK" && (user_validation.input.postal_code | length) >= 5)
+      ))
+      # Would be: true (US with 5 digits)
+      
+      is_valid: (( 
+        user_validation.rules.location.country_supported &&
+        user_validation.input.postal_code != ""
+      ))
+      # Result: true
+    
+    # Terms and conditions
+    legal:
+      terms_accepted: (( user_validation.input.terms_accepted == true ))
+      # Result: true
+      
+      age_appropriate: (( user_validation.rules.age.is_adult || user_validation.input.country != "US" ))
+      # Result: true (is adult)
+      
+      is_valid: (( 
+        user_validation.rules.legal.terms_accepted &&
+        user_validation.rules.legal.age_appropriate
+      ))
+      # Result: true
+  
+  # Overall validation
+  is_valid: (( 
+    user_validation.rules.username.is_valid &&
+    user_validation.rules.email.is_valid &&
+    user_validation.rules.password.is_valid &&
+    user_validation.rules.age.is_valid &&
+    user_validation.rules.location.is_valid &&
+    user_validation.rules.legal.is_valid
+  ))
+  # Result: true
+
+# Form field dependencies
+field_dependencies:
+  # Business registration form
+  business_form:
+    business_type: "corporation"  # sole_proprietor, partnership, corporation, llc
+    has_employees: true
+    employee_count: 50
+    needs_ein: true
+    has_ein: true
+    ein: "12-3456789"
+    
+    # State-specific requirements
+    state: "CA"
+    requires_state_registration: true
+    has_state_registration: true
+    
+    # Financial information
+    annual_revenue: 1000000
+    requires_financial_audit: false
+    
+  # Validation rules with dependencies
+  validations:
+    # EIN required for certain business types
+    ein_validation:
+      ein_required: (( 
+        field_dependencies.business_form.business_type == "corporation" ||
+        field_dependencies.business_form.business_type == "llc" ||
+        (field_dependencies.business_form.business_type == "partnership" && field_dependencies.business_form.has_employees) ||
+        field_dependencies.business_form.needs_ein
+      ))
+      # Result: true
+      
+      ein_provided: (( 
+        !field_dependencies.validations.ein_validation.ein_required ||
+        (field_dependencies.business_form.has_ein && field_dependencies.business_form.ein != "")
+      ))
+      # Result: true
+      
+      ein_format_valid: (( 
+        !field_dependencies.business_form.has_ein ||
+        (field_dependencies.business_form.ein | length) == 10  # Simplified check
+      ))
+      # Would be: true
+    
+    # Employee information required if has_employees
+    employee_validation:
+      count_required: (( field_dependencies.business_form.has_employees ))
+      # Result: true
+      
+      count_provided: (( 
+        !field_dependencies.validations.employee_validation.count_required ||
+        field_dependencies.business_form.employee_count > 0
+      ))
+      # Result: true
+      
+      count_reasonable: (( 
+        !field_dependencies.business_form.has_employees ||
+        (field_dependencies.business_form.employee_count > 0 && field_dependencies.business_form.employee_count < 100000)
+      ))
+      # Result: true
+    
+    # State registration requirements
+    state_validation:
+      registration_required: (( 
+        field_dependencies.business_form.requires_state_registration &&
+        (field_dependencies.business_form.state == "CA" || 
+         field_dependencies.business_form.state == "NY" ||
+         field_dependencies.business_form.state == "TX")
+      ))
+      # Result: true
+      
+      registration_complete: (( 
+        !field_dependencies.validations.state_validation.registration_required ||
+        field_dependencies.business_form.has_state_registration
+      ))
+      # Result: true
+    
+    # Financial audit requirements
+    financial_validation:
+      audit_required: (( 
+        field_dependencies.business_form.annual_revenue > 5000000 ||
+        (field_dependencies.business_form.business_type == "corporation" && field_dependencies.business_form.annual_revenue > 1000000) ||
+        field_dependencies.business_form.requires_financial_audit
+      ))
+      # Result: false
+      
+      audit_completed: (( 
+        !field_dependencies.validations.financial_validation.audit_required ||
+        field_dependencies.business_form.has_financial_audit
+      ))
+      # Result: true (not required)
+  
+  # Overall form validation
+  form_valid: (( 
+    field_dependencies.validations.ein_validation.ein_provided &&
+    field_dependencies.validations.ein_validation.ein_format_valid &&
+    field_dependencies.validations.employee_validation.count_provided &&
+    field_dependencies.validations.employee_validation.count_reasonable &&
+    field_dependencies.validations.state_validation.registration_complete &&
+    field_dependencies.validations.financial_validation.audit_completed
+  ))
+  # Result: true
+
+# Configuration validation
+config_validation:
+  # Application configuration
+  config:
+    app:
+      name: "MyApp"
+      version: "2.1.0"
+      environment: "production"
+    
+    server:
+      host: "0.0.0.0"
+      port: 8080
+      ssl_enabled: true
+      ssl_cert: "/etc/ssl/cert.pem"
+      ssl_key: "/etc/ssl/key.pem"
+    
+    database:
+      host: "db.example.com"
+      port: 5432
+      name: "myapp_prod"
+      user: "app_user"
+      password: "secure_password"
+      pool_size: 20
+      ssl_mode: "require"
+    
+    cache:
+      enabled: true
+      provider: "redis"
+      host: "cache.example.com"
+      port: 6379
+      ttl: 3600
+    
+    logging:
+      level: "info"
+      outputs: ["stdout", "file"]
+      file_path: "/var/log/myapp.log"
+      max_size_mb: 100
+      retention_days: 30
+  
+  # Validation rules
+  validations:
+    # App configuration
+    app:
+      name_valid: (( 
+        config_validation.config.app.name != "" &&
+        (config_validation.config.app.name | length) <= 50
+      ))
+      # Would be: true
+      
+      version_valid: (( config_validation.config.app.version != "" ))
+      # Result: true
+      
+      environment_valid: (( 
+        config_validation.config.app.environment == "development" ||
+        config_validation.config.app.environment == "staging" ||
+        config_validation.config.app.environment == "production"
+      ))
+      # Result: true
+      
+      is_valid: (( 
+        config_validation.validations.app.name_valid &&
+        config_validation.validations.app.version_valid &&
+        config_validation.validations.app.environment_valid
+      ))
+      # Result: true
+    
+    # Server configuration
+    server:
+      port_valid: (( 
+        config_validation.config.server.port > 0 &&
+        config_validation.config.server.port <= 65535
+      ))
+      # Result: true
+      
+      ssl_config_valid: (( 
+        !config_validation.config.server.ssl_enabled ||
+        (config_validation.config.server.ssl_cert != "" && config_validation.config.server.ssl_key != "")
+      ))
+      # Result: true
+      
+      production_ssl_required: (( 
+        config_validation.config.app.environment != "production" ||
+        config_validation.config.server.ssl_enabled
+      ))
+      # Result: true
+      
+      is_valid: (( 
+        config_validation.validations.server.port_valid &&
+        config_validation.validations.server.ssl_config_valid &&
+        config_validation.validations.server.production_ssl_required
+      ))
+      # Result: true
+    
+    # Database configuration
+    database:
+      connection_valid: (( 
+        config_validation.config.database.host != "" &&
+        config_validation.config.database.port > 0 &&
+        config_validation.config.database.name != "" &&
+        config_validation.config.database.user != "" &&
+        config_validation.config.database.password != ""
+      ))
+      # Result: true
+      
+      pool_size_valid: (( 
+        config_validation.config.database.pool_size >= 1 &&
+        config_validation.config.database.pool_size <= 100
+      ))
+      # Result: true
+      
+      ssl_required_prod: (( 
+        config_validation.config.app.environment != "production" ||
+        config_validation.config.database.ssl_mode == "require" ||
+        config_validation.config.database.ssl_mode == "verify-full"
+      ))
+      # Result: true
+      
+      is_valid: (( 
+        config_validation.validations.database.connection_valid &&
+        config_validation.validations.database.pool_size_valid &&
+        config_validation.validations.database.ssl_required_prod
+      ))
+      # Result: true
+    
+    # Cache configuration
+    cache:
+      config_complete: (( 
+        !config_validation.config.cache.enabled ||
+        (config_validation.config.cache.provider != "" &&
+         config_validation.config.cache.host != "" &&
+         config_validation.config.cache.port > 0)
+      ))
+      # Result: true
+      
+      ttl_valid: (( 
+        !config_validation.config.cache.enabled ||
+        (config_validation.config.cache.ttl > 0 && config_validation.config.cache.ttl <= 86400)
+      ))
+      # Result: true
+      
+      is_valid: (( 
+        config_validation.validations.cache.config_complete &&
+        config_validation.validations.cache.ttl_valid
+      ))
+      # Result: true
+    
+    # Logging configuration
+    logging:
+      level_valid: (( 
+        config_validation.config.logging.level == "debug" ||
+        config_validation.config.logging.level == "info" ||
+        config_validation.config.logging.level == "warn" ||
+        config_validation.config.logging.level == "error"
+      ))
+      # Result: true
+      
+      outputs_valid: (( 
+        config_validation.config.logging.outputs &&
+        (config_validation.config.logging.outputs | length) > 0
+      ))
+      # Would be: true
+      
+      file_config_valid: (( 
+        !(config_validation.config.logging.outputs | contains "file") ||
+        (config_validation.config.logging.file_path != "" &&
+         config_validation.config.logging.max_size_mb > 0 &&
+         config_validation.config.logging.retention_days > 0)
+      ))
+      # Would be: true
+      
+      is_valid: (( 
+        config_validation.validations.logging.level_valid &&
+        config_validation.validations.logging.outputs_valid &&
+        config_validation.validations.logging.file_config_valid
+      ))
+      # Would be: true
+  
+  # Overall configuration validation
+  config_valid: (( 
+    config_validation.validations.app.is_valid &&
+    config_validation.validations.server.is_valid &&
+    config_validation.validations.database.is_valid &&
+    config_validation.validations.cache.is_valid &&
+    config_validation.validations.logging.is_valid
+  ))
+  # Result: true
+
+# Cross-field validation
+cross_field_validation:
+  # Shipping form example
+  shipping_form:
+    shipping_method: "express"  # standard, express, overnight
+    delivery_date: "2024-01-26"
+    current_date: "2024-01-23"
+    
+    billing_same_as_shipping: false
+    
+    shipping_address:
+      street: "123 Main St"
+      city: "New York"
+      state: "NY"
+      zip: "10001"
+      country: "US"
+    
+    billing_address:
+      street: "456 Oak Ave"
+      city: "Boston"
+      state: "MA"
+      zip: "02101"
+      country: "US"
+    
+    items:
+      - sku: "ITEM-001"
+        quantity: 2
+        weight: 5
+        hazardous: false
+        
+      - sku: "ITEM-002"
+        quantity: 1
+        weight: 10
+        hazardous: true
+  
+  # Cross-field validations
+  validations:
+    # Delivery date must be compatible with shipping method
+    delivery_date:
+      days_until_delivery: 3  # Calculated from dates
+      
+      standard_valid: (( 
+        cross_field_validation.shipping_form.shipping_method != "standard" ||
+        cross_field_validation.validations.delivery_date.days_until_delivery >= 5
+      ))
+      # Result: true (not standard)
+      
+      express_valid: (( 
+        cross_field_validation.shipping_form.shipping_method != "express" ||
+        (cross_field_validation.validations.delivery_date.days_until_delivery >= 2 &&
+         cross_field_validation.validations.delivery_date.days_until_delivery <= 3)
+      ))
+      # Result: true (3 days for express)
+      
+      overnight_valid: (( 
+        cross_field_validation.shipping_form.shipping_method != "overnight" ||
+        cross_field_validation.validations.delivery_date.days_until_delivery == 1
+      ))
+      # Result: true (not overnight)
+      
+      is_valid: (( 
+        cross_field_validation.validations.delivery_date.standard_valid &&
+        cross_field_validation.validations.delivery_date.express_valid &&
+        cross_field_validation.validations.delivery_date.overnight_valid
+      ))
+      # Result: true
+    
+    # Address validation
+    addresses:
+      shipping_complete: (( 
+        cross_field_validation.shipping_form.shipping_address.street != "" &&
+        cross_field_validation.shipping_form.shipping_address.city != "" &&
+        cross_field_validation.shipping_form.shipping_address.state != "" &&
+        cross_field_validation.shipping_form.shipping_address.zip != ""
+      ))
+      # Result: true
+      
+      billing_required: (( !cross_field_validation.shipping_form.billing_same_as_shipping ))
+      # Result: true
+      
+      billing_complete: (( 
+        !cross_field_validation.validations.addresses.billing_required ||
+        (cross_field_validation.shipping_form.billing_address.street != "" &&
+         cross_field_validation.shipping_form.billing_address.city != "" &&
+         cross_field_validation.shipping_form.billing_address.state != "" &&
+         cross_field_validation.shipping_form.billing_address.zip != "")
+      ))
+      # Result: true
+      
+      is_valid: (( 
+        cross_field_validation.validations.addresses.shipping_complete &&
+        cross_field_validation.validations.addresses.billing_complete
+      ))
+      # Result: true
+    
+    # Hazardous material restrictions
+    hazmat:
+      has_hazardous: true  # Calculated from items
+      
+      total_weight: 15  # Sum of all item weights
+      
+      # Hazmat can't use overnight shipping
+      shipping_method_valid: (( 
+        !cross_field_validation.validations.hazmat.has_hazardous ||
+        cross_field_validation.shipping_form.shipping_method != "overnight"
+      ))
+      # Result: true (using express)
+      
+      # International restrictions
+      international_valid: (( 
+        !cross_field_validation.validations.hazmat.has_hazardous ||
+        (cross_field_validation.shipping_form.shipping_address.country == "US" &&
+         cross_field_validation.shipping_form.billing_address.country == "US")
+      ))
+      # Result: true
+      
+      # Weight restrictions for hazmat
+      weight_valid: (( 
+        !cross_field_validation.validations.hazmat.has_hazardous ||
+        cross_field_validation.validations.hazmat.total_weight <= 50
+      ))
+      # Result: true (15 <= 50)
+      
+      is_valid: (( 
+        cross_field_validation.validations.hazmat.shipping_method_valid &&
+        cross_field_validation.validations.hazmat.international_valid &&
+        cross_field_validation.validations.hazmat.weight_valid
+      ))
+      # Result: true
+  
+  # Overall form validation
+  form_valid: (( 
+    cross_field_validation.validations.delivery_date.is_valid &&
+    cross_field_validation.validations.addresses.is_valid &&
+    cross_field_validation.validations.hazmat.is_valid
+  ))
+  # Result: true
+
+# Business rule validation
+business_rules:
+  # Order processing rules
+  order:
+    customer_type: "premium"  # regular, premium, vip
+    order_total: 500
+    items_count: 5
+    
+    payment_method: "credit_card"  # credit_card, paypal, invoice, wire_transfer
+    shipping_country: "US"
+    
+    # Discounts applied
+    discounts:
+      percentage: 10
+      fixed_amount: 0
+      
+  # Business rule validations
+  rules:
+    # Minimum order requirements
+    minimum_order:
+      regular_minimum: 50
+      premium_minimum: 0
+      vip_minimum: 0
+      
+      meets_minimum: (( 
+        (business_rules.order.customer_type == "regular" && business_rules.order.order_total >= business_rules.rules.minimum_order.regular_minimum) ||
+        (business_rules.order.customer_type == "premium" && business_rules.order.order_total >= business_rules.rules.minimum_order.premium_minimum) ||
+        (business_rules.order.customer_type == "vip" && business_rules.order.order_total >= business_rules.rules.minimum_order.vip_minimum)
+      ))
+      # Result: true
+    
+    # Payment method restrictions
+    payment_restrictions:
+      # Invoice only for premium/vip with orders > $1000
+      invoice_allowed: (( 
+        business_rules.order.payment_method != "invoice" ||
+        ((business_rules.order.customer_type == "premium" || business_rules.order.customer_type == "vip") &&
+         business_rules.order.order_total >= 1000)
+      ))
+      # Result: true (not using invoice)
+      
+      # Wire transfer for orders > $5000
+      wire_transfer_allowed: (( 
+        business_rules.order.payment_method != "wire_transfer" ||
+        business_rules.order.order_total >= 5000
+      ))
+      # Result: true (not using wire transfer)
+      
+      # International restrictions
+      international_payment_valid: (( 
+        business_rules.order.shipping_country == "US" ||
+        (business_rules.order.payment_method != "invoice" && business_rules.order.payment_method != "wire_transfer")
+      ))
+      # Result: true
+      
+      is_valid: (( 
+        business_rules.rules.payment_restrictions.invoice_allowed &&
+        business_rules.rules.payment_restrictions.wire_transfer_allowed &&
+        business_rules.rules.payment_restrictions.international_payment_valid
+      ))
+      # Result: true
+    
+    # Discount validation
+    discount_rules:
+      # Maximum discount percentages by customer type
+      max_discount_percent: (( 
+        business_rules.order.customer_type == "vip" ? 25 :
+        business_rules.order.customer_type == "premium" ? 15 :
+        10
+      ))
+      # Result: 15
+      
+      percentage_valid: (( 
+        business_rules.order.discounts.percentage <= business_rules.rules.discount_rules.max_discount_percent
+      ))
+      # Result: true (10 <= 15)
+      
+      # Can't combine percentage and fixed discounts
+      combination_valid: (( 
+        !(business_rules.order.discounts.percentage > 0 && business_rules.order.discounts.fixed_amount > 0)
+      ))
+      # Result: true
+      
+      # Total discount can't exceed 50% of order
+      total_discount: (( 
+        business_rules.order.discounts.percentage > 0 ? 
+        business_rules.order.order_total * business_rules.order.discounts.percentage / 100 :
+        business_rules.order.discounts.fixed_amount
+      ))
+      # Result: 50
+      
+      discount_reasonable: (( 
+        business_rules.rules.discount_rules.total_discount <= business_rules.order.order_total * 0.5
+      ))
+      # Result: true (50 <= 250)
+      
+      is_valid: (( 
+        business_rules.rules.discount_rules.percentage_valid &&
+        business_rules.rules.discount_rules.combination_valid &&
+        business_rules.rules.discount_rules.discount_reasonable
+      ))
+      # Result: true
+  
+  # Overall business rule validation
+  order_valid: (( 
+    business_rules.rules.minimum_order.meets_minimum &&
+    business_rules.rules.payment_restrictions.is_valid &&
+    business_rules.rules.discount_rules.is_valid
+  ))
+  # Result: true
+
+# Validation summary
+validation_summary:
+  all_validations:
+    user_registration: (( user_validation.is_valid ))
+    # Result: true
+    
+    business_form: (( field_dependencies.form_valid ))
+    # Result: true
+    
+    app_configuration: (( config_validation.config_valid ))
+    # Result: true
+    
+    shipping_form: (( cross_field_validation.form_valid ))
+    # Result: true
+    
+    business_order: (( business_rules.order_valid ))
+    # Result: true
+  
+  # Overall system validation
+  all_valid: (( 
+    validation_summary.all_validations.user_registration &&
+    validation_summary.all_validations.business_form &&
+    validation_summary.all_validations.app_configuration &&
+    validation_summary.all_validations.shipping_form &&
+    validation_summary.all_validations.business_order
+  ))
+  # Result: true
+  
+  # Validation counts
+  total_checks: 5
+  passed: (( 
+    (validation_summary.all_validations.user_registration ? 1 : 0) +
+    (validation_summary.all_validations.business_form ? 1 : 0) +
+    (validation_summary.all_validations.app_configuration ? 1 : 0) +
+    (validation_summary.all_validations.shipping_form ? 1 : 0) +
+    (validation_summary.all_validations.business_order ? 1 : 0)
+  ))
+  # Result: 5
+  
+  success_rate: (( (validation_summary.passed / validation_summary.total_checks) * 100 ))
+  # Result: 100

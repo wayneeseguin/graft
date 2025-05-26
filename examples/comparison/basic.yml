@@ -1,0 +1,360 @@
+# Basic Comparison Operator Examples
+#
+# Demonstrates all comparison operators in Spruce
+
+# Numeric comparisons
+numeric_comparisons:
+  # Test values
+  values:
+    a: 10
+    b: 20
+    c: 10
+    negative: -5
+    zero: 0
+    float1: 3.14
+    float2: 3.14159
+  
+  # Equal to (==)
+  equal_tests:
+    a_equals_b: (( numeric_comparisons.values.a == numeric_comparisons.values.b ))
+    # Result: false (10 == 20)
+    
+    a_equals_c: (( numeric_comparisons.values.a == numeric_comparisons.values.c ))
+    # Result: true (10 == 10)
+    
+    zero_equals_zero: (( numeric_comparisons.values.zero == 0 ))
+    # Result: true
+    
+    float_exact: (( numeric_comparisons.values.float1 == 3.14 ))
+    # Result: true
+  
+  # Not equal to (!=)
+  not_equal_tests:
+    a_not_equals_b: (( numeric_comparisons.values.a != numeric_comparisons.values.b ))
+    # Result: true (10 != 20)
+    
+    a_not_equals_c: (( numeric_comparisons.values.a != numeric_comparisons.values.c ))
+    # Result: false (10 != 10)
+    
+    negative_not_zero: (( numeric_comparisons.values.negative != numeric_comparisons.values.zero ))
+    # Result: true (-5 != 0)
+    
+    floats_different: (( numeric_comparisons.values.float1 != numeric_comparisons.values.float2 ))
+    # Result: true (3.14 != 3.14159)
+  
+  # Less than (<)
+  less_than_tests:
+    a_less_than_b: (( numeric_comparisons.values.a < numeric_comparisons.values.b ))
+    # Result: true (10 < 20)
+    
+    b_less_than_a: (( numeric_comparisons.values.b < numeric_comparisons.values.a ))
+    # Result: false (20 < 10)
+    
+    a_less_than_c: (( numeric_comparisons.values.a < numeric_comparisons.values.c ))
+    # Result: false (10 < 10)
+    
+    negative_less_than_zero: (( numeric_comparisons.values.negative < numeric_comparisons.values.zero ))
+    # Result: true (-5 < 0)
+    
+    negative_less_than_positive: (( numeric_comparisons.values.negative < numeric_comparisons.values.a ))
+    # Result: true (-5 < 10)
+  
+  # Greater than (>)
+  greater_than_tests:
+    b_greater_than_a: (( numeric_comparisons.values.b > numeric_comparisons.values.a ))
+    # Result: true (20 > 10)
+    
+    a_greater_than_b: (( numeric_comparisons.values.a > numeric_comparisons.values.b ))
+    # Result: false (10 > 20)
+    
+    a_greater_than_c: (( numeric_comparisons.values.a > numeric_comparisons.values.c ))
+    # Result: false (10 > 10)
+    
+    zero_greater_than_negative: (( numeric_comparisons.values.zero > numeric_comparisons.values.negative ))
+    # Result: true (0 > -5)
+    
+    float_comparison: (( numeric_comparisons.values.float2 > numeric_comparisons.values.float1 ))
+    # Result: true (3.14159 > 3.14)
+  
+  # Less than or equal to (<=)
+  less_or_equal_tests:
+    a_lte_b: (( numeric_comparisons.values.a <= numeric_comparisons.values.b ))
+    # Result: true (10 <= 20)
+    
+    a_lte_c: (( numeric_comparisons.values.a <= numeric_comparisons.values.c ))
+    # Result: true (10 <= 10)
+    
+    b_lte_a: (( numeric_comparisons.values.b <= numeric_comparisons.values.a ))
+    # Result: false (20 <= 10)
+    
+    negative_lte_zero: (( numeric_comparisons.values.negative <= numeric_comparisons.values.zero ))
+    # Result: true (-5 <= 0)
+  
+  # Greater than or equal to (>=)
+  greater_or_equal_tests:
+    b_gte_a: (( numeric_comparisons.values.b >= numeric_comparisons.values.a ))
+    # Result: true (20 >= 10)
+    
+    a_gte_c: (( numeric_comparisons.values.a >= numeric_comparisons.values.c ))
+    # Result: true (10 >= 10)
+    
+    a_gte_b: (( numeric_comparisons.values.a >= numeric_comparisons.values.b ))
+    # Result: false (10 >= 20)
+    
+    zero_gte_negative: (( numeric_comparisons.values.zero >= numeric_comparisons.values.negative ))
+    # Result: true (0 >= -5)
+
+# String comparisons
+string_comparisons:
+  # Test values
+  values:
+    str1: "apple"
+    str2: "banana"
+    str3: "apple"
+    str4: "Apple"  # Different case
+    empty: ""
+    space: " "
+    version1: "1.2.3"
+    version2: "1.10.0"
+  
+  # String equality
+  equality:
+    same_strings: (( string_comparisons.values.str1 == string_comparisons.values.str3 ))
+    # Result: true ("apple" == "apple")
+    
+    different_strings: (( string_comparisons.values.str1 == string_comparisons.values.str2 ))
+    # Result: false ("apple" == "banana")
+    
+    case_sensitive: (( string_comparisons.values.str1 == string_comparisons.values.str4 ))
+    # Result: false ("apple" == "Apple")
+    
+    empty_equals_empty: (( string_comparisons.values.empty == "" ))
+    # Result: true
+    
+    empty_not_space: (( string_comparisons.values.empty == string_comparisons.values.space ))
+    # Result: false ("" == " ")
+  
+  # String ordering (lexicographic)
+  ordering:
+    apple_before_banana: (( string_comparisons.values.str1 < string_comparisons.values.str2 ))
+    # Result: true ("apple" < "banana")
+    
+    banana_after_apple: (( string_comparisons.values.str2 > string_comparisons.values.str1 ))
+    # Result: true ("banana" > "apple")
+    
+    uppercase_before_lowercase: (( string_comparisons.values.str4 < string_comparisons.values.str1 ))
+    # Result: true ("Apple" < "apple")
+    
+    # Version string comparison (lexicographic, not semantic)
+    version_comparison: (( string_comparisons.values.version1 > string_comparisons.values.version2 ))
+    # Result: true ("1.2.3" > "1.10.0" lexicographically)
+
+# Boolean comparisons
+boolean_comparisons:
+  # Test values
+  values:
+    true_val: true
+    false_val: false
+    also_true: true
+    also_false: false
+  
+  # Boolean equality
+  tests:
+    true_equals_true: (( boolean_comparisons.values.true_val == boolean_comparisons.values.also_true ))
+    # Result: true
+    
+    true_equals_false: (( boolean_comparisons.values.true_val == boolean_comparisons.values.false_val ))
+    # Result: false
+    
+    false_equals_false: (( boolean_comparisons.values.false_val == boolean_comparisons.values.also_false ))
+    # Result: true
+    
+    # Boolean ordering (false < true)
+    false_less_than_true: (( boolean_comparisons.values.false_val < boolean_comparisons.values.true_val ))
+    # Result: true
+    
+    true_greater_than_false: (( boolean_comparisons.values.true_val > boolean_comparisons.values.false_val ))
+    # Result: true
+
+# Mixed type comparisons
+mixed_comparisons:
+  # Values of different types
+  values:
+    number: 42
+    string_number: "42"
+    boolean_true: true
+    boolean_false: false
+    null_value: null
+  
+  # Type-aware comparisons
+  tests:
+    # Number vs string (different types)
+    number_vs_string: (( mixed_comparisons.values.number == mixed_comparisons.values.string_number ))
+    # Result: false (42 == "42" is false, different types)
+    
+    # Boolean vs number
+    true_vs_one: (( mixed_comparisons.values.boolean_true == 1 ))
+    # Result: false (true == 1 is false, different types)
+    
+    false_vs_zero: (( mixed_comparisons.values.boolean_false == 0 ))
+    # Result: false (false == 0 is false, different types)
+    
+    # Null comparisons
+    null_equals_null: (( mixed_comparisons.values.null_value == null ))
+    # Result: true
+    
+    null_not_equals_zero: (( mixed_comparisons.values.null_value != 0 ))
+    # Result: true
+    
+    null_not_equals_empty: (( mixed_comparisons.values.null_value != "" ))
+    # Result: true
+    
+    null_not_equals_false: (( mixed_comparisons.values.null_value != false ))
+    # Result: true
+
+# Complex comparisons with expressions
+complex_comparisons:
+  # Base values
+  values:
+    base: 100
+    increment: 10
+    multiplier: 2
+    threshold: 150
+  
+  # Comparisons with calculations
+  calculated:
+    # Compare calculated values
+    sum_vs_threshold: (( (complex_comparisons.values.base + complex_comparisons.values.increment) < complex_comparisons.values.threshold ))
+    # Result: true (110 < 150)
+    
+    product_vs_threshold: (( (complex_comparisons.values.base * complex_comparisons.values.multiplier) > complex_comparisons.values.threshold ))
+    # Result: true (200 > 150)
+    
+    # Nested calculations
+    complex_check: (( ((complex_comparisons.values.base + complex_comparisons.values.increment) * complex_comparisons.values.multiplier) >= 200 ))
+    # Result: true ((110 * 2) >= 200, which is 220 >= 200)
+
+# Comparisons with references
+reference_comparisons:
+  # Configuration values
+  config:
+    min_instances: 2
+    max_instances: 10
+    current_instances: 5
+    cpu_threshold: 80
+    memory_threshold: 75
+    current_cpu: 85
+    current_memory: 60
+  
+  # Comparison checks
+  checks:
+    # Range checks
+    within_min: (( reference_comparisons.config.current_instances >= reference_comparisons.config.min_instances ))
+    # Result: true (5 >= 2)
+    
+    within_max: (( reference_comparisons.config.current_instances <= reference_comparisons.config.max_instances ))
+    # Result: true (5 <= 10)
+    
+    within_range: (( reference_comparisons.checks.within_min && reference_comparisons.checks.within_max ))
+    # Result: true
+    
+    # Threshold checks
+    cpu_alert: (( reference_comparisons.config.current_cpu > reference_comparisons.config.cpu_threshold ))
+    # Result: true (85 > 80)
+    
+    memory_alert: (( reference_comparisons.config.current_memory > reference_comparisons.config.memory_threshold ))
+    # Result: false (60 > 75)
+    
+    any_alert: (( reference_comparisons.checks.cpu_alert || reference_comparisons.checks.memory_alert ))
+    # Result: true
+
+# Chained comparisons using logical operators
+chained_comparisons:
+  # User data
+  user:
+    age: 25
+    score: 85
+    level: "gold"
+    verified: true
+  
+  # Complex conditions
+  eligibility:
+    # Age range check
+    valid_age: (( chained_comparisons.user.age >= 18 && chained_comparisons.user.age <= 65 ))
+    # Result: true (25 is between 18 and 65)
+    
+    # Score requirements
+    high_score: (( chained_comparisons.user.score >= 80 ))
+    # Result: true (85 >= 80)
+    
+    # Level check
+    premium_level: (( chained_comparisons.user.level == "gold" || chained_comparisons.user.level == "platinum" ))
+    # Result: true
+    
+    # Combined eligibility
+    fully_eligible: (( 
+      chained_comparisons.eligibility.valid_age && 
+      chained_comparisons.eligibility.high_score && 
+      chained_comparisons.eligibility.premium_level && 
+      chained_comparisons.user.verified 
+    ))
+    # Result: true
+
+# Practical use cases
+practical_examples:
+  # System metrics
+  metrics:
+    cpu_usage: 45
+    memory_usage: 78
+    disk_usage: 92
+    network_latency: 150
+  
+  # Threshold definitions
+  thresholds:
+    cpu_warning: 70
+    cpu_critical: 90
+    memory_warning: 75
+    memory_critical: 90
+    disk_warning: 80
+    disk_critical: 95
+    latency_warning: 100
+    latency_critical: 200
+  
+  # Alert conditions
+  alerts:
+    cpu_status: (( 
+      practical_examples.metrics.cpu_usage >= practical_examples.thresholds.cpu_critical ? "critical" :
+      practical_examples.metrics.cpu_usage >= practical_examples.thresholds.cpu_warning ? "warning" :
+      "ok"
+    ))
+    # Result: "ok"
+    
+    memory_status: (( 
+      practical_examples.metrics.memory_usage >= practical_examples.thresholds.memory_critical ? "critical" :
+      practical_examples.metrics.memory_usage >= practical_examples.thresholds.memory_warning ? "warning" :
+      "ok"
+    ))
+    # Result: "warning"
+    
+    disk_status: (( 
+      practical_examples.metrics.disk_usage >= practical_examples.thresholds.disk_critical ? "critical" :
+      practical_examples.metrics.disk_usage >= practical_examples.thresholds.disk_warning ? "warning" :
+      "ok"
+    ))
+    # Result: "warning"
+    
+    network_status: (( 
+      practical_examples.metrics.network_latency >= practical_examples.thresholds.latency_critical ? "critical" :
+      practical_examples.metrics.network_latency >= practical_examples.thresholds.latency_warning ? "warning" :
+      "ok"
+    ))
+    # Result: "warning"
+    
+    # Overall system health
+    system_healthy: (( 
+      practical_examples.alerts.cpu_status != "critical" &&
+      practical_examples.alerts.memory_status != "critical" &&
+      practical_examples.alerts.disk_status != "critical" &&
+      practical_examples.alerts.network_status != "critical"
+    ))
+    # Result: true

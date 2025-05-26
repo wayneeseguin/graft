@@ -1,0 +1,111 @@
+---
+# Using vault with || operator for fallback values
+# This is crucial for handling optional secrets or development environments
+
+# Development defaults
+dev_defaults:
+  database_password: "dev-password"
+  api_key: "dev-api-key-12345"
+  redis_password: "dev-redis"
+  jwt_secret: "dev-jwt-secret"
+
+# Production secrets with development fallbacks
+application:
+  database:
+    # Try vault first, fall back to dev default
+    password: (( vault "secret/production/db:password" || (grab dev_defaults.database_password) ))
+    
+    # Chain multiple fallbacks
+    username: (( 
+      vault "secret/production/db:username" || 
+      vault "secret/defaults/db:username" || 
+      "postgres" 
+    ))
+    
+    # Use environment-specific paths with fallback
+    host: (( vault (concat "secret/" $ENV "/db:host") || "localhost" ))
+    port: (( vault (concat "secret/" $ENV "/db:port") || 5432 ))
+  
+  api:
+    # Fallback to environment variable, then default
+    key: (( 
+      vault "secret/api/keys:primary" || 
+      (grab $API_KEY) || 
+      (grab dev_defaults.api_key) 
+    ))
+    
+    # Conditional secret paths
+    secret: (( grab $ENV == "production" 
+      ? (vault "secret/prod/api:secret") 
+      : (grab dev_defaults.api_key) 
+    ))
+
+# Feature-specific secrets with smart defaults
+features:
+  # Only require payment secrets if payment feature is enabled
+  payments_enabled: true
+  
+  stripe:
+    # Only fetch if payments enabled, otherwise use empty string
+    public_key: (( grab features.payments_enabled 
+      ? (vault "secret/stripe:public_key" || "pk_test_default") 
+      : "" 
+    ))
+    
+    secret_key: (( grab features.payments_enabled 
+      ? (vault "secret/stripe:secret_key" || "sk_test_default") 
+      : "" 
+    ))
+
+# Multi-environment pattern with defaults
+environments:
+  # Each environment tries its specific vault path, then falls back
+  development:
+    db_password: (( vault "secret/dev/db:password" || (grab dev_defaults.database_password) ))
+    api_key: (( vault "secret/dev/api:key" || (grab dev_defaults.api_key) ))
+    
+  staging:
+    db_password: (( vault "secret/staging/db:password" || "staging-default-pass" ))
+    api_key: (( vault "secret/staging/api:key" || "staging-default-key" ))
+    
+  production:
+    # Production has no defaults - must have vault secrets
+    db_password: (( vault "secret/prod/db:password" ))
+    api_key: (( vault "secret/prod/api:key" ))
+
+# Select current environment
+current_env: (( grab $ENVIRONMENT || "development" ))
+config: (( grab environments.(grab current_env) ))
+
+# Advanced default patterns
+advanced_defaults:
+  # Try multiple vault paths before defaulting
+  ssl_cert: (( 
+    vault "secret/tls/production:cert" ||
+    vault "secret/tls/wildcard:cert" ||
+    vault "secret/tls/self-signed:cert" ||
+    "generate-self-signed-cert-here" 
+  ))
+  
+  # Build connection string with mixed vault/defaults
+  database_url: (( concat 
+    "postgresql://"
+    (vault "secret/db:username" || "postgres") ":"
+    (vault "secret/db:password" || "postgres") "@"
+    (vault "secret/db:host" || "localhost") ":"
+    (vault "secret/db:port" || "5432") "/"
+    (vault "secret/db:name" || "myapp_dev")
+  ))
+
+# Validation pattern - ensure critical secrets exist
+validation:
+  # This pattern helps identify missing critical secrets
+  critical_secrets:
+    # These will error if not in vault (no defaults)
+    payment_key: (( vault "secret/payment:api_key" ))
+    encryption_key: (( vault "secret/app:encryption_key" ))
+    
+  # These have defaults for development
+  optional_secrets:
+    analytics_key: (( vault "secret/analytics:key" || "no-analytics-in-dev" ))
+    cdn_key: (( vault "secret/cdn:key" || "" ))

@@ -1,0 +1,67 @@
+---
+# Using keys operator with nested expressions
+
+meta:
+  configs:
+    databases:
+      postgres:
+        host: pg.example.com
+        port: 5432
+      mysql:
+        host: mysql.example.com
+        port: 3306
+      mongodb:
+        host: mongo.example.com
+        port: 27017
+    caches:
+      redis:
+        host: redis.example.com
+        port: 6379
+      memcached:
+        host: memcached.example.com
+        port: 11211
+  
+  current_type: databases
+
+# Dynamic key extraction
+analysis:
+  # Get keys from a dynamically selected section
+  available_services: (( keys (grab meta.configs.(grab meta.current_type)) ))
+  # If current_type is "databases": ["mongodb", "mysql", "postgres"]
+  # If current_type is "caches": ["memcached", "redis"]
+  
+  # Build a summary
+  summary: (( concat "Available " (grab meta.current_type) ": " (join ", " (keys (grab meta.configs.(grab meta.current_type)))) ))
+
+# More complex example with multiple levels
+infrastructure:
+  regions:
+    us-east-1:
+      zones:
+        us-east-1a: { subnet: "10.0.1.0/24" }
+        us-east-1b: { subnet: "10.0.2.0/24" }
+        us-east-1c: { subnet: "10.0.3.0/24" }
+    us-west-2:
+      zones:
+        us-west-2a: { subnet: "10.1.1.0/24" }
+        us-west-2b: { subnet: "10.1.2.0/24" }
+    eu-west-1:
+      zones:
+        eu-west-1a: { subnet: "10.2.1.0/24" }
+        eu-west-1b: { subnet: "10.2.2.0/24" }
+        eu-west-1c: { subnet: "10.2.3.0/24" }
+
+deployment:
+  target_region: us-east-1
+  
+  # Get all regions
+  all_regions: (( keys infrastructure.regions ))
+  
+  # Get zones for target region
+  available_zones: (( keys (grab infrastructure.regions.(grab deployment.target_region).zones) ))
+  
+  # Build deployment message
+  message: (( concat 
+    "Deploying to region " (grab deployment.target_region) 
+    " with zones: " (join ", " (keys (grab infrastructure.regions.(grab deployment.target_region).zones)))
+  ))

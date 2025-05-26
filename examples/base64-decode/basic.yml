@@ -1,0 +1,153 @@
+# Basic Base64-Decode Examples
+#
+# Simple base64 decoding operations
+
+# Decoding string literals
+simple_strings:
+  # Basic text
+  hello_world:
+    encoded: "SGVsbG8gV29ybGQ="
+    decoded: (( base64-decode simple_strings.hello_world.encoded ))
+    # Result: "Hello World"
+  
+  # Empty string
+  empty:
+    encoded: ""
+    decoded: (( base64-decode simple_strings.empty.encoded ))
+    # Result: ""
+  
+  # Single character
+  single_char:
+    encoded: "QQ=="
+    decoded: (( base64-decode simple_strings.single_char.encoded ))
+    # Result: "A"
+  
+  # Numbers as strings
+  number_string:
+    encoded: "MTIzNDU2Nzg5MA=="
+    decoded: (( base64-decode simple_strings.number_string.encoded ))
+    # Result: "1234567890"
+
+# Decoding with special characters
+special_characters:
+  # URL with special chars
+  url:
+    encoded: "aHR0cHM6Ly9leGFtcGxlLmNvbS9wYXRoP3BhcmFtPXZhbHVlJmZvbz1iYXI="
+    decoded: (( base64-decode special_characters.url.encoded ))
+    # Result: "https://example.com/path?param=value&foo=bar"
+  
+  # JSON string
+  json:
+    encoded: "eyJuYW1lIjoiSm9obiIsImFnZSI6MzAsImNpdHkiOiJOZXcgWW9yayJ9"
+    decoded: (( base64-decode special_characters.json.encoded ))
+    # Result: '{"name":"John","age":30,"city":"New York"}'
+  
+  # Special symbols
+  symbols:
+    encoded: "ISMkJV4mKigpXys9e31bXTo7Jyw8Lj4vPw=="
+    decoded: (( base64-decode special_characters.symbols.encoded ))
+    # Result: "!#$%^&*()_+={}[]:;',<.>/?"
+
+# Multi-line content
+multiline:
+  # Simple multi-line text
+  text:
+    encoded: "Rmlyc3QgbGluZQpTZWNvbmQgbGluZQpUaGlyZCBsaW5l"
+    decoded: (( base64-decode multiline.text.encoded ))
+    # Result: |
+    #   First line
+    #   Second line
+    #   Third line
+  
+  # YAML content
+  yaml_content:
+    encoded: "bmFtZTogbXktYXBwCnZlcnNpb246IDEuMi4zCmZlYXR1cmVzOgogIC0gYXV0aAogIC0gY2FjaGUKICAtIGxvZ2dpbmc="
+    decoded: (( base64-decode multiline.yaml_content.encoded ))
+    # Result: |
+    #   name: my-app
+    #   version: 1.2.3
+    #   features:
+    #     - auth
+    #     - cache
+    #     - logging
+
+# Decoding from references
+from_references:
+  # Encoded values stored elsewhere
+  encoded_values:
+    username: "YWRtaW4="
+    password: "c3VwZXJzZWNyZXQxMjM="
+    api_key: "YWJjZGVmZ2hpams="
+  
+  # Decode the references
+  credentials:
+    username: (( base64-decode from_references.encoded_values.username ))
+    # Result: "admin"
+    password: (( base64-decode from_references.encoded_values.password ))
+    # Result: "supersecret123"
+    api_key: (( base64-decode from_references.encoded_values.api_key ))
+    # Result: "abcdefghijk"
+
+# Direct literal decoding
+direct_decode:
+  # Decode literals directly
+  message: (( base64-decode "VGhpcyBpcyBhIHNlY3JldCBtZXNzYWdl" ))
+  # Result: "This is a secret message"
+  
+  token: (( base64-decode "ZXlKaGJHY2lPaUpJVXpJMU5pSjkuZXlKemRXSWlPaUl4TWpNME5UWTNPRGt3SW4wLnRva2Vu" ))
+  # Result: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.token"
+
+# Unicode and international characters
+unicode:
+  # Various languages
+  hello_multilang:
+    encoded: "SGVsbG8g5L2g5aW9IEJvbmpvdXIg0J/RgNC40LLQtdGCINmF2LHYrdio2Kc="
+    decoded: (( base64-decode unicode.hello_multilang.encoded ))
+    # Result: "Hello 你好 Bonjour Привет مرحبا"
+  
+  # Emoji
+  emoji:
+    encoded: "8J+YgCDwn5iDIPCfmIQg8J+YjSAg8J+aqCDwn5qAIPCfkY0="
+    decoded: (( base64-decode unicode.emoji.encoded ))
+    # Result: "😀 😃 😄 😍  🚨 🚀 👍"
+
+# Common encoding patterns
+common_patterns:
+  # Base64 URL-safe encoding (with - and _ instead of + and /)
+  # Note: This is still valid base64 that can be decoded
+  url_safe:
+    encoded: "VGhpc19pc19hX3Rlc3Q="
+    decoded: (( base64-decode common_patterns.url_safe.encoded ))
+    # Result: "This_is_a_test"
+  
+  # Padded vs unpadded
+  with_padding:
+    encoded: "U3BydWNl"  # "Spruce" without padding
+    decoded: (( base64-decode common_patterns.with_padding.encoded ))
+    # Result: "Spruce"
+
+# Concatenated decoding
+concatenated:
+  # Multiple encoded parts
+  part1: "SGVsbG8g"      # "Hello "
+  part2: "V29ybGQ="      # "World"
+  
+  # Decode separately
+  decoded1: (( base64-decode concatenated.part1 ))
+  decoded2: (( base64-decode concatenated.part2 ))
+  
+  # Combine after decoding
+  message: (( concat concatenated.decoded1 concatenated.decoded2 ))
+  # Result: "Hello World"
+
+# Error handling
+error_cases:
+  # Invalid base64 (would cause error)
+  # invalid: (( base64-decode "Not valid base64!" ))
+  
+  # Valid base64 but might not be readable text
+  binary_data:
+    encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+    # This is a tiny PNG image encoded in base64
+    decoded: (( base64-decode error_cases.binary_data.encoded ))
+    # Result: Binary data (PNG image bytes)

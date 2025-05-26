@@ -1,0 +1,261 @@
+# Kubernetes ConfigMap Examples with Stringify
+#
+# Creating ConfigMaps with embedded YAML/properties files
+
+# Application configuration to embed
+app_config:
+  application:
+    name: my-microservice
+    version: 2.1.0
+    
+  server:
+    port: 8080
+    context-path: /api
+    shutdown: graceful
+    
+  spring:
+    profiles:
+      active: production
+    datasource:
+      url: jdbc:postgresql://db:5432/myapp
+      username: appuser
+      driver-class-name: org.postgresql.Driver
+      hikari:
+        maximum-pool-size: 20
+        minimum-idle: 5
+        connection-timeout: 30000
+    
+  management:
+    endpoints:
+      web:
+        exposure:
+          include: health,info,metrics
+    metrics:
+      export:
+        prometheus:
+          enabled: true
+  
+  logging:
+    level:
+      root: INFO
+      com.mycompany: DEBUG
+    pattern:
+      console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Kubernetes ConfigMap with stringified YAML
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: production
+  labels:
+    app: my-microservice
+    version: 2.1.0
+data:
+  # Main application configuration
+  application.yml: (( stringify app_config ))
+  
+  # Additional configuration files
+  database.yml: (( stringify database_config ))
+  cache.yml: (( stringify cache_config ))
+  security.yml: (( stringify security_config ))
+
+# Database configuration
+database_config:
+  database:
+    primary:
+      host: postgres-primary.production.svc.cluster.local
+      port: 5432
+      database: myapp_prod
+      pool:
+        min_size: 5
+        max_size: 20
+        timeout: 5000
+    
+    read_replicas:
+      - host: postgres-replica-1.production.svc.cluster.local
+        port: 5432
+      - host: postgres-replica-2.production.svc.cluster.local
+        port: 5432
+    
+    migrations:
+      auto_migrate: false
+      schema: public
+      table: schema_migrations
+
+# Cache configuration
+cache_config:
+  redis:
+    mode: cluster
+    nodes:
+      - redis-node-1.production.svc.cluster.local:6379
+      - redis-node-2.production.svc.cluster.local:6379
+      - redis-node-3.production.svc.cluster.local:6379
+    
+    options:
+      timeout: 5000
+      max_retries: 3
+      retry_interval: 1000
+    
+    pools:
+      default:
+        max_total: 100
+        max_idle: 50
+        min_idle: 10
+      
+      sessions:
+        max_total: 200
+        max_idle: 100
+        min_idle: 20
+        ttl: 3600
+
+# Security configuration
+security_config:
+  security:
+    oauth2:
+      resource-server:
+        jwt:
+          issuer-uri: https://auth.example.com
+          jwk-set-uri: https://auth.example.com/.well-known/jwks.json
+    
+    cors:
+      allowed-origins:
+        - https://app.example.com
+        - https://admin.example.com
+      allowed-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+      allowed-headers:
+        - Authorization
+        - Content-Type
+      max-age: 3600
+
+---
+# ConfigMap for environment-specific settings
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: env-config
+  namespace: production
+data:
+  # Environment variables as a .env file format
+  app.env: |
+    APP_NAME=my-microservice
+    APP_ENV=production
+    LOG_LEVEL=info
+    DATABASE_URL=postgresql://appuser:password@postgres-primary:5432/myapp_prod
+    REDIS_URL=redis://redis-cluster:6379
+    JWT_SECRET=your-secret-key
+    METRICS_ENABLED=true
+    TRACING_ENABLED=true
+
+---
+# ConfigMap with multiple config formats
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: multi-format-config
+  namespace: production
+data:
+  # YAML configuration
+  config.yaml: (( stringify yaml_config ))
+  
+  # JSON configuration (stringify works with JSON too)
+  config.json: (( stringify json_config ))
+  
+  # Properties format (manually formatted)
+  application.properties: |
+    server.port=8080
+    server.servlet.context-path=/api
+    spring.profiles.active=production
+    spring.datasource.url=jdbc:postgresql://db:5432/myapp
+    spring.datasource.username=appuser
+    logging.level.root=INFO
+
+# YAML config for stringification
+yaml_config:
+  service:
+    name: api-gateway
+    routes:
+      - path: /users
+        service: user-service
+        methods: [GET, POST, PUT, DELETE]
+      - path: /orders
+        service: order-service
+        methods: [GET, POST]
+      - path: /products
+        service: product-service
+        methods: [GET]
+
+# JSON-like config for stringification
+json_config:
+  name: "api-gateway"
+  version: "1.0.0"
+  endpoints: 
+    health: "/health"
+    metrics: "/metrics"
+    info: "/info"
+  rateLimit:
+    enabled: true
+    requests: 1000
+    window: "1m"
+
+---
+# ConfigMap for Nginx configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: production
+data:
+  nginx.conf: |
+    worker_processes auto;
+    error_log /var/log/nginx/error.log warn;
+    pid /var/run/nginx.pid;
+    
+    events {
+        worker_connections 1024;
+    }
+    
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+        
+        server {
+            listen 80;
+            server_name _;
+            
+            location / {
+                proxy_pass http://app:8080;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+        }
+    }
+  
+  # Additional server config as YAML
+  servers.yml: (( stringify nginx_servers ))
+
+# Nginx server configurations
+nginx_servers:
+  servers:
+    - name: api
+      listen: 80
+      server_name: api.example.com
+      locations:
+        - path: /
+          proxy_pass: http://api-service:8080
+        - path: /static
+          root: /var/www/static
+    
+    - name: admin
+      listen: 80
+      server_name: admin.example.com
+      locations:
+        - path: /
+          proxy_pass: http://admin-service:8080
+          auth_basic: "Admin Area"
+          auth_basic_user_file: /etc/nginx/.htpasswd

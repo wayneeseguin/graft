@@ -1,0 +1,57 @@
+---
+# Basic load operator examples
+
+# Load a YAML file
+databases: (( load "configs/database.yml" ))
+# This loads the entire content of database.yml as structured data
+
+# Load a JSON file
+feature_flags: (( load "configs/features.json" ))
+# JSON is automatically parsed into YAML structure
+
+# Load and access specific values
+app_config:
+  # Load the file
+  all_databases: (( load "configs/database.yml" ))
+  
+  # Access loaded data with grab
+  primary_db: (( grab app_config.all_databases.postgres ))
+  
+  # Or combine load with immediate access (using nested expressions)
+  mongodb_host: (( grab (load "configs/database.yml").mongodb.host ))
+
+# Load multiple configuration files
+redis_config:
+  # Load all Redis configurations
+  all: (( load "configs/redis.yml" ))
+  
+  # Pick specific configs
+  cache_config: (( grab redis_config.all.cache ))
+  session_config: (( grab redis_config.all.sessions ))
+
+# Loading arrays/lists
+users:
+  # Load user data
+  data: (( load "data/users.yml" ))
+  
+  # Access specific user groups
+  admin_users: (( grab users.data.admins ))
+  dev_users: (( grab users.data.developers ))
+  
+  # Count users (would need calc operator)
+  # admin_count: (( calc "$( (grab users.data.admins) | len )" ))
+
+# Important: Spruce operators in loaded files are NOT evaluated
+# If database.yml contained (( grab some.value )), it would be loaded as-is
+# This is different from the merge behavior
+
+# Example of what NOT to expect:
+# If external.yml contains:
+#   value: (( grab meta.name ))
+# 
+# Then:
+#   data: (( load "external.yml" ))
+# 
+# Results in:
+#   data:
+#     value: (( grab meta.name ))  # <-- NOT evaluated!

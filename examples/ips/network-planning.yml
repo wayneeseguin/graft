@@ -1,0 +1,194 @@
+# Network Planning with IPs Operator
+#
+# Using the ips operator for comprehensive network design
+
+# Corporate network design
+corporate_network:
+  # Main corporate network
+  supernet: "10.0.0.0/16"
+  
+  # Subnet allocation
+  subnets:
+    # Management network - 10.0.0.0/24
+    management:
+      cidr: "10.0.0.0/24"
+      gateway: (( ips corporate_network.subnets.management.cidr 1 ))         # 10.0.0.1
+      switches: (( ips corporate_network.subnets.management.cidr 2 10 ))     # 10.0.0.2-11
+      monitoring: (( ips corporate_network.subnets.management.cidr 20 5 ))   # 10.0.0.20-24
+      reserved: (( ips corporate_network.subnets.management.cidr -10 10 ))  # 10.0.0.245-254
+    
+    # Production network - 10.0.1.0/24
+    production:
+      cidr: "10.0.1.0/24"
+      gateway: (( ips corporate_network.subnets.production.cidr 1 ))         # 10.0.1.1
+      load_balancers: (( ips corporate_network.subnets.production.cidr 10 2 )) # 10.0.1.10-11
+      web_servers: (( ips corporate_network.subnets.production.cidr 20 10 ))   # 10.0.1.20-29
+      app_servers: (( ips corporate_network.subnets.production.cidr 30 10 ))   # 10.0.1.30-39
+      db_servers: (( ips corporate_network.subnets.production.cidr 40 5 ))     # 10.0.1.40-44
+    
+    # Development network - 10.0.2.0/24
+    development:
+      cidr: "10.0.2.0/24"
+      gateway: (( ips corporate_network.subnets.development.cidr 1 ))         # 10.0.2.1
+      dev_servers: (( ips corporate_network.subnets.development.cidr 10 20 )) # 10.0.2.10-29
+      ci_cd: (( ips corporate_network.subnets.development.cidr 30 5 ))       # 10.0.2.30-34
+      test_env: (( ips corporate_network.subnets.development.cidr 50 10 ))   # 10.0.2.50-59
+    
+    # DMZ network - 10.0.100.0/24
+    dmz:
+      cidr: "10.0.100.0/24"
+      gateway: (( ips corporate_network.subnets.dmz.cidr 1 ))                # 10.0.100.1
+      public_web: (( ips corporate_network.subnets.dmz.cidr 10 5 ))         # 10.0.100.10-14
+      mail_servers: (( ips corporate_network.subnets.dmz.cidr 20 2 ))       # 10.0.100.20-21
+      vpn_endpoints: (( ips corporate_network.subnets.dmz.cidr 30 2 ))      # 10.0.100.30-31
+
+# Cloud VPC design
+cloud_vpc:
+  # VPC CIDR
+  vpc_cidr: "172.31.0.0/16"
+  
+  # Availability Zone subnets
+  availability_zones:
+    # AZ-1 subnets
+    az1:
+      # Public subnet - 172.31.0.0/24
+      public:
+        cidr: "172.31.0.0/24"
+        nat_gateway: (( ips cloud_vpc.availability_zones.az1.public.cidr 5 ))     # 172.31.0.5
+        bastion: (( ips cloud_vpc.availability_zones.az1.public.cidr 10 ))        # 172.31.0.10
+        alb: (( ips cloud_vpc.availability_zones.az1.public.cidr 20 ))            # 172.31.0.20
+      
+      # Private subnet - 172.31.1.0/24
+      private:
+        cidr: "172.31.1.0/24"
+        app_servers: (( ips cloud_vpc.availability_zones.az1.private.cidr 10 20 )) # 172.31.1.10-29
+        db_primary: (( ips cloud_vpc.availability_zones.az1.private.cidr 50 ))     # 172.31.1.50
+      
+      # Database subnet - 172.31.2.0/24
+      database:
+        cidr: "172.31.2.0/24"
+        rds_primary: (( ips cloud_vpc.availability_zones.az1.database.cidr 10 ))   # 172.31.2.10
+        rds_replica: (( ips cloud_vpc.availability_zones.az1.database.cidr 11 ))   # 172.31.2.11
+    
+    # AZ-2 subnets (parallel structure)
+    az2:
+      public:
+        cidr: "172.31.10.0/24"
+        nat_gateway: (( ips cloud_vpc.availability_zones.az2.public.cidr 5 ))     # 172.31.10.5
+        alb: (( ips cloud_vpc.availability_zones.az2.public.cidr 20 ))            # 172.31.10.20
+      
+      private:
+        cidr: "172.31.11.0/24"
+        app_servers: (( ips cloud_vpc.availability_zones.az2.private.cidr 10 20 )) # 172.31.11.10-29
+        
+      database:
+        cidr: "172.31.12.0/24"
+        rds_replica: (( ips cloud_vpc.availability_zones.az2.database.cidr 10 ))   # 172.31.12.10
+
+# Kubernetes cluster networking
+k8s_cluster:
+  # Cluster network configuration
+  cluster_cidr: "10.244.0.0/16"  # Pod network
+  service_cidr: "10.96.0.0/12"   # Service network
+  
+  # Node networks
+  nodes:
+    # Master nodes - 192.168.100.0/24
+    masters:
+      cidr: "192.168.100.0/24"
+      master_ips: (( ips k8s_cluster.nodes.masters.cidr 10 3 ))  # 192.168.100.10-12
+      api_vip: (( ips k8s_cluster.nodes.masters.cidr 5 ))        # 192.168.100.5
+    
+    # Worker nodes - 192.168.101.0/24
+    workers:
+      cidr: "192.168.101.0/24"
+      worker_ips: (( ips k8s_cluster.nodes.workers.cidr 10 20 )) # 192.168.101.10-29
+  
+  # Important service IPs
+  services:
+    # DNS service (usually .10 in service CIDR)
+    cluster_dns: (( ips k8s_cluster.service_cidr 10 ))           # 10.96.0.10
+    
+    # Default kubernetes service
+    kubernetes_api: (( ips k8s_cluster.service_cidr 1 ))         # 10.96.0.1
+
+# Data center network layout
+datacenter:
+  # Core network
+  core: "10.10.0.0/16"
+  
+  # Rack allocation (each rack gets a /24)
+  racks:
+    rack_a:
+      cidr: "10.10.1.0/24"
+      tor_switch: (( ips datacenter.racks.rack_a.cidr 1 ))         # 10.10.1.1
+      management: (( ips datacenter.racks.rack_a.cidr 2 ))         # 10.10.1.2
+      servers: (( ips datacenter.racks.rack_a.cidr 10 40 ))        # 10.10.1.10-49
+      storage: (( ips datacenter.racks.rack_a.cidr 50 10 ))        # 10.10.1.50-59
+      reserved: (( ips datacenter.racks.rack_a.cidr -10 10 ))      # 10.10.1.245-254
+    
+    rack_b:
+      cidr: "10.10.2.0/24"
+      tor_switch: (( ips datacenter.racks.rack_b.cidr 1 ))         # 10.10.2.1
+      management: (( ips datacenter.racks.rack_b.cidr 2 ))         # 10.10.2.2
+      servers: (( ips datacenter.racks.rack_b.cidr 10 40 ))        # 10.10.2.10-49
+      storage: (( ips datacenter.racks.rack_b.cidr 50 10 ))        # 10.10.2.50-59
+    
+    rack_c:
+      cidr: "10.10.3.0/24"
+      tor_switch: (( ips datacenter.racks.rack_c.cidr 1 ))         # 10.10.3.1
+      management: (( ips datacenter.racks.rack_c.cidr 2 ))         # 10.10.3.2
+      servers: (( ips datacenter.racks.rack_c.cidr 10 40 ))        # 10.10.3.10-49
+
+# VLAN-based segmentation
+vlan_design:
+  # Base network for VLANs
+  base_network: "192.168.0.0/16"
+  
+  vlans:
+    # VLAN 10 - Management
+    vlan_10:
+      cidr: "192.168.10.0/24"
+      gateway: (( ips vlan_design.vlans.vlan_10.cidr 1 ))          # 192.168.10.1
+      devices: (( ips vlan_design.vlans.vlan_10.cidr 10 50 ))      # 192.168.10.10-59
+    
+    # VLAN 20 - Users
+    vlan_20:
+      cidr: "192.168.20.0/24"
+      gateway: (( ips vlan_design.vlans.vlan_20.cidr 1 ))          # 192.168.20.1
+      dhcp_pool: (( ips vlan_design.vlans.vlan_20.cidr 100 100 ))  # 192.168.20.100-199
+      printers: (( ips vlan_design.vlans.vlan_20.cidr 200 20 ))    # 192.168.20.200-219
+    
+    # VLAN 30 - Servers
+    vlan_30:
+      cidr: "192.168.30.0/24"
+      gateway: (( ips vlan_design.vlans.vlan_30.cidr 1 ))          # 192.168.30.1
+      servers: (( ips vlan_design.vlans.vlan_30.cidr 10 50 ))      # 192.168.30.10-59
+    
+    # VLAN 99 - Guest
+    vlan_99:
+      cidr: "192.168.99.0/24"
+      gateway: (( ips vlan_design.vlans.vlan_99.cidr 1 ))          # 192.168.99.1
+      dhcp_pool: (( ips vlan_design.vlans.vlan_99.cidr 50 150 ))   # 192.168.99.50-199
+
+# Point-to-point links
+point_to_point:
+  # WAN links using /30 subnets
+  links:
+    # Site A to Site B
+    link_1:
+      cidr: "10.255.255.0/30"
+      site_a: (( ips point_to_point.links.link_1.cidr 1 ))         # 10.255.255.1
+      site_b: (( ips point_to_point.links.link_1.cidr 2 ))         # 10.255.255.2
+    
+    # Site B to Site C
+    link_2:
+      cidr: "10.255.255.4/30"
+      site_b: (( ips point_to_point.links.link_2.cidr 1 ))         # 10.255.255.5
+      site_c: (( ips point_to_point.links.link_2.cidr 2 ))         # 10.255.255.6
+    
+    # Site A to Site C
+    link_3:
+      cidr: "10.255.255.8/30"
+      site_a: (( ips point_to_point.links.link_3.cidr 1 ))         # 10.255.255.9
+      site_c: (( ips point_to_point.links.link_3.cidr 2 ))         # 10.255.255.10

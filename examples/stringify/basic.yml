@@ -1,0 +1,173 @@
+# Basic Stringify Examples
+#
+# Converting different data types to YAML strings
+
+# Simple data structures
+simple:
+  # A basic map
+  config:
+    host: localhost
+    port: 8080
+    debug: true
+  
+  # Stringify the map
+  config_string: (( stringify simple.config ))
+  # Result will be:
+  # "host: localhost\nport: 8080\ndebug: true\n"
+
+# Arrays and lists
+arrays:
+  # Simple array
+  items:
+    - apple
+    - banana
+    - orange
+  
+  items_string: (( stringify arrays.items ))
+  # Result: "- apple\n- banana\n- orange\n"
+  
+  # Array of objects
+  users:
+    - name: Alice
+      role: admin
+    - name: Bob
+      role: user
+  
+  users_string: (( stringify arrays.users ))
+  # Result: "- name: Alice\n  role: admin\n- name: Bob\n  role: user\n"
+
+# Nested structures
+nested:
+  application:
+    name: my-app
+    version: 1.2.3
+    database:
+      host: db.example.com
+      port: 5432
+      credentials:
+        username: dbuser
+        password: secret123
+    features:
+      - authentication
+      - logging
+      - caching
+  
+  # Stringify the entire structure
+  app_yaml: (( stringify nested.application ))
+
+# Different data types
+types:
+  # Various types to stringify
+  data:
+    string_value: "hello world"
+    number_value: 42
+    float_value: 3.14159
+    boolean_value: true
+    null_value: null
+    array_value: [1, 2, 3]
+    object_value:
+      key: value
+  
+  # All converted to YAML representation
+  yaml_output: (( stringify types.data ))
+
+# Empty structures
+empty:
+  empty_map: {}
+  empty_array: []
+  
+  # Even empty structures get stringified
+  empty_map_string: (( stringify empty.empty_map ))    # "{}\n"
+  empty_array_string: (( stringify empty.empty_array )) # "[]\n"
+
+# Real-world configuration example
+app_config:
+  server:
+    host: 0.0.0.0
+    port: 8080
+    workers: 4
+  
+  database:
+    primary:
+      host: db-primary.example.com
+      port: 5432
+      pool_size: 20
+    replica:
+      host: db-replica.example.com
+      port: 5432
+      pool_size: 10
+  
+  cache:
+    provider: redis
+    host: cache.example.com
+    port: 6379
+    ttl: 3600
+  
+  logging:
+    level: info
+    format: json
+    outputs:
+      - stdout
+      - file:///var/log/app.log
+  
+  features:
+    authentication: true
+    rate_limiting: true
+    metrics: true
+
+# Convert entire config to string
+config_yaml: (( stringify app_config ))
+
+# Selective stringification
+partial:
+  # Just database config
+  db_config_only: (( stringify app_config.database ))
+  
+  # Just server config
+  server_config_only: (( stringify app_config.server ))
+  
+  # Just feature flags
+  features_only: (( stringify app_config.features ))
+
+# Using with template generation
+template:
+  # Define a structure
+  service:
+    apiVersion: v1
+    kind: Service
+    metadata:
+      name: my-service
+      labels:
+        app: my-app
+    spec:
+      selector:
+        app: my-app
+      ports:
+        - port: 80
+          targetPort: 8080
+  
+  # Convert to YAML string for embedding
+  service_yaml: (( stringify template.service ))
+
+# Complex mixed types
+mixed:
+  config:
+    name: "Mixed Config"
+    enabled: true
+    count: 10
+    rate: 0.95
+    tags:
+      - production
+      - critical
+      - monitored
+    metadata:
+      created: "2024-01-15"
+      author: "admin"
+      version: 2.1
+    settings:
+      debug: false
+      timeout: 30
+      retries: 3
+  
+  # Entire structure as YAML string
+  full_yaml: (( stringify mixed.config ))

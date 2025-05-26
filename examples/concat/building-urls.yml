@@ -1,0 +1,88 @@
+---
+# Building URLs and connection strings with concat
+
+config:
+  protocol: https
+  host: api.example.com
+  port: 443
+  base_path: /v2
+  
+database:
+  type: postgresql
+  host: db.example.com
+  port: 5432
+  name: myapp_prod
+  user: app_user
+  password: (( vault "secret/db:password" || "default-pass" ))
+  
+redis:
+  host: cache.example.com
+  port: 6379
+  db: 0
+  
+elasticsearch:
+  protocol: https
+  host: search.example.com
+  port: 9200
+  index: logs-2024
+
+# Building various URLs and connection strings
+connections:
+  # REST API URL
+  api_url: (( concat (grab config.protocol) "://" (grab config.host) ":" (grab config.port) (grab config.base_path) ))
+  
+  # Database connection string
+  database_url: (( concat 
+    (grab database.type) "://" 
+    (grab database.user) ":" 
+    (grab database.password) "@" 
+    (grab database.host) ":" 
+    (grab database.port) "/" 
+    (grab database.name) 
+  ))
+  
+  # Redis URL
+  redis_url: (( concat "redis://" (grab redis.host) ":" (grab redis.port) "/" (grab redis.db) ))
+  
+  # Elasticsearch endpoint
+  elastic_url: (( concat (grab elasticsearch.protocol) "://" (grab elasticsearch.host) ":" (grab elasticsearch.port) "/" (grab elasticsearch.index) ))
+
+# Building different endpoints
+endpoints:
+  # API endpoints
+  users: (( concat (grab connections.api_url) "/users" ))
+  auth: (( concat (grab connections.api_url) "/auth" ))
+  health: (( concat (grab connections.api_url) "/health" ))
+  
+  # With query parameters
+  search: (( concat (grab connections.api_url) "/search?limit=100&sort=desc" ))
+
+# Environment-specific URLs
+environments:
+  development:
+    url: http://localhost:3000
+  staging:
+    url: https://staging.example.com
+  production:
+    url: https://api.example.com
+
+services:
+  # Dynamic URL based on environment
+  current_env: staging
+  base_url: (( grab environments.(grab services.current_env).url ))
+  
+  # Service endpoints
+  user_service: (( concat (grab services.base_url) "/user-service" ))
+  order_service: (( concat (grab services.base_url) "/order-service" ))
+  payment_service: (( concat (grab services.base_url) "/payment-service" ))
+
+# Complex URL building with conditions
+advanced:
+  use_ssl: true
+  custom_port: false
+  
+  # Build URL with conditional parts
+  protocol: (( grab advanced.use_ssl ? "https" : "http" ))
+  port: (( grab advanced.custom_port ? ":8443" : "" ))
+  
+  final_url: (( concat (grab advanced.protocol) "://api.example.com" (grab advanced.port) "/api" ))

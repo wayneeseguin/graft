@@ -1,6 +1,10 @@
 ## What are all the Spruce operators?
 
-> **Enhanced Parser Note**: Spruce now uses an enhanced parser by default that supports additional expression operators. See the [Expression Operators](#expression-operators) section for details on boolean logic, comparisons, ternary operator, and more.
+> **Enhanced Parser Note**: Spruce now uses an enhanced parser by default that supports additional expression operators. See the [Expression Operators](expression-operators.md) section for details on boolean logic, comparisons, ternary operator, and more.
+
+> **New Features**: 
+> - **[Nested Expressions](nested-expressions.md)** - Operators can now be nested within other operators for powerful compositions
+> - **[Environment Variables in References](environment-variable-expansion.md)** - Use `$VAR` syntax in reference paths for dynamic lookups
 
 - [Arithmetic Operators](#-arithmetic-operators-)
   - [+ (addition)](#--addition-)

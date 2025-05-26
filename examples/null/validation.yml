@@ -1,0 +1,350 @@
+# Data Validation with Null Operator
+#
+# Using null checks to validate required fields and configurations
+
+# User registration validation
+user_registration:
+  # Input data (some fields might be missing)
+  input:
+    username: "johndoe"
+    email: "john@example.com"
+    password: ""
+    first_name: "John"
+    last_name: null
+    age: 25
+    terms_accepted: true
+    phone: ""
+    address:
+      street: ""
+      city: "New York"
+      state: "NY"
+      zip: null
+  
+  # Validation rules
+  validation:
+    # Required field checks
+    required:
+      username: (( ! (null user_registration.input.username) ))
+      # Result: true (present)
+      
+      email: (( ! (null user_registration.input.email) ))
+      # Result: true (present)
+      
+      password: (( ! (null user_registration.input.password) ))
+      # Result: false (empty string)
+      
+      first_name: (( ! (null user_registration.input.first_name) ))
+      # Result: true (present)
+      
+      last_name: (( ! (null user_registration.input.last_name) ))
+      # Result: false (null)
+      
+      terms_accepted: (( user_registration.input.terms_accepted ))
+      # Result: true (must be true, not just non-null)
+    
+    # Optional field checks
+    optional:
+      has_phone: (( ! (null user_registration.input.phone) ))
+      # Result: false (empty)
+      
+      has_age: (( ! (null user_registration.input.age) ))
+      # Result: true (present)
+      
+      has_full_address: (( 
+        ! (null user_registration.input.address.street) &&
+        ! (null user_registration.input.address.city) &&
+        ! (null user_registration.input.address.state) &&
+        ! (null user_registration.input.address.zip)
+      ))
+      # Result: false (street and zip are null/empty)
+    
+    # Overall validation
+    is_valid: (( 
+      validation.required.username &&
+      validation.required.email &&
+      validation.required.password &&
+      validation.required.first_name &&
+      validation.required.last_name &&
+      validation.required.terms_accepted
+    ))
+    # Result: false (password and last_name missing)
+    
+    # Error messages
+    errors:
+      - (( null user_registration.input.username ? "Username is required" : ~ ))
+      - (( null user_registration.input.email ? "Email is required" : ~ ))
+      - (( null user_registration.input.password ? "Password is required" : ~ ))
+      - (( null user_registration.input.first_name ? "First name is required" : ~ ))
+      - (( null user_registration.input.last_name ? "Last name is required" : ~ ))
+      - (( ! user_registration.input.terms_accepted ? "Terms must be accepted" : ~ ))
+
+# API request validation
+api_request:
+  # Incoming request
+  request:
+    method: "POST"
+    path: "/api/orders"
+    headers:
+      authorization: "Bearer abc123"
+      content_type: "application/json"
+      x_api_key: ""
+    body:
+      customer_id: "CUST-123"
+      items: []
+      shipping_address:
+        street: "123 Main St"
+        city: "Seattle"
+        state: "WA"
+        zip: "98101"
+      billing_address: null
+      payment_method:
+        type: "credit_card"
+        token: ""
+  
+  # Validation checks
+  validation:
+    # Header validation
+    headers:
+      has_auth: (( ! (null api_request.request.headers.authorization) ))
+      # Result: true
+      
+      has_api_key: (( ! (null api_request.request.headers.x_api_key) ))
+      # Result: false (empty)
+      
+      valid_content_type: (( api_request.request.headers.content_type == "application/json" ))
+      # Result: true
+    
+    # Body validation
+    body:
+      has_customer: (( ! (null api_request.request.body.customer_id) ))
+      # Result: true
+      
+      has_items: (( ! (null api_request.request.body.items) && api_request.request.body.items != [] ))
+      # Result: false (empty array)
+      
+      has_shipping: (( ! (null api_request.request.body.shipping_address) ))
+      # Result: true
+      
+      has_billing: (( ! (null api_request.request.body.billing_address) ))
+      # Result: false (null)
+      
+      has_payment_token: (( ! (null api_request.request.body.payment_method.token) ))
+      # Result: false (empty)
+    
+    # Conditional requirements
+    requires_billing: (( api_request.request.body.payment_method.type == "credit_card" ))
+    billing_valid: (( ! requires_billing || ! (null api_request.request.body.billing_address) ))
+    # Result: false (credit card requires billing address)
+    
+    # Overall request validation
+    is_valid: (( 
+      validation.headers.has_auth &&
+      validation.body.has_customer &&
+      validation.body.has_items &&
+      validation.body.has_shipping &&
+      validation.body.has_payment_token &&
+      validation.billing_valid
+    ))
+    # Result: false
+    
+    # Response
+    response:
+      status: (( validation.is_valid ? 200 : 400 ))
+      errors: 
+        - (( validation.body.has_items ? ~ : "Items cannot be empty" ))
+        - (( validation.body.has_payment_token ? ~ : "Payment token is required" ))
+        - (( validation.billing_valid ? ~ : "Billing address required for credit card" ))
+
+# Configuration file validation
+config_validation:
+  # Application configuration
+  config:
+    app:
+      name: "MyService"
+      version: "1.2.3"
+      environment: ""
+    
+    database:
+      host: "localhost"
+      port: 5432
+      name: "mydb"
+      user: null
+      password: null
+    
+    cache:
+      enabled: true
+      provider: ""
+      ttl: null
+    
+    monitoring:
+      enabled: true
+      endpoints:
+        metrics: "/metrics"
+        health: ""
+        ready: null
+    
+    features: []
+  
+  # Section validations
+  validations:
+    # App section
+    app:
+      valid_name: (( ! (null config_validation.config.app.name) ))
+      valid_version: (( ! (null config_validation.config.app.version) ))
+      valid_environment: (( ! (null config_validation.config.app.environment) ))
+      is_valid: (( app.valid_name && app.valid_version && app.valid_environment ))
+      # Result: false (environment is empty)
+    
+    # Database section
+    database:
+      valid_host: (( ! (null config_validation.config.database.host) ))
+      valid_port: (( ! (null config_validation.config.database.port) ))
+      valid_name: (( ! (null config_validation.config.database.name) ))
+      valid_credentials: (( 
+        ! (null config_validation.config.database.user) && 
+        ! (null config_validation.config.database.password) 
+      ))
+      is_valid: (( database.valid_host && database.valid_port && database.valid_name && database.valid_credentials ))
+      # Result: false (missing credentials)
+    
+    # Cache section (optional but if enabled, must be configured)
+    cache:
+      is_configured: (( 
+        ! config_validation.config.cache.enabled || 
+        (! (null config_validation.config.cache.provider) && ! (null config_validation.config.cache.ttl))
+      ))
+      # Result: false (enabled but missing provider and ttl)
+    
+    # Monitoring section
+    monitoring:
+      all_endpoints_defined: (( 
+        ! config_validation.config.monitoring.enabled ||
+        (! (null config_validation.config.monitoring.endpoints.metrics) &&
+         ! (null config_validation.config.monitoring.endpoints.health) &&
+         ! (null config_validation.config.monitoring.endpoints.ready))
+      ))
+      # Result: false (enabled but missing some endpoints)
+    
+    # Overall validation
+    all_valid: (( 
+      validations.app.is_valid && 
+      validations.database.is_valid && 
+      validations.cache.is_configured && 
+      validations.monitoring.all_endpoints_defined 
+    ))
+    # Result: false
+    
+    # Validation report
+    report:
+      valid: (( validations.all_valid ))
+      sections:
+        app: (( validations.app.is_valid ? "OK" : "Invalid: missing environment" ))
+        database: (( validations.database.is_valid ? "OK" : "Invalid: missing credentials" ))
+        cache: (( validations.cache.is_configured ? "OK" : "Invalid: missing configuration" ))
+        monitoring: (( validations.monitoring.all_endpoints_defined ? "OK" : "Invalid: missing endpoints" ))
+
+# Form validation with complex rules
+form_validation:
+  # Form input
+  form_data:
+    personal:
+      title: "Mr"
+      first_name: "John"
+      middle_name: ""
+      last_name: "Doe"
+      date_of_birth: "1990-01-01"
+      ssn: null
+    
+    contact:
+      email: "john@example.com"
+      phone: "+1-555-1234"
+      alt_phone: ""
+      preferred_contact: "email"
+    
+    employment:
+      status: "employed"
+      employer: ""
+      job_title: null
+      annual_income: 75000
+      start_date: ""
+    
+    preferences:
+      newsletter: true
+      sms_alerts: false
+      notifications: null
+  
+  # Validation rules based on other fields
+  rules:
+    # Personal info
+    personal:
+      has_full_name: (( 
+        ! (null form_validation.form_data.personal.first_name) && 
+        ! (null form_validation.form_data.personal.last_name) 
+      ))
+      # Result: true
+      
+      has_ssn: (( ! (null form_validation.form_data.personal.ssn) ))
+      # Result: false
+    
+    # Contact validation
+    contact:
+      has_primary_contact: (( 
+        ! (null form_validation.form_data.contact.email) || 
+        ! (null form_validation.form_data.contact.phone) 
+      ))
+      # Result: true
+      
+      preferred_contact_valid: (( 
+        (form_validation.form_data.contact.preferred_contact == "email" && ! (null form_validation.form_data.contact.email)) ||
+        (form_validation.form_data.contact.preferred_contact == "phone" && ! (null form_validation.form_data.contact.phone))
+      ))
+      # Result: true
+    
+    # Employment validation (conditional)
+    employment:
+      # If employed, employer and job title required
+      valid_if_employed: (( 
+        form_validation.form_data.employment.status != "employed" ||
+        (! (null form_validation.form_data.employment.employer) && 
+         ! (null form_validation.form_data.employment.job_title) &&
+         ! (null form_validation.form_data.employment.start_date))
+      ))
+      # Result: false (employed but missing required fields)
+      
+      # Income required for certain statuses
+      income_required: (( 
+        form_validation.form_data.employment.status == "employed" ||
+        form_validation.form_data.employment.status == "self-employed"
+      ))
+      has_income: (( ! (null form_validation.form_data.employment.annual_income) ))
+      income_valid: (( ! rules.employment.income_required || rules.employment.has_income ))
+      # Result: true
+    
+    # Preferences (at least one notification method if subscribed)
+    preferences:
+      notification_method_selected: (( 
+        ! form_validation.form_data.preferences.newsletter ||
+        form_validation.form_data.preferences.sms_alerts ||
+        ! (null form_validation.form_data.preferences.notifications)
+      ))
+      # Result: false (newsletter true but no notification method)
+  
+  # Final validation
+  validation_summary:
+    sections:
+      personal: (( rules.personal.has_full_name ))
+      contact: (( rules.contact.has_primary_contact && rules.contact.preferred_contact_valid ))
+      employment: (( rules.employment.valid_if_employed && rules.employment.income_valid ))
+      preferences: (( rules.preferences.notification_method_selected ))
+    
+    all_valid: (( 
+      validation_summary.sections.personal &&
+      validation_summary.sections.contact &&
+      validation_summary.sections.employment &&
+      validation_summary.sections.preferences
+    ))
+    # Result: false
+    
+    errors:
+      - (( rules.employment.valid_if_employed ? ~ : "Employment details incomplete" ))
+      - (( rules.preferences.notification_method_selected ? ~ : "Select notification preference" ))

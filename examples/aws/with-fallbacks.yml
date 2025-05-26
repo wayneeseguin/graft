@@ -1,0 +1,160 @@
+# AWS Operators with Error Handling and Fallbacks
+#
+# Examples showing how to handle missing parameters/secrets gracefully
+
+# Basic fallbacks with || operator
+basic_config:
+  # Use default if parameter doesn't exist
+  app_name: (( awsparam "/myapp/name" || "my-application" ))
+  port: (( awsparam "/myapp/port" || 8080 ))
+  timeout: (( awsparam "/myapp/timeout" || 30 ))
+  
+  # Use default if secret doesn't exist
+  api_key: (( awssecret "myapp/api-key" || "dev-api-key-12345" ))
+  secret_token: (( awssecret "myapp/token" || grab defaults.token ))
+
+defaults:
+  token: "default-token-for-development"
+
+# Cascading fallbacks
+cascading:
+  # Try multiple parameters in order
+  database_host: (( awsparam "/myapp/prod/db_host" || awsparam "/myapp/shared/db_host" || "localhost" ))
+  
+  # Try environment-specific then shared secret
+  api_secret: (( awssecret "myapp/prod/api-secret" || awssecret "myapp/shared/api-secret" || "fallback-secret" ))
+
+# Environment-based fallbacks
+meta:
+  env: (( grab $ENVIRONMENT || "dev" ))
+
+config:
+  # Production uses real values, others use defaults
+  database:
+    host: (( grab meta.env == "prod" ? (awsparam "/prod/db/host") : "dev.db.local" ))
+    password: (( grab meta.env == "prod" ? (awssecret "prod/db/password") : "devpass123" ))
+    
+  # Use parameter if exists, otherwise use environment-specific default
+  redis:
+    host: (( awsparam "/myapp/redis/host" || grab redis_defaults.[meta.env] ))
+
+redis_defaults:
+  dev: "localhost:6379"
+  staging: "redis.staging.local:6379"
+  prod: "redis.prod.local:6379"
+
+# Graceful degradation
+features:
+  # Optional features that can be disabled if configs are missing
+  monitoring:
+    enabled: (( awsparam "/features/monitoring/enabled" || false ))
+    endpoint: (( grab features.monitoring.enabled ? (awsparam "/features/monitoring/endpoint") : null ))
+    api_key: (( grab features.monitoring.enabled ? (awssecret "monitoring/api-key") : null ))
+  
+  caching:
+    enabled: (( awsparam "/features/caching/enabled" || true ))
+    ttl: (( awsparam "/features/caching/ttl" || 3600 ))
+    redis_url: (( grab features.caching.enabled ? (awsparam "/features/caching/redis_url" || "redis://localhost:6379") : null ))
+
+# Safe JSON extraction with defaults
+# If parameter doesn't exist or key is missing, use default
+json_configs:
+  # Assume parameter might not exist or might not have all keys
+  database:
+    host: (( awsparam "/myapp/database?key=host" || "localhost" ))
+    port: (( awsparam "/myapp/database?key=port" || 5432 ))
+    name: (( awsparam "/myapp/database?key=name" || "myapp_dev" ))
+    
+  # Secret might not have all expected fields
+  oauth:
+    client_id: (( awssecret "oauth/config?key=client_id" || "dev-client-id" ))
+    client_secret: (( awssecret "oauth/config?key=client_secret" || "dev-client-secret" ))
+    redirect_uri: (( awssecret "oauth/config?key=redirect_uri" || "http://localhost:3000/callback" ))
+
+# Handling rotation scenarios
+rotation_safe:
+  # During secret rotation, try current then previous
+  database:
+    password_current: (( awssecret "myapp/db/rotating?stage=AWSCURRENT" || null ))
+    password_previous: (( awssecret "myapp/db/rotating?stage=AWSPREVIOUS" || null ))
+    
+    # Use current if available, fall back to previous
+    password: (( grab rotation_safe.database.password_current || rotation_safe.database.password_previous || "emergency-fallback" ))
+
+# Regional fallbacks
+regional:
+  primary_region: us-east-1
+  fallback_region: us-west-2
+  
+  # Try primary region first, then fallback
+  config:
+    api_endpoint: (( awsparam (concat "/myapp/" regional.primary_region "/api/endpoint") || 
+                     awsparam (concat "/myapp/" regional.fallback_region "/api/endpoint") || 
+                     "https://api.example.com" ))
+    
+  secrets:
+    api_key: (( awssecret (concat "myapp/" regional.primary_region "/api-key") || 
+                awssecret (concat "myapp/" regional.fallback_region "/api-key") || 
+                "fallback-api-key" ))
+
+# Conditional parameter loading
+conditional_params:
+  # Only load expensive parameters if needed
+  basic_mode: (( awsparam "/myapp/basic_mode" || true ))
+  
+  advanced_config:
+    # These parameters are only loaded if not in basic mode
+    ml_endpoint: (( grab conditional_params.basic_mode ? null : (awsparam "/myapp/ml/endpoint" || null) ))
+    ml_api_key: (( grab conditional_params.basic_mode ? null : (awssecret "myapp/ml/api-key" || null) ))
+    ml_model_id: (( grab conditional_params.basic_mode ? null : (awsparam "/myapp/ml/model_id" || null) ))
+
+# Development overrides
+development:
+  # Allow local development without AWS access
+  use_aws: (( grab $USE_AWS || false ))
+  
+  database:
+    # Use AWS if enabled, otherwise local defaults
+    host: (( grab development.use_aws ? (awsparam "/dev/db/host" || "localhost") : "localhost" ))
+    password: (( grab development.use_aws ? (awssecret "dev/db/password" || "devpass") : "devpass" ))
+
+# Validation with fallbacks
+validated_config:
+  # Get config with defaults
+  raw:
+    timeout: (( awsparam "/myapp/timeout" || 30 ))
+    retries: (( awsparam "/myapp/retries" || 3 ))
+    batch_size: (( awsparam "/myapp/batch_size" || 100 ))
+  
+  # Validate and constrain values
+  final:
+    # Ensure timeout is between 10 and 300
+    timeout: (( grab validated_config.raw.timeout < 10 ? 10 : 
+                grab validated_config.raw.timeout > 300 ? 300 : 
+                validated_config.raw.timeout ))
+    
+    # Ensure retries is between 0 and 10
+    retries: (( grab validated_config.raw.retries < 0 ? 0 : 
+                grab validated_config.raw.retries > 10 ? 10 : 
+                validated_config.raw.retries ))
+    
+    # Ensure batch_size is between 1 and 1000
+    batch_size: (( grab validated_config.raw.batch_size < 1 ? 1 : 
+                   grab validated_config.raw.batch_size > 1000 ? 1000 : 
+                   validated_config.raw.batch_size ))
+
+# Error aggregation
+health_check:
+  # Track which configs failed to load
+  status:
+    has_database: (( ! empty (awsparam "/required/db/host" || null) ))
+    has_api_key: (( ! empty (awssecret "required/api-key" || null) ))
+    has_cache: (( ! empty (awsparam "/required/cache/host" || null) ))
+    
+  # Overall health
+  all_required_present: (( health_check.status.has_database && 
+                          health_check.status.has_api_key && 
+                          health_check.status.has_cache ))
+  
+  # Fallback to minimal config if unhealthy
+  mode: (( grab health_check.all_required_present ? "full" : "degraded" ))

@@ -1,0 +1,190 @@
+# Kubernetes + Vault Integration Patterns
+#
+# This example demonstrates common patterns for using Vault
+# with Kubernetes deployments and configurations
+
+# Kubernetes Secret manifest
+apiVersion: v1
+kind: Secret
+metadata:
+  name: myapp-secrets
+  namespace: production
+type: Opaque
+data:
+  # Base64-encoded secrets from Vault
+  database-password: (( base64 (vault "secret/myapp/production:db_password") ))
+  api-key: (( base64 (vault "secret/myapp/production:api_key") ))
+  jwt-secret: (( base64 (vault "secret/myapp/production:jwt_secret") ))
+
+---
+# ConfigMap with non-sensitive configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: myapp-config
+  namespace: production
+data:
+  database-host: db.production.svc.cluster.local
+  database-name: myapp
+  # Reference Vault for the username (not sensitive but centralized)
+  database-user: (( vault "secret/myapp/production:db_username" ))
+
+---
+# Deployment using the secrets
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+  namespace: production
+spec:
+  replicas: 3
+  template:
+    spec:
+      # Service account for Vault authentication
+      serviceAccountName: myapp-vault
+      
+      # Init container to fetch secrets from Vault
+      initContainers:
+      - name: vault-init
+        image: vault:1.13.0
+        env:
+        - name: VAULT_ADDR
+          value: https://vault.example.com
+        - name: VAULT_ROLE
+          value: myapp-production
+        command:
+        - sh
+        - -c
+        - |
+          # Authenticate with Kubernetes auth method
+          vault write auth/kubernetes/login \
+            role=myapp-production \
+            jwt=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+          
+          # Fetch secrets and write to shared volume
+          vault kv get -format=json secret/myapp/production | \
+            jq -r '.data.data' > /vault/secrets/config.json
+        volumeMounts:
+        - name: vault-secrets
+          mountPath: /vault/secrets
+      
+      containers:
+      - name: myapp
+        image: myapp:latest
+        env:
+        # Static configuration
+        - name: DATABASE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: myapp-config
+              key: database-host
+        
+        # Secrets from Kubernetes Secret (populated by Vault via Spruce)
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: myapp-secrets
+              key: database-password
+        
+        # Direct Vault integration for dynamic secrets
+        - name: VAULT_ADDR
+          value: https://vault.example.com
+        - name: VAULT_SECRET_PATH
+          value: secret/myapp/production
+        
+        volumeMounts:
+        - name: vault-secrets
+          mountPath: /vault/secrets
+          readOnly: true
+      
+      volumes:
+      - name: vault-secrets
+        emptyDir: {}
+
+---
+# TLS Certificate from Vault PKI
+apiVersion: v1
+kind: Secret
+metadata:
+  name: myapp-tls
+  namespace: production
+type: kubernetes.io/tls
+data:
+  # Vault PKI backend for certificate generation
+  tls.crt: (( base64 (vault "pki/issue/myapp-production:certificate") ))
+  tls.key: (( base64 (vault "pki/issue/myapp-production:private_key") ))
+
+---
+# Ingress using the TLS certificate
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: myapp
+  namespace: production
+spec:
+  tls:
+  - hosts:
+    - myapp.example.com
+    secretName: myapp-tls
+  rules:
+  - host: myapp.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: myapp
+            port:
+              number: 80
+
+---
+# HelmRelease with Vault values
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: myapp
+  namespace: production
+spec:
+  chart:
+    spec:
+      chart: myapp
+      version: 1.0.0
+  values:
+    image:
+      repository: myapp
+      tag: latest
+    
+    # Database configuration from Vault
+    database:
+      host: db.production.svc.cluster.local
+      port: 5432
+      name: myapp
+      username: (( vault "secret/myapp/production:db_username" ))
+      password: (( vault "secret/myapp/production:db_password" ))
+    
+    # Redis configuration
+    redis:
+      enabled: true
+      auth:
+        password: (( vault "secret/redis/production:password" ))
+    
+    # External service API keys
+    integrations:
+      stripe:
+        apiKey: (( vault "secret/integrations/stripe:api_key" ))
+        webhookSecret: (( vault "secret/integrations/stripe:webhook_secret" ))
+      
+      sendgrid:
+        apiKey: (( vault "secret/integrations/sendgrid:api_key" ))
+      
+      aws:
+        accessKeyId: (( vault "secret/cloud/aws:access_key_id" ))
+        secretAccessKey: (( vault "secret/cloud/aws:secret_access_key" ))
+    
+    # TLS configuration
+    tls:
+      enabled: true
+      cert: (( vault "pki/issue/myapp-production:certificate" ))
+      key: (( vault "pki/issue/myapp-production:private_key" ))
+      ca: (( vault "pki/issue/myapp-production:ca_chain" ))

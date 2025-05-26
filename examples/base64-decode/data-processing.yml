@@ -1,0 +1,280 @@
+# Data Processing with Base64-Decode
+#
+# Examples of decoding various data formats from base64
+
+# JSON data processing
+json_processing:
+  # Encoded JSON configurations
+  encoded_configs:
+    # Application configuration
+    app_config: "ewogICJhcHBfbmFtZSI6ICJNeUFwcCIsCiAgInZlcnNpb24iOiAiMi4zLjQiLAogICJmZWF0dXJlcyI6IHsKICAgICJhdXRoIjogdHJ1ZSwKICAgICJhbmFseXRpY3MiOiB0cnVlLAogICAgImJldGFfZmVhdHVyZXMiOiBmYWxzZQogIH0sCiAgImRhdGFiYXNlIjogewogICAgImhvc3QiOiAiZGIuZXhhbXBsZS5jb20iLAogICAgInBvcnQiOiA1NDMyCiAgfQp9"
+    
+    # User preferences
+    user_prefs: "eyJ0aGVtZSI6ImRhcmsiLCJsYW5ndWFnZSI6ImVuIiwibm90aWZpY2F0aW9ucyI6eyJlbWFpbCI6dHJ1ZSwicHVzaCI6ZmFsc2UsInNtcyI6ZmFsc2V9LCJ0aW1lem9uZSI6IlVUQyJ9"
+    
+    # API response
+    api_response: "eyJzdGF0dXMiOiJzdWNjZXNzIiwiZGF0YSI6eyJ1c2VyX2lkIjoxMjM0NSwidXNlcm5hbWUiOiJqb2huZG9lIiwiZW1haWwiOiJqb2huQGV4YW1wbGUuY29tIiwicm9sZXMiOlsiYWRtaW4iLCJ1c2VyIl19LCJtZXRhIjp7InRpbWVzdGFtcCI6IjIwMjQtMDEtMjNUMTI6MzQ6NTZaIiwicmVxdWVzdF9pZCI6ImFiYzEyMyJ9fQ=="
+  
+  # Decoded JSON data
+  decoded:
+    app_config: (( base64-decode json_processing.encoded_configs.app_config ))
+    # Result: |
+    #   {
+    #     "app_name": "MyApp",
+    #     "version": "2.3.4",
+    #     "features": {
+    #       "auth": true,
+    #       "analytics": true,
+    #       "beta_features": false
+    #     },
+    #     "database": {
+    #       "host": "db.example.com",
+    #       "port": 5432
+    #     }
+    #   }
+    
+    user_prefs: (( base64-decode json_processing.encoded_configs.user_prefs ))
+    # Result: {"theme":"dark","language":"en","notifications":{"email":true,"push":false,"sms":false},"timezone":"UTC"}
+    
+    api_response: (( base64-decode json_processing.encoded_configs.api_response ))
+    # Result: {"status":"success","data":{"user_id":12345,"username":"johndoe","email":"john@example.com","roles":["admin","user"]},"meta":{"timestamp":"2024-01-23T12:34:56Z","request_id":"abc123"}}
+
+# XML data processing
+xml_processing:
+  # Encoded XML documents
+  encoded_xml:
+    # SOAP request
+    soap_request: "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHNvYXA6RW52ZWxvcGUgeG1sbnM6c29hcD0iaHR0cDovL3d3dy53My5vcmcvMjAwMy8wNS9zb2FwLWVudmVsb3BlIj4KICA8c29hcDpIZWFkZXI+CiAgICA8YXV0aDpBdXRoZW50aWNhdGlvbiB4bWxuczphdXRoPSJodHRwOi8vZXhhbXBsZS5jb20vYXV0aCI+CiAgICAgIDxhdXRoOlVzZXJuYW1lPnVzZXI8L2F1dGg6VXNlcm5hbWU+CiAgICAgIDxhdXRoOlBhc3N3b3JkPnBhc3M8L2F1dGg6UGFzc3dvcmQ+CiAgICA8L2F1dGg6QXV0aGVudGljYXRpb24+CiAgPC9zb2FwOkhlYWRlcj4KICA8c29hcDpCb2R5PgogICAgPEdldFVzZXIgeG1sbnM9Imh0dHA6Ly9leGFtcGxlLmNvbS91c2VycyI+CiAgICAgIDxVc2VySWQ+MTIzNDU8L1VzZXJJZD4KICAgIDwvR2V0VXNlcj4KICA8L3NvYXA6Qm9keT4KPC9zb2FwOkVudmVsb3BlPg=="
+    
+    # Configuration file
+    config_xml: "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPGNvbmZpZ3VyYXRpb24+CiAgPGFwcGxpY2F0aW9uPgogICAgPG5hbWU+TXlBcHA8L25hbWU+CiAgICA8dmVyc2lvbj4xLjAuMDwvdmVyc2lvbj4KICAgIDxlbnZpcm9ubWVudD5wcm9kdWN0aW9uPC9lbnZpcm9ubWVudD4KICA8L2FwcGxpY2F0aW9uPgogIDxkYXRhYmFzZT4KICAgIDxob3N0PmRiLmV4YW1wbGUuY29tPC9ob3N0PgogICAgPHBvcnQ+NTQzMjwvcG9ydD4KICAgIDx1c2VybmFtZT5hcHB1c2VyPC91c2VybmFtZT4KICA8L2RhdGFiYXNlPgo8L2NvbmZpZ3VyYXRpb24+"
+  
+  # Decoded XML
+  decoded:
+    soap_request: (( base64-decode xml_processing.encoded_xml.soap_request ))
+    config_xml: (( base64-decode xml_processing.encoded_xml.config_xml ))
+
+# YAML data processing
+yaml_processing:
+  # Encoded YAML configurations
+  encoded_yaml:
+    # Kubernetes manifest
+    k8s_deployment: "YXBpVmVyc2lvbjogYXBwcy92MQpraW5kOiBEZXBsb3ltZW50Cm1ldGFkYXRhOgogIG5hbWU6IG15YXBwLWRlcGxveW1lbnQKICBsYWJlbHM6CiAgICBhcHA6IG15YXBwCnNwZWM6CiAgcmVwbGljYXM6IDMKICBzZWxlY3RvcjoKICAgIG1hdGNoTGFiZWxzOgogICAgICBhcHA6IG15YXBwCiAgdGVtcGxhdGU6CiAgICBtZXRhZGF0YToKICAgICAgbGFiZWxzOgogICAgICAgIGFwcDogbXlhcHAKICAgIHNwZWM6CiAgICAgIGNvbnRhaW5lcnM6CiAgICAgIC0gbmFtZTogbXlhcHAKICAgICAgICBpbWFnZTogbXlhcHA6bGF0ZXN0CiAgICAgICAgcG9ydHM6CiAgICAgICAgLSBjb250YWluZXJQb3J0OiA4MDgw"
+    
+    # Docker compose
+    docker_compose: "dmVyc2lvbjogJzMuOCcKc2VydmljZXM6CiAgd2ViOgogICAgaW1hZ2U6IG5naW54OmxhdGVzdAogICAgcG9ydHM6CiAgICAgIC0gIjgwOjgwIgogICAgdm9sdW1lczoKICAgICAgLSAuL2h0bWw6L3Vzci9zaGFyZS9uZ2lueC9odG1sCiAgZGI6CiAgICBpbWFnZTogcG9zdGdyZXM6MTQKICAgIGVudmlyb25tZW50OgogICAgICBQT1NUR1JFU19EQjogbXlhcHAKICAgICAgUE9TVEdSRVNfVVNFUjogdXNlcgogICAgICBQT1NUR1JFU19QQVNTV09SRDogcGFzcw=="
+  
+  # Decoded YAML
+  decoded:
+    k8s_deployment: (( base64-decode yaml_processing.encoded_yaml.k8s_deployment ))
+    docker_compose: (( base64-decode yaml_processing.encoded_yaml.docker_compose ))
+
+# Binary data processing
+binary_data:
+  # Small binary files encoded
+  encoded:
+    # Small image (1x1 pixel PNG)
+    tiny_image: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+    
+    # ZIP file header
+    zip_header: "UEsDBAoAAAAAAOyqNFMAAAAAAAAAAAAAAAAJABwAX19NQUNPU1gvVVQJAANBd+VhQXflYXV4CwABBPUBAAAEFAAAAA=="
+    
+    # PDF header
+    pdf_header: "JVBERi0xLjcKCjEgMCBvYmoKPDwgL1R5cGUgL0NhdGFsb2cgL1BhZ2VzIDIgMCBSID4+CmVuZG9iago="
+  
+  # Decoded binary data
+  decoded:
+    # These would be actual binary data when decoded
+    tiny_image: (( base64-decode binary_data.encoded.tiny_image ))
+    zip_header: (( base64-decode binary_data.encoded.zip_header ))
+    pdf_header: (( base64-decode binary_data.encoded.pdf_header ))
+
+# CSV data processing
+csv_data:
+  # Encoded CSV data
+  encoded_csv: "bmFtZSxlbWFpbCxyb2xlLGRlcGFydG1lbnQKSm9obiBEb2Usam9obkBleGFtcGxlLmNvbSxEZXZlbG9wZXIsRW5naW5lZXJpbmcKSmFuZSBTbWl0aCxqYW5lQGV4YW1wbGUuY29tLE1hbmFnZXIsU2FsZXMKQm9iIEpvaG5zb24sYm9iQGV4YW1wbGUuY29tLEFuYWx5c3QsRmluYW5jZQpBbGljZSBCcm93bixhbGljZUBleGFtcGxlLmNvbSxEZXNpZ25lcixNYXJrZXRpbmc="
+  
+  # Decoded CSV
+  decoded_csv: (( base64-decode csv_data.encoded_csv ))
+  # Result:
+  # name,email,role,department
+  # John Doe,john@example.com,Developer,Engineering
+  # Jane Smith,jane@example.com,Manager,Sales
+  # Bob Johnson,bob@example.com,Analyst,Finance
+  # Alice Brown,alice@example.com,Designer,Marketing
+
+# Log data processing
+log_processing:
+  # Encoded log entries
+  encoded_logs:
+    # Application logs
+    app_logs: "MjAyNC0wMS0yMyAxMDoxNTozMCBJTkZPICBBcHBsaWNhdGlvbiBzdGFydGVkCjIwMjQtMDEtMjMgMTA6MTU6MzEgREVCVUcgQ29ubmVjdGluZyB0byBkYXRhYmFzZQoyMDI0LTAxLTIzIDEwOjE1OjMyIElORk8gIERhdGFiYXNlIGNvbm5lY3Rpb24gZXN0YWJsaXNoZWQKMjAyNC0wMS0yMyAxMDoxNTozMyBFUlJPUiBGYWlsZWQgdG8gbG9hZCBjb25maWd1cmF0aW9uOiBGaWxlIG5vdCBmb3VuZAoyMDI0LTAxLTIzIDEwOjE1OjM0IFdBUk4gIFVzaW5nIGRlZmF1bHQgY29uZmlndXJhdGlvbg=="
+    
+    # Access logs
+    access_logs: "MTcyLjE2LjAuMSAtIC0gWzIzL0phbi8yMDI0OjEwOjE1OjMwICswMDAwXSAiR0VUIC9hcGkvdXNlcnMgSFRUUC8xLjEiIDIwMCA0NTYKODE5Mi4xNjguMS4xMCAtIC0gWzIzL0phbi8yMDI0OjEwOjE1OjMxICswMDAwXSAiUE9TVCAvYXBpL2xvZ2luIEhUVFAvMS4xIiAyMDEgMTIzCjEwLjAuMC41IC0gLSBbMjMvSmFuLzIwMjQ6MTA6MTU6MzIgKzAwMDBdICJHRVQgL2hlYWx0aCBIVFRQLzEuMSIgMjAwIDI="
+  
+  # Decoded logs
+  decoded:
+    app_logs: (( base64-decode log_processing.encoded_logs.app_logs ))
+    # Result:
+    # 2024-01-23 10:15:30 INFO  Application started
+    # 2024-01-23 10:15:31 DEBUG Connecting to database
+    # 2024-01-23 10:15:32 INFO  Database connection established
+    # 2024-01-23 10:15:33 ERROR Failed to load configuration: File not found
+    # 2024-01-23 10:15:34 WARN  Using default configuration
+    
+    access_logs: (( base64-decode log_processing.encoded_logs.access_logs ))
+    # Result:
+    # 172.16.0.1 - - [23/Jan/2024:10:15:30 +0000] "GET /api/users HTTP/1.1" 200 456
+    # 192.168.1.10 - - [23/Jan/2024:10:15:31 +0000] "POST /api/login HTTP/1.1" 201 123
+    # 10.0.0.5 - - [23/Jan/2024:10:15:32 +0000] "GET /health HTTP/1.1" 200 2
+
+# Message queue payloads
+message_processing:
+  # Encoded message payloads
+  encoded_messages:
+    # RabbitMQ message
+    rabbitmq_msg: "eyJtZXNzYWdlX2lkIjoiMTIzNDU2IiwidGltZXN0YW1wIjoiMjAyNC0wMS0yM1QxMjozNDo1NloiLCJ0eXBlIjoib3JkZXJfY3JlYXRlZCIsImRhdGEiOnsib3JkZXJfaWQiOiJPUkQtMDAxIiwiY3VzdG9tZXJfaWQiOiJDVVNULTEyMyIsImFtb3VudCI6OTkuOTksIml0ZW1zIjpbeyJza3UiOiJQUk9ELTAwMSIsInF0eSI6Mn1dfX0="
+    
+    # Kafka message
+    kafka_msg: "eyJldmVudF90eXBlIjoidXNlcl91cGRhdGVkIiwiZXZlbnRfdGltZSI6IjIwMjQtMDEtMjNUMTI6MzQ6NTZaIiwidXNlciI6eyJpZCI6MTIzNDUsImVtYWlsIjoiam9obkBleGFtcGxlLmNvbSIsInVwZGF0ZWRfZmllbGRzIjpbImVtYWlsIiwicGhvbmUiXX0sInNvdXJjZSI6InVzZXItc2VydmljZSJ9"
+    
+    # SQS message
+    sqs_msg: "eyJUeXBlIjoiTm90aWZpY2F0aW9uIiwiTWVzc2FnZUlkIjoiMTIzNDUtNjc4OS1hYmNkLWVmZ2giLCJTdWJqZWN0IjoiQWxlcnQiLCJNZXNzYWdlIjoiSGlnaCBDUFUgdXNhZ2UgZGV0ZWN0ZWQgb24gc2VydmVyLXByb2QtMDEiLCJUaW1lc3RhbXAiOiIyMDI0LTAxLTIzVDEyOjM0OjU2WiJ9"
+  
+  # Decoded messages
+  decoded:
+    rabbitmq_msg: (( base64-decode message_processing.encoded_messages.rabbitmq_msg ))
+    kafka_msg: (( base64-decode message_processing.encoded_messages.kafka_msg ))
+    sqs_msg: (( base64-decode message_processing.encoded_messages.sqs_msg ))
+
+# Protocol buffers
+protobuf_data:
+  # Encoded protobuf messages
+  encoded:
+    # User message
+    user_proto: "CgVBbGljZRIQYWxpY2VAZXhhbXBsZS5jb20YrQg="
+    
+    # Transaction message
+    transaction_proto: "CAESBlRYLTAwMRoGVVNELTAxIgZVU0QtMDIoDTUAAIA/PQrXIzw="
+  
+  # Decoded (would be binary protobuf data)
+  decoded:
+    user_proto: (( base64-decode protobuf_data.encoded.user_proto ))
+    transaction_proto: (( base64-decode protobuf_data.encoded.transaction_proto ))
+
+# GraphQL queries
+graphql_processing:
+  # Encoded GraphQL queries and responses
+  encoded:
+    # Query
+    query: "cXVlcnkgR2V0VXNlcigkaWQ6IElEISkgewogIHVzZXIoaWQ6ICRpZCkgewogICAgaWQKICAgIG5hbWUKICAgIGVtYWlsCiAgICBwb3N0cyB7CiAgICAgIGlkCiAgICAgIHRpdGxlCiAgICAgIGNyZWF0ZWRBdAogICAgfQogIH0KfQ=="
+    
+    # Variables
+    variables: "eyJpZCI6IjEyMzQ1In0="
+    
+    # Response
+    response: "eyJkYXRhIjp7InVzZXIiOnsiaWQiOiIxMjM0NSIsIm5hbWUiOiJKb2huIERvZSIsImVtYWlsIjoiam9obkBleGFtcGxlLmNvbSIsInBvc3RzIjpbeyJpZCI6IjEiLCJ0aXRsZSI6IkZpcnN0IFBvc3QiLCJjcmVhdGVkQXQiOiIyMDI0LTAxLTIwVDEwOjAwOjAwWiJ9LHsiaWQiOiIyIiwidGl0bGUiOiJTZWNvbmQgUG9zdCIsImNyZWF0ZWRBdCI6IjIwMjQtMDEtMjJUMTQ6MzA6MDBaIn1dfX19"
+  
+  # Decoded GraphQL
+  decoded:
+    query: (( base64-decode graphql_processing.encoded.query ))
+    # Result:
+    # query GetUser($id: ID!) {
+    #   user(id: $id) {
+    #     id
+    #     name
+    #     email
+    #     posts {
+    #       id
+    #       title
+    #       createdAt
+    #     }
+    #   }
+    # }
+    
+    variables: (( base64-decode graphql_processing.encoded.variables ))
+    # Result: {"id":"12345"}
+    
+    response: (( base64-decode graphql_processing.encoded.response ))
+    # Result: JSON response with user data
+
+# Shell scripts and commands
+script_processing:
+  # Encoded scripts
+  encoded_scripts:
+    # Bash script
+    deploy_script: "IyEvYmluL2Jhc2gKCiMgRGVwbG95bWVudCBzY3JpcHQKc2V0IC1lCgplY2hvICJTdGFydGluZyBkZXBsb3ltZW50Li4uIgoKIyBCdWlsZCBhcHBsaWNhdGlvbgpucG0gcnVuIGJ1aWxkCgojIFJ1biB0ZXN0cwpucG0gdGVzdAoKIyBEZXBsb3kgdG8gc2VydmVyCnJzeW5jIC1hdnogLi9kaXN0LyB1c2VyQHNlcnZlcjovdmFyL3d3dy9hcHAvCgplY2hvICJEZXBsb3ltZW50IGNvbXBsZXRlISI="
+    
+    # Python script
+    python_script: "aW1wb3J0IHJlcXVlc3RzCmltcG9ydCBqc29uCgpkZWYgZmV0Y2hfZGF0YShhcGlfdXJsKToKICAgIHJlc3BvbnNlID0gcmVxdWVzdHMuZ2V0KGFwaV91cmwpCiAgICByZXR1cm4gcmVzcG9uc2UuanNvbigpCgppZiBfX25hbWVfXyA9PSAiX19tYWluX18iOgogICAgZGF0YSA9IGZldGNoX2RhdGEoImh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL2RhdGEiKQogICAgcHJpbnQoanNvbi5kdW1wcyhkYXRhLCBpbmRlbnQ9Mikp"
+  
+  # Decoded scripts
+  decoded:
+    deploy_script: (( base64-decode script_processing.encoded_scripts.deploy_script ))
+    # Result: Full bash deployment script
+    
+    python_script: (( base64-decode script_processing.encoded_scripts.python_script ))
+    # Result: Python API client script
+
+# Environment configurations
+env_configs:
+  # Encoded environment files
+  encoded:
+    # .env file
+    dotenv: "REFUQUJBU0VfVVJMPXBvc3RncmVzOi8vdXNlcjpwYXNzQGRiLmV4YW1wbGUuY29tOjU0MzIvbXlhcHAKUkVESVNfVVJMPXJlZGlzOi8vOmF1dGhwYXNzQHJlZGlzLmV4YW1wbGUuY29tOjYzNzkKQVBJX0tFWT1za190ZXN0XzRlQzJfQWJDZEVmR2hJaktsTW5PcFFyU3RVdld4eXoKREVCVUc9dHJ1ZQBQT1JUPTgwODA="
+    
+    # Docker env
+    docker_env: "REFUQUJBU0VfSE9TVD1kYgpEQVRBQkFTRV9QT1JUPTU0MzIKREFUQUJBU0VfVVNFUj1hcHB1c2VyCkRBVEFCQVNFX1BBU1NXT1JEPXNlY3JldHBhc3MKREFUQUJBU0VfTkFNRT1teWFwcApOT0RFX0VOVj1wcm9kdWN0aW9u"
+  
+  # Decoded environment configurations
+  decoded:
+    dotenv: (( base64-decode env_configs.encoded.dotenv ))
+    # Result:
+    # DATABASE_URL=postgres://user:pass@db.example.com:5432/myapp
+    # REDIS_URL=redis://:authpass@redis.example.com:6379
+    # API_KEY=sk_test_4eC2_AbCdEfGhIjKlMnOpQrStUvWxyz
+    # DEBUG=true
+    # PORT=8080
+    
+    docker_env: (( base64-decode env_configs.encoded.docker_env ))
+    # Result:
+    # DATABASE_HOST=db
+    # DATABASE_PORT=5432
+    # DATABASE_USER=appuser
+    # DATABASE_PASSWORD=secretpass
+    # DATABASE_NAME=myapp
+    # NODE_ENV=production
+
+# Complex nested data
+complex_data:
+  # Encoded complex structures
+  encoded:
+    # Nested configuration
+    nested_config: "ewogICJhcHAiOiB7CiAgICAibmFtZSI6ICJNeUFwcCIsCiAgICAic2V0dGluZ3MiOiB7CiAgICAgICJhdXRoIjogewogICAgICAgICJwcm92aWRlcnMiOiBbImdvb2dsZSIsICJnaXRodWIiXSwKICAgICAgICAic2Vzc2lvbl90aW1lb3V0IjogMzYwMAogICAgICB9LAogICAgICAiZmVhdHVyZXMiOiB7CiAgICAgICAgImJldGEiOiB0cnVlLAogICAgICAgICJhbmFseXRpY3MiOiB7CiAgICAgICAgICAiZW5hYmxlZCI6IHRydWUsCiAgICAgICAgICAidHJhY2tpbmdfaWQiOiAiVUEtMTIzNDU2LTEiCiAgICAgICAgfQogICAgICB9CiAgICB9CiAgfSwKICAic2VydmljZXMiOiB7CiAgICAiZGF0YWJhc2UiOiB7CiAgICAgICJwcmltYXJ5IjogImRiLW1hc3Rlci5leGFtcGxlLmNvbSIsCiAgICAgICJyZXBsaWNhcyI6IFsiZGItcmVwbGljYS0xLmV4YW1wbGUuY29tIiwgImRiLXJlcGxpY2EtMi5leGFtcGxlLmNvbSJdCiAgICB9CiAgfQp9"
+  
+  # Decoded complex data
+  decoded:
+    nested_config: (( base64-decode complex_data.encoded.nested_config ))
+    # Result: Complex nested JSON/YAML structure
+
+# Data transformation pipeline
+data_pipeline:
+  # Stage 1: Receive encoded data from external source
+  input:
+    encoded_payload: "eyJ0eXBlIjoib3JkZXIiLCJpZCI6IjEyMzQ1IiwidG90YWwiOjk5Ljk5fQ=="
+  
+  # Stage 2: Decode the data
+  decoded_data: (( base64-decode data_pipeline.input.encoded_payload ))
+  
+  # Stage 3: Process with other operators
+  processed:
+    # Use the decoded data with other spruce operators
+    order_type: (( grab data_pipeline.decoded_data.type || "unknown" ))
+    order_id: (( grab data_pipeline.decoded_data.id || "000000" ))
+    
+    # Combine with other data
+    full_order:
+      id: (( grab data_pipeline.processed.order_id ))
+      timestamp: "2024-01-23T12:34:56Z"
+      status: "processed"

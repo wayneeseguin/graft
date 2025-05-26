@@ -1,0 +1,218 @@
+# Service IP Allocation with IPs Operator
+#
+# Allocating IP addresses to various services
+
+# Microservices architecture
+microservices:
+  # Service network
+  network: "10.100.0.0/16"
+  
+  # Core services - 10.100.1.0/24
+  core:
+    subnet: "10.100.1.0/24"
+    
+    # API Gateway
+    api_gateway:
+      primary: (( ips microservices.core.subnet 10 ))      # 10.100.1.10
+      secondary: (( ips microservices.core.subnet 11 ))    # 10.100.1.11
+      vip: (( ips microservices.core.subnet 5 ))          # 10.100.1.5
+    
+    # Service discovery
+    consul:
+      servers: (( ips microservices.core.subnet 20 3 ))    # 10.100.1.20-22
+      ui: (( ips microservices.core.subnet 25 ))          # 10.100.1.25
+    
+    # Configuration service
+    config_service:
+      primary: (( ips microservices.core.subnet 30 ))      # 10.100.1.30
+      secondary: (( ips microservices.core.subnet 31 ))    # 10.100.1.31
+  
+  # Application services - 10.100.2.0/24
+  applications:
+    subnet: "10.100.2.0/24"
+    
+    # User service
+    user_service:
+      instances: (( ips microservices.applications.subnet 10 3 ))  # 10.100.2.10-12
+      database: (( ips microservices.applications.subnet 15 ))     # 10.100.2.15
+    
+    # Order service
+    order_service:
+      instances: (( ips microservices.applications.subnet 20 3 ))  # 10.100.2.20-22
+      database: (( ips microservices.applications.subnet 25 ))     # 10.100.2.25
+    
+    # Inventory service
+    inventory_service:
+      instances: (( ips microservices.applications.subnet 30 3 ))  # 10.100.2.30-32
+      database: (( ips microservices.applications.subnet 35 ))     # 10.100.2.35
+    
+    # Payment service
+    payment_service:
+      instances: (( ips microservices.applications.subnet 40 2 ))  # 10.100.2.40-41
+      database: (( ips microservices.applications.subnet 45 ))     # 10.100.2.45
+
+# Database cluster allocation
+database_cluster:
+  # Database network
+  network: "10.200.0.0/24"
+  
+  # PostgreSQL cluster
+  postgresql:
+    primary: (( ips database_cluster.network 10 ))                 # 10.200.0.10
+    replicas: (( ips database_cluster.network 11 3 ))             # 10.200.0.11-13
+    pgbouncer: (( ips database_cluster.network 15 2 ))            # 10.200.0.15-16
+    backup: (( ips database_cluster.network 19 ))                 # 10.200.0.19
+  
+  # MongoDB replica set
+  mongodb:
+    primary: (( ips database_cluster.network 20 ))                 # 10.200.0.20
+    secondaries: (( ips database_cluster.network 21 2 ))          # 10.200.0.21-22
+    arbiter: (( ips database_cluster.network 23 ))                # 10.200.0.23
+    config_servers: (( ips database_cluster.network 25 3 ))       # 10.200.0.25-27
+  
+  # Redis cluster
+  redis:
+    masters: (( ips database_cluster.network 30 3 ))              # 10.200.0.30-32
+    slaves: (( ips database_cluster.network 33 3 ))               # 10.200.0.33-35
+    sentinel: (( ips database_cluster.network 38 3 ))             # 10.200.0.38-40
+
+# Container orchestration
+container_platform:
+  # Docker Swarm / Kubernetes nodes
+  cluster_network: "172.20.0.0/16"
+  
+  # Control plane
+  control_plane:
+    subnet: "172.20.1.0/24"
+    masters: (( ips container_platform.control_plane.subnet 10 3 ))    # 172.20.1.10-12
+    etcd_nodes: (( ips container_platform.control_plane.subnet 20 3 )) # 172.20.1.20-22
+    api_lb: (( ips container_platform.control_plane.subnet 5 ))        # 172.20.1.5
+  
+  # Worker nodes
+  workers:
+    # General purpose workers
+    general:
+      subnet: "172.20.2.0/24"
+      nodes: (( ips container_platform.workers.general.subnet 10 20 )) # 172.20.2.10-29
+    
+    # GPU workers
+    gpu:
+      subnet: "172.20.3.0/24"
+      nodes: (( ips container_platform.workers.gpu.subnet 10 5 ))      # 172.20.3.10-14
+    
+    # High memory workers
+    highmem:
+      subnet: "172.20.4.0/24"
+      nodes: (( ips container_platform.workers.highmem.subnet 10 8 ))  # 172.20.4.10-17
+  
+  # Ingress controllers
+  ingress:
+    subnet: "172.20.10.0/24"
+    nginx: (( ips container_platform.ingress.subnet 10 2 ))            # 172.20.10.10-11
+    traefik: (( ips container_platform.ingress.subnet 20 2 ))          # 172.20.10.20-21
+    haproxy: (( ips container_platform.ingress.subnet 30 2 ))          # 172.20.10.30-31
+
+# Monitoring and logging stack
+monitoring:
+  # Monitoring network
+  network: "10.99.0.0/24"
+  
+  # Metrics collection
+  metrics:
+    prometheus: (( ips monitoring.network 10 2 ))                      # 10.99.0.10-11
+    grafana: (( ips monitoring.network 15 ))                          # 10.99.0.15
+    alertmanager: (( ips monitoring.network 16 ))                     # 10.99.0.16
+    pushgateway: (( ips monitoring.network 17 ))                      # 10.99.0.17
+  
+  # Logging
+  logging:
+    elasticsearch: (( ips monitoring.network 20 3 ))                   # 10.99.0.20-22
+    logstash: (( ips monitoring.network 25 2 ))                       # 10.99.0.25-26
+    kibana: (( ips monitoring.network 28 ))                           # 10.99.0.28
+    fluentd: (( ips monitoring.network 30 3 ))                        # 10.99.0.30-32
+  
+  # Tracing
+  tracing:
+    jaeger_collector: (( ips monitoring.network 40 ))                  # 10.99.0.40
+    jaeger_query: (( ips monitoring.network 41 ))                     # 10.99.0.41
+    zipkin: (( ips monitoring.network 42 ))                           # 10.99.0.42
+
+# Message queue services
+messaging:
+  # Messaging network
+  network: "10.150.0.0/24"
+  
+  # RabbitMQ cluster
+  rabbitmq:
+    nodes: (( ips messaging.network 10 3 ))                           # 10.150.0.10-12
+    management: (( ips messaging.network 15 ))                        # 10.150.0.15
+    ha_proxy: (( ips messaging.network 5 ))                           # 10.150.0.5
+  
+  # Kafka cluster
+  kafka:
+    brokers: (( ips messaging.network 20 3 ))                         # 10.150.0.20-22
+    zookeeper: (( ips messaging.network 25 3 ))                       # 10.150.0.25-27
+    schema_registry: (( ips messaging.network 30 ))                   # 10.150.0.30
+    connect: (( ips messaging.network 31 2 ))                         # 10.150.0.31-32
+  
+  # NATS
+  nats:
+    servers: (( ips messaging.network 40 3 ))                         # 10.150.0.40-42
+    streaming: (( ips messaging.network 45 3 ))                       # 10.150.0.45-47
+
+# Load balancer allocation
+load_balancers:
+  # Public facing
+  public:
+    network: "203.0.113.0/24"  # Documentation IP range
+    
+    # Web traffic
+    web_lb:
+      primary: (( ips load_balancers.public.network 10 ))             # 203.0.113.10
+      secondary: (( ips load_balancers.public.network 11 ))           # 203.0.113.11
+      vip: (( ips load_balancers.public.network 5 ))                  # 203.0.113.5
+    
+    # API traffic
+    api_lb:
+      primary: (( ips load_balancers.public.network 20 ))             # 203.0.113.20
+      secondary: (( ips load_balancers.public.network 21 ))           # 203.0.113.21
+      vip: (( ips load_balancers.public.network 15 ))                 # 203.0.113.15
+  
+  # Internal
+  internal:
+    network: "10.50.0.0/24"
+    
+    # Database load balancer
+    db_lb:
+      read_primary: (( ips load_balancers.internal.network 10 ))      # 10.50.0.10
+      read_secondary: (( ips load_balancers.internal.network 11 ))    # 10.50.0.11
+      write_vip: (( ips load_balancers.internal.network 5 ))          # 10.50.0.5
+      read_vip: (( ips load_balancers.internal.network 6 ))           # 10.50.0.6
+    
+    # Service mesh load balancer
+    mesh_lb:
+      instances: (( ips load_balancers.internal.network 20 4 ))       # 10.50.0.20-23
+
+# Development environments
+dev_environments:
+  # Dev network with multiple isolated environments
+  network: "192.168.50.0/24"
+  
+  # Calculate IP ranges for each developer
+  # Each dev gets 10 IPs
+  developers:
+    alice:
+      start_ip: (( ips dev_environments.network 10 ))                 # 192.168.50.10
+      range: (( ips dev_environments.network 10 10 ))                 # 192.168.50.10-19
+    
+    bob:
+      start_ip: (( ips dev_environments.network 20 ))                 # 192.168.50.20
+      range: (( ips dev_environments.network 20 10 ))                 # 192.168.50.20-29
+    
+    charlie:
+      start_ip: (( ips dev_environments.network 30 ))                 # 192.168.50.30
+      range: (( ips dev_environments.network 30 10 ))                 # 192.168.50.30-39
+    
+    shared:
+      services: (( ips dev_environments.network 200 20 ))             # 192.168.50.200-219
+      databases: (( ips dev_environments.network 220 10 ))            # 192.168.50.220-229

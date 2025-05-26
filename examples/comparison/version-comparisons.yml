@@ -1,0 +1,477 @@
+# Version Comparisons with Comparison Operators
+#
+# Comparing version numbers and implementing compatibility checks
+
+# Version comparison basics
+version_basics:
+  # Important note: String comparisons are lexicographic, not semantic
+  # "1.10.0" < "1.2.0" in string comparison (incorrect for versions)
+  # This example shows both the limitations and workarounds
+  
+  versions:
+    current: "2.5.3"
+    minimum: "2.0.0"
+    latest: "3.1.0"
+    
+    # Examples showing lexicographic comparison issues
+    v1_2: "1.2.0"
+    v1_10: "1.10.0"
+    
+  # Direct string comparisons (lexicographic)
+  string_comparisons:
+    current_gte_minimum: (( version_basics.versions.current >= version_basics.versions.minimum ))
+    # Result: true ("2.5.3" >= "2.0.0")
+    
+    current_lt_latest: (( version_basics.versions.current < version_basics.versions.latest ))
+    # Result: true ("2.5.3" < "3.1.0")
+    
+    # This shows the problem with string comparison
+    version_ordering_issue: (( version_basics.versions.v1_10 < version_basics.versions.v1_2 ))
+    # Result: true ("1.10.0" < "1.2.0" - INCORRECT for semantic versioning!)
+
+# Semantic version components
+semantic_versions:
+  # Application versions
+  app:
+    current:
+      full: "2.5.3"
+      major: 2
+      minor: 5
+      patch: 3
+    
+    required:
+      full: "2.0.0"
+      major: 2
+      minor: 0
+      patch: 0
+    
+    latest:
+      full: "3.1.0"
+      major: 3
+      minor: 1
+      patch: 0
+  
+  # Proper semantic version comparison
+  compatibility:
+    # Major version compatibility
+    major_compatible: (( semantic_versions.app.current.major == semantic_versions.app.required.major ))
+    # Result: true (2 == 2)
+    
+    # Check if current >= required (semantic)
+    meets_minimum: (( 
+      semantic_versions.app.current.major > semantic_versions.app.required.major ||
+      (semantic_versions.app.current.major == semantic_versions.app.required.major &&
+       semantic_versions.app.current.minor > semantic_versions.app.required.minor) ||
+      (semantic_versions.app.current.major == semantic_versions.app.required.major &&
+       semantic_versions.app.current.minor == semantic_versions.app.required.minor &&
+       semantic_versions.app.current.patch >= semantic_versions.app.required.patch)
+    ))
+    # Result: true (2.5.3 >= 2.0.0)
+    
+    # Check if update available
+    update_available: (( 
+      semantic_versions.app.latest.major > semantic_versions.app.current.major ||
+      (semantic_versions.app.latest.major == semantic_versions.app.current.major &&
+       semantic_versions.app.latest.minor > semantic_versions.app.current.minor) ||
+      (semantic_versions.app.latest.major == semantic_versions.app.current.major &&
+       semantic_versions.app.latest.minor == semantic_versions.app.current.minor &&
+       semantic_versions.app.latest.patch > semantic_versions.app.current.patch)
+    ))
+    # Result: true (3.1.0 > 2.5.3)
+    
+    # Update type
+    update_type: (( 
+      !semantic_versions.compatibility.update_available ? "none" :
+      semantic_versions.app.latest.major > semantic_versions.app.current.major ? "major" :
+      semantic_versions.app.latest.minor > semantic_versions.app.current.minor ? "minor" :
+      "patch"
+    ))
+    # Result: "major"
+
+# Dependency version checking
+dependencies:
+  # Current dependency versions
+  installed:
+    nodejs:
+      version: "16.14.2"
+      major: 16
+      minor: 14
+      patch: 2
+    
+    postgres:
+      version: "13.7"
+      major: 13
+      minor: 7
+    
+    redis:
+      version: "6.2.7"
+      major: 6
+      minor: 2
+      patch: 7
+    
+    nginx:
+      version: "1.21.6"
+      major: 1
+      minor: 21
+      patch: 6
+  
+  # Required versions
+  requirements:
+    nodejs:
+      min_version: "14.0.0"
+      min_major: 14
+      max_version: "18.0.0"
+      max_major: 18
+    
+    postgres:
+      min_version: "12.0"
+      min_major: 12
+      max_version: "14.99"
+      max_major: 14
+    
+    redis:
+      min_version: "5.0.0"
+      min_major: 5
+    
+    nginx:
+      min_version: "1.18.0"
+      min_major: 1
+      min_minor: 18
+  
+  # Compatibility checks
+  compatibility:
+    nodejs:
+      meets_minimum: (( dependencies.installed.nodejs.major >= dependencies.requirements.nodejs.min_major ))
+      # Result: true (16 >= 14)
+      
+      within_range: (( 
+        dependencies.installed.nodejs.major >= dependencies.requirements.nodejs.min_major &&
+        dependencies.installed.nodejs.major <= dependencies.requirements.nodejs.max_major
+      ))
+      # Result: true (16 >= 14 && 16 <= 18)
+      
+      status: (( 
+        !dependencies.compatibility.nodejs.within_range ? "incompatible" :
+        dependencies.installed.nodejs.major == dependencies.requirements.nodejs.min_major ? "minimum" :
+        dependencies.installed.nodejs.major == dependencies.requirements.nodejs.max_major ? "maximum" :
+        "supported"
+      ))
+      # Result: "supported"
+    
+    postgres:
+      compatible: (( 
+        dependencies.installed.postgres.major >= dependencies.requirements.postgres.min_major &&
+        dependencies.installed.postgres.major <= dependencies.requirements.postgres.max_major
+      ))
+      # Result: true (13 >= 12 && 13 <= 14)
+      
+      upgrade_available: (( dependencies.installed.postgres.major < dependencies.requirements.postgres.max_major ))
+      # Result: true (13 < 14)
+    
+    redis:
+      compatible: (( dependencies.installed.redis.major >= dependencies.requirements.redis.min_major ))
+      # Result: true (6 >= 5)
+      
+      major_versions_ahead: (( dependencies.installed.redis.major - dependencies.requirements.redis.min_major ))
+      # Result: 1
+    
+    nginx:
+      compatible: (( 
+        dependencies.installed.nginx.major > dependencies.requirements.nginx.min_major ||
+        (dependencies.installed.nginx.major == dependencies.requirements.nginx.min_major &&
+         dependencies.installed.nginx.minor >= dependencies.requirements.nginx.min_minor)
+      ))
+      # Result: true (1.21 >= 1.18)
+
+# API version compatibility
+api_versions:
+  # Client/Server versions
+  client:
+    version: "2.3.0"
+    api_version: "v2"
+    supported_apis: ["v1", "v2"]
+  
+  server:
+    version: "3.1.0"
+    api_version: "v3"
+    supported_apis: ["v2", "v3"]
+    deprecated_apis: ["v1"]
+  
+  # Compatibility matrix
+  compatibility:
+    # Check if client API is supported by server
+    client_api_supported: (( 
+      api_versions.client.api_version == "v1" && (api_versions.server.supported_apis | contains "v1") ||
+      api_versions.client.api_version == "v2" && (api_versions.server.supported_apis | contains "v2") ||
+      api_versions.client.api_version == "v3" && (api_versions.server.supported_apis | contains "v3")
+    ))
+    # Would be: true (v2 is in server's supported_apis)
+    
+    # Check if using deprecated API
+    using_deprecated: (( 
+      api_versions.client.api_version == "v1" ||
+      (api_versions.client.supported_apis | contains "v1")
+    ))
+    # Would evaluate based on contains operator
+    
+    # Recommended action
+    recommendation: (( 
+      !api_versions.compatibility.client_api_supported ? "upgrade_required" :
+      api_versions.compatibility.using_deprecated ? "upgrade_recommended" :
+      api_versions.client.api_version != api_versions.server.api_version ? "newer_available" :
+      "up_to_date"
+    ))
+
+# Package version constraints
+package_constraints:
+  # Package versions with different formats
+  packages:
+    express:
+      installed: "4.18.2"
+      constraint: "^4.17.0"  # Compatible with 4.x.x where x >= 17
+      major_required: 4
+      minor_minimum: 17
+    
+    react:
+      installed: "18.2.0"
+      constraint: ">=17.0.0 <19.0.0"
+      min_major: 17
+      max_major: 18
+    
+    lodash:
+      installed: "4.17.21"
+      constraint: "~4.17.20"  # Compatible with 4.17.x where x >= 20
+      major_required: 4
+      minor_required: 17
+      patch_minimum: 20
+    
+    typescript:
+      installed: "4.9.5"
+      constraint: ">=4.5.0"
+      min_major: 4
+      min_minor: 5
+  
+  # Simplified constraint checking (without parsing)
+  constraint_checks:
+    express:
+      major: 4
+      minor: 18
+      patch: 2
+      
+      satisfies: (( 
+        package_constraints.constraint_checks.express.major == package_constraints.packages.express.major_required &&
+        package_constraints.constraint_checks.express.minor >= package_constraints.packages.express.minor_minimum
+      ))
+      # Result: true (4 == 4 && 18 >= 17)
+    
+    react:
+      major: 18
+      minor: 2
+      patch: 0
+      
+      satisfies: (( 
+        package_constraints.constraint_checks.react.major >= package_constraints.packages.react.min_major &&
+        package_constraints.constraint_checks.react.major <= package_constraints.packages.react.max_major
+      ))
+      # Result: true (18 >= 17 && 18 <= 18)
+    
+    typescript:
+      major: 4
+      minor: 9
+      patch: 5
+      
+      satisfies: (( 
+        package_constraints.constraint_checks.typescript.major > package_constraints.packages.typescript.min_major ||
+        (package_constraints.constraint_checks.typescript.major == package_constraints.packages.typescript.min_major &&
+         package_constraints.constraint_checks.typescript.minor >= package_constraints.packages.typescript.min_minor)
+      ))
+      # Result: true (4 == 4 && 9 >= 5)
+
+# Database migration versions
+migrations:
+  # Current state
+  current:
+    schema_version: 45
+    last_migration: "20240115_add_user_preferences"
+    compatible_app_versions: ["2.4.0", "2.5.0", "2.5.1", "2.5.2", "2.5.3"]
+  
+  # Available migrations
+  pending:
+    - version: 46
+      name: "20240120_add_analytics_table"
+      min_app_version: "2.5.0"
+      breaking_change: false
+      
+    - version: 47
+      name: "20240125_refactor_user_table"
+      min_app_version: "2.6.0"
+      breaking_change: true
+      
+    - version: 48
+      name: "20240130_add_indexes"
+      min_app_version: "2.6.0"
+      breaking_change: false
+  
+  # Migration compatibility
+  compatibility:
+    # Check each pending migration
+    migration_46_compatible: (( migrations.current.schema_version < 46 ))
+    # Result: true (45 < 46)
+    
+    migration_47_compatible: (( migrations.current.schema_version < 47 ))
+    # Result: true (45 < 47)
+    
+    # Check for breaking changes
+    has_breaking_changes: (( 
+      migrations.current.schema_version < 47 &&
+      migrations.pending.[1].breaking_change
+    ))
+    # Result: true
+    
+    # Safe to auto-migrate
+    can_auto_migrate: (( 
+      migrations.current.schema_version == 45 &&
+      !migrations.pending.[0].breaking_change
+    ))
+    # Result: true (version 46 is not breaking)
+
+# Version lifecycle management
+lifecycle:
+  # Product versions
+  versions:
+    - version: "1.0.0"
+      status: "deprecated"
+      end_of_life: "2023-01-01"
+      
+    - version: "2.0.0"
+      status: "maintenance"
+      end_of_life: "2024-06-01"
+      
+    - version: "2.5.3"
+      status: "current"
+      end_of_life: "2025-06-01"
+      
+    - version: "3.0.0"
+      status: "beta"
+      release_date: "2024-03-01"
+      
+    - version: "3.1.0"
+      status: "alpha"
+      release_date: "2024-06-01"
+  
+  # Current date for comparison (simulated)
+  current_date: "2024-01-23"
+  
+  # Version recommendations
+  recommendations:
+    current_version: "2.5.3"
+    current_major: 2
+    
+    # Check if on supported version
+    is_supported: (( 
+      lifecycle.recommendations.current_version == "2.5.3" ||
+      lifecycle.recommendations.current_version == "2.0.0"
+    ))
+    # Result: true
+    
+    # Check if upgrade needed
+    upgrade_urgency: (( 
+      lifecycle.recommendations.current_version == "1.0.0" ? "critical" :
+      lifecycle.recommendations.current_version == "2.0.0" ? "recommended" :
+      lifecycle.recommendations.current_version == "2.5.3" ? "optional" :
+      "none"
+    ))
+    # Result: "optional"
+    
+    # Next recommended version
+    recommended_upgrade: (( 
+      lifecycle.recommendations.current_major < 2 ? "2.5.3" :
+      lifecycle.recommendations.current_major == 2 ? "3.0.0" :
+      "none"
+    ))
+    # Result: "3.0.0"
+
+# Compatibility matrix
+compatibility_matrix:
+  # Component versions
+  components:
+    frontend:
+      version: "3.2.1"
+      major: 3
+      minor: 2
+    
+    backend:
+      version: "2.8.5"
+      major: 2
+      minor: 8
+    
+    database:
+      version: "1.5.0"
+      major: 1
+      minor: 5
+    
+    cache:
+      version: "2.1.0"
+      major: 2
+      minor: 1
+  
+  # Compatibility rules
+  rules:
+    # Frontend-Backend compatibility
+    frontend_backend:
+      compatible: (( 
+        (compatibility_matrix.components.frontend.major == 3 && 
+         compatibility_matrix.components.backend.major == 2 &&
+         compatibility_matrix.components.backend.minor >= 8) ||
+        (compatibility_matrix.components.frontend.major == 2 && 
+         compatibility_matrix.components.backend.major == 2)
+      ))
+      # Result: true (frontend 3.x works with backend 2.8+)
+    
+    # Backend-Database compatibility
+    backend_database:
+      compatible: (( 
+        compatibility_matrix.components.backend.major == 2 &&
+        compatibility_matrix.components.database.major == 1 &&
+        compatibility_matrix.components.database.minor >= 4
+      ))
+      # Result: true (backend 2.x works with database 1.4+)
+    
+    # Cache version requirements
+    cache_compatible: (( 
+      compatibility_matrix.components.cache.major >= 2
+    ))
+    # Result: true
+    
+    # Overall system compatibility
+    system_compatible: (( 
+      compatibility_matrix.rules.frontend_backend.compatible &&
+      compatibility_matrix.rules.backend_database.compatible &&
+      compatibility_matrix.rules.cache_compatible
+    ))
+    # Result: true
+  
+  # Upgrade paths
+  upgrade_paths:
+    # Can upgrade frontend to v4?
+    frontend_v4_compatible: (( 
+      compatibility_matrix.components.backend.major >= 3 ||
+      (compatibility_matrix.components.backend.major == 2 && 
+       compatibility_matrix.components.backend.minor >= 10)
+    ))
+    # Result: false (backend is 2.8, needs 2.10+)
+    
+    # Required upgrades for frontend v4
+    required_for_frontend_v4:
+      backend_min: "2.10.0"
+      database_min: "1.5.0"
+      cache_min: "2.0.0"
+      
+      backend_needs_upgrade: (( compatibility_matrix.components.backend.minor < 10 ))
+      # Result: true
+      
+      database_needs_upgrade: (( compatibility_matrix.components.database.minor < 5 ))
+      # Result: false
+      
+      cache_needs_upgrade: (( compatibility_matrix.components.cache.major < 2 ))
+      # Result: false

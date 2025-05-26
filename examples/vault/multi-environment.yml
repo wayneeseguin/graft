@@ -1,0 +1,149 @@
+# Multi-Environment Vault Configuration
+#
+# This example demonstrates patterns for managing secrets
+# across multiple environments using consistent Vault paths
+
+# Environment-specific configuration
+meta:
+  environment: (( param "Please provide environment (dev/staging/prod)" ))
+  region: (( param "Please provide region (us-east-1/us-west-2/eu-west-1)" ))
+  
+  # Build Vault paths based on environment
+  vault_prefix: (( concat "secret/" meta.environment "/" meta.region ))
+
+# Application configuration with environment-specific secrets
+application:
+  name: myapp
+  environment: (( grab meta.environment ))
+  
+  # Database configuration varies by environment
+  database:
+    host: (( concat "db." meta.environment ".example.com" ))
+    port: 5432
+    name: (( concat "myapp_" meta.environment ))
+    username: (( vault meta.vault_prefix "/database:username" ))
+    password: (( vault meta.vault_prefix "/database:password" ))
+    
+    # Production has additional read replicas
+    read_replicas: (( grab meta.environment == "prod" ? database.prod_replicas : [] ))
+    prod_replicas:
+      - host: db-read-1.prod.example.com
+        port: 5432
+      - host: db-read-2.prod.example.com
+        port: 5432
+
+  # API keys with environment isolation
+  api_keys:
+    internal: (( vault meta.vault_prefix "/api:internal_key" ))
+    external: (( vault meta.vault_prefix "/api:external_key" ))
+    
+    # Some services only in production
+    payment_gateway: (( vault meta.vault_prefix "/api:payment_key" || null ))
+    analytics: (( vault meta.vault_prefix "/api:analytics_key" || null ))
+
+  # Feature flags from Vault
+  features:
+    new_ui: (( vault meta.vault_prefix "/features:new_ui" || false ))
+    advanced_analytics: (( vault meta.vault_prefix "/features:advanced_analytics" || false ))
+    beta_features: (( vault meta.vault_prefix "/features:beta_enabled" || false ))
+
+# Infrastructure secrets
+infrastructure:
+  # Cloud provider credentials
+  aws:
+    access_key_id: (( vault meta.vault_prefix "/aws:access_key_id" ))
+    secret_access_key: (( vault meta.vault_prefix "/aws:secret_access_key" ))
+    region: (( grab meta.region ))
+    
+    # Environment-specific S3 buckets
+    s3_buckets:
+      uploads: (( concat "myapp-uploads-" meta.environment "-" meta.region ))
+      backups: (( concat "myapp-backups-" meta.environment "-" meta.region ))
+
+  # Monitoring and alerting
+  monitoring:
+    datadog:
+      api_key: (( vault "secret/shared/monitoring:datadog_api_key" ))
+      app_key: (( vault "secret/shared/monitoring:datadog_app_key" ))
+      
+      # Environment-specific tags
+      tags:
+        - (( concat "env:" meta.environment ))
+        - (( concat "region:" meta.region ))
+        - "service:myapp"
+    
+    pagerduty:
+      # Only production has PagerDuty integration
+      enabled: (( grab meta.environment == "prod" ))
+      integration_key: (( grab meta.environment == "prod" ? (vault "secret/prod/alerting:pagerduty_key") : null ))
+
+# SSL/TLS certificates by environment
+tls:
+  # Development uses self-signed
+  development:
+    cert: (( vault "secret/dev/tls:self_signed_cert" ))
+    key: (( vault "secret/dev/tls:self_signed_key" ))
+  
+  # Staging uses Let's Encrypt staging
+  staging:
+    cert: (( vault "secret/staging/tls:letsencrypt_cert" ))
+    key: (( vault "secret/staging/tls:letsencrypt_key" ))
+  
+  # Production uses paid wildcard certificate
+  production:
+    cert: (( vault "secret/prod/tls:wildcard_cert" ))
+    key: (( vault "secret/prod/tls:wildcard_key" ))
+    chain: (( vault "secret/prod/tls:cert_chain" ))
+  
+  # Select based on environment
+  active: (( grab tls.[meta.environment] ))
+
+# Shared secrets across all environments
+shared:
+  # OAuth providers
+  oauth:
+    github:
+      client_id: (( vault "secret/shared/oauth/github:client_id" ))
+      client_secret: (( vault "secret/shared/oauth/github:client_secret" ))
+    
+    google:
+      client_id: (( vault "secret/shared/oauth/google:client_id" ))
+      client_secret: (( vault "secret/shared/oauth/google:client_secret" ))
+  
+  # Third-party services
+  services:
+    sendgrid:
+      api_key: (( vault "secret/shared/services/sendgrid:api_key" ))
+      
+    twilio:
+      account_sid: (( vault "secret/shared/services/twilio:account_sid" ))
+      auth_token: (( vault "secret/shared/services/twilio:auth_token" ))
+
+# Environment-specific overrides
+overrides:
+  dev:
+    log_level: debug
+    debug_mode: true
+    
+  staging:
+    log_level: info
+    debug_mode: false
+    
+  prod:
+    log_level: warning
+    debug_mode: false
+    
+    # Production-only configurations
+    cdn:
+      enabled: true
+      provider: cloudflare
+      api_token: (( vault "secret/prod/cdn:cloudflare_token" ))
+
+# Final configuration selection
+config: (( grab overrides.[meta.environment] ))
+
+# Example usage:
+# spruce merge multi-environment.yml --prune meta
+#   with environment=prod region=us-east-1
+#
+# This will resolve all Vault paths for production in us-east-1

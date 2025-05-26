@@ -1,0 +1,75 @@
+---
+# Basic vault operator examples
+# Requires: export VAULT_ADDR='http://127.0.0.1:8200'
+#          export VAULT_TOKEN="your-token"
+
+# Simple secret retrieval
+credentials:
+  # Get a specific key from a secret
+  database_password: (( vault "secret/database:password" ))
+  
+  # Get different keys from same path
+  database_username: (( vault "secret/database:username" ))
+  database_host: (( vault "secret/database:host" ))
+  
+  # Get from different paths
+  api_key: (( vault "secret/api:key" ))
+  api_endpoint: (( vault "secret/api:endpoint" ))
+
+# Building paths dynamically
+dynamic_paths:
+  service: myapp
+  environment: production
+  
+  # Construct vault path: secret/myapp/production/database:password
+  db_password: (( vault (concat "secret/" (grab dynamic_paths.service) "/" (grab dynamic_paths.environment) "/database:password") ))
+  
+  # Another dynamic path
+  api_key: (( vault (concat "secret/" (grab dynamic_paths.service) "/" (grab dynamic_paths.environment) "/api:key") ))
+
+# Using vault with environment variables
+env_based:
+  # Path includes environment variable: secret/prod/credentials:password
+  password: (( vault (concat "secret/" $ENV "/credentials:password") ))
+  
+  # Multiple variables in path
+  secret: (( vault (concat "secret/" $APP "/" $ENV "/db:password") ))
+
+# Vault v2 KV secrets engine (requires /data/ in path)
+kv_v2_secrets:
+  # For KV v2, include /data/ after the mount point
+  # If your secret is at secret/myapp/config
+  # The path becomes: secret/data/myapp/config:key
+  app_secret: (( vault "secret/data/myapp/config:api_key" ))
+  
+  # Another v2 example
+  db_creds: (( vault "secret/data/database/mysql:root_password" ))
+
+# Common patterns
+common_patterns:
+  # Basic auth credentials
+  auth:
+    username: (( vault "secret/auth:username" ))
+    password: (( vault "secret/auth:password" ))
+    # Combine for basic auth
+    basic_auth: (( base64 (concat (grab common_patterns.auth.username) ":" (grab common_patterns.auth.password)) ))
+  
+  # TLS certificates
+  tls:
+    cert: (( vault "secret/certificates/app:cert" ))
+    key: (( vault "secret/certificates/app:key" ))
+    ca: (( vault "secret/certificates/app:ca" ))
+  
+  # API configuration
+  external_api:
+    endpoint: (( vault "secret/external/api:endpoint" ))
+    key: (( vault "secret/external/api:key" ))
+    secret: (( vault "secret/external/api:secret" ))
+
+# Error handling
+error_examples:
+  # This will fail if secret doesn't exist
+  # missing: (( vault "secret/does-not-exist:key" ))
+  
+  # Use with defaults to handle missing secrets
+  with_fallback: (( vault "secret/might-not-exist:key" || "default-value" ))

@@ -1,0 +1,245 @@
+# Conditional Configuration with Null Operator
+#
+# Using null checks to conditionally enable features and resources
+
+# Application configuration with optional features
+application:
+  name: "MyApp"
+  version: "1.2.3"
+  
+  # Optional configurations (some may be null/empty)
+  features:
+    analytics:
+      enabled: true
+      tracking_id: "UA-123456-1"
+    
+    cache:
+      enabled: true
+      provider: ""  # Empty - should use default
+    
+    cdn:
+      enabled: false
+      url: null
+    
+    monitoring:
+      # Completely missing - should be detected as null
+  
+  # Feature flags based on null checks
+  feature_flags:
+    has_analytics: (( ! (null application.features.analytics.tracking_id) ))
+    # Result: true (tracking_id is present)
+    
+    has_cache_provider: (( ! (null application.features.cache.provider) ))
+    # Result: false (provider is empty string)
+    
+    has_cdn_url: (( ! (null application.features.cdn.url) ))
+    # Result: false (url is null)
+    
+    has_monitoring: (( ! (null application.features.monitoring) ))
+    # Result: false (monitoring doesn't exist)
+
+# Database configuration with optional read replicas
+database:
+  primary:
+    host: "db-master.example.com"
+    port: 5432
+    username: "appuser"
+    password: "secretpass"
+  
+  # Optional read replicas
+  replicas: []  # Empty array
+  
+  # Connection pooling (optional)
+  pool:
+    min: null
+    max: null
+  
+  # SSL configuration (optional)
+  ssl:
+    enabled: true
+    cert: ""
+  
+  # Configuration decisions based on null checks
+  config:
+    use_replicas: (( ! (null database.replicas) && database.replicas != [] ))
+    # Result: false (empty array)
+    
+    has_pool_config: (( ! (null database.pool.min) || ! (null database.pool.max) ))
+    # Result: false (both are null)
+    
+    ssl_fully_configured: (( database.ssl.enabled && ! (null database.ssl.cert) ))
+    # Result: false (cert is empty)
+    
+    connection_string: (( concat 
+      "postgresql://" 
+      database.primary.username 
+      ":" 
+      database.primary.password 
+      "@" 
+      database.primary.host 
+      ":" 
+      database.primary.port 
+      "/myapp"
+      (null database.ssl.cert ? "" : "?sslcert=" + database.ssl.cert)
+    ))
+
+# Service discovery with optional endpoints
+services:
+  api:
+    internal: "http://api.internal:8080"
+    external: "https://api.example.com"
+  
+  auth:
+    internal: "http://auth.internal:8080"
+    external: null  # No external endpoint
+  
+  cache:
+    internal: ""  # Empty - no internal endpoint
+    external: "redis://cache.example.com:6379"
+  
+  # Service availability checks
+  availability:
+    api:
+      has_internal: (( ! (null services.api.internal) ))
+      # Result: true
+      has_external: (( ! (null services.api.external) ))
+      # Result: true
+      fully_available: (( ! (null services.api.internal) && ! (null services.api.external) ))
+      # Result: true
+    
+    auth:
+      has_internal: (( ! (null services.auth.internal) ))
+      # Result: true
+      has_external: (( ! (null services.auth.external) ))
+      # Result: false
+      fully_available: (( ! (null services.auth.internal) && ! (null services.auth.external) ))
+      # Result: false
+    
+    cache:
+      has_internal: (( ! (null services.cache.internal) ))
+      # Result: false
+      has_external: (( ! (null services.cache.external) ))
+      # Result: true
+      fully_available: (( ! (null services.cache.internal) && ! (null services.cache.external) ))
+      # Result: false
+
+# Cloud resource configuration
+cloud:
+  # Optional auto-scaling configuration
+  autoscaling:
+    enabled: true
+    min: 2
+    max: null  # Not configured
+    target_cpu: 80
+  
+  # Optional load balancer
+  load_balancer:
+    enabled: false
+    type: ""
+    certificate_arn: null
+  
+  # Optional CDN
+  cdn: {}  # Empty map
+  
+  # Resource creation flags
+  resources:
+    create_autoscaling: (( cloud.autoscaling.enabled && ! (null cloud.autoscaling.max) ))
+    # Result: false (max is null)
+    
+    create_load_balancer: (( 
+      cloud.load_balancer.enabled && 
+      ! (null cloud.load_balancer.type) && 
+      ! (null cloud.load_balancer.certificate_arn)
+    ))
+    # Result: false (multiple nulls)
+    
+    create_cdn: (( ! (null cloud.cdn) && cloud.cdn != {} ))
+    # Result: false (empty map)
+
+# Kubernetes deployment with optional resources
+kubernetes:
+  deployment:
+    name: "myapp"
+    replicas: 3
+    
+    # Optional resource limits
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "250m"
+      limits:
+        memory: null  # No limit
+        cpu: ""      # Empty - no limit
+    
+    # Optional probes
+    probes:
+      liveness:
+        path: "/health"
+        port: 8080
+      readiness:
+        # Completely missing
+    
+    # Optional environment variables
+    env:
+      - name: "APP_ENV"
+        value: "production"
+      - name: "LOG_LEVEL"
+        value: ""  # Empty - should use default
+      - name: "FEATURE_FLAG"
+        value: null
+  
+  # Deployment configuration based on null checks
+  config:
+    has_memory_limit: (( ! (null kubernetes.deployment.resources.limits.memory) ))
+    # Result: false
+    
+    has_cpu_limit: (( ! (null kubernetes.deployment.resources.limits.cpu) ))
+    # Result: false
+    
+    has_readiness_probe: (( ! (null kubernetes.deployment.probes.readiness) ))
+    # Result: false
+    
+    valid_env_vars: (( grab kubernetes.deployment.env | 
+      [[ var | var if ! (null var.value) ]] 
+    ))
+    # Filters out env vars with null/empty values
+
+# Feature toggles with complex conditions
+feature_toggles:
+  # Source configurations (some might be missing)
+  configs:
+    beta_users: ["user1", "user2"]
+    premium_features: null
+    experimental: {}
+    maintenance_mode: false
+  
+  # Feature decisions
+  features:
+    enable_beta: (( ! (null feature_toggles.configs.beta_users) && feature_toggles.configs.beta_users != [] ))
+    # Result: true (has beta users)
+    
+    enable_premium: (( ! (null feature_toggles.configs.premium_features) ))
+    # Result: false (premium_features is null)
+    
+    enable_experimental: (( ! (null feature_toggles.configs.experimental) && feature_toggles.configs.experimental != {} ))
+    # Result: false (empty map)
+    
+    system_available: (( ! feature_toggles.configs.maintenance_mode ))
+    # Result: true (not in maintenance)
+
+# Conditional resource creation
+resources:
+  # Optional S3 bucket
+  s3_bucket:
+    create: (( ! (null cloud.cdn.bucket_name) ))
+    name: (( null cloud.cdn.bucket_name ? "" : cloud.cdn.bucket_name ))
+  
+  # Optional RDS instance
+  rds_instance:
+    create: (( ! (null database.replicas) && database.replicas != [] ))
+    read_replica_count: (( null database.replicas ? 0 : database.replicas.length ))
+  
+  # Optional ElastiCache
+  elasticache:
+    create: (( ! (null services.cache.internal) ))
+    endpoint: (( null services.cache.internal ? services.cache.external : services.cache.internal ))

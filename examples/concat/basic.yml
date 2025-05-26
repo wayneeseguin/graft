@@ -1,0 +1,32 @@
+---
+# Basic concatenation examples
+
+# Simple string literals
+greetings:
+  hello: (( concat "Hello" " " "World" "!" ))
+  welcome: (( concat "Welcome " "to " "Spruce" ))
+  
+# Concatenating different types (numbers are converted to strings)
+versions:
+  version: (( concat "v" 1 "." 2 "." 3 ))          # "v1.2.3"
+  build: (( concat "build-" 2024 "-" 42 ))         # "build-2024-42"
+  
+# Building identifiers
+identifiers:
+  user_id: (( concat "user-" 12345 ))              # "user-12345"
+  session: (( concat "sess_" "abc" "_" 789 ))      # "sess_abc_789"
+  
+# Empty strings are fine
+edge_cases:
+  with_empty: (( concat "start" "" "end" ))        # "startend"
+  only_empty: (( concat "" "" "" ))                # ""
+  
+# Multiple arguments
+long_concat:
+  sentence: (( concat "The " "quick " "brown " "fox " "jumps " "over " "the " "lazy " "dog" ))
+  
+# Special characters
+special:
+  with_newline: (( concat "line1" "\n" "line2" ))  # Actual newline character
+  with_tab: (( concat "col1" "\t" "col2" ))        # Tab character
+  with_quotes: (( concat "He said " "\"Hello\"" )) # Escaped quotes

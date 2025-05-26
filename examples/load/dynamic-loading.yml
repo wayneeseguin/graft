@@ -1,0 +1,88 @@
+---
+# Dynamic file loading based on runtime values
+
+meta:
+  # Configuration can come from environment or defaults
+  config_version: (( grab $CONFIG_VERSION || "v2" ))
+  customer: (( grab $CUSTOMER || "default" ))
+  region: (( grab $REGION || "us-east-1" ))
+
+# Load configuration based on version
+versioned_config:
+  # Build path dynamically: configs/v1/settings.yml or configs/v2/settings.yml
+  settings: (( load (concat "configs/" (grab meta.config_version) "/settings.yml") ))
+
+# Load customer-specific configuration
+customer_config:
+  # Path: configs/customers/acme/config.yml
+  base: (( load (concat "configs/customers/" (grab meta.customer) "/config.yml") ))
+  
+  # Customer might have region-specific overrides
+  # Path: configs/customers/acme/regions/us-east-1.yml
+  regional: (( load (concat 
+    "configs/customers/" 
+    (grab meta.customer) 
+    "/regions/" 
+    (grab meta.region) 
+    ".yml"
+  ) || "null" ))
+
+# Load different file types based on preference
+data_format:
+  prefer_json: false
+  
+  # Load either JSON or YAML based on preference
+  features: (( load (concat 
+    "configs/features" 
+    (grab data_format.prefer_json ? ".json" : ".yml")
+  )))
+
+# Multi-file configuration loading
+components:
+  # List of components to load
+  enabled:
+    - database
+    - redis
+    - auth
+    
+  # Would need to iterate - this is a conceptual example
+  # In practice, you'd list them explicitly or use a different approach
+  configs:
+    database: (( load "configs/database.yml" ))
+    redis: (( load "configs/redis.yml" ))
+    # auth: (( load "configs/auth.yml" ))
+
+# Conditional loading
+optional_configs:
+  # Load monitoring config only in production
+  monitoring: (( grab meta.environment == "production" 
+    ? (load "configs/monitoring.yml") 
+    : "null" 
+  ))
+  
+  # Load debug config only in development
+  debug: (( grab meta.environment == "development" 
+    ? (load "configs/debug.yml") 
+    : "null" 
+  ))
+
+# Building file paths from multiple parts
+modular_loading:
+  base_path: "configs"
+  service: "api"
+  aspect: "security"
+  
+  # Load: configs/services/api/security.yml
+  config: (( load (concat 
+    (grab modular_loading.base_path) "/services/"
+    (grab modular_loading.service) "/"
+    (grab modular_loading.aspect) ".yml"
+  )))
+
+# Error handling pattern
+safe_loading:
+  # Use || operator to provide fallback if file doesn't exist
+  optional_config: (( load "configs/optional.yml" || "null" ))
+  
+  # Load with default fallback structure
+  with_defaults: (( load "configs/custom.yml" || load "configs/defaults.yml" ))

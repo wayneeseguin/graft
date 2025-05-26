@@ -1,0 +1,64 @@
+---
+# Loading environment-specific configurations
+# Run with: ENV=production spruce merge environment-specific.yml
+
+meta:
+  # Get environment from ENV variable, default to 'dev'
+  environment: (( grab $ENV || "dev" ))
+
+# Load the appropriate environment config file
+environment_config: (( load (concat "configs/environments/" (grab meta.environment) ".yml") ))
+
+# Build final configuration using loaded environment data
+application:
+  name: my-app
+  environment: (( grab environment_config.environment ))
+  
+  # All environment-specific settings come from loaded file
+  debug_mode: (( grab environment_config.debug ))
+  log_level: (( grab environment_config.log_level ))
+  
+  database: (( grab environment_config.database ))
+  api: (( grab environment_config.api ))
+  features: (( grab environment_config.features ))
+  
+  # Production might have additional config
+  monitoring: (( grab environment_config.monitoring || "null" ))
+
+# Different way: Load all environments and select
+all_environments:
+  dev: (( load "configs/environments/dev.yml" ))
+  staging: (( load "configs/environments/staging.yml" ))
+  prod: (( load "configs/environments/prod.yml" ))
+
+# Select current environment
+selected_config: (( grab all_environments.(grab meta.environment) ))
+
+# Example of building connection strings from loaded config
+connections:
+  database_url: (( concat 
+    "postgresql://user:pass@"
+    (grab selected_config.database.host) ":"
+    (grab selected_config.database.port) "/"
+    (grab selected_config.database.name)
+    "?ssl=" (grab selected_config.database.ssl)
+  ))
+  
+  api_endpoint: (( concat 
+    (grab selected_config.api.base_url)
+    "/v1"
+  ))
+
+# Feature flags based on environment
+feature_flags:
+  # Get base features from environment
+  base: (( grab selected_config.features ))
+  
+  # Override or add based on conditions
+  enable_beta: (( grab meta.environment != "production" ))
+  enable_debug: (( grab selected_config.debug ))
+  
+# Validation example - ensure required fields exist
+validation:
+  has_database: (( grab selected_config.database || "error: no database config" ))
+  has_api: (( grab selected_config.api || "error: no api config" ))

@@ -1,0 +1,367 @@
+# Basic Boolean Operator Examples
+#
+# Demonstrates the usage of &&, ||, and ! operators
+
+# AND operator (&&)
+and_operations:
+  # Basic AND operations
+  simple:
+    both_true: (( true && true ))
+    # Result: true
+    
+    true_and_false: (( true && false ))
+    # Result: false
+    
+    false_and_true: (( false && true ))
+    # Result: false
+    
+    both_false: (( false && false ))
+    # Result: false
+  
+  # AND with expressions
+  expressions:
+    value1: 10
+    value2: 20
+    value3: 30
+    
+    # Multiple conditions
+    all_positive: (( and_operations.expressions.value1 > 0 && and_operations.expressions.value2 > 0 && and_operations.expressions.value3 > 0 ))
+    # Result: true
+    
+    in_range: (( and_operations.expressions.value1 >= 10 && and_operations.expressions.value1 <= 20 ))
+    # Result: true
+    
+    specific_values: (( and_operations.expressions.value1 == 10 && and_operations.expressions.value2 == 20 ))
+    # Result: true
+    
+    mixed_conditions: (( and_operations.expressions.value1 < and_operations.expressions.value2 && and_operations.expressions.value2 < and_operations.expressions.value3 ))
+    # Result: true (10 < 20 && 20 < 30)
+  
+  # Short-circuit evaluation
+  short_circuit:
+    # Second condition not evaluated if first is false
+    safe_check: (( false && and_operations.non_existent.value ))
+    # Result: false (second part not evaluated)
+    
+    # Useful for null checks
+    data:
+      user:
+        name: "John"
+        active: true
+    
+    safe_access: (( and_operations.short_circuit.data.user && and_operations.short_circuit.data.user.active ))
+    # Result: true
+
+# OR operator (||)
+or_operations:
+  # Basic OR operations
+  simple:
+    both_true: (( true || true ))
+    # Result: true
+    
+    true_or_false: (( true || false ))
+    # Result: true
+    
+    false_or_true: (( false || true ))
+    # Result: true
+    
+    both_false: (( false || false ))
+    # Result: false
+  
+  # OR with expressions
+  expressions:
+    status: "active"
+    role: "admin"
+    vip: false
+    
+    # Multiple conditions
+    has_access: (( or_operations.expressions.role == "admin" || or_operations.expressions.role == "moderator" || or_operations.expressions.vip ))
+    # Result: true (role is "admin")
+    
+    is_special: (( or_operations.expressions.status == "premium" || or_operations.expressions.status == "active" ))
+    # Result: true (status is "active")
+    
+    needs_attention: (( or_operations.expressions.status == "pending" || or_operations.expressions.status == "error" || or_operations.expressions.status == "failed" ))
+    # Result: false
+  
+  # Default values pattern
+  defaults:
+    user_provided: null
+    system_default: "default_value"
+    
+    # Use user value or default
+    final_value: (( or_operations.defaults.user_provided || or_operations.defaults.system_default ))
+    # Result: "default_value"
+    
+    # Chained defaults
+    primary: null
+    secondary: null
+    tertiary: "fallback"
+    
+    selected: (( or_operations.defaults.primary || or_operations.defaults.secondary || or_operations.defaults.tertiary ))
+    # Result: "fallback"
+
+# NOT operator (!)
+not_operations:
+  # Basic NOT operations
+  simple:
+    not_true: (( ! true ))
+    # Result: false
+    
+    not_false: (( ! false ))
+    # Result: true
+    
+    double_negation: (( ! ! true ))
+    # Result: true
+  
+  # NOT with expressions
+  expressions:
+    is_production: false
+    is_test: true
+    debug_mode: false
+    
+    # Negating conditions
+    not_production: (( ! not_operations.expressions.is_production ))
+    # Result: true
+    
+    not_test: (( ! not_operations.expressions.is_test ))
+    # Result: false
+    
+    production_or_not_test: (( not_operations.expressions.is_production || ! not_operations.expressions.is_test ))
+    # Result: false (false || false)
+  
+  # Negating comparisons
+  comparisons:
+    value: 42
+    
+    not_equal_50: (( ! (not_operations.comparisons.value == 50) ))
+    # Result: true
+    
+    # Same as !=
+    also_not_equal_50: (( not_operations.comparisons.value != 50 ))
+    # Result: true
+    
+    not_greater_than_40: (( ! (not_operations.comparisons.value > 40) ))
+    # Result: false
+    
+    not_in_range: (( ! (not_operations.comparisons.value >= 40 && not_operations.comparisons.value <= 45) ))
+    # Result: false
+
+# Combined operations
+combined_operations:
+  # Mixing AND, OR, and NOT
+  user:
+    authenticated: true
+    role: "user"
+    subscription: "premium"
+    trial_expired: false
+    
+  # Complex conditions
+  access:
+    # Admin or authenticated premium user
+    can_access_premium: (( 
+      combined_operations.user.role == "admin" || 
+      (combined_operations.user.authenticated && combined_operations.user.subscription == "premium")
+    ))
+    # Result: true
+    
+    # Not expired trial or paid subscription
+    has_valid_subscription: (( 
+      !combined_operations.user.trial_expired || 
+      combined_operations.user.subscription != "trial"
+    ))
+    # Result: true
+    
+    # Complex nested condition
+    full_access: (( 
+      combined_operations.user.authenticated && 
+      (combined_operations.user.role == "admin" || 
+       (combined_operations.user.role == "user" && 
+        combined_operations.user.subscription == "premium" && 
+        !combined_operations.user.trial_expired))
+    ))
+    # Result: true
+
+# Operator precedence
+precedence:
+  # NOT has highest precedence, then AND, then OR
+  values:
+    a: true
+    b: false
+    c: true
+    
+  # Without parentheses
+  example1: (( precedence.values.a || precedence.values.b && precedence.values.c ))
+  # Evaluated as: a || (b && c) = true || (false && true) = true || false = true
+  
+  # With explicit parentheses
+  example2: (( (precedence.values.a || precedence.values.b) && precedence.values.c ))
+  # Evaluated as: (true || false) && true = true && true = true
+  
+  # NOT precedence
+  example3: (( ! precedence.values.a && precedence.values.b ))
+  # Evaluated as: (!a) && b = false && false = false
+  
+  example4: (( ! (precedence.values.a && precedence.values.b) ))
+  # Evaluated as: !(a && b) = !(true && false) = !false = true
+
+# De Morgan's Laws
+de_morgan:
+  # !(A && B) == !A || !B
+  # !(A || B) == !A && !B
+  
+  values:
+    x: true
+    y: false
+  
+  # First law
+  law1_left: (( ! (de_morgan.values.x && de_morgan.values.y) ))
+  # Result: true
+  
+  law1_right: (( ! de_morgan.values.x || ! de_morgan.values.y ))
+  # Result: true
+  
+  law1_equal: (( de_morgan.law1_left == de_morgan.law1_right ))
+  # Result: true
+  
+  # Second law
+  law2_left: (( ! (de_morgan.values.x || de_morgan.values.y) ))
+  # Result: false
+  
+  law2_right: (( ! de_morgan.values.x && ! de_morgan.values.y ))
+  # Result: false
+  
+  law2_equal: (( de_morgan.law2_left == de_morgan.law2_right ))
+  # Result: true
+
+# Practical patterns
+patterns:
+  # Feature flags
+  features:
+    new_ui: true
+    beta_features: false
+    experimental: false
+    analytics: true
+    
+  # Environment checks
+  environment:
+    is_production: true
+    is_staging: false
+    is_development: false
+    
+  # Combined feature availability
+  ui_features:
+    show_beta_banner: (( patterns.features.beta_features && !patterns.environment.is_production ))
+    # Result: false
+    
+    enable_analytics: (( patterns.features.analytics && (patterns.environment.is_production || patterns.environment.is_staging) ))
+    # Result: true
+    
+    allow_experimental: (( patterns.features.experimental && patterns.environment.is_development && !patterns.environment.is_production ))
+    # Result: false
+    
+    use_new_ui: (( patterns.features.new_ui || patterns.features.beta_features ))
+    # Result: true
+  
+  # Validation patterns
+  validation:
+    email: "user@example.com"
+    age: 25
+    country: "US"
+    terms_accepted: true
+    
+    # All required fields present
+    has_required_fields: (( patterns.validation.email && patterns.validation.age && patterns.validation.terms_accepted ))
+    # Result: true
+    
+    # Age validation
+    valid_age: (( patterns.validation.age >= 18 && patterns.validation.age <= 120 ))
+    # Result: true
+    
+    # Regional restrictions
+    allowed_country: (( patterns.validation.country == "US" || patterns.validation.country == "CA" || patterns.validation.country == "UK" ))
+    # Result: true
+    
+    # Overall validation
+    is_valid: (( patterns.validation.has_required_fields && patterns.validation.valid_age && patterns.validation.allowed_country ))
+    # Result: true
+
+# Truth tables
+truth_tables:
+  # Demonstrating all combinations
+  inputs:
+    - p: true
+      q: true
+      and_result: (( truth_tables.inputs.[0].p && truth_tables.inputs.[0].q ))  # true
+      or_result: (( truth_tables.inputs.[0].p || truth_tables.inputs.[0].q ))   # true
+      
+    - p: true
+      q: false
+      and_result: (( truth_tables.inputs.[1].p && truth_tables.inputs.[1].q ))  # false
+      or_result: (( truth_tables.inputs.[1].p || truth_tables.inputs.[1].q ))   # true
+      
+    - p: false
+      q: true
+      and_result: (( truth_tables.inputs.[2].p && truth_tables.inputs.[2].q ))  # false
+      or_result: (( truth_tables.inputs.[2].p || truth_tables.inputs.[2].q ))   # true
+      
+    - p: false
+      q: false
+      and_result: (( truth_tables.inputs.[3].p && truth_tables.inputs.[3].q ))  # false
+      or_result: (( truth_tables.inputs.[3].p || truth_tables.inputs.[3].q ))   # false
+  
+  # XOR pattern (exclusive OR)
+  xor_pattern:
+    a: true
+    b: false
+    
+    # XOR: (A || B) && !(A && B)
+    xor_result: (( (truth_tables.xor_pattern.a || truth_tables.xor_pattern.b) && ! (truth_tables.xor_pattern.a && truth_tables.xor_pattern.b) ))
+    # Result: true
+    
+    # Alternative: (A && !B) || (!A && B)
+    xor_alt: (( (truth_tables.xor_pattern.a && ! truth_tables.xor_pattern.b) || (! truth_tables.xor_pattern.a && truth_tables.xor_pattern.b) ))
+    # Result: true
+
+# Error handling patterns
+error_handling:
+  # Service status
+  services:
+    database:
+      connected: true
+      responding: true
+      
+    cache:
+      connected: true
+      responding: false
+      
+    queue:
+      connected: false
+      responding: false
+  
+  # Health checks
+  health:
+    database_healthy: (( error_handling.services.database.connected && error_handling.services.database.responding ))
+    # Result: true
+    
+    cache_healthy: (( error_handling.services.cache.connected && error_handling.services.cache.responding ))
+    # Result: false
+    
+    queue_healthy: (( error_handling.services.queue.connected && error_handling.services.queue.responding ))
+    # Result: false
+    
+    # Any service down
+    has_failures: (( !error_handling.health.database_healthy || !error_handling.health.cache_healthy || !error_handling.health.queue_healthy ))
+    # Result: true
+    
+    # All critical services up (database is critical, cache is not)
+    critical_services_ok: (( error_handling.health.database_healthy ))
+    # Result: true
+    
+    # System status
+    system_status: (( 
+      !error_handling.health.has_failures ? "healthy" :
+      error_handling.health.critical_services_ok ? "degraded" :
+      "critical"
+    ))
+    # Result: "degraded"

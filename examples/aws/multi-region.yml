@@ -1,0 +1,165 @@
+# Multi-Region AWS Configuration
+#
+# Examples of using AWS operators across multiple regions
+
+meta:
+  app_name: myapp
+  environment: (( grab $ENVIRONMENT || "dev" ))
+  primary_region: us-east-1
+  secondary_region: us-west-2
+  
+# Regional parameter store configuration
+regional_params:
+  # Primary region parameters
+  primary:
+    database_host: (( awsparam (concat "/" meta.app_name "/" meta.environment "/" meta.primary_region "/database/host") ))
+    cache_endpoint: (( awsparam (concat "/" meta.app_name "/" meta.environment "/" meta.primary_region "/cache/endpoint") ))
+    
+  # Secondary region parameters  
+  secondary:
+    database_host: (( awsparam (concat "/" meta.app_name "/" meta.environment "/" meta.secondary_region "/database/host") ))
+    cache_endpoint: (( awsparam (concat "/" meta.app_name "/" meta.environment "/" meta.secondary_region "/cache/endpoint") ))
+
+# Cross-region secrets using ARNs
+regional_secrets:
+  us_east_1:
+    # Full ARN for cross-region access
+    api_key: (( awssecret "arn:aws:secretsmanager:us-east-1:123456789012:secret:myapp/api-key-AbCdEf" ))
+    db_password: (( awssecret "arn:aws:secretsmanager:us-east-1:123456789012:secret:myapp/db-password-GhIjKl" ))
+    
+  us_west_2:
+    api_key: (( awssecret "arn:aws:secretsmanager:us-west-2:123456789012:secret:myapp/api-key-MnOpQr" ))
+    db_password: (( awssecret "arn:aws:secretsmanager:us-west-2:123456789012:secret:myapp/db-password-StUvWx" ))
+    
+  eu_west_1:
+    api_key: (( awssecret "arn:aws:secretsmanager:eu-west-1:123456789012:secret:myapp/api-key-YzAbCd" ))
+    db_password: (( awssecret "arn:aws:secretsmanager:eu-west-1:123456789012:secret:myapp/db-password-EfGhIj" ))
+
+# Global vs regional configuration
+configuration:
+  # Global settings (stored in primary region)
+  global:
+    company_name: (( awsparam "/global/company_name" ))
+    support_email: (( awsparam "/global/support_email" ))
+    feature_flags: (( awsparam "/global/feature_flags" ))
+    
+  # Region-specific settings
+  regions:
+    us_east_1:
+      endpoint: (( awsparam "/myapp/us-east-1/api/endpoint" ))
+      bucket: (( awsparam "/myapp/us-east-1/s3/bucket" ))
+      db_cluster: (( awsparam "/myapp/us-east-1/rds/cluster" ))
+      
+    us_west_2:
+      endpoint: (( awsparam "/myapp/us-west-2/api/endpoint" ))
+      bucket: (( awsparam "/myapp/us-west-2/s3/bucket" ))
+      db_cluster: (( awsparam "/myapp/us-west-2/rds/cluster" ))
+      
+    eu_west_1:
+      endpoint: (( awsparam "/myapp/eu-west-1/api/endpoint" ))
+      bucket: (( awsparam "/myapp/eu-west-1/s3/bucket" ))
+      db_cluster: (( awsparam "/myapp/eu-west-1/rds/cluster" ))
+
+# Multi-region database configuration
+databases:
+  # Primary region (read-write)
+  primary:
+    region: (( grab meta.primary_region ))
+    host: (( awssecret (concat "rds/" meta.primary_region "/primary?key=endpoint") ))
+    username: (( awssecret (concat "rds/" meta.primary_region "/primary?key=username") ))
+    password: (( awssecret (concat "rds/" meta.primary_region "/primary?key=password") ))
+    
+  # Read replicas in different regions
+  replicas:
+    - region: us-west-2
+      host: (( awssecret "rds/us-west-2/replica?key=endpoint" ))
+      username: (( awssecret "rds/us-west-2/replica?key=username" ))
+      password: (( awssecret "rds/us-west-2/replica?key=password" ))
+      
+    - region: eu-west-1
+      host: (( awssecret "rds/eu-west-1/replica?key=endpoint" ))
+      username: (( awssecret "rds/eu-west-1/replica?key=username" ))
+      password: (( awssecret "rds/eu-west-1/replica?key=password" ))
+
+# Disaster recovery configuration
+disaster_recovery:
+  # Primary region config
+  primary:
+    region: (( grab meta.primary_region ))
+    active: true
+    database: (( awsparam (concat "/dr/" meta.primary_region "/database/endpoint") ))
+    cache: (( awsparam (concat "/dr/" meta.primary_region "/cache/endpoint") ))
+    
+  # Standby region config
+  standby:
+    region: (( grab meta.secondary_region ))
+    active: false
+    database: (( awsparam (concat "/dr/" meta.secondary_region "/database/endpoint") ))
+    cache: (( awsparam (concat "/dr/" meta.secondary_region "/cache/endpoint") ))
+
+# CDN and edge configuration
+cdn_config:
+  # CloudFront distribution settings per region
+  distributions:
+    north_america:
+      distribution_id: (( awsparam "/cdn/north_america/distribution_id" ))
+      domain: (( awsparam "/cdn/north_america/domain" ))
+      
+    europe:
+      distribution_id: (( awsparam "/cdn/europe/distribution_id" ))
+      domain: (( awsparam "/cdn/europe/domain" ))
+      
+    asia_pacific:
+      distribution_id: (( awsparam "/cdn/asia_pacific/distribution_id" ))
+      domain: (( awsparam "/cdn/asia_pacific/domain" ))
+
+# Service mesh configuration across regions
+service_mesh:
+  regions:
+    - name: us-east-1
+      discovery:
+        endpoint: (( awsparam "/mesh/us-east-1/discovery/endpoint" ))
+        port: (( awsparam "/mesh/us-east-1/discovery/port" ))
+      services:
+        auth: (( awsparam "/mesh/us-east-1/services/auth/endpoint" ))
+        api: (( awsparam "/mesh/us-east-1/services/api/endpoint" ))
+        
+    - name: us-west-2
+      discovery:
+        endpoint: (( awsparam "/mesh/us-west-2/discovery/endpoint" ))
+        port: (( awsparam "/mesh/us-west-2/discovery/port" ))
+      services:
+        auth: (( awsparam "/mesh/us-west-2/services/auth/endpoint" ))
+        api: (( awsparam "/mesh/us-west-2/services/api/endpoint" ))
+
+# Regional feature flags
+features:
+  # Global features
+  global:
+    maintenance_mode: (( awsparam "/features/global/maintenance_mode" || false ))
+    new_ui: (( awsparam "/features/global/new_ui" || false ))
+    
+  # Region-specific features
+  regional:
+    us_east_1:
+      beta_features: (( awsparam "/features/us-east-1/beta_enabled" || false ))
+      capacity_limit: (( awsparam "/features/us-east-1/capacity_limit" || 1000 ))
+      
+    eu_west_1:
+      gdpr_mode: (( awsparam "/features/eu-west-1/gdpr_mode" || true ))
+      data_residency: (( awsparam "/features/eu-west-1/data_residency" || true ))
+
+# Cost optimization - use different instance types per region
+compute:
+  regions:
+    us_east_1:
+      instance_type: (( awsparam "/compute/us-east-1/instance_type" || "t3.medium" ))
+      spot_enabled: (( awsparam "/compute/us-east-1/spot_enabled" || false ))
+      
+    us_west_2:
+      instance_type: (( awsparam "/compute/us-west-2/instance_type" || "t3.small" ))
+      spot_enabled: (( awsparam "/compute/us-west-2/spot_enabled" || true ))
+      
+    ap_southeast_1:
+      instance_type: (( awsparam "/compute/ap-southeast-1/instance_type" || "t3.micro" ))
+      spot_enabled: (( awsparam "/compute/ap-southeast-1/spot_enabled" || true ))

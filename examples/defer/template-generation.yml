@@ -1,0 +1,78 @@
+---
+# Generating reusable Spruce templates with defer
+
+# Template metadata (evaluated during template generation)
+template_info:
+  name: microservice-template
+  version: 2.0
+  created_by: platform-team
+
+# Generate a service template
+service_template:
+  metadata:
+    # These are evaluated now and become static values
+    template: (( grab template_info.name ))
+    version: (( grab template_info.version ))
+    
+    # These are deferred and will need values when template is used
+    name: (( defer grab service.name ))
+    namespace: (( defer grab service.namespace || "default" ))
+  
+  deployment:
+    replicas: (( defer grab service.replicas || 3 ))
+    
+    image: (( defer concat (grab service.image.registry || "docker.io") "/" (grab service.image.name) ":" (grab service.image.tag || "latest") ))
+    
+    resources:
+      requests:
+        memory: (( defer grab service.resources.memory || "256Mi" ))
+        cpu: (( defer grab service.resources.cpu || "100m" ))
+      limits:
+        memory: (( defer grab service.resources.max_memory || (grab service.resources.memory) ))
+        cpu: (( defer grab service.resources.max_cpu || (grab service.resources.cpu) ))
+    
+    env:
+      - name: SERVICE_NAME
+        value: (( defer grab service.name ))
+      - name: LOG_LEVEL
+        value: (( defer grab service.log_level || "info" ))
+      - name: PORT
+        value: (( defer grab service.port || 8080 ))
+  
+  service:
+    type: (( defer grab service.type || "ClusterIP" ))
+    port: (( defer grab service.port || 8080 ))
+    targetPort: (( defer grab service.port || 8080 ))
+
+# Generate different templates based on type
+templates:
+  api:
+    base: (( grab service_template ))
+    ingress:
+      enabled: true
+      host: (( defer concat (grab service.name) "." (grab cluster.domain) ))
+      path: (( defer grab service.path || "/" ))
+  
+  worker:
+    base: (( grab service_template ))
+    # Workers don't need service/ingress
+    service: null
+    
+  cronjob:
+    schedule: (( defer grab job.schedule ))
+    job_template: (( grab service_template.deployment ))
+
+# Configuration template for different environments
+config_template:
+  database:
+    host: (( defer grab (concat "databases." (grab environment) ".host") ))
+    port: (( defer grab (concat "databases." (grab environment) ".port") || 5432 ))
+    name: (( defer concat (grab service.name) "_" (grab environment) ))
+  
+  features:
+    debug: (( defer grab environment == "production" ? false : true ))
+    tracing: (( defer grab features.tracing || (grab environment == "production") ))
+    
+  external_services:
+    api_gateway: (( defer grab (concat "gateways." (grab environment) ".url") ))
+    auth_service: (( defer grab (concat "auth." (grab environment) ".url") ))

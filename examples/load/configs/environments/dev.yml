@@ -1,0 +1,20 @@
+---
+environment: development
+debug: true
+log_level: debug
+
+database:
+  host: localhost
+  port: 5432
+  name: myapp_dev
+  ssl: false
+  
+api:
+  base_url: http://localhost:3000
+  timeout: 30
+  rate_limit: 1000
+  
+features:
+  experimental: true
+  debug_toolbar: true
+  mock_external_apis: true

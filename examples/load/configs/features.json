@@ -1,0 +1,31 @@
+{
+  "features": {
+    "new_ui": {
+      "enabled": true,
+      "rollout_percentage": 100
+    },
+    "beta_api": {
+      "enabled": false,
+      "rollout_percentage": 0,
+      "allowed_users": ["beta-tester@example.com"]
+    },
+    "advanced_analytics": {
+      "enabled": true,
+      "rollout_percentage": 50
+    },
+    "social_login": {
+      "enabled": true,
+      "providers": ["google", "github", "twitter"]
+    }
+  },
+  "experiments": {
+    "dark_mode": {
+      "active": true,
+      "variants": ["light", "dark", "auto"]
+    },
+    "new_onboarding": {
+      "active": false,
+      "control_group_size": 0.5
+    }
+  }
+}

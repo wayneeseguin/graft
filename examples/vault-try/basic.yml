@@ -1,0 +1,135 @@
+# Basic Vault-Try Examples
+#
+# Simple usage patterns for the vault-try operator
+
+# Basic fallback pattern
+database:
+  # Try primary path, then fallback path, then default
+  password: (( vault-try "secret/database/primary:password" "secret/database/fallback:password" "default-password" ))
+  
+  # Multiple fallback levels
+  connection_string: (( vault-try 
+    "secret/database/v2:connection_string"
+    "secret/database/v1:connection_string" 
+    "secret/database/legacy:connection_string"
+    "postgresql://localhost:5432/myapp" ))
+
+# API credentials with fallbacks
+api_credentials:
+  # Try environment-specific, then shared, then default
+  stripe_key: (( vault-try 
+    "secret/production/stripe:api_key"
+    "secret/shared/stripe:api_key"
+    "sk_test_default_key" ))
+  
+  # Service API keys
+  services:
+    email: (( vault-try "secret/services/sendgrid:key" "secret/services/mailgun:key" "test-email-key" ))
+    sms: (( vault-try "secret/services/twilio:key" "secret/services/nexmo:key" "test-sms-key" ))
+    storage: (( vault-try "secret/services/s3:key" "secret/services/gcs:key" "test-storage-key" ))
+
+# Configuration with defaults
+app_config:
+  # Try vault first, use inline default if not found
+  features:
+    max_upload_size: (( vault-try "secret/config/limits:max_upload_size" "secret/defaults/limits:max_upload_size" 10485760 ))
+    session_timeout: (( vault-try "secret/config/session:timeout" "secret/defaults/session:timeout" 3600 ))
+    rate_limit: (( vault-try "secret/config/api:rate_limit" "secret/defaults/api:rate_limit" 1000 ))
+
+# SSL/TLS certificates
+tls:
+  # Try multiple certificate stores
+  certificate: (( vault-try 
+    "secret/tls/production:cert"
+    "secret/tls/wildcard:cert"
+    "secret/tls/self-signed:cert"
+    "-----BEGIN CERTIFICATE-----\nDEFAULT_CERT\n-----END CERTIFICATE-----" ))
+  
+  private_key: (( vault-try 
+    "secret/tls/production:key"
+    "secret/tls/wildcard:key"
+    "secret/tls/self-signed:key"
+    "-----BEGIN PRIVATE KEY-----\nDEFAULT_KEY\n-----END PRIVATE KEY-----" ))
+
+# OAuth credentials
+oauth:
+  providers:
+    github:
+      client_id: (( vault-try "secret/oauth/github/prod:client_id" "secret/oauth/github/dev:client_id" "dev-github-client" ))
+      client_secret: (( vault-try "secret/oauth/github/prod:client_secret" "secret/oauth/github/dev:client_secret" "dev-github-secret" ))
+    
+    google:
+      client_id: (( vault-try "secret/oauth/google/prod:client_id" "secret/oauth/google/dev:client_id" "dev-google-client" ))
+      client_secret: (( vault-try "secret/oauth/google/prod:client_secret" "secret/oauth/google/dev:client_secret" "dev-google-secret" ))
+
+# Different secret engines
+multi_engine:
+  # Try KV v2, then KV v1, then default
+  from_kv2: (( vault-try "secret/data/myapp:password" "secret/myapp:password" "fallback-password" ))
+  
+  # Try different mount points
+  from_different_mounts: (( vault-try 
+    "prod-secrets/myapp:token"
+    "dev-secrets/myapp:token"
+    "secret/myapp:token"
+    "default-token" ))
+
+# Error handling examples
+error_handling:
+  # Non-existent paths - will use default
+  missing_secret: (( vault-try 
+    "secret/does/not/exist:key"
+    "secret/also/missing:key"
+    "safe-default-value" ))
+  
+  # Malformed paths - more forgiving than regular vault
+  bad_path: (( vault-try 
+    "secret/bad path with spaces:key"
+    "secret/good/path:key"
+    "default-for-bad-path" ))
+  
+  # Empty or null handling
+  empty_check: (( vault-try 
+    "secret/might/be/empty:value"
+    "secret/backup/location:value"
+    "non-empty-default" ))
+
+# Numbered versioning
+versioned_secrets:
+  # Try newest to oldest
+  api_key: (( vault-try 
+    "secret/api/v3:key"
+    "secret/api/v2:key"
+    "secret/api/v1:key"
+    "secret/api/legacy:key"
+    "development-api-key" ))
+
+# Conditional vault paths
+conditional:
+  # Different paths based on conditions
+  is_production: true
+  
+  database_password: (( grab conditional.is_production ? 
+    (vault-try "secret/prod/db:password" "secret/prod-backup/db:password" "no-prod-password") :
+    (vault-try "secret/dev/db:password" "secret/local/db:password" "dev-password") ))
+
+# Combined with other operators
+combined:
+  # With concat for dynamic paths
+  service: "myapp"
+  env: "prod"
+  
+  dynamic_secret: (( vault-try 
+    (concat "secret/" combined.env "/" combined.service ":key")
+    (concat "secret/shared/" combined.service ":key")
+    (concat "secret/defaults/" combined.service ":key")
+    "hardcoded-default" ))
+  
+  # With grab for references
+  primary_path: "secret/primary/location"
+  backup_path: "secret/backup/location"
+  
+  referenced_secret: (( vault-try 
+    (concat (grab combined.primary_path) ":secret")
+    (concat (grab combined.backup_path) ":secret")
+    "no-secret-found" ))

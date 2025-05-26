@@ -1,0 +1,239 @@
+# Data Validation with Empty Operator
+#
+# Using empty operator to validate required fields and data integrity
+
+# Form validation example
+user_registration:
+  # Input data (some fields might be empty)
+  form_data:
+    username: "johndoe"
+    email: ""
+    password: "secret123"
+    first_name: "John"
+    last_name: ""
+    phone: null
+    terms_accepted: true
+  
+  # Validation rules
+  validation:
+    username:
+      value: (( grab user_registration.form_data.username ))
+      is_valid: (( ! empty user_registration.form_data.username ))
+      error: (( empty user_registration.form_data.username ? "Username is required" : null ))
+    
+    email:
+      value: (( grab user_registration.form_data.email ))
+      is_valid: (( ! empty user_registration.form_data.email ))
+      error: (( empty user_registration.form_data.email ? "Email is required" : null ))
+    
+    password:
+      value: (( grab user_registration.form_data.password ))
+      is_valid: (( ! empty user_registration.form_data.password ))
+      error: (( empty user_registration.form_data.password ? "Password is required" : null ))
+    
+    # Optional fields
+    phone:
+      value: (( grab user_registration.form_data.phone || "Not provided" ))
+      is_valid: true  # Phone is optional
+      error: null
+  
+  # Overall validation status
+  is_valid: (( user_registration.validation.username.is_valid && 
+               user_registration.validation.email.is_valid && 
+               user_registration.validation.password.is_valid ))
+  
+  errors: 
+    - (( grab user_registration.validation.username.error ))
+    - (( grab user_registration.validation.email.error ))
+    - (( grab user_registration.validation.password.error ))
+
+# API request validation
+api_request:
+  # Incoming request
+  headers:
+    authorization: ""
+    content_type: "application/json"
+    api_key: "key-123"
+  
+  body:
+    action: "create"
+    data: {}
+    metadata: null
+  
+  # Validate required fields
+  validation:
+    # Headers validation
+    has_auth: (( ! empty api_request.headers.authorization || ! empty api_request.headers.api_key ))
+    auth_error: (( api_request.validation.has_auth ? null : "Authentication required" ))
+    
+    # Body validation
+    has_action: (( ! empty api_request.body.action ))
+    has_data: (( ! empty api_request.body.data ))
+    
+    # Combined validation
+    is_valid: (( api_request.validation.has_auth && 
+                 api_request.validation.has_action && 
+                 api_request.validation.has_data ))
+    
+    errors:
+      auth: (( grab api_request.validation.auth_error ))
+      action: (( empty api_request.body.action ? "Action is required" : null ))
+      data: (( empty api_request.body.data ? "Data payload is required" : null ))
+
+# Configuration validation
+service_config:
+  # Service configuration with required and optional fields
+  name: "my-service"
+  version: ""
+  
+  endpoints:
+    health: "/health"
+    metrics: ""
+    api: "/api/v1"
+  
+  database:
+    host: "localhost"
+    port: null
+    name: ""
+    credentials:
+      username: "dbuser"
+      password: ""
+  
+  features:
+    logging: true
+    monitoring: false
+    tracing: null
+  
+  # Validate configuration
+  validation:
+    # Required top-level fields
+    core:
+      name_valid: (( ! empty service_config.name ))
+      version_valid: (( ! empty service_config.version ))
+      errors:
+        - (( empty service_config.name ? "Service name is required" : null ))
+        - (( empty service_config.version ? "Service version is required" : null ))
+    
+    # Endpoint validation
+    endpoints:
+      health_valid: (( ! empty service_config.endpoints.health ))
+      api_valid: (( ! empty service_config.endpoints.api ))
+      # Metrics endpoint is optional
+      all_required_valid: (( service_config.validation.endpoints.health_valid && 
+                             service_config.validation.endpoints.api_valid ))
+    
+    # Database validation (all fields required if database block exists)
+    database:
+      host_valid: (( ! empty service_config.database.host ))
+      port_valid: (( ! empty service_config.database.port ))
+      name_valid: (( ! empty service_config.database.name ))
+      username_valid: (( ! empty service_config.database.credentials.username ))
+      password_valid: (( ! empty service_config.database.credentials.password ))
+      
+      is_configured: (( service_config.validation.database.host_valid && 
+                        service_config.validation.database.port_valid && 
+                        service_config.validation.database.name_valid && 
+                        service_config.validation.database.username_valid && 
+                        service_config.validation.database.password_valid ))
+      
+      errors:
+        - (( empty service_config.database.host ? "Database host is required" : null ))
+        - (( empty service_config.database.port ? "Database port is required" : null ))
+        - (( empty service_config.database.name ? "Database name is required" : null ))
+        - (( empty service_config.database.credentials.password ? "Database password is required" : null ))
+    
+    # Overall status
+    is_valid: (( service_config.validation.core.name_valid && 
+                 service_config.validation.core.version_valid && 
+                 service_config.validation.endpoints.all_required_valid && 
+                 service_config.validation.database.is_configured ))
+
+# List validation - ensure no empty elements
+data_quality:
+  # Lists that might contain empty values
+  user_ids: ["user1", "", "user3", null, "user5"]
+  product_codes: ["ABC123", "DEF456", "", "GHI789"]
+  tags: ["", "important", "", "urgent", null]
+  
+  # Validation results
+  validation:
+    # Count empty values
+    empty_user_ids: 2  # Manual count for example
+    empty_products: 1
+    empty_tags: 3
+    
+    # Check if lists are clean (no empty values)
+    users_clean: false
+    products_clean: false
+    tags_clean: false
+    
+    # Get clean lists (would need custom operator in practice)
+    # This is just for demonstration
+    clean_users: ["user1", "user3", "user5"]
+    clean_products: ["ABC123", "DEF456", "GHI789"]
+    clean_tags: ["important", "urgent"]
+
+# Complex validation scenario
+order_validation:
+  order:
+    id: "ORD-123"
+    customer:
+      id: ""
+      email: "customer@example.com"
+      name: null
+    items: []
+    shipping:
+      address: "123 Main St"
+      city: "Anytown"
+      state: ""
+      zip: "12345"
+      country: "US"
+    payment:
+      method: "credit_card"
+      details: {}
+  
+  # Multi-level validation
+  validation:
+    # Order level
+    has_id: (( ! empty order_validation.order.id ))
+    has_items: (( ! empty order_validation.order.items ))
+    
+    # Customer validation
+    customer:
+      has_id: (( ! empty order_validation.order.customer.id ))
+      has_contact: (( ! empty order_validation.order.customer.email || 
+                      ! empty order_validation.order.customer.name ))
+      is_valid: (( order_validation.validation.customer.has_id && 
+                   order_validation.validation.customer.has_contact ))
+    
+    # Shipping validation
+    shipping:
+      has_address: (( ! empty order_validation.order.shipping.address ))
+      has_city: (( ! empty order_validation.order.shipping.city ))
+      has_state: (( ! empty order_validation.order.shipping.state ))
+      has_zip: (( ! empty order_validation.order.shipping.zip ))
+      is_complete: (( order_validation.validation.shipping.has_address && 
+                      order_validation.validation.shipping.has_city && 
+                      order_validation.validation.shipping.has_state && 
+                      order_validation.validation.shipping.has_zip ))
+    
+    # Payment validation
+    payment:
+      has_method: (( ! empty order_validation.order.payment.method ))
+      has_details: (( ! empty order_validation.order.payment.details ))
+      is_valid: (( order_validation.validation.payment.has_method && 
+                   order_validation.validation.payment.has_details ))
+    
+    # Overall order validation
+    can_process: (( order_validation.validation.has_id && 
+                    order_validation.validation.has_items && 
+                    order_validation.validation.customer.is_valid && 
+                    order_validation.validation.shipping.is_complete && 
+                    order_validation.validation.payment.is_valid ))
+    
+    # Collect all errors
+    errors:
+      - (( empty order_validation.order.customer.id ? "Customer ID is required" : null ))
+      - (( empty order_validation.order.items ? "Order must contain items" : null ))
+      - (( empty order_validation.order.shipping.state ? "Shipping state is required" : null ))
+      - (( empty order_validation.order.payment.details ? "Payment details are required" : null ))

@@ -1,0 +1,255 @@
+# Multi-Tenant Vault Configuration
+#
+# Using vault-try for tenant-specific secret management
+
+# Basic tenant configuration
+tenant:
+  # Tenant identifier (from parameter or environment)
+  id: (( grab $TENANT_ID || "default" ))
+  name: (( grab $TENANT_NAME || "Default Company" ))
+  tier: (( grab $TENANT_TIER || "free" ))
+
+# Tenant-specific database credentials
+database:
+  # Try tenant-specific, then tier-specific, then shared, then default
+  connection:
+    host: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/database:host")
+      (concat "secret/tiers/" tenant.tier "/database:host")
+      "secret/shared/database:host"
+      "shared-db.example.com" ))
+    
+    port: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/database:port")
+      (concat "secret/tiers/" tenant.tier "/database:port")
+      "secret/shared/database:port"
+      5432 ))
+    
+    username: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/database:username")
+      (concat "secret/tiers/" tenant.tier "/database:username")
+      "secret/shared/database:username"
+      "app_user" ))
+    
+    password: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/database:password")
+      (concat "secret/tiers/" tenant.tier "/database:password")
+      "secret/shared/database:password"
+      "shared-password" ))
+    
+    # Tenant-specific database name
+    database_name: (( concat "app_" tenant.id ))
+
+# API rate limits by tenant tier
+rate_limiting:
+  # Different limits for different tiers
+  requests_per_minute: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/limits:rpm")
+    (concat "secret/tiers/" tenant.tier "/limits:rpm")
+    "secret/defaults/limits:rpm"
+    60 ))
+  
+  requests_per_day: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/limits:rpd")
+    (concat "secret/tiers/" tenant.tier "/limits:rpd")
+    "secret/defaults/limits:rpd"
+    10000 ))
+  
+  # Burst capacity
+  burst_multiplier: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/limits:burst")
+    (concat "secret/tiers/" tenant.tier "/limits:burst")
+    2 ))
+
+# Feature flags per tenant
+features:
+  # Advanced features for premium tenants
+  advanced_analytics: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/features:advanced_analytics")
+    (concat "secret/tiers/" tenant.tier "/features:advanced_analytics")
+    false ))
+  
+  custom_branding: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/features:custom_branding")
+    (concat "secret/tiers/" tenant.tier "/features:custom_branding")
+    false ))
+  
+  api_access: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/features:api_access")
+    (concat "secret/tiers/" tenant.tier "/features:api_access")
+    true ))
+  
+  export_data: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/features:export_data")
+    (concat "secret/tiers/" tenant.tier "/features:export_data")
+    false ))
+
+# External service credentials
+external_services:
+  # Payment processing - tenant might have own account
+  stripe:
+    api_key: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/stripe:api_key")
+      "secret/shared/stripe:api_key"
+      "sk_test_shared_key" ))
+    
+    webhook_secret: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/stripe:webhook_secret")
+      "secret/shared/stripe:webhook_secret"
+      "whsec_test_shared" ))
+  
+  # Email service - tier-based quotas
+  sendgrid:
+    api_key: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/sendgrid:api_key")
+      (concat "secret/tiers/" tenant.tier "/sendgrid:api_key")
+      "secret/shared/sendgrid:api_key"
+      "SG.test_shared_key" ))
+    
+    monthly_quota: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/sendgrid:quota")
+      (concat "secret/tiers/" tenant.tier "/sendgrid:quota")
+      1000 ))
+
+# Storage configuration
+storage:
+  # S3 bucket per tenant or shared
+  s3:
+    # Dedicated bucket for enterprise tenants
+    bucket: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/s3:bucket")
+      (concat "secret/tiers/" tenant.tier "/s3:bucket")
+      "shared-tenant-bucket" ))
+    
+    # Tenant-specific prefix in shared bucket
+    prefix: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/s3:prefix")
+      (concat "tenants/" tenant.id "/") ))
+    
+    # Access credentials
+    access_key: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/s3:access_key")
+      "secret/shared/s3:access_key"
+      "AKIA_SHARED_KEY" ))
+    
+    secret_key: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/s3:secret_key")
+      "secret/shared/s3:secret_key"
+      "shared_secret_key" ))
+
+# Encryption keys
+encryption:
+  # Tenant-specific encryption keys
+  data_key: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/encryption:data_key")
+    (concat "secret/tiers/" tenant.tier "/encryption:data_key")
+    "secret/shared/encryption:data_key"
+    "base64encodeddefaultkey=" ))
+  
+  # Key rotation schedule
+  rotation_days: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/encryption:rotation_days")
+    (concat "secret/tiers/" tenant.tier "/encryption:rotation_days")
+    90 ))
+
+# Custom domains
+custom_domain:
+  # Premium feature - custom domains
+  enabled: (( grab features.custom_branding ))
+  
+  domain: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/domain:custom")
+    (concat tenant.id ".app.example.com") ))
+  
+  ssl_cert: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/ssl:cert")
+    "secret/shared/wildcard:cert"
+    "default-cert" ))
+  
+  ssl_key: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/ssl:key")
+    "secret/shared/wildcard:key"
+    "default-key" ))
+
+# Monitoring and alerting
+monitoring:
+  # Tenant-specific monitoring endpoints
+  datadog:
+    api_key: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/datadog:api_key")
+      "secret/shared/datadog:api_key"
+      "shared_dd_key" ))
+    
+    # Custom tags per tenant
+    tags: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/datadog:tags")
+      (concat "[\"tenant:" tenant.id "\", \"tier:" tenant.tier "\"]") ))
+  
+  # Alert destinations
+  alerts:
+    email: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/alerts:email")
+      "ops@example.com" ))
+    
+    slack_webhook: (( vault-try 
+      (concat "secret/tenants/" tenant.id "/alerts:slack_webhook")
+      (concat "secret/tiers/" tenant.tier "/alerts:slack_webhook")
+      "" ))
+
+# Compliance and regulatory
+compliance:
+  # Region-specific data residency
+  data_region: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/compliance:data_region")
+    "us-east-1" ))
+  
+  # Compliance certifications required
+  requirements: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/compliance:requirements")
+    (concat "secret/tiers/" tenant.tier "/compliance:requirements")
+    "[]" ))
+  
+  # Audit log retention
+  audit_retention_days: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/compliance:audit_retention")
+    (concat "secret/tiers/" tenant.tier "/compliance:audit_retention")
+    365 ))
+
+# Tenant isolation strategies
+isolation:
+  # Network isolation level
+  network_isolation: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/isolation:network")
+    (concat "secret/tiers/" tenant.tier "/isolation:network")
+    "shared" ))
+  
+  # Compute isolation
+  dedicated_resources: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/isolation:dedicated")
+    (concat "secret/tiers/" tenant.tier "/isolation:dedicated")
+    false ))
+  
+  # Database isolation
+  database_strategy: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/isolation:database")
+    (concat "secret/tiers/" tenant.tier "/isolation:database")
+    "schema" ))  # shared, schema, or database
+
+# White-label configuration
+whitelabel:
+  # Branding elements
+  logo_url: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/branding:logo_url")
+    "/assets/default-logo.png" ))
+  
+  primary_color: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/branding:primary_color")
+    "#007bff" ))
+  
+  company_name: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/branding:company_name")
+    tenant.name ))
+  
+  support_email: (( vault-try 
+    (concat "secret/tenants/" tenant.id "/branding:support_email")
+    "support@example.com" ))

@@ -1,0 +1,250 @@
+# Setting Defaults with Empty Operator
+#
+# Common patterns for providing default values when data is empty
+
+# Application configuration with defaults
+app_config:
+  # User-provided configuration (might be incomplete)
+  user:
+    name: ""
+    port: null
+    host: ""
+    timeout: 30
+    retries: null
+    log_level: ""
+  
+  # System defaults
+  defaults:
+    name: "my-application"
+    port: 8080
+    host: "0.0.0.0"
+    timeout: 60
+    retries: 3
+    log_level: "info"
+  
+  # Resolved configuration
+  final:
+    name: (( empty app_config.user.name ? app_config.defaults.name : app_config.user.name ))
+    port: (( empty app_config.user.port ? app_config.defaults.port : app_config.user.port ))
+    host: (( empty app_config.user.host ? app_config.defaults.host : app_config.user.host ))
+    timeout: (( empty app_config.user.timeout ? app_config.defaults.timeout : app_config.user.timeout ))
+    retries: (( empty app_config.user.retries ? app_config.defaults.retries : app_config.user.retries ))
+    log_level: (( empty app_config.user.log_level ? app_config.defaults.log_level : app_config.user.log_level ))
+
+# Environment-based defaults
+deployment:
+  # Environment from parameter or variable
+  env: ""  # Could be set via parameter
+  
+  # Environment-specific defaults
+  defaults:
+    development:
+      replicas: 1
+      memory: "256Mi"
+      cpu: "100m"
+      debug: true
+    staging:
+      replicas: 2
+      memory: "512Mi"
+      cpu: "250m"
+      debug: false
+    production:
+      replicas: 3
+      memory: "1Gi"
+      cpu: "500m"
+      debug: false
+  
+  # Select defaults based on environment
+  selected_env: (( empty deployment.env ? "development" : deployment.env ))
+  config: (( grab deployment.defaults.[deployment.selected_env] ))
+
+# Database connection with cascading defaults
+database:
+  # Connection parameters (some might be empty)
+  connection:
+    host: ""
+    port: null
+    username: "appuser"
+    password: ""
+    database: ""
+    ssl: null
+  
+  # Multiple levels of defaults
+  env_defaults:
+    host: "db.dev.local"
+    port: 5432
+    database: "app_dev"
+    ssl: false
+  
+  global_defaults:
+    host: "localhost"
+    port: 5432
+    username: "postgres"
+    password: "postgres"
+    database: "postgres"
+    ssl: false
+  
+  # Resolve with fallback chain
+  resolved:
+    host: (( ! empty database.connection.host ? database.connection.host : 
+             ! empty database.env_defaults.host ? database.env_defaults.host : 
+             database.global_defaults.host ))
+    port: (( ! empty database.connection.port ? database.connection.port : 
+             ! empty database.env_defaults.port ? database.env_defaults.port : 
+             database.global_defaults.port ))
+    username: (( ! empty database.connection.username ? database.connection.username : 
+                database.global_defaults.username ))
+    password: (( ! empty database.connection.password ? database.connection.password : 
+                database.global_defaults.password ))
+    database: (( ! empty database.connection.database ? database.connection.database : 
+                ! empty database.env_defaults.database ? database.env_defaults.database : 
+                database.global_defaults.database ))
+    ssl: (( ! empty database.connection.ssl ? database.connection.ssl : 
+           ! empty database.env_defaults.ssl ? database.env_defaults.ssl : 
+           database.global_defaults.ssl ))
+
+# Feature flags with smart defaults
+features:
+  # User overrides (sparse)
+  overrides:
+    new_ui: true
+    analytics: ""
+    monitoring: null
+    # experimental not specified
+  
+  # Environment-based defaults
+  by_environment:
+    production:
+      new_ui: false
+      analytics: true
+      monitoring: true
+      experimental: false
+    development:
+      new_ui: true
+      analytics: false
+      monitoring: false
+      experimental: true
+  
+  # Current environment
+  environment: "production"
+  
+  # Resolved features
+  enabled:
+    new_ui: (( ! empty features.overrides.new_ui ? features.overrides.new_ui : 
+              grab features.by_environment.[features.environment].new_ui ))
+    analytics: (( ! empty features.overrides.analytics ? features.overrides.analytics : 
+                 grab features.by_environment.[features.environment].analytics ))
+    monitoring: (( ! empty features.overrides.monitoring ? features.overrides.monitoring : 
+                  grab features.by_environment.[features.environment].monitoring ))
+    experimental: (( ! empty (grab features.overrides.experimental) ? features.overrides.experimental : 
+                    grab features.by_environment.[features.environment].experimental ))
+
+# API client configuration with nested defaults
+api_clients:
+  # Service A configuration (partially specified)
+  service_a:
+    endpoint: "https://api-a.example.com"
+    timeout: null
+    retries: 3
+    headers: {}
+  
+  # Service B configuration (mostly empty)
+  service_b:
+    endpoint: ""
+    timeout: null
+    retries: null
+    headers: null
+  
+  # Default client settings
+  client_defaults:
+    timeout: 30
+    retries: 3
+    headers:
+      Content-Type: "application/json"
+      Accept: "application/json"
+      User-Agent: "MyApp/1.0"
+  
+  # Resolved configurations
+  configured:
+    service_a:
+      endpoint: (( grab api_clients.service_a.endpoint ))
+      timeout: (( empty api_clients.service_a.timeout ? api_clients.client_defaults.timeout : api_clients.service_a.timeout ))
+      retries: (( empty api_clients.service_a.retries ? api_clients.client_defaults.retries : api_clients.service_a.retries ))
+      headers: (( empty api_clients.service_a.headers ? api_clients.client_defaults.headers : api_clients.service_a.headers ))
+    
+    service_b:
+      endpoint: (( empty api_clients.service_b.endpoint ? "https://api-b.example.com" : api_clients.service_b.endpoint ))
+      timeout: (( empty api_clients.service_b.timeout ? api_clients.client_defaults.timeout : api_clients.service_b.timeout ))
+      retries: (( empty api_clients.service_b.retries ? api_clients.client_defaults.retries : api_clients.service_b.retries ))
+      headers: (( empty api_clients.service_b.headers ? api_clients.client_defaults.headers : api_clients.service_b.headers ))
+
+# Resource limits with defaults
+resources:
+  # User-specified limits (might be partial)
+  specified:
+    requests:
+      memory: "128Mi"
+      cpu: ""
+    limits:
+      memory: ""
+      cpu: null
+  
+  # Tier-based defaults
+  tiers:
+    small:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "200m"
+    medium:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+    large:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+  
+  # Select tier
+  selected_tier: "medium"
+  tier_defaults: (( grab resources.tiers.[resources.selected_tier] ))
+  
+  # Final resources
+  final:
+    requests:
+      memory: (( ! empty resources.specified.requests.memory ? resources.specified.requests.memory : resources.tier_defaults.requests.memory ))
+      cpu: (( empty resources.specified.requests.cpu ? resources.tier_defaults.requests.cpu : resources.specified.requests.cpu ))
+    limits:
+      memory: (( empty resources.specified.limits.memory ? resources.tier_defaults.limits.memory : resources.specified.limits.memory ))
+      cpu: (( empty resources.specified.limits.cpu ? resources.tier_defaults.limits.cpu : resources.specified.limits.cpu ))
+
+# Complex default resolution with computed values
+computed_defaults:
+  input:
+    base_domain: ""
+    app_name: "myapp"
+    environment: ""
+  
+  # Computed defaults based on other values
+  defaults:
+    environment: "development"
+    base_domain: (( concat computed_defaults.input.app_name ".local" ))
+    
+  # Resolved values
+  resolved:
+    app_name: (( grab computed_defaults.input.app_name ))
+    environment: (( empty computed_defaults.input.environment ? computed_defaults.defaults.environment : computed_defaults.input.environment ))
+    base_domain: (( empty computed_defaults.input.base_domain ? computed_defaults.defaults.base_domain : computed_defaults.input.base_domain ))
+    
+    # Computed from resolved values
+    full_domain: (( concat computed_defaults.resolved.app_name "." computed_defaults.resolved.environment "." computed_defaults.resolved.base_domain ))
+    api_endpoint: (( concat "https://api." computed_defaults.resolved.full_domain ))
+    web_endpoint: (( concat "https://www." computed_defaults.resolved.full_domain ))

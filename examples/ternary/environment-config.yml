@@ -1,0 +1,314 @@
+# Environment-Specific Configuration with Ternary Operator
+#
+# Using ternary operator for environment-based configuration
+
+# Environment detection
+environment:
+  # Could come from ENV variable or parameter
+  name: "production"  # Change to "staging", "development", etc.
+  
+  # Environment flags
+  is_production: (( environment.name == "production" ? true : false ))
+  is_staging: (( environment.name == "staging" ? true : false ))
+  is_development: (( environment.name == "development" ? true : false ))
+  is_test: (( environment.name == "test" ? true : false ))
+  
+  # Environment type
+  type: (( environment.is_production || environment.is_staging ? "deployed" : "local" ))
+  tier: (( environment.is_production ? "tier-1" : environment.is_staging ? "tier-2" : "tier-3" ))
+
+# Application configuration
+application:
+  name: "MyApp"
+  version: "2.1.0"
+  
+  # Debug mode based on environment
+  debug: (( environment.is_development || environment.is_test ? true : false ))
+  
+  # Log level by environment
+  log_level: (( 
+    environment.is_production ? "error" :
+    environment.is_staging ? "warning" :
+    environment.is_development ? "debug" :
+    "info"
+  ))
+  
+  # Feature flags
+  features:
+    beta_features: (( environment.is_production ? false : true ))
+    experimental: (( environment.is_development ? true : false ))
+    analytics: (( environment.type == "deployed" ? true : false ))
+    debug_panel: (( environment.is_development ? true : false ))
+    
+  # Performance settings
+  performance:
+    cache_enabled: (( environment.type == "deployed" ? true : false ))
+    compression: (( environment.is_production ? true : false ))
+    minify_assets: (( environment.type == "deployed" ? true : false ))
+    
+  # Timeouts by environment
+  timeouts:
+    request: (( environment.is_production ? 30 : 300 ))
+    session: (( environment.is_production ? 3600 : 86400 ))
+    cache_ttl: (( environment.is_production ? 3600 : environment.is_staging ? 600 : 60 ))
+
+# Database configuration
+database:
+  # Connection settings by environment
+  host: (( 
+    environment.is_production ? "db-prod.example.com" :
+    environment.is_staging ? "db-staging.example.com" :
+    "localhost"
+  ))
+  
+  port: (( environment.type == "deployed" ? 5432 : 5433 ))
+  
+  name: (( 
+    environment.is_production ? "myapp_production" :
+    environment.is_staging ? "myapp_staging" :
+    environment.is_test ? "myapp_test" :
+    "myapp_development"
+  ))
+  
+  # Credentials
+  username: (( environment.is_production ? "myapp_prod_user" : "myapp_dev" ))
+  password: (( environment.type == "deployed" ? (vault "secret/db/password") : "devpassword" ))
+  
+  # Connection pool settings
+  pool:
+    min: (( environment.is_production ? 10 : 2 ))
+    max: (( environment.is_production ? 50 : environment.is_staging ? 20 : 5 ))
+    idle_timeout: (( environment.is_production ? 60 : 300 ))
+  
+  # Performance settings
+  settings:
+    ssl: (( environment.type == "deployed" ? true : false ))
+    prepared_statements: (( environment.is_production ? true : false ))
+    query_logging: (( environment.is_development ? true : false ))
+    slow_query_threshold: (( environment.is_production ? 1000 : 100 ))
+
+# API endpoints
+api:
+  # Base URLs by environment
+  base_url: (( 
+    environment.is_production ? "https://api.example.com" :
+    environment.is_staging ? "https://api-staging.example.com" :
+    "http://localhost:8080"
+  ))
+  
+  # Service endpoints
+  services:
+    auth: (( concat api.base_url "/auth" ))
+    users: (( concat api.base_url "/users" ))
+    orders: (( concat api.base_url "/orders" ))
+  
+  # API keys (different per environment)
+  keys:
+    public: (( 
+      environment.is_production ? "pk_live_abcd1234" :
+      environment.is_staging ? "pk_test_efgh5678" :
+      "pk_dev_ijkl9012"
+    ))
+    secret: (( 
+      environment.type == "deployed" ? 
+      (vault (concat "secret/api/" environment.name "/secret_key")) : 
+      "sk_dev_secret"
+    ))
+  
+  # Rate limiting
+  rate_limits:
+    requests_per_minute: (( environment.is_production ? 60 : 600 ))
+    burst: (( environment.is_production ? 100 : 1000 ))
+    
+  # Retry configuration
+  retry:
+    enabled: (( environment.type == "deployed" ? true : false ))
+    max_attempts: (( environment.is_production ? 3 : 1 ))
+    backoff: (( environment.is_production ? "exponential" : "none" ))
+
+# Infrastructure configuration
+infrastructure:
+  # Cloud provider settings
+  cloud:
+    provider: "aws"
+    region: (( 
+      environment.is_production ? "us-east-1" :
+      environment.is_staging ? "us-west-2" :
+      "us-west-1"
+    ))
+    
+    # Instance configuration
+    instance:
+      type: (( 
+        environment.is_production ? "m5.xlarge" :
+        environment.is_staging ? "t3.large" :
+        "t3.micro"
+      ))
+      count: (( 
+        environment.is_production ? 5 :
+        environment.is_staging ? 2 :
+        1
+      ))
+      
+    # Auto-scaling
+    autoscaling:
+      enabled: (( environment.type == "deployed" ? true : false ))
+      min: (( environment.is_production ? 3 : 1 ))
+      max: (( environment.is_production ? 20 : environment.is_staging ? 5 : 1 ))
+      target_cpu: (( environment.is_production ? 70 : 80 ))
+  
+  # Load balancer
+  load_balancer:
+    enabled: (( environment.type == "deployed" ? true : false ))
+    type: (( environment.is_production ? "application" : "network" ))
+    ssl_policy: (( environment.is_production ? "TLS-1.2-2017-01" : "TLS-1.0-2016-08" ))
+  
+  # Storage
+  storage:
+    type: (( environment.type == "deployed" ? "s3" : "local" ))
+    bucket: (( 
+      environment.is_production ? "myapp-prod-storage" :
+      environment.is_staging ? "myapp-staging-storage" :
+      "/tmp/myapp-storage"
+    ))
+    cdn_enabled: (( environment.is_production ? true : false ))
+
+# Security configuration
+security:
+  # HTTPS enforcement
+  force_https: (( environment.type == "deployed" ? true : false ))
+  
+  # CORS settings
+  cors:
+    enabled: true
+    origins: (( 
+      environment.is_production ? 
+      ["https://app.example.com", "https://www.example.com"] :
+      ["*"]
+    ))
+    credentials: (( environment.is_production ? true : false ))
+  
+  # Session configuration
+  session:
+    secure: (( environment.type == "deployed" ? true : false ))
+    http_only: true
+    same_site: (( environment.is_production ? "strict" : "lax" ))
+    max_age: (( environment.is_production ? 3600 : 86400 ))
+  
+  # API security
+  api:
+    rate_limiting: (( environment.type == "deployed" ? true : false ))
+    require_api_key: (( environment.is_production ? true : false ))
+    ip_whitelist: (( environment.is_development ? [] : ["10.0.0.0/8", "172.16.0.0/12"] ))
+
+# Monitoring and alerting
+monitoring:
+  # Monitoring provider
+  provider: (( environment.type == "deployed" ? "datadog" : "local" ))
+  
+  # Metrics collection
+  metrics:
+    enabled: (( environment.type == "deployed" ? true : false ))
+    interval: (( environment.is_production ? 60 : 300 ))
+    detailed: (( environment.is_development ? true : false ))
+  
+  # Alerting
+  alerts:
+    enabled: (( environment.is_production || environment.is_staging ? true : false ))
+    channels: (( 
+      environment.is_production ? ["pagerduty", "slack", "email"] :
+      environment.is_staging ? ["slack", "email"] :
+      ["console"]
+    ))
+    
+    # Alert thresholds
+    thresholds:
+      cpu_percent: (( environment.is_production ? 80 : 90 ))
+      memory_percent: (( environment.is_production ? 85 : 95 ))
+      error_rate: (( environment.is_production ? 0.01 : 0.05 ))
+      response_time_ms: (( environment.is_production ? 500 : 2000 ))
+  
+  # Logging
+  logging:
+    level: (( application.log_level ))
+    outputs: (( 
+      environment.is_production ? ["cloudwatch", "s3"] :
+      environment.is_staging ? ["cloudwatch"] :
+      ["stdout", "file"]
+    ))
+    retention_days: (( 
+      environment.is_production ? 90 :
+      environment.is_staging ? 30 :
+      7
+    ))
+
+# Email configuration
+email:
+  # Provider selection
+  provider: (( environment.type == "deployed" ? "sendgrid" : "smtp" ))
+  
+  # SMTP settings
+  smtp:
+    host: (( environment.type == "deployed" ? "smtp.sendgrid.net" : "localhost" ))
+    port: (( environment.type == "deployed" ? 587 : 1025 ))
+    username: (( environment.type == "deployed" ? "apikey" : "" ))
+    password: (( environment.type == "deployed" ? (vault "secret/email/api_key") : "" ))
+    tls: (( environment.type == "deployed" ? true : false ))
+  
+  # Email settings
+  from: (( 
+    environment.is_production ? "noreply@example.com" :
+    environment.is_staging ? "staging@example.com" :
+    "dev@localhost"
+  ))
+  
+  # Feature flags
+  features:
+    send_emails: (( environment.is_production || environment.is_staging ? true : false ))
+    bcc_admin: (( environment.is_development ? true : false ))
+    use_templates: (( environment.type == "deployed" ? true : false ))
+
+# Background jobs
+jobs:
+  # Queue configuration
+  queue:
+    provider: (( environment.type == "deployed" ? "sqs" : "memory" ))
+    workers: (( 
+      environment.is_production ? 10 :
+      environment.is_staging ? 3 :
+      1
+    ))
+    
+  # Job settings
+  settings:
+    retry_enabled: (( environment.type == "deployed" ? true : false ))
+    max_retries: (( environment.is_production ? 5 : 2 ))
+    retry_delay: (( environment.is_production ? 300 : 60 ))
+    
+  # Scheduled jobs
+  schedules:
+    cleanup:
+      enabled: (( environment.type == "deployed" ? true : false ))
+      interval: (( environment.is_production ? "0 2 * * *" : "*/10 * * * *" ))
+    
+    reports:
+      enabled: (( environment.is_production ? true : false ))
+      interval: "0 6 * * MON"
+
+# Summary configuration
+summary:
+  environment: (( environment.name ))
+  type: (( environment.type ))
+  endpoints:
+    app: (( 
+      environment.is_production ? "https://app.example.com" :
+      environment.is_staging ? "https://staging.example.com" :
+      "http://localhost:3000"
+    ))
+    api: (( api.base_url ))
+    database: (( concat database.host ":" database.port "/" database.name ))
+  features:
+    debug: (( application.debug ))
+    caching: (( application.performance.cache_enabled ))
+    monitoring: (( monitoring.metrics.enabled ))
+    emails: (( email.features.send_emails ))

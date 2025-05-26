@@ -1,0 +1,80 @@
+---
+# Grabbing complex data structures
+
+metadata:
+  tags:
+    - production
+    - web
+    - critical
+  
+  attributes:
+    owner: platform-team
+    cost-center: engineering
+    environment: production
+  
+  servers:
+    - name: web-01
+      ip: 10.0.1.10
+      role: frontend
+    - name: web-02
+      ip: 10.0.1.11
+      role: frontend
+    - name: db-01
+      ip: 10.0.2.10
+      role: database
+
+# Grab entire lists
+deployment:
+  tags: (( grab metadata.tags ))  # Gets the whole array
+  
+  # Grab specific list items by index
+  primary_tag: (( grab metadata.tags[0] ))  # "production"
+  secondary_tag: (( grab metadata.tags[1] )) # "web"
+
+# Grab entire maps
+resource:
+  labels: (( grab metadata.attributes ))  # Gets the whole map
+  
+  # Grab specific map values
+  owner: (( grab metadata.attributes.owner ))
+  env: (( grab metadata.attributes.environment ))
+
+# Grab from lists of maps
+servers:
+  all: (( grab metadata.servers ))  # Gets all servers
+  
+  # Grab specific server by index
+  first_server: (( grab metadata.servers[0] ))
+  
+  # Grab specific field from server in list
+  first_server_ip: (( grab metadata.servers[0].ip ))
+  
+  # Note: For named access to list items, you'd need to use 
+  # Spruce's list merging features or restructure the data
+
+# Combining with other operators
+infrastructure:
+  # Join all tags
+  tag_string: (( join ", " (grab metadata.tags) ))
+  
+  # Get all server IPs (would need more complex logic)
+  # This is where you might need to restructure data or use static_ips
+
+# Nested structure grabbing
+complex:
+  deep:
+    nested:
+      value: "found me!"
+      list: [a, b, c]
+      map:
+        key1: value1
+        key2: value2
+
+result:
+  # Grab from deeply nested structure
+  deep_value: (( grab complex.deep.nested.value ))
+  deep_list: (( grab complex.deep.nested.list ))
+  deep_map_item: (( grab complex.deep.nested.map.key1 ))
+  
+  # Grab entire nested structure
+  nested_struct: (( grab complex.deep.nested ))

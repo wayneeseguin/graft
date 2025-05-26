@@ -1,0 +1,131 @@
+---
+# Complex Calculations with Spruce Arithmetic Operators
+# This file demonstrates more advanced calculation scenarios
+
+# Financial calculations
+finance:
+  principal: 10000
+  annual_rate: 0.05
+  years: 3
+  
+  # Simple interest calculation
+  simple_interest: (( finance.principal * finance.annual_rate * finance.years ))  # 1500
+  total_with_simple: (( finance.principal + finance.simple_interest ))            # 11500
+  
+  # Monthly payment calculation (simplified)
+  monthly_rate: (( finance.annual_rate / 12 ))                                   # 0.00416...
+  months: (( finance.years * 12 ))                                               # 36
+  monthly_payment: (( finance.principal / finance.months ))                      # 277.77...
+
+# Geometric calculations
+geometry:
+  # Circle calculations
+  circle:
+    radius: 5
+    pi: 3.14159
+    diameter: (( 2 * circle.radius ))                                           # 10
+    circumference: (( 2 * circle.pi * circle.radius ))                         # 31.4159
+    area: (( circle.pi * circle.radius * circle.radius ))                      # 78.53975
+  
+  # Rectangle calculations
+  rectangle:
+    length: 12
+    width: 8
+    perimeter: (( 2 * (rectangle.length + rectangle.width) ))                  # 40
+    area: (( rectangle.length * rectangle.width ))                             # 96
+    diagonal: (( (rectangle.length * rectangle.length + rectangle.width * rectangle.width) ))  # 208 (squared)
+
+# Statistical calculations
+statistics:
+  dataset: 
+    values: 
+      - 10
+      - 20
+      - 30
+      - 40
+      - 50
+    count: 5
+    sum: (( 10 + 20 + 30 + 40 + 50 ))                                         # 150
+    mean: (( statistics.dataset.sum / statistics.dataset.count ))              # 30
+    
+  # Variance calculation (simplified - from mean)
+  deviations:
+    d1: (( (10 - statistics.dataset.mean) * (10 - statistics.dataset.mean) ))  # 400
+    d2: (( (20 - statistics.dataset.mean) * (20 - statistics.dataset.mean) ))  # 100
+    d3: (( (30 - statistics.dataset.mean) * (30 - statistics.dataset.mean) ))  # 0
+    d4: (( (40 - statistics.dataset.mean) * (40 - statistics.dataset.mean) ))  # 100
+    d5: (( (50 - statistics.dataset.mean) * (50 - statistics.dataset.mean) ))  # 400
+    sum_of_squares: (( statistics.deviations.d1 + statistics.deviations.d2 + statistics.deviations.d3 + statistics.deviations.d4 + statistics.deviations.d5 ))  # 1000
+  
+  variance: (( statistics.deviations.sum_of_squares / statistics.dataset.count ))  # 200
+
+# Temperature conversions
+temperature:
+  celsius: 25
+  
+  # Celsius to Fahrenheit: F = C * 9/5 + 32
+  to_fahrenheit: (( temperature.celsius * 9 / 5 + 32 ))                        # 77
+  
+  # Celsius to Kelvin: K = C + 273.15
+  to_kelvin: (( temperature.celsius + 273.15 ))                                # 298.15
+  
+  # Back conversions for verification
+  fahrenheit: 77
+  back_to_celsius: (( (temperature.fahrenheit - 32) * 5 / 9 ))                 # 25
+
+# Unit conversions
+conversions:
+  # Storage units
+  storage:
+    gigabytes: 100
+    to_megabytes: (( conversions.storage.gigabytes * 1024 ))                   # 102400
+    to_kilobytes: (( conversions.storage.to_megabytes * 1024 ))                # 104857600
+    to_bytes: (( conversions.storage.to_kilobytes * 1024 ))                    # 107374182400
+    
+    # Reverse calculation
+    bytes: 1073741824
+    to_gb: (( conversions.storage.bytes / 1024 / 1024 / 1024 ))                # 1
+  
+  # Time conversions
+  time:
+    days: 7
+    to_hours: (( conversions.time.days * 24 ))                                 # 168
+    to_minutes: (( conversions.time.to_hours * 60 ))                           # 10080
+    to_seconds: (( conversions.time.to_minutes * 60 ))                         # 604800
+    to_milliseconds: (( conversions.time.to_seconds * 1000 ))                  # 604800000
+
+# Complex formulas with multiple operations
+formulas:
+  # Quadratic formula components (for ax² + bx + c = 0)
+  quadratic:
+    a: 1
+    b: -5
+    c: 6
+    discriminant: (( formulas.quadratic.b * formulas.quadratic.b - 4 * formulas.quadratic.a * formulas.quadratic.c ))  # 1
+    # Note: Square root would need to be approximated or use another method
+    
+  # Compound calculations
+  compound:
+    base: 100
+    factor1: 1.1
+    factor2: 0.95
+    factor3: 1.05
+    result: (( formulas.compound.base * formulas.compound.factor1 * formulas.compound.factor2 * formulas.compound.factor3 ))  # 110.25
+
+# Nested calculations with intermediate results
+nested_calc:
+  level1:
+    a: 10
+    b: 20
+    sum: (( nested_calc.level1.a + nested_calc.level1.b ))                     # 30
+  
+  level2:
+    multiplier: 3
+    product: (( nested_calc.level1.sum * nested_calc.level2.multiplier ))      # 90
+    
+  level3:
+    divisor: 5
+    result: (( nested_calc.level2.product / nested_calc.level3.divisor ))      # 18
+    remainder: (( nested_calc.level2.product % nested_calc.level3.divisor ))   # 0
+    
+  final_calculation: (( nested_calc.level3.result + nested_calc.level1.a ))    # 28

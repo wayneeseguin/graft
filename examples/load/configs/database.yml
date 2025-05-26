@@ -1,0 +1,26 @@
+---
+# Database configuration
+postgres:
+  host: localhost
+  port: 5432
+  database: myapp_dev
+  pool:
+    min: 2
+    max: 10
+  options:
+    ssl: false
+    timeout: 5000
+
+mysql:
+  host: localhost
+  port: 3306
+  database: legacy_app
+  charset: utf8mb4
+  
+mongodb:
+  host: localhost
+  port: 27017
+  database: analytics
+  options:
+    replicaSet: rs0
+    authSource: admin

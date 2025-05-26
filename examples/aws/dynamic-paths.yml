@@ -1,0 +1,191 @@
+# Dynamic Path Construction for AWS Operators
+#
+# Building AWS parameter/secret paths dynamically based on environment and configuration
+
+# Base configuration
+meta:
+  app: myapp
+  env: (( grab $ENVIRONMENT || "dev" ))
+  region: (( grab $AWS_REGION || "us-east-1" ))
+  tenant: (( grab $TENANT || "default" ))
+  version: v2
+
+# Dynamic Parameter Store paths
+parameters:
+  # Build path: /myapp/dev/us-east-1/config
+  base_path: (( concat "/" meta.app "/" meta.env "/" meta.region ))
+  
+  # Application configuration
+  app_config:
+    # Path: /myapp/dev/us-east-1/config/general
+    general: (( awsparam (concat parameters.base_path "/config/general") ))
+    
+    # Path: /myapp/dev/us-east-1/config/features
+    features: (( awsparam (concat parameters.base_path "/config/features") ))
+    
+    # Path: /myapp/dev/us-east-1/config/limits
+    limits: (( awsparam (concat parameters.base_path "/config/limits") ))
+
+  # Service-specific parameters
+  services:
+    # Dynamic service configuration
+    api:
+      # Path: /myapp/dev/us-east-1/services/api/endpoint
+      endpoint: (( awsparam (concat parameters.base_path "/services/api/endpoint") ))
+      timeout: (( awsparam (concat parameters.base_path "/services/api/timeout") || 30 ))
+      
+    auth:
+      # Path: /myapp/dev/us-east-1/services/auth/endpoint
+      endpoint: (( awsparam (concat parameters.base_path "/services/auth/endpoint") ))
+      jwt_expiry: (( awsparam (concat parameters.base_path "/services/auth/jwt_expiry") || 3600 ))
+
+# Dynamic Secrets Manager paths
+secrets:
+  # Build secret name: myapp/dev/tenant-id
+  base_name: (( concat meta.app "/" meta.env "/" meta.tenant ))
+  
+  # Database secrets
+  database:
+    # Name: myapp/dev/default/database/primary
+    primary: (( awssecret (concat secrets.base_name "/database/primary") ))
+    
+    # Extract specific fields
+    primary_host: (( awssecret (concat secrets.base_name "/database/primary?key=host") ))
+    primary_password: (( awssecret (concat secrets.base_name "/database/primary?key=password") ))
+    
+    # Name: myapp/dev/default/database/replica
+    replica: (( awssecret (concat secrets.base_name "/database/replica") ))
+
+  # API credentials by version
+  api_keys:
+    # Name: myapp/dev/default/api/v2/internal
+    internal: (( awssecret (concat secrets.base_name "/api/" meta.version "/internal") ))
+    
+    # Name: myapp/dev/default/api/v2/external
+    external: (( awssecret (concat secrets.base_name "/api/" meta.version "/external") ))
+
+# Multi-tenant configuration
+tenant_config:
+  # Tenant-specific parameters
+  settings:
+    # Path: /tenants/default/myapp/config
+    config: (( awsparam (concat "/tenants/" meta.tenant "/" meta.app "/config") ))
+    
+    # Path: /tenants/default/myapp/limits
+    limits: (( awsparam (concat "/tenants/" meta.tenant "/" meta.app "/limits") ))
+    
+    # Path: /tenants/default/myapp/features
+    features: (( awsparam (concat "/tenants/" meta.tenant "/" meta.app "/features") ))
+
+  # Tenant secrets
+  credentials:
+    # Name: tenants/default/myapp/credentials
+    main: (( awssecret (concat "tenants/" meta.tenant "/" meta.app "/credentials") ))
+    
+    # Extract specific credentials
+    api_key: (( awssecret (concat "tenants/" meta.tenant "/" meta.app "/credentials?key=api_key") ))
+    secret: (( awssecret (concat "tenants/" meta.tenant "/" meta.app "/credentials?key=secret") ))
+
+# Environment-aware paths
+deployment:
+  # Different path patterns per environment
+  paths:
+    parameter_prefix: (( grab meta.env == "prod" ? "/production" : (concat "/" meta.env) ))
+    secret_prefix: (( grab meta.env == "prod" ? "production" : meta.env ))
+  
+  # Use environment-specific prefixes
+  config:
+    database_url: (( awsparam (concat deployment.paths.parameter_prefix "/database/url") ))
+    redis_url: (( awsparam (concat deployment.paths.parameter_prefix "/redis/url") ))
+    
+  secrets:
+    db_password: (( awssecret (concat deployment.paths.secret_prefix "/database/password") ))
+    api_key: (( awssecret (concat deployment.paths.secret_prefix "/api/key") ))
+
+# Component-based paths
+components:
+  # List of components
+  names: ["frontend", "backend", "worker", "scheduler"]
+  
+  # Generate paths for each component
+  configs:
+    frontend:
+      # Path: /myapp/dev/components/frontend/config
+      settings: (( awsparam (concat "/" meta.app "/" meta.env "/components/frontend/config") ))
+      
+    backend:
+      # Path: /myapp/dev/components/backend/config
+      settings: (( awsparam (concat "/" meta.app "/" meta.env "/components/backend/config") ))
+      
+    worker:
+      # Path: /myapp/dev/components/worker/config
+      settings: (( awsparam (concat "/" meta.app "/" meta.env "/components/worker/config") ))
+
+# Date-based paths (for versioned configs)
+versioned:
+  # Current date-based path (would need actual date)
+  date_suffix: "2024-01-15"
+  
+  # Archived configurations
+  archive:
+    # Path: /myapp/archive/2024-01-15/config
+    config: (( awsparam (concat "/" meta.app "/archive/" versioned.date_suffix "/config") ))
+    
+    # Name: myapp/archive/2024-01-15/secrets
+    secrets: (( awssecret (concat meta.app "/archive/" versioned.date_suffix "/secrets") ))
+
+# Hierarchical organization paths
+hierarchy:
+  # Organization structure
+  org: acme
+  department: engineering
+  team: platform
+  
+  # Build hierarchical paths
+  params:
+    # Path: /acme/engineering/platform/myapp/dev/config
+    team_config: (( awsparam (concat "/" hierarchy.org "/" hierarchy.department "/" hierarchy.team "/" meta.app "/" meta.env "/config") ))
+    
+    # Path: /acme/global/policies
+    org_policies: (( awsparam (concat "/" hierarchy.org "/global/policies") ))
+    
+  secrets:
+    # Name: acme/engineering/platform/myapp/dev/credentials
+    team_creds: (( awssecret (concat hierarchy.org "/" hierarchy.department "/" hierarchy.team "/" meta.app "/" meta.env "/credentials") ))
+
+# Feature flag paths
+feature_flags:
+  # Base path for feature flags
+  base: (( concat "/" meta.app "/features/" meta.env ))
+  
+  # Individual feature flags
+  flags:
+    new_ui: (( awsparam (concat feature_flags.base "/new_ui") || false ))
+    beta_api: (( awsparam (concat feature_flags.base "/beta_api") || false ))
+    experimental: (( awsparam (concat feature_flags.base "/experimental") || false ))
+    
+  # Feature flag metadata
+  metadata:
+    last_updated: (( awsparam (concat feature_flags.base "/metadata/last_updated") ))
+    updated_by: (( awsparam (concat feature_flags.base "/metadata/updated_by") ))
+
+# Cross-reference paths
+references:
+  # Parameters that reference other AWS resources
+  resources:
+    # Get S3 bucket name from parameter
+    s3_bucket: (( awsparam (concat "/" meta.app "/" meta.env "/resources/s3/bucket") ))
+    
+    # Get Lambda function ARN
+    lambda_arn: (( awsparam (concat "/" meta.app "/" meta.env "/resources/lambda/arn") ))
+    
+    # Get SQS queue URL
+    sqs_url: (( awsparam (concat "/" meta.app "/" meta.env "/resources/sqs/url") ))
+  
+  # Secrets for those resources
+  credentials:
+    # S3 access credentials
+    s3_access: (( awssecret (concat meta.app "/" meta.env "/resources/s3/credentials") ))
+    
+    # Lambda execution role credentials
+    lambda_role: (( awssecret (concat meta.app "/" meta.env "/resources/lambda/role") ))

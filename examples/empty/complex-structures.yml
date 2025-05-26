@@ -1,0 +1,332 @@
+# Complex Structure Validation with Empty Operator
+#
+# Checking emptiness in nested and complex data structures
+
+# Nested object validation
+user_profile:
+  # Complex user data structure
+  basic_info:
+    name: "John Doe"
+    email: ""
+    phone: null
+  
+  address:
+    street: ""
+    city: "New York"
+    state: "NY"
+    zip: ""
+    country: "USA"
+  
+  preferences:
+    notifications:
+      email: true
+      sms: false
+      push: null
+    settings: {}
+  
+  social_links: []
+  
+  # Validation of nested structures
+  validation:
+    # Check individual fields
+    has_email: (( ! empty user_profile.basic_info.email ))
+    has_phone: (( ! empty user_profile.basic_info.phone ))
+    
+    # Check if address is complete
+    address_complete: (( ! empty user_profile.address.street && 
+                        ! empty user_profile.address.city && 
+                        ! empty user_profile.address.state && 
+                        ! empty user_profile.address.zip ))
+    
+    # Check nested objects
+    has_preferences: (( ! empty user_profile.preferences ))
+    has_notification_prefs: (( ! empty user_profile.preferences.notifications ))
+    has_custom_settings: (( ! empty user_profile.preferences.settings ))
+    
+    # Check arrays
+    has_social_links: (( ! empty user_profile.social_links ))
+    
+    # Profile completeness score
+    completeness:
+      basic: (( user_profile.validation.has_email && user_profile.validation.has_phone ? 100 : 50 ))
+      address: (( user_profile.validation.address_complete ? 100 : 25 ))
+      preferences: (( user_profile.validation.has_custom_settings ? 100 : 50 ))
+      social: (( user_profile.validation.has_social_links ? 100 : 0 ))
+
+# Array of objects validation
+inventory:
+  products:
+    - id: "PROD001"
+      name: "Widget A"
+      description: ""
+      price: 29.99
+      stock:
+        quantity: 100
+        location: "A1"
+      categories: ["electronics", "gadgets"]
+      metadata: {}
+    
+    - id: "PROD002"
+      name: ""
+      description: "Premium widget with advanced features"
+      price: null
+      stock:
+        quantity: 0
+        location: ""
+      categories: []
+      metadata:
+        featured: true
+    
+    - id: ""
+      name: "Widget C"
+      description: "Budget option"
+      price: 9.99
+      stock: null
+      categories: ["electronics"]
+      metadata:
+        discount: 10
+  
+  # Validate each product
+  product_validation:
+    - product_1:
+        has_id: true
+        has_name: true
+        has_description: false
+        has_price: true
+        has_stock: true
+        has_categories: true
+        is_complete: false
+    
+    - product_2:
+        has_id: true
+        has_name: false
+        has_description: true
+        has_price: false
+        has_stock: true  # Has stock object even with 0 quantity
+        stock_available: false  # But no actual stock
+        has_categories: false
+        is_complete: false
+    
+    - product_3:
+        has_id: false
+        has_name: true
+        has_description: true
+        has_price: true
+        has_stock: false
+        has_categories: true
+        is_complete: false
+
+# Multi-dimensional data validation
+analytics_data:
+  # Time series data with possible gaps
+  metrics:
+    daily:
+      - date: "2024-01-01"
+        values:
+          visits: 1000
+          conversions: 50
+          revenue: null
+      - date: "2024-01-02"
+        values: {}
+      - date: "2024-01-03"
+        values:
+          visits: 1200
+          conversions: 0  # Zero is not empty
+          revenue: 1500.00
+    
+    summary:
+      total_days: 3
+      days_with_data: 2
+      complete_days: 1
+  
+  # Segmented data
+  segments:
+    mobile:
+      users: []
+      revenue: 0
+      transactions: null
+    desktop:
+      users: ["user1", "user2", "user3"]
+      revenue: 5000
+      transactions: 150
+    tablet:
+      users: null
+      revenue: null
+      transactions: null
+  
+  # Validation
+  data_quality:
+    # Check daily metrics
+    daily_checks:
+      - has_values: (( ! empty analytics_data.metrics.daily.0.values ))
+        has_revenue: (( ! empty analytics_data.metrics.daily.0.values.revenue ))
+        is_complete: false
+      - has_values: (( ! empty analytics_data.metrics.daily.1.values ))
+        is_complete: false
+      - has_values: (( ! empty analytics_data.metrics.daily.2.values ))
+        has_all_metrics: true
+        is_complete: true
+    
+    # Check segments
+    segment_checks:
+      mobile:
+        has_users: (( ! empty analytics_data.segments.mobile.users ))
+        has_data: (( ! empty analytics_data.segments.mobile.transactions ))
+        is_active: false
+      desktop:
+        has_users: (( ! empty analytics_data.segments.desktop.users ))
+        has_data: true
+        is_active: true
+      tablet:
+        has_any_data: false
+
+# Recursive structure validation
+organization:
+  name: "TechCorp"
+  departments:
+    - name: "Engineering"
+      manager: "John Smith"
+      teams:
+        - name: "Backend"
+          lead: "Jane Doe"
+          members: ["dev1", "dev2", "dev3"]
+          projects: []
+        - name: "Frontend"
+          lead: ""
+          members: []
+          projects: ["website", "mobile-app"]
+      budget: 1000000
+    
+    - name: "Marketing"
+      manager: ""
+      teams: []
+      budget: null
+    
+    - name: ""
+      manager: "Bob Wilson"
+      teams:
+        - name: "Support"
+          lead: "Alice Brown"
+          members: ["support1", "support2"]
+          projects: null
+      budget: 500000
+  
+  # Deep validation
+  dept_validation:
+    # Check each department
+    engineering:
+      has_name: true
+      has_manager: true
+      has_teams: true
+      has_budget: true
+      teams_validated:
+        backend:
+          has_lead: true
+          has_members: true
+          has_projects: false
+          is_operational: true
+        frontend:
+          has_lead: false
+          has_members: false
+          has_projects: true
+          is_operational: false
+    
+    marketing:
+      has_name: true
+      has_manager: false
+      has_teams: false
+      has_budget: false
+      is_operational: false
+    
+    unnamed:
+      has_name: false
+      has_manager: true
+      has_teams: true
+      is_valid: false  # Can't have dept without name
+
+# Mixed type validation
+configuration:
+  # Various data types that might be empty
+  settings:
+    string_empty: ""
+    string_space: " "
+    number_zero: 0
+    number_null: null
+    bool_false: false
+    bool_null: null
+    array_empty: []
+    array_null: null
+    object_empty: {}
+    object_null: null
+    nested:
+      deep:
+        value: ""
+  
+  # Comprehensive checks
+  emptiness_checks:
+    strings:
+      empty_string: (( empty configuration.settings.string_empty ))  # true
+      space_string: (( empty configuration.settings.string_space ))  # false
+    
+    numbers:
+      zero_empty: (( empty configuration.settings.number_zero ))     # false
+      null_empty: (( empty configuration.settings.number_null ))     # true
+    
+    booleans:
+      false_empty: (( empty configuration.settings.bool_false ))     # false
+      null_empty: (( empty configuration.settings.bool_null ))       # true
+    
+    collections:
+      array_empty: (( empty configuration.settings.array_empty ))    # true
+      array_null: (( empty configuration.settings.array_null ))      # true
+      object_empty: (( empty configuration.settings.object_empty ))  # true
+      object_null: (( empty configuration.settings.object_null ))    # true
+    
+    nested:
+      deep_empty: (( empty configuration.settings.nested.deep.value ))  # true
+      deep_exists: (( ! empty configuration.settings.nested.deep ))     # true (object exists)
+
+# Dynamic path validation
+dynamic_validation:
+  data:
+    users:
+      admin:
+        permissions: ["read", "write", "delete"]
+        settings: {}
+      viewer:
+        permissions: ["read"]
+        settings:
+          theme: "dark"
+    groups:
+      editors: []
+      moderators: null
+  
+  # Build paths dynamically and check
+  paths_to_check:
+    - "users.admin.permissions"
+    - "users.admin.settings"
+    - "users.viewer.settings.theme"
+    - "users.guest.permissions"  # Non-existent
+    - "groups.editors"
+    - "groups.moderators"
+  
+  # Results (would need custom logic in practice)
+  validation_results:
+    - path: "users.admin.permissions"
+      exists: true
+      empty: false
+    - path: "users.admin.settings"
+      exists: true
+      empty: true
+    - path: "users.viewer.settings.theme"
+      exists: true
+      empty: false
+    - path: "users.guest.permissions"
+      exists: false
+      empty: true  # Non-existent paths are considered empty
+    - path: "groups.editors"
+      exists: true
+      empty: true
+    - path: "groups.moderators"
+      exists: true
+      empty: true

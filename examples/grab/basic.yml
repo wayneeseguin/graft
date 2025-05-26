@@ -1,0 +1,23 @@
+---
+# Basic grab examples
+meta:
+  name: MyApp
+  version: 1.2.3
+  author: Jane Doe
+
+# Simple grab
+application:
+  name: (( grab meta.name ))
+  version: (( grab meta.version ))
+  
+# Grab with literal (unusual but possible)
+defaults:
+  timeout: (( grab "30s" ))  # Just returns "30s" - not very useful!
+  
+# Grab from current level using relative path
+config:
+  app_name: (( grab meta.name ))
+  full_info: 
+    name: (( grab meta.name ))
+    version: (( grab meta.version ))
+    author: (( grab meta.author ))

@@ -1,0 +1,59 @@
+---
+# Dynamic file paths with nested expressions
+# Run with: ENV=production spruce merge dynamic-paths.yml
+
+meta:
+  environment: (( grab $ENV || "dev" ))
+  base_path: configs
+  cert_path: certificates
+
+# Build file paths dynamically
+config:
+  # Concatenate path based on environment
+  database_config: (( file (concat (grab meta.base_path) "/" (grab meta.environment) "/database.conf") ))
+  
+  # Different configs for different environments
+  # If ENV=production, reads configs/prod/database.conf
+  # If ENV not set, reads configs/dev/database.conf
+
+# Certificate management
+tls:
+  cert_name: server
+  
+  # Build certificate path
+  certificate: (( file (concat (grab meta.cert_path) "/" (grab tls.cert_name) ".crt") ))
+  
+  # Could also do environment-specific certs
+  # certificate: (( file (concat "certs/" (grab meta.environment) "-cert.pem") ))
+
+# Script selection based on conditions
+deployment:
+  use_custom_script: false
+  script_type: (( grab deployment.use_custom_script ? "custom" : "default" ))
+  
+  # Select script based on type
+  startup_script: (( file (concat "scripts/" (grab deployment.script_type) "/startup.sh") ))
+
+# Multiple file includes with dynamic selection
+features:
+  version: v2
+  
+  # Load different feature flags based on version
+  config: (( file (concat "configs/features-" (grab features.version) ".json") ))
+
+# Advanced: Building paths from multiple components
+service:
+  name: api
+  version: 2.0
+  env: (( grab meta.environment ))
+  
+  # Complex path: configs/api/2.0/production/service.yaml
+  config_path: (( concat 
+    "configs/" 
+    (grab service.name) "/" 
+    (grab service.version) "/" 
+    (grab service.env) "/service.yaml" 
+  ))
+  
+  # Load the config (would use load for YAML parsing)
+  raw_config: (( file (grab service.config_path) ))

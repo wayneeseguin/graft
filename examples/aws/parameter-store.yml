@@ -1,0 +1,140 @@
+# AWS Systems Manager Parameter Store Examples
+#
+# The awsparam operator retrieves parameters from AWS SSM Parameter Store
+
+# Basic parameter retrieval
+database:
+  # Simple string parameter
+  host: (( awsparam "/myapp/database/host" ))
+  
+  # SecureString parameter (automatically decrypted)
+  password: (( awsparam "/myapp/database/password" ))
+  
+  # With default value if parameter doesn't exist
+  port: (( awsparam "/myapp/database/port" || 5432 ))
+
+# JSON parameter with key extraction
+# Assume parameter contains: {"username": "admin", "password": "secret", "port": 3306}
+mysql_config:
+  # Extract specific keys from JSON
+  username: (( awsparam "/myapp/mysql/config?key=username" ))
+  password: (( awsparam "/myapp/mysql/config?key=password" ))
+  port: (( awsparam "/myapp/mysql/config?key=port" ))
+
+# Hierarchical parameter organization
+application:
+  name: myapp
+  environment: dev
+  
+  # Build paths dynamically
+  config:
+    # Path: /myapp/dev/api/endpoint
+    api_endpoint: (( awsparam (concat "/" application.name "/" application.environment "/api/endpoint") ))
+    
+    # Path: /myapp/dev/features/flags
+    feature_flags: (( awsparam (concat "/" application.name "/" application.environment "/features/flags") ))
+
+# Environment-specific parameters
+environments:
+  development:
+    database_url: (( awsparam "/myapp/dev/database_url" ))
+    redis_url: (( awsparam "/myapp/dev/redis_url" ))
+    
+  staging:
+    database_url: (( awsparam "/myapp/staging/database_url" ))
+    redis_url: (( awsparam "/myapp/staging/redis_url" ))
+    
+  production:
+    database_url: (( awsparam "/myapp/prod/database_url" ))
+    redis_url: (( awsparam "/myapp/prod/redis_url" ))
+
+# Shared parameters across environments
+shared:
+  # Global configurations
+  company_name: (( awsparam "/global/company_name" ))
+  support_email: (( awsparam "/global/support_email" ))
+  
+  # Service endpoints
+  services:
+    auth_service: (( awsparam "/services/auth/endpoint" ))
+    payment_service: (( awsparam "/services/payment/endpoint" ))
+
+# Complex JSON extraction
+# Assume parameter contains: 
+# {
+#   "primary": {"host": "db1.example.com", "port": 5432},
+#   "replica": {"host": "db2.example.com", "port": 5432}
+# }
+database_cluster:
+  primary_host: (( awsparam "/myapp/database/cluster?key=primary.host" ))
+  primary_port: (( awsparam "/myapp/database/cluster?key=primary.port" ))
+  replica_host: (( awsparam "/myapp/database/cluster?key=replica.host" ))
+  replica_port: (( awsparam "/myapp/database/cluster?key=replica.port" ))
+
+# Using parameters for different stages
+deployment:
+  # Parameters by stage/environment
+  image_tag: (( awsparam "/myapp/deployment/image_tag" ))
+  replicas: (( awsparam "/myapp/deployment/replicas" || 1 ))
+  
+  # Feature toggles from parameters
+  features:
+    new_ui: (( awsparam "/myapp/features/new_ui" || false ))
+    beta_features: (( awsparam "/myapp/features/beta" || false ))
+
+# Credentials and secrets
+credentials:
+  # API keys
+  stripe_api_key: (( awsparam "/myapp/credentials/stripe/api_key" ))
+  sendgrid_api_key: (( awsparam "/myapp/credentials/sendgrid/api_key" ))
+  
+  # OAuth credentials
+  oauth:
+    client_id: (( awsparam "/myapp/oauth/github/client_id" ))
+    client_secret: (( awsparam "/myapp/oauth/github/client_secret" ))
+
+# Parameter Store paths with versioning
+# Parameters can have versions, but awsparam gets latest by default
+versioned_config:
+  # Always gets latest version
+  current_config: (( awsparam "/myapp/config/current" ))
+  
+  # For specific versions, you'd need to use AWS CLI or SDK directly
+  # This is a limitation of the awsparam operator
+
+# Best practices example
+production_config:
+  # Organize parameters hierarchically
+  database:
+    primary:
+      host: (( awsparam "/prod/myapp/database/primary/host" ))
+      port: (( awsparam "/prod/myapp/database/primary/port" ))
+      name: (( awsparam "/prod/myapp/database/primary/name" ))
+      username: (( awsparam "/prod/myapp/database/primary/username" ))
+      password: (( awsparam "/prod/myapp/database/primary/password" ))
+    
+    read_replica:
+      host: (( awsparam "/prod/myapp/database/replica/host" ))
+      port: (( awsparam "/prod/myapp/database/replica/port" ))
+  
+  # Group related parameters
+  monitoring:
+    datadog_api_key: (( awsparam "/prod/myapp/monitoring/datadog/api_key" ))
+    sentry_dsn: (( awsparam "/prod/myapp/monitoring/sentry/dsn" ))
+    
+  # Use clear naming conventions
+  external_apis:
+    payment_gateway: (( awsparam "/prod/myapp/external/payment/endpoint" ))
+    email_service: (( awsparam "/prod/myapp/external/email/endpoint" ))
+
+# Error handling with defaults
+safe_config:
+  # Required parameters (will fail if missing)
+  critical:
+    api_key: (( awsparam "/myapp/required/api_key" ))
+    
+  # Optional parameters with defaults
+  optional:
+    timeout: (( awsparam "/myapp/optional/timeout" || 30 ))
+    retries: (( awsparam "/myapp/optional/retries" || 3 ))
+    cache_ttl: (( awsparam "/myapp/optional/cache_ttl" || 3600 ))

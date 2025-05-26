@@ -1,0 +1,217 @@
+# Basic Sort Examples
+#
+# Simple sorting of arrays with strings and numbers
+
+# String sorting
+strings:
+  # Unsorted string arrays
+  fruits:
+    - orange
+    - apple
+    - banana
+    - grape
+    - cherry
+  
+  # Sort alphabetically
+  sorted_fruits: (( sort ))
+  # Result: [apple, banana, cherry, grape, orange]
+  
+  # Case-sensitive sorting
+  mixed_case:
+    - zebra
+    - Apple
+    - banana
+    - Zebra
+    - apple
+    - Banana
+  
+  sorted_mixed: (( sort ))
+  # Result: [Apple, Banana, Zebra, apple, banana, zebra]
+  # Note: Uppercase letters sort before lowercase
+
+  # Special characters
+  special_chars:
+    - "_underscore"
+    - "!exclamation"
+    - "#hash"
+    - "@at"
+    - "~tilde"
+    - "1number"
+  
+  sorted_special: (( sort ))
+  # Sorts by ASCII value
+
+# Number sorting
+numbers:
+  # Unsorted integers
+  integers:
+    - 42
+    - 1
+    - 100
+    - 7
+    - 23
+    - 5
+  
+  sorted_integers: (( sort ))
+  # Result: [1, 5, 7, 23, 42, 100]
+  
+  # Floating point numbers
+  decimals:
+    - 3.14
+    - 2.71
+    - 1.41
+    - 0.5
+    - 10.1
+    - 2.0
+  
+  sorted_decimals: (( sort ))
+  # Result: [0.5, 1.41, 2.0, 2.71, 3.14, 10.1]
+  
+  # Negative numbers
+  with_negatives:
+    - 5
+    - -10
+    - 0
+    - -5
+    - 10
+    - -1
+  
+  sorted_negatives: (( sort ))
+  # Result: [-10, -5, -1, 0, 5, 10]
+
+# Empty and single-element arrays
+edge_cases:
+  # Empty array remains empty
+  empty_array: []
+  sorted_empty: (( sort ))
+  # Result: []
+  
+  # Single element array remains unchanged
+  single_element: [42]
+  sorted_single: (( sort ))
+  # Result: [42]
+  
+  # Array with duplicates
+  with_duplicates:
+    - apple
+    - banana
+    - apple
+    - cherry
+    - banana
+  
+  sorted_duplicates: (( sort ))
+  # Result: [apple, apple, banana, banana, cherry]
+
+# Practical string examples
+practical_strings:
+  # File names
+  files:
+    - "config.yml"
+    - "README.md"
+    - "main.go"
+    - "Dockerfile"
+    - "test.sh"
+    - ".gitignore"
+  
+  sorted_files: (( sort ))
+  
+  # Version strings
+  versions:
+    - "1.2.3"
+    - "1.10.0"
+    - "1.2.10"
+    - "2.0.0"
+    - "1.0.0"
+  
+  sorted_versions: (( sort ))
+  # Note: This is string sorting, not semantic versioning
+  # Result: [1.0.0, 1.10.0, 1.2.10, 1.2.3, 2.0.0]
+  
+  # IP addresses
+  ip_addresses:
+    - "192.168.1.100"
+    - "192.168.1.20"
+    - "192.168.1.5"
+    - "10.0.0.1"
+    - "172.16.0.1"
+  
+  sorted_ips: (( sort ))
+  # String sorting, not numerical IP sorting
+
+# Date strings
+dates:
+  # ISO format dates
+  iso_dates:
+    - "2024-01-15"
+    - "2023-12-25"
+    - "2024-02-01"
+    - "2023-11-30"
+    - "2024-01-01"
+  
+  sorted_dates: (( sort ))
+  # Result: [2023-11-30, 2023-12-25, 2024-01-01, 2024-01-15, 2024-02-01]
+  
+  # Timestamps
+  timestamps:
+    - "2024-01-15T10:30:00Z"
+    - "2024-01-15T09:15:00Z"
+    - "2024-01-14T23:59:59Z"
+    - "2024-01-15T10:30:00Z"
+    - "2024-01-15T08:00:00Z"
+  
+  sorted_timestamps: (( sort ))
+
+# Environment names
+environments:
+  env_list:
+    - production
+    - development
+    - staging
+    - testing
+    - qa
+    - integration
+  
+  sorted_envs: (( sort ))
+  # Result: [development, integration, production, qa, staging, testing]
+
+# User identifiers
+identifiers:
+  # UUIDs
+  uuids:
+    - "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+    - "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
+    - "6ba7b811-9dad-11d1-80b4-00c04fd430c8"
+    - "550e8400-e29b-41d4-a716-446655440000"
+  
+  sorted_uuids: (( sort ))
+  
+  # User IDs
+  user_ids:
+    - "user-123"
+    - "user-001"
+    - "user-099"
+    - "user-1000"
+    - "user-42"
+  
+  sorted_user_ids: (( sort ))
+
+# Mixed length strings
+mixed_lengths:
+  words:
+    - "a"
+    - "ab"
+    - "abc"
+    - "abcd"
+    - "abcde"
+    - "aa"
+    - "aaa"
+  
+  sorted_words: (( sort ))
+  # Result: [a, aa, aaa, ab, abc, abcd, abcde]
+
+# Expected output after sort:
+# All arrays will be sorted according to their type
+# - Strings: alphabetically (case-sensitive)
+# - Numbers: numerically
+# - Mixed case: Uppercase before lowercase
+# - Special characters: By ASCII value

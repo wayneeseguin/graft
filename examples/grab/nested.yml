@@ -1,0 +1,40 @@
+---
+# Nested grab examples - showing the power of nested expressions
+meta:
+  environments:
+    dev:
+      host: dev.example.com
+      port: 8080
+    prod:
+      host: prod.example.com
+      port: 443
+  current: dev
+
+# Old way - requires intermediate values
+old_style:
+  current_env: (( grab meta.current ))
+  # Would need another line to grab the actual config
+
+# New way - nested grab expressions
+new_style:
+  # Grab based on another grab
+  host: (( grab meta.environments.(grab meta.current).host ))
+  port: (( grab meta.environments.(grab meta.current).port ))
+  
+  # Using concat to build the path
+  url: (( concat "https://" (grab meta.environments.(grab meta.current).host) ":" (grab meta.environments.(grab meta.current).port) ))
+
+# Even more complex nesting
+dynamic_config:
+  # Build path dynamically
+  service_name: api
+  service_version: v2
+  endpoint: (( grab (concat "services." (grab dynamic_config.service_name) "." (grab dynamic_config.service_version)) ))
+
+services:
+  api:
+    v1: /api/v1
+    v2: /api/v2
+  auth:
+    v1: /auth/v1
+    v2: /auth/v2

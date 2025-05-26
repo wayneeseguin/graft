@@ -1,0 +1,58 @@
+---
+# Basic keys operator examples
+
+# Define some maps
+environments:
+  development:
+    url: http://localhost:3000
+    debug: true
+  staging:
+    url: https://staging.example.com
+    debug: true
+  production:
+    url: https://api.example.com
+    debug: false
+
+services:
+  user-service:
+    port: 8001
+    replicas: 3
+  order-service:
+    port: 8002
+    replicas: 2
+  payment-service:
+    port: 8003
+    replicas: 2
+  notification-service:
+    port: 8004
+    replicas: 1
+
+features:
+  new_ui: true
+  beta_api: false
+  debug_mode: true
+  analytics: true
+  social_login: false
+
+# Extract keys from maps
+extracted:
+  # Get all environment names (sorted)
+  environment_list: (( keys environments ))
+  # Result: ["development", "production", "staging"]
+  
+  # Get all service names
+  service_list: (( keys services ))
+  # Result: ["notification-service", "order-service", "payment-service", "user-service"]
+  
+  # Get all feature flags
+  feature_flags: (( keys features ))
+  # Result: ["analytics", "beta_api", "debug_mode", "new_ui", "social_login"]
+
+# Using keys for summary information
+summary:
+  total_environments: (( len (keys environments) ))  # Would need calc operator
+  environments_available: (( join ", " (keys environments) ))
+  
+  services_deployed: (( join ", " (keys services) ))
+  
+  active_features: (( join " | " (keys features) ))

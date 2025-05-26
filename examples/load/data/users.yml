@@ -1,0 +1,38 @@
+---
+admins:
+  - username: admin
+    email: admin@example.com
+    role: superuser
+    permissions: ["*"]
+  
+  - username: ops-lead
+    email: ops@example.com
+    role: operator
+    permissions: ["deploy", "monitor", "logs"]
+
+developers:
+  - username: dev1
+    email: dev1@example.com
+    role: developer
+    permissions: ["read", "write", "deploy:staging"]
+  
+  - username: dev2
+    email: dev2@example.com
+    role: developer
+    permissions: ["read", "write", "deploy:staging"]
+    
+  - username: senior-dev
+    email: senior@example.com
+    role: senior-developer
+    permissions: ["read", "write", "deploy:staging", "deploy:production"]
+
+readonly_users:
+  - username: auditor
+    email: audit@example.com
+    role: auditor
+    permissions: ["read", "logs"]
+  
+  - username: support
+    email: support@example.com
+    role: support
+    permissions: ["read", "logs", "users:read"]

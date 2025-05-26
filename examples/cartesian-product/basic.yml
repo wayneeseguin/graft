@@ -1,0 +1,162 @@
+# Basic Cartesian Product Examples
+#
+# Generating all combinations from multiple arrays
+
+# Simple two-array combinations
+simple:
+  # Input arrays
+  colors: ["red", "green", "blue"]
+  sizes: ["small", "large"]
+  
+  # Generate all color-size combinations
+  combinations: (( cartesian-product simple.colors simple.sizes ))
+  # Result: 
+  # - [red, small]
+  # - [red, large]
+  # - [green, small]
+  # - [green, large]
+  # - [blue, small]
+  # - [blue, large]
+
+# Three-array combinations
+three_arrays:
+  # Input arrays
+  shapes: ["circle", "square"]
+  colors: ["red", "blue"]
+  sizes: ["S", "M", "L"]
+  
+  # All possible combinations (2 x 2 x 3 = 12 combinations)
+  all_combinations: (( cartesian-product three_arrays.shapes three_arrays.colors three_arrays.sizes ))
+  # Result:
+  # - [circle, red, S]
+  # - [circle, red, M]
+  # - [circle, red, L]
+  # - [circle, blue, S]
+  # - [circle, blue, M]
+  # - [circle, blue, L]
+  # - [square, red, S]
+  # - [square, red, M]
+  # - [square, red, L]
+  # - [square, blue, S]
+  # - [square, blue, M]
+  # - [square, blue, L]
+
+# Different data types
+mixed_types:
+  # Arrays with different types
+  numbers: [1, 2]
+  booleans: [true, false]
+  strings: ["a", "b", "c"]
+  
+  # Combinations of mixed types
+  combinations: (( cartesian-product mixed_types.numbers mixed_types.booleans mixed_types.strings ))
+  # Result: 2 x 2 x 3 = 12 combinations
+
+# Product variants example
+product:
+  # T-shirt variants
+  colors: ["white", "black", "gray", "navy"]
+  sizes: ["XS", "S", "M", "L", "XL", "XXL"]
+  styles: ["crew-neck", "v-neck"]
+  
+  # Generate all SKUs (4 x 6 x 2 = 48 variants)
+  all_variants: (( cartesian-product product.colors product.sizes product.styles ))
+  
+  # Count of variants
+  total_variants: 48  # Would need a length operator to calculate
+
+# Edge cases
+edge_cases:
+  # Empty array in combination
+  array1: ["a", "b"]
+  empty: []
+  array2: ["x", "y"]
+  
+  # Result is empty when any input is empty
+  with_empty: (( cartesian-product edge_cases.array1 edge_cases.empty edge_cases.array2 ))
+  # Result: []
+  
+  # Single element arrays
+  single1: ["only"]
+  single2: ["one"]
+  single_combination: (( cartesian-product edge_cases.single1 edge_cases.single2 ))
+  # Result: [[only, one]]
+  
+  # Single array (just wraps each element)
+  just_one: ["a", "b", "c"]
+  wrapped: (( cartesian-product edge_cases.just_one ))
+  # Result: [[a], [b], [c]]
+
+# Binary combinations
+binary:
+  # Truth table generation
+  bool1: [true, false]
+  bool2: [true, false]
+  bool3: [true, false]
+  
+  # All possible truth combinations (2^3 = 8)
+  truth_table: (( cartesian-product binary.bool1 binary.bool2 binary.bool3 ))
+  # Result:
+  # - [true, true, true]
+  # - [true, true, false]
+  # - [true, false, true]
+  # - [true, false, false]
+  # - [false, true, true]
+  # - [false, true, false]
+  # - [false, false, true]
+  # - [false, false, false]
+
+# Configuration options
+config_options:
+  # Environment settings
+  environments: ["dev", "staging", "prod"]
+  regions: ["us-east-1", "us-west-2", "eu-west-1"]
+  instance_types: ["t3.small", "t3.medium", "t3.large"]
+  
+  # All deployment combinations (3 x 3 x 3 = 27)
+  all_deployments: (( cartesian-product config_options.environments config_options.regions config_options.instance_types ))
+
+# Database sharding combinations
+sharding:
+  # Shard dimensions
+  shard_keys: ["user_id", "timestamp"]
+  shard_counts: [2, 4, 8]
+  regions: ["us", "eu", "asia"]
+  
+  # All sharding strategies
+  strategies: (( cartesian-product sharding.shard_keys sharding.shard_counts sharding.regions ))
+  # Result: 2 x 3 x 3 = 18 different sharding configurations
+
+# Network topology
+network:
+  # Availability zones
+  azs: ["az1", "az2", "az3"]
+  # Subnet types
+  subnet_types: ["public", "private"]
+  # CIDR blocks
+  cidr_blocks: ["10.0.1.0/24", "10.0.2.0/24"]
+  
+  # All subnet combinations
+  all_subnets: (( cartesian-product network.azs network.subnet_types network.cidr_blocks ))
+
+# Feature flag combinations
+features:
+  # Feature toggles
+  ui_version: ["v1", "v2"]
+  backend_version: ["stable", "beta"]
+  cache_enabled: [true, false]
+  debug_mode: [true, false]
+  
+  # All possible feature combinations (2 x 2 x 2 x 2 = 16)
+  all_combinations: (( cartesian-product features.ui_version features.backend_version features.cache_enabled features.debug_mode ))
+
+# Path combinations
+paths:
+  # Directory structure
+  roots: ["/app", "/data"]
+  categories: ["logs", "cache", "temp"]
+  services: ["web", "api", "worker"]
+  
+  # Generate all paths
+  all_paths: (( cartesian-product paths.roots paths.categories paths.services ))
+  # Results in paths like: [/app, logs, web], [/app, logs, api], etc.

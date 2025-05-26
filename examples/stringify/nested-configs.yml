@@ -1,0 +1,335 @@
+# Nested Configuration Stringification
+#
+# Examples of stringifying complex nested structures
+
+# Multi-level application configuration
+enterprise_app:
+  metadata:
+    name: enterprise-platform
+    version: 3.2.1
+    environment: production
+    region: us-east-1
+  
+  components:
+    frontend:
+      framework: react
+      version: 18.2.0
+      build:
+        output_dir: dist
+        source_maps: false
+        minify: true
+      features:
+        - responsive-design
+        - pwa-support
+        - offline-mode
+      
+    backend:
+      framework: spring-boot
+      version: 3.1.0
+      server:
+        port: 8080
+        context_path: /api
+        compression:
+          enabled: true
+          mime_types:
+            - application/json
+            - application/xml
+      database:
+        primary:
+          type: postgresql
+          host: db-primary.internal
+          port: 5432
+          pool:
+            min: 10
+            max: 50
+            timeout: 30000
+        cache:
+          type: redis
+          cluster:
+            nodes:
+              - host: redis-1.internal
+                port: 6379
+              - host: redis-2.internal
+                port: 6379
+              - host: redis-3.internal
+                port: 6379
+    
+    microservices:
+      user-service:
+        replicas: 3
+        resources:
+          cpu: 500m
+          memory: 1Gi
+        endpoints:
+          - path: /users
+            methods: [GET, POST, PUT, DELETE]
+          - path: /auth
+            methods: [POST]
+      
+      order-service:
+        replicas: 5
+        resources:
+          cpu: 1000m
+          memory: 2Gi
+        dependencies:
+          - user-service
+          - inventory-service
+          - payment-service
+
+# Convert entire enterprise app config to string
+full_config_yaml: (( stringify enterprise_app ))
+
+# Stringify specific components
+component_configs:
+  frontend_only: (( stringify enterprise_app.components.frontend ))
+  backend_only: (( stringify enterprise_app.components.backend ))
+  microservices_only: (( stringify enterprise_app.components.microservices ))
+
+# Deeply nested monitoring configuration
+monitoring:
+  global:
+    enabled: true
+    retention: 30d
+    
+  metrics:
+    prometheus:
+      enabled: true
+      endpoints:
+        - name: app-metrics
+          path: /metrics
+          port: 9090
+          interval: 15s
+          labels:
+            environment: production
+            region: us-east-1
+            
+      rules:
+        - name: high-cpu-usage
+          expression: cpu_usage > 0.8
+          duration: 5m
+          severity: warning
+          annotations:
+            summary: High CPU usage detected
+            description: CPU usage above 80% for 5 minutes
+            
+        - name: low-disk-space
+          expression: disk_free < 0.1
+          duration: 10m
+          severity: critical
+          annotations:
+            summary: Low disk space
+            description: Less than 10% disk space remaining
+      
+      storage:
+        tsdb:
+          retention: 15d
+          wal_compression: true
+          block_duration: 2h
+    
+  logging:
+    elasticsearch:
+      enabled: true
+      cluster:
+        name: logging-cluster
+        nodes:
+          - name: es-node-1
+            roles: [master, data]
+            heap_size: 4g
+          - name: es-node-2
+            roles: [master, data]
+            heap_size: 4g
+          - name: es-node-3
+            roles: [data]
+            heap_size: 8g
+      
+      indices:
+        - name: app-logs
+          shards: 5
+          replicas: 1
+          retention: 7d
+          mappings:
+            properties:
+              timestamp:
+                type: date
+              level:
+                type: keyword
+              message:
+                type: text
+              trace_id:
+                type: keyword
+        
+        - name: audit-logs
+          shards: 3
+          replicas: 2
+          retention: 90d
+    
+  tracing:
+    jaeger:
+      enabled: true
+      collector:
+        endpoint: jaeger-collector:14268
+        queue_size: 10000
+        batch_size: 100
+      sampler:
+        type: probabilistic
+        param: 0.1
+      storage:
+        type: elasticsearch
+        options:
+          index_prefix: jaeger
+          num_shards: 5
+          num_replicas: 1
+
+# Stringify monitoring subsystems
+monitoring_configs:
+  full_monitoring: (( stringify monitoring ))
+  metrics_only: (( stringify monitoring.metrics ))
+  logging_only: (( stringify monitoring.logging ))
+  tracing_only: (( stringify monitoring.tracing ))
+
+# Complex service mesh configuration
+service_mesh:
+  istio:
+    version: 1.19.0
+    namespace: istio-system
+    
+    global:
+      proxy:
+        image: istio/proxyv2:1.19.0
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 2000m
+            memory: 1Gi
+      
+      pilot:
+        enabled: true
+        autoscale:
+          min: 2
+          max: 5
+          cpu_threshold: 80
+    
+    gateways:
+      - name: main-gateway
+        servers:
+          - port: 80
+            protocol: HTTP
+            hosts: ["*.example.com"]
+          - port: 443
+            protocol: HTTPS
+            hosts: ["*.example.com"]
+            tls:
+              mode: SIMPLE
+              credential_name: gateway-cert
+    
+    virtual_services:
+      - name: api-routes
+        hosts: ["api.example.com"]
+        gateways: ["main-gateway"]
+        routes:
+          - match:
+              - uri:
+                  prefix: /v1/users
+            route:
+              - destination:
+                  host: user-service
+                  port: 8080
+                weight: 100
+          
+          - match:
+              - uri:
+                  prefix: /v1/orders
+            route:
+              - destination:
+                  host: order-service
+                  port: 8080
+                weight: 100
+    
+    destination_rules:
+      - name: user-service-dr
+        host: user-service
+        traffic_policy:
+          connection_pool:
+            tcp:
+              max_connections: 100
+            http:
+              http1_max_pending_requests: 10
+              http2_max_requests: 100
+          load_balancer:
+            simple: ROUND_ROBIN
+          circuit_breaker:
+            consecutive_errors: 5
+            interval: 30s
+            base_ejection_time: 30s
+
+# Service mesh configurations as strings
+mesh_configs:
+  complete_mesh: (( stringify service_mesh ))
+  istio_config: (( stringify service_mesh.istio ))
+  gateways_only: (( stringify service_mesh.istio.gateways ))
+  virtual_services: (( stringify service_mesh.istio.virtual_services ))
+
+# Multi-environment configuration
+environments:
+  development:
+    features:
+      debug: true
+      profiling: true
+      hot_reload: true
+    
+    resources:
+      replicas: 1
+      cpu: 250m
+      memory: 512Mi
+    
+    integrations:
+      database:
+        mock: true
+        seed_data: true
+      external_apis:
+        use_sandbox: true
+  
+  staging:
+    features:
+      debug: false
+      profiling: true
+      hot_reload: false
+    
+    resources:
+      replicas: 2
+      cpu: 500m
+      memory: 1Gi
+    
+    integrations:
+      database:
+        mock: false
+        seed_data: false
+      external_apis:
+        use_sandbox: true
+  
+  production:
+    features:
+      debug: false
+      profiling: false
+      hot_reload: false
+    
+    resources:
+      replicas: 5
+      cpu: 1000m
+      memory: 2Gi
+    
+    integrations:
+      database:
+        mock: false
+        seed_data: false
+      external_apis:
+        use_sandbox: false
+
+# Environment configs as strings
+env_yaml_configs:
+  all_environments: (( stringify environments ))
+  dev_config: (( stringify environments.development ))
+  staging_config: (( stringify environments.staging ))
+  prod_config: (( stringify environments.production ))

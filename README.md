@@ -28,6 +28,14 @@ for site-specific configurations to [DRY][dry-definition] your configs up as muc
 
 Alternatively, you can download a [prebuilt binaries for 64-bit Linux, or Mac OS X][releases]
 
+## 📚 Documentation
+
+- **[Documentation Hub](docs/index.md)** - Complete documentation organized by topic
+- **[Getting Started Guide](docs/getting-started.md)** - Installation and basic usage
+- **[Operator Quick Reference](docs/reference/operator-quick-reference.md)** - Concise overview of all operators
+- **[Use Cases Guide](docs/reference/use-cases.md)** - Find the right operators for your needs
+- **[Examples Directory](examples/)** - Practical examples for every operator
+
 ## How do I compile from source?
 
 1. [Install Go][install-go], e.g. on Ubuntu `sudo snap install --classic go`
@@ -115,7 +123,7 @@ Licensed under [the MIT License][license]
 [slack-badge]:          http://slack.cloudfoundry.org/badge.svg
 [dry-definition]:       https://en.wikipedia.org/wiki/Don%27t_repeat_yourself
 [releases]:             https://github.com/geofffranks/spruce/releases/
-[operator-docs]:        https://github.com/geofffranks/spruce/blob/master/doc/operators.md
+[operator-docs]:        https://github.com/geofffranks/spruce/blob/master/docs/operators/README.md
 [expression-operators]: https://github.com/geofffranks/spruce/blob/master/doc/expression-operators.md
 [merge-semantics]:      https://github.com/geofffranks/spruce/blob/master/doc/merging.md
 [array-merge]:          https://github.com/geofffranks/spruce/blob/master/doc/array-merging.md

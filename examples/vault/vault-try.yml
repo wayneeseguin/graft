@@ -1,0 +1,156 @@
+# Vault-Try Operator Examples
+#
+# The vault-try operator attempts multiple vault paths and returns
+# the first successful result. Useful for migration and fallback scenarios.
+
+# Basic vault-try usage
+# Try multiple paths in order until one succeeds
+database:
+  # Try new path first, fall back to legacy path
+  password: (( vault-try "secret/v2/database/prod:password" "secret/database/prod:password" "secret/legacy/db:pass" ))
+
+# Migration scenario
+# Moving from old vault structure to new one
+migration_example:
+  # Old structure: secret/myapp/prod/database
+  # New structure: secret/data/prod/myapp/database
+  
+  db_credentials:
+    # Try new path first, fall back to old
+    username: (( vault-try "secret/data/prod/myapp/database:username" "secret/myapp/prod/database:username" ))
+    password: (( vault-try "secret/data/prod/myapp/database:password" "secret/myapp/prod/database:password" ))
+  
+  api_keys:
+    stripe: (( vault-try "secret/data/prod/myapp/api:stripe_key" "secret/myapp/prod/stripe:api_key" ))
+    sendgrid: (( vault-try "secret/data/prod/myapp/api:sendgrid_key" "secret/myapp/prod/sendgrid:api_key" ))
+
+# Multi-tenant configuration
+# Different tenants might have secrets in different locations
+tenant:
+  name: (( param "Please provide tenant name" ))
+  
+  # Try tenant-specific path, then shared path, then default
+  database:
+    host: db.example.com
+    port: 5432
+    name: (( concat "app_" tenant.name ))
+    username: (( vault-try 
+      (concat "secret/tenants/" tenant.name "/database:username")
+      "secret/shared/database:username"
+      "secret/defaults/database:username" ))
+    password: (( vault-try 
+      (concat "secret/tenants/" tenant.name "/database:password")
+      "secret/shared/database:password" ))
+
+# Environment-aware paths
+# Try environment-specific paths with increasing generality
+environment:
+  name: (( param "Please provide environment" ))
+  region: (( param "Please provide region" ))
+  
+  # Most specific to least specific
+  config:
+    api_endpoint: (( vault-try
+      (concat "secret/" environment.name "/" environment.region "/config:api_endpoint")
+      (concat "secret/" environment.name "/config:api_endpoint")
+      "secret/global/config:api_endpoint" ))
+    
+    feature_flags: (( vault-try
+      (concat "secret/" environment.name "/" environment.region "/features:flags")
+      (concat "secret/" environment.name "/features:flags")
+      "secret/global/features:default_flags" ))
+
+# Cross-region failover
+# Try primary region first, then failover regions
+failover_config:
+  regions:
+    primary: us-east-1
+    secondary: us-west-2
+    tertiary: eu-west-1
+  
+  # Critical secrets with regional failover
+  critical_secrets:
+    master_key: (( vault-try
+      (concat "secret/" failover_config.regions.primary "/critical:master_key")
+      (concat "secret/" failover_config.regions.secondary "/critical:master_key")
+      (concat "secret/" failover_config.regions.tertiary "/critical:master_key") ))
+    
+    encryption_key: (( vault-try
+      (concat "secret/" failover_config.regions.primary "/critical:encryption_key")
+      (concat "secret/" failover_config.regions.secondary "/critical:encryption_key")
+      (concat "secret/" failover_config.regions.tertiary "/critical:encryption_key") ))
+
+# Version-specific secrets
+# Useful during application version migrations
+app_version:
+  current: v2
+  previous: v1
+  
+  # Try current version secrets, fall back to previous
+  oauth:
+    client_id: (( vault-try
+      (concat "secret/oauth/" app_version.current ":client_id")
+      (concat "secret/oauth/" app_version.previous ":client_id") ))
+    client_secret: (( vault-try
+      (concat "secret/oauth/" app_version.current ":client_secret")
+      (concat "secret/oauth/" app_version.previous ":client_secret") ))
+
+# Namespace migration
+# Moving from flat structure to namespaced structure
+namespace_migration:
+  # Old: secret/myapp-prod-db-password
+  # New: secret/myapp/prod/db/password
+  
+  old_style:
+    db_pass: (( vault-try
+      "secret/myapp/prod/db:password"
+      "secret/myapp-prod-db-password:value" ))
+    api_key: (( vault-try
+      "secret/myapp/prod/api:key"
+      "secret/myapp-prod-api-key:value" ))
+
+# Team-based secret organization
+# Different teams might organize secrets differently
+team_secrets:
+  team: (( param "Please provide team name" ))
+  service: (( param "Please provide service name" ))
+  
+  # Try team-specific organization, then standard
+  credentials:
+    database: (( vault-try
+      (concat "secret/teams/" team_secrets.team "/" team_secrets.service "/db:connection_string")
+      (concat "secret/services/" team_secrets.service "/db:connection_string")
+      "secret/shared/databases:default_connection" ))
+    
+    monitoring: (( vault-try
+      (concat "secret/teams/" team_secrets.team "/monitoring:api_key")
+      "secret/shared/monitoring:api_key" ))
+
+# Dynamic path construction with vault-try
+# Build paths based on multiple variables
+dynamic_paths:
+  app: myapp
+  env: (( param "Please provide environment" ))
+  component: (( param "Please provide component name" ))
+  
+  secret: (( vault-try
+    (concat "secret/" dynamic_paths.app "/" dynamic_paths.env "/" dynamic_paths.component ":config")
+    (concat "secret/" dynamic_paths.env "/" dynamic_paths.component ":config")
+    (concat "secret/" dynamic_paths.component ":default_config") ))
+
+# Error handling example
+# vault-try returns null if all paths fail
+error_handling:
+  # This will be null if none of the paths exist
+  optional_secret: (( vault-try "secret/optional/path1:key" "secret/optional/path2:key" ))
+  
+  # Use with || operator for ultimate fallback
+  required_secret: (( vault-try "secret/required/path1:key" "secret/required/path2:key" || "default-value" ))
+
+# Example output (assuming some paths exist):
+# database:
+#   password: "actual-password-from-vault"
+# migration_example:
+#   db_credentials:
+#     username: "dbuser"
+#     password: "dbpass123"

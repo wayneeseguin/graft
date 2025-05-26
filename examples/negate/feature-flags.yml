@@ -1,0 +1,154 @@
+# Feature Flags with Negate Operator
+#
+# Using negate to manage feature flags and their inverses
+
+# Core feature flags
+features:
+  # New features (typically disabled by default)
+  new_ui: false
+  beta_api: false
+  experimental_mode: false
+  
+  # Legacy features (typically enabled by default)
+  classic_ui: (( negate features.new_ui ))        # true
+  stable_api: (( negate features.beta_api ))      # true
+  production_mode: (( negate features.experimental_mode ))  # true
+
+# Environment-based features
+meta:
+  environment: (( param "Please specify environment (dev/staging/prod)" ))
+  is_production: false  # Set based on environment
+
+feature_config:
+  # Development features
+  debug_mode: (( negate meta.is_production ))     # Enabled when NOT production
+  verbose_logging: (( negate meta.is_production )) # Enabled when NOT production
+  
+  # Production features
+  caching_enabled: (( grab meta.is_production ))   # Enabled IN production
+  rate_limiting: (( grab meta.is_production ))     # Enabled IN production
+  
+  # Safety features
+  allow_dangerous_operations: (( negate meta.is_production ))  # Only in non-prod
+  require_approval: (( grab meta.is_production ))              # Only in prod
+
+# A/B testing flags
+ab_testing:
+  # Test groups
+  group_a_enabled: true
+  group_b_enabled: (( negate ab_testing.group_a_enabled ))  # false - mutually exclusive
+  
+  # Feature variations
+  show_old_checkout: false
+  show_new_checkout: (( negate ab_testing.show_old_checkout ))  # true
+  
+  # Gradual rollout
+  feature_enabled_10_percent: false
+  feature_disabled_90_percent: (( negate ab_testing.feature_enabled_10_percent ))  # true
+
+# User preference toggles
+user_preferences:
+  # Notification settings
+  email_notifications: true
+  disable_emails: (( negate user_preferences.email_notifications ))  # false
+  
+  # Privacy settings
+  tracking_enabled: false
+  do_not_track: (( negate user_preferences.tracking_enabled ))  # true
+  
+  # UI preferences
+  dark_mode: true
+  light_mode: (( negate user_preferences.dark_mode ))  # false
+  
+  compact_view: false
+  expanded_view: (( negate user_preferences.compact_view ))  # true
+
+# System capability flags
+capabilities:
+  # Resource availability
+  has_gpu: false
+  cpu_only: (( negate capabilities.has_gpu ))  # true
+  
+  # Network features
+  offline_capable: true
+  requires_internet: (( negate capabilities.offline_capable ))  # false
+  
+  # Storage
+  has_local_storage: true
+  cloud_only: (( negate capabilities.has_local_storage ))  # false
+
+# Progressive enhancement
+enhancement:
+  # Base features always enabled
+  basic_features: true
+  
+  # Advanced features conditionally enabled
+  advanced_features: false
+  fallback_mode: (( negate enhancement.advanced_features ))  # true
+  
+  # Performance features
+  lazy_loading: true
+  eager_loading: (( negate enhancement.lazy_loading ))  # false
+  
+  animations_enabled: true
+  reduced_motion: (( negate enhancement.animations_enabled ))  # false
+
+# Feature dependencies
+dependencies:
+  # Primary features
+  search_enabled: true
+  analytics_enabled: false
+  
+  # Dependent features (inverse relationships)
+  disable_indexing: (( negate dependencies.search_enabled ))     # false - need indexing for search
+  anonymous_mode: (( negate dependencies.analytics_enabled ))    # true - no tracking
+  
+  # Complex dependencies
+  premium_features: true
+  basic_tier: (( negate dependencies.premium_features ))  # false
+  show_upgrade_prompts: (( grab dependencies.basic_tier ))  # false - only show if basic
+
+# Regional features
+regional:
+  # Compliance flags
+  gdpr_region: true
+  non_gdpr_region: (( negate regional.gdpr_region ))  # false
+  
+  # Feature availability
+  feature_available_us: true
+  feature_available_eu: false
+  feature_blocked_eu: (( negate regional.feature_available_eu ))  # true
+  
+  # Data residency
+  local_data_required: true
+  cloud_sync_allowed: (( negate regional.local_data_required ))  # false
+
+# Maintenance and operations
+operations:
+  # System state
+  maintenance_mode: false
+  normal_operations: (( negate operations.maintenance_mode ))  # true
+  
+  # Access control during maintenance
+  admin_only_access: (( grab operations.maintenance_mode ))    # false
+  public_access: (( negate operations.admin_only_access ))     # true
+  
+  # Feature availability
+  all_features_available: (( negate operations.maintenance_mode ))  # true
+  limited_features: (( grab operations.maintenance_mode ))          # false
+
+# Kill switches (emergency feature disabling)
+kill_switches:
+  # Individual feature kills
+  disable_payment_processing: false
+  payment_enabled: (( negate kill_switches.disable_payment_processing ))  # true
+  
+  disable_new_signups: false
+  signups_enabled: (( negate kill_switches.disable_new_signups ))  # true
+  
+  disable_api_v2: false
+  api_v2_enabled: (( negate kill_switches.disable_api_v2 ))  # true
+  
+  # Master kill switch
+  emergency_shutdown: false
+  system_operational: (( negate kill_switches.emergency_shutdown ))  # true

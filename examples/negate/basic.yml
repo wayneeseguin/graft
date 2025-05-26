@@ -1,0 +1,98 @@
+# Basic Negate Operator Examples
+#
+# The negate operator performs logical NOT on boolean values
+
+# Simple boolean negation
+flags:
+  is_enabled: true
+  is_disabled: (( negate flags.is_enabled ))  # false
+  
+  has_access: false
+  no_access: (( negate flags.has_access ))    # true
+
+# Working with different boolean values
+booleans:
+  # Direct boolean values
+  true_value: true
+  false_value: false
+  
+  # Negated values
+  not_true: (( negate booleans.true_value ))    # false
+  not_false: (( negate booleans.false_value ))  # true
+
+# Environmental flags
+environment:
+  is_production: false
+  is_development: (( negate environment.is_production ))  # true
+  
+  debug_enabled: true
+  debug_disabled: (( negate environment.debug_enabled ))  # false
+
+# User permissions
+user:
+  is_admin: false
+  is_guest: (( negate user.is_admin ))  # true
+  
+  can_edit: true
+  read_only: (( negate user.can_edit ))  # false
+
+# System states
+system:
+  is_healthy: true
+  needs_attention: (( negate system.is_healthy ))  # false
+  
+  is_running: true
+  is_stopped: (( negate system.is_running ))  # false
+  
+  has_errors: false
+  error_free: (( negate system.has_errors ))  # true
+
+# Configuration modes
+modes:
+  maintenance_mode: false
+  normal_operation: (( negate modes.maintenance_mode ))  # true
+  
+  safe_mode: true
+  full_features: (( negate modes.safe_mode ))  # false
+
+# Chained negations (double negative)
+double_negative:
+  original: true
+  negated_once: (( negate double_negative.original ))       # false
+  negated_twice: (( negate double_negative.negated_once ))  # true (back to original)
+
+# With grab references
+source:
+  flag: false
+
+references:
+  # Negate a grabbed value
+  inverted: (( negate (grab source.flag) ))  # true
+  
+  # Grab and negate in separate steps
+  grabbed_value: (( grab source.flag ))       # false
+  inverted_value: (( negate references.grabbed_value ))  # true
+
+# Practical examples
+service:
+  ssl_enabled: true
+  ssl_disabled: (( negate service.ssl_enabled ))  # false
+  
+  public_access: false
+  private_only: (( negate service.public_access ))  # true
+  
+  rate_limited: true
+  unlimited: (( negate service.rate_limited ))  # false
+
+# Expected output:
+# flags:
+#   is_enabled: true
+#   is_disabled: false
+#   has_access: false
+#   no_access: true
+# booleans:
+#   true_value: true
+#   false_value: false
+#   not_true: false
+#   not_false: true
+# ... (continues with all resolved values)

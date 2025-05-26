@@ -1,0 +1,199 @@
+# Availability Zone Distribution with Shuffle
+#
+# Using shuffle for distributing resources across AZs
+
+# AWS availability zones
+aws:
+  regions:
+    us-east-1:
+      azs: ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e", "us-east-1f"]
+    us-west-2:
+      azs: ["us-west-2a", "us-west-2b", "us-west-2c", "us-west-2d"]
+    eu-west-1:
+      azs: ["eu-west-1a", "eu-west-1b", "eu-west-1c"]
+
+  # Current region configuration
+  current_region: us-east-1
+  available_azs: (( grab aws.regions.[aws.current_region].azs ))
+  
+  # Randomize AZ order for distribution
+  randomized_azs: (( shuffle aws.available_azs ))
+
+# Instance distribution across AZs
+instances:
+  # Web tier instances
+  web:
+    count: 6
+    # Distribute across randomized AZs
+    distribution:
+      - name: web-1
+        az: (( grab (shuffle aws.available_azs).0 ))
+      - name: web-2
+        az: (( grab (shuffle aws.available_azs).1 ))
+      - name: web-3
+        az: (( grab (shuffle aws.available_azs).2 ))
+      - name: web-4
+        az: (( grab (shuffle aws.available_azs).0 ))
+      - name: web-5
+        az: (( grab (shuffle aws.available_azs).1 ))
+      - name: web-6
+        az: (( grab (shuffle aws.available_azs).2 ))
+  
+  # App tier instances  
+  app:
+    count: 4
+    distribution:
+      - name: app-1
+        az: (( grab (shuffle aws.available_azs).0 ))
+      - name: app-2
+        az: (( grab (shuffle aws.available_azs).1 ))
+      - name: app-3
+        az: (( grab (shuffle aws.available_azs).0 ))
+      - name: app-4
+        az: (( grab (shuffle aws.available_azs).1 ))
+  
+  # Database instances (different shuffle for spread)
+  database:
+    count: 3
+    distribution:
+      - name: db-primary
+        az: (( grab (shuffle aws.available_azs).0 ))
+      - name: db-replica-1
+        az: (( grab (shuffle aws.available_azs).1 ))
+      - name: db-replica-2
+        az: (( grab (shuffle aws.available_azs).2 ))
+
+# Kubernetes node distribution
+kubernetes:
+  cluster_name: production
+  node_groups:
+    # Shuffle AZs for each node group independently
+    system:
+      azs: (( shuffle aws.available_azs ))
+      nodes:
+        - name: system-1
+          az: (( grab kubernetes.node_groups.system.azs.0 ))
+        - name: system-2
+          az: (( grab kubernetes.node_groups.system.azs.1 ))
+        - name: system-3
+          az: (( grab kubernetes.node_groups.system.azs.2 ))
+    
+    workers:
+      azs: (( shuffle aws.available_azs ))
+      nodes:
+        - name: worker-1
+          az: (( grab kubernetes.node_groups.workers.azs.0 ))
+        - name: worker-2
+          az: (( grab kubernetes.node_groups.workers.azs.1 ))
+        - name: worker-3
+          az: (( grab kubernetes.node_groups.workers.azs.2 ))
+        - name: worker-4
+          az: (( grab kubernetes.node_groups.workers.azs.0 ))
+        - name: worker-5
+          az: (( grab kubernetes.node_groups.workers.azs.1 ))
+
+# Load balancer target distribution
+load_balancers:
+  # Application load balancer
+  alb:
+    name: app-alb
+    # Shuffle subnets for each AZ
+    subnets: (( shuffle aws.available_azs ))
+    subnet_mapping:
+      - az: (( grab load_balancers.alb.subnets.0 ))
+        subnet: subnet-1234567890abcdef0
+      - az: (( grab load_balancers.alb.subnets.1 ))
+        subnet: subnet-234567890abcdef01
+      - az: (( grab load_balancers.alb.subnets.2 ))
+        subnet: subnet-34567890abcdef012
+  
+  # Network load balancer
+  nlb:
+    name: api-nlb
+    # Different shuffle for network tier
+    subnets: (( shuffle aws.available_azs ))
+    cross_zone_enabled: true
+
+# Multi-region deployment
+multi_region:
+  regions:
+    - name: us-east-1
+      azs: (( shuffle aws.regions.us-east-1.azs ))
+      primary: (( grab multi_region.regions.0.azs.0 ))
+      secondary: (( grab multi_region.regions.0.azs.1 ))
+    
+    - name: us-west-2
+      azs: (( shuffle aws.regions.us-west-2.azs ))
+      primary: (( grab multi_region.regions.1.azs.0 ))
+      secondary: (( grab multi_region.regions.1.azs.1 ))
+    
+    - name: eu-west-1
+      azs: (( shuffle aws.regions.eu-west-1.azs ))
+      primary: (( grab multi_region.regions.2.azs.0 ))
+      secondary: (( grab multi_region.regions.2.azs.1 ))
+
+# Auto scaling group configuration
+auto_scaling:
+  web_asg:
+    min_size: 3
+    max_size: 9
+    desired_capacity: 6
+    # Distribute across shuffled AZs
+    availability_zones: (( shuffle aws.available_azs ))
+    
+    # Launch template assigns instances to AZs in order
+    instance_distribution:
+      on_demand_percentage: 30
+      spot_allocation_strategy: "capacity-optimized"
+      # Use first 3 AZs from shuffled list
+      spot_instance_pools: 3
+
+# BOSH deployment AZ assignment
+bosh_deployment:
+  azs: (( shuffle ["z1", "z2", "z3"] ))
+  
+  instance_groups:
+    - name: web
+      instances: 3
+      azs: (( grab bosh_deployment.azs ))
+      # BOSH will distribute across these AZs
+    
+    - name: worker
+      instances: 5
+      azs: (( grab bosh_deployment.azs ))
+      # Random distribution across AZs
+    
+    - name: database
+      instances: 3
+      # Shuffle independently for database tier
+      azs: (( shuffle ["z1", "z2", "z3"] ))
+
+# Disaster recovery site selection
+disaster_recovery:
+  regions: ["us-east-1", "us-west-2", "eu-west-1", "ap-southeast-1"]
+  
+  # Randomly prioritize regions for DR
+  priority_order: (( shuffle disaster_recovery.regions ))
+  
+  primary_site: (( grab disaster_recovery.priority_order.0 ))
+  dr_site: (( grab disaster_recovery.priority_order.1 ))
+  backup_site: (( grab disaster_recovery.priority_order.2 ))
+
+# Container placement strategy
+ecs_placement:
+  # Available placement constraints
+  attributes:
+    - attribute: "ecs.availability-zone"
+      values: (( shuffle aws.available_azs ))
+    
+    - attribute: "ecs.instance-type"
+      values: (( shuffle ["t3.micro", "t3.small", "t3.medium", "t3.large"] ))
+  
+  # Task placement
+  tasks:
+    - family: web-app
+      desired_count: 6
+      placement_strategy:
+        - type: spread
+          field: attribute:ecs.availability-zone
+      # Will spread across shuffled AZ list

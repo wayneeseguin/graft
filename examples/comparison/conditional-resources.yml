@@ -1,0 +1,470 @@
+# Conditional Resource Allocation with Comparison Operators
+#
+# Dynamic resource allocation based on comparisons
+
+# Environment and load context
+context:
+  # Environment settings
+  environment: "production"  # development, staging, production
+  region: "us-east-1"
+  
+  # Current load metrics
+  load:
+    current_users: 15000
+    requests_per_second: 2500
+    average_response_time: 250
+    peak_hour: true
+    
+  # Time-based context
+  time:
+    hour: 14  # 2 PM
+    day_of_week: 5  # Friday (1=Monday, 7=Sunday)
+    day_of_month: 15
+    month: 12
+    
+  # Business metrics
+  business:
+    active_customers: 50000
+    revenue_per_day: 125000
+    growth_rate: 0.15  # 15% monthly
+    
+  # Computed flags
+  is_production: (( context.environment == "production" ))
+  is_business_hours: (( context.time.hour >= 9 && context.time.hour <= 17 ))
+  is_weekend: (( context.time.day_of_week >= 6 ))
+  is_high_load: (( context.load.requests_per_second > 2000 ))
+  is_enterprise: (( context.business.active_customers > 10000 ))
+
+# Compute instance allocation
+compute:
+  # Base configuration
+  base:
+    min_instances: 2
+    max_instances: 100
+    instance_type: "t3.medium"
+    
+  # Dynamic scaling based on load
+  scaling:
+    # Calculate required instances based on load
+    required_instances: (( 
+      context.load.requests_per_second <= 500 ? 2 :
+      context.load.requests_per_second <= 1000 ? 4 :
+      context.load.requests_per_second <= 2000 ? 8 :
+      context.load.requests_per_second <= 5000 ? 16 :
+      32
+    ))
+    # Result: 16 (2500 > 2000 but <= 5000)
+    
+    # Add buffer for peak hours
+    peak_multiplier: (( 
+      context.load.peak_hour && context.is_business_hours ? 1.5 :
+      context.load.peak_hour ? 1.3 :
+      1.0
+    ))
+    # Result: 1.5
+    
+    # Weekend reduction
+    weekend_multiplier: (( context.is_weekend ? 0.7 : 1.0 ))
+    # Result: 1.0 (not weekend)
+    
+    # Final instance count
+    target_instances: (( 
+      compute.scaling.required_instances * 
+      compute.scaling.peak_multiplier * 
+      compute.scaling.weekend_multiplier
+    ))
+    # Result: 24 (16 * 1.5 * 1.0)
+    
+    # Ensure within bounds
+    final_instances: (( 
+      compute.scaling.target_instances < compute.base.min_instances ? compute.base.min_instances :
+      compute.scaling.target_instances > compute.base.max_instances ? compute.base.max_instances :
+      compute.scaling.target_instances
+    ))
+    # Result: 24
+  
+  # Instance type selection based on load
+  instance_selection:
+    # Select instance type based on response time and load
+    recommended_type: (( 
+      context.load.average_response_time > 500 && context.is_production ? "c5.2xlarge" :
+      context.load.average_response_time > 300 && context.is_production ? "c5.xlarge" :
+      context.load.current_users > 10000 ? "m5.xlarge" :
+      context.load.current_users > 5000 ? "m5.large" :
+      context.is_production ? "t3.large" :
+      "t3.medium"
+    ))
+    # Result: "m5.xlarge" (15000 > 10000)
+    
+    # Cost optimization
+    use_spot: (( 
+      !context.is_production ? true :
+      context.is_weekend ? true :
+      !context.is_business_hours ? true :
+      false
+    ))
+    # Result: false (production during business hours)
+    
+    spot_percentage: (( 
+      compute.instance_selection.use_spot ? 
+      (!context.is_production ? 80 : 30) : 
+      0
+    ))
+    # Result: 0
+
+# Database resources
+database:
+  # Current metrics
+  metrics:
+    connections: 450
+    queries_per_second: 5000
+    storage_used_gb: 800
+    storage_total_gb: 1000
+    cpu_utilization: 65
+    
+  # Base configuration
+  base:
+    instance_class: "db.r5.large"
+    multi_az: true
+    backup_retention: 7
+    
+  # Dynamic sizing
+  sizing:
+    # Connection pool size
+    max_connections: (( 
+      database.metrics.connections <= 100 ? 200 :
+      database.metrics.connections <= 500 ? 1000 :
+      database.metrics.connections <= 1000 ? 2000 :
+      5000
+    ))
+    # Result: 1000 (450 <= 500)
+    
+    # Instance class based on QPS
+    required_class: (( 
+      database.metrics.queries_per_second > 10000 ? "db.r5.4xlarge" :
+      database.metrics.queries_per_second > 5000 ? "db.r5.2xlarge" :
+      database.metrics.queries_per_second > 2000 ? "db.r5.xlarge" :
+      database.metrics.queries_per_second > 1000 ? "db.r5.large" :
+      "db.r5.medium"
+    ))
+    # Result: "db.r5.xlarge" (5000 > 2000 but <= 5000)
+    
+    # Read replicas based on load
+    read_replicas: (( 
+      !context.is_production ? 0 :
+      database.metrics.queries_per_second > 8000 ? 3 :
+      database.metrics.queries_per_second > 4000 ? 2 :
+      database.metrics.queries_per_second > 2000 ? 1 :
+      0
+    ))
+    # Result: 2 (5000 > 4000 but <= 8000)
+    
+    # Storage autoscaling
+    storage_warning_percent: 80
+    storage_critical_percent: 90
+    storage_used_percent: (( (database.metrics.storage_used_gb / database.metrics.storage_total_gb) * 100 ))
+    # Result: 80
+    
+    needs_storage_increase: (( database.sizing.storage_used_percent >= database.sizing.storage_warning_percent ))
+    # Result: true (80 >= 80)
+    
+    new_storage_size: (( 
+      database.sizing.storage_used_percent >= database.sizing.storage_critical_percent ? database.metrics.storage_total_gb * 2 :
+      database.sizing.needs_storage_increase ? database.metrics.storage_total_gb * 1.5 :
+      database.metrics.storage_total_gb
+    ))
+    # Result: 1500 (1000 * 1.5)
+    
+  # Backup strategy based on business metrics
+  backup:
+    # More frequent backups for high-value customers
+    frequency_hours: (( 
+      context.business.revenue_per_day > 100000 ? 1 :
+      context.business.revenue_per_day > 50000 ? 3 :
+      context.business.revenue_per_day > 10000 ? 6 :
+      12
+    ))
+    # Result: 1 (125000 > 100000)
+    
+    # Retention based on compliance needs
+    retention_days: (( 
+      context.is_enterprise && context.is_production ? 90 :
+      context.is_enterprise ? 30 :
+      context.is_production ? 14 :
+      7
+    ))
+    # Result: 90 (enterprise && production)
+
+# Cache layer configuration
+cache:
+  # Current metrics
+  metrics:
+    hit_ratio: 0.85
+    memory_used_gb: 12
+    evictions_per_minute: 50
+    
+  # Redis cluster sizing
+  redis:
+    # Node type based on memory needs
+    node_type: (( 
+      cache.metrics.memory_used_gb > 100 ? "cache.r6g.4xlarge" :
+      cache.metrics.memory_used_gb > 50 ? "cache.r6g.2xlarge" :
+      cache.metrics.memory_used_gb > 25 ? "cache.r6g.xlarge" :
+      cache.metrics.memory_used_gb > 10 ? "cache.r6g.large" :
+      "cache.t3.medium"
+    ))
+    # Result: "cache.r6g.large" (12 > 10 but <= 25)
+    
+    # Number of nodes based on hit ratio and evictions
+    num_nodes: (( 
+      cache.metrics.hit_ratio < 0.7 && cache.metrics.evictions_per_minute > 100 ? 6 :
+      cache.metrics.hit_ratio < 0.8 && cache.metrics.evictions_per_minute > 50 ? 4 :
+      cache.metrics.hit_ratio < 0.9 ? 3 :
+      2
+    ))
+    # Result: 3 (0.85 < 0.9)
+    
+    # Enable cluster mode for high load
+    cluster_enabled: (( 
+      context.load.requests_per_second > 5000 ||
+      cache.redis.num_nodes > 3 ||
+      context.is_enterprise
+    ))
+    # Result: true (is_enterprise)
+
+# CDN configuration
+cdn:
+  # Traffic metrics
+  metrics:
+    bandwidth_gbps: 2.5
+    requests_per_second: 10000
+    cache_hit_ratio: 0.92
+    origin_response_time: 150
+    
+  # Dynamic CDN configuration
+  config:
+    # Edge locations based on traffic
+    coverage: (( 
+      cdn.metrics.bandwidth_gbps > 10 ? "global" :
+      cdn.metrics.bandwidth_gbps > 5 ? "multi-region" :
+      cdn.metrics.bandwidth_gbps > 1 ? "regional" :
+      "basic"
+    ))
+    # Result: "regional" (2.5 > 1 but <= 5)
+    
+    # Cache TTL based on hit ratio
+    default_ttl_seconds: (( 
+      cdn.metrics.cache_hit_ratio > 0.95 ? 86400 :
+      cdn.metrics.cache_hit_ratio > 0.90 ? 43200 :
+      cdn.metrics.cache_hit_ratio > 0.80 ? 21600 :
+      3600
+    ))
+    # Result: 43200 (0.92 > 0.90 but <= 0.95)
+    
+    # Origin shield based on origin response time
+    enable_origin_shield: (( 
+      cdn.metrics.origin_response_time > 200 ||
+      cdn.metrics.requests_per_second > 5000
+    ))
+    # Result: true (10000 > 5000)
+    
+    # WAF rules based on security needs
+    waf_enabled: (( context.is_production && context.is_enterprise ))
+    # Result: true
+    
+    waf_rule_set: (( 
+      !cdn.config.waf_enabled ? "none" :
+      context.business.revenue_per_day > 100000 ? "strict" :
+      context.business.revenue_per_day > 50000 ? "balanced" :
+      "basic"
+    ))
+    # Result: "strict" (125000 > 100000)
+
+# Storage configuration
+storage:
+  # Current usage
+  metrics:
+    total_data_tb: 5.2
+    growth_rate_percent: 20
+    hot_data_percent: 30
+    access_frequency: "high"
+    
+  # S3 bucket configuration
+  s3:
+    # Storage class based on access patterns
+    primary_storage_class: (( 
+      storage.metrics.access_frequency == "high" && storage.metrics.hot_data_percent > 50 ? "STANDARD" :
+      storage.metrics.access_frequency == "high" && storage.metrics.hot_data_percent > 20 ? "STANDARD_IA" :
+      storage.metrics.access_frequency == "medium" ? "INTELLIGENT_TIERING" :
+      "GLACIER"
+    ))
+    # Result: "STANDARD_IA" (high frequency && 30 > 20 but <= 50)
+    
+    # Lifecycle policies based on data volume
+    lifecycle_enabled: (( storage.metrics.total_data_tb > 1 ))
+    # Result: true (5.2 > 1)
+    
+    transition_days: (( 
+      storage.metrics.growth_rate_percent > 50 ? 30 :
+      storage.metrics.growth_rate_percent > 25 ? 60 :
+      storage.metrics.growth_rate_percent > 10 ? 90 :
+      180
+    ))
+    # Result: 90 (20 > 10 but <= 25)
+    
+    # Replication based on business criticality
+    replication_enabled: (( 
+      context.is_production && 
+      (context.business.revenue_per_day > 50000 || storage.metrics.total_data_tb > 10)
+    ))
+    # Result: true (production && revenue > 50000)
+    
+    replication_regions: (( 
+      !storage.s3.replication_enabled ? 0 :
+      context.business.revenue_per_day > 100000 ? 2 :
+      1
+    ))
+    # Result: 2 (125000 > 100000)
+
+# Container orchestration
+kubernetes:
+  # Cluster metrics
+  metrics:
+    nodes: 25
+    pods: 450
+    cpu_utilization: 70
+    memory_utilization: 65
+    
+  # Node pool configuration
+  node_pools:
+    # General purpose pool
+    general:
+      min_nodes: (( context.is_production ? 3 : 1 ))
+      max_nodes: (( context.is_production ? 50 : 10 ))
+      
+      target_nodes: (( 
+        kubernetes.metrics.cpu_utilization > 80 ? kubernetes.metrics.nodes * 1.5 :
+        kubernetes.metrics.cpu_utilization > 70 ? kubernetes.metrics.nodes * 1.2 :
+        kubernetes.metrics.cpu_utilization < 40 ? kubernetes.metrics.nodes * 0.8 :
+        kubernetes.metrics.nodes
+      ))
+      # Result: 30 (25 * 1.2)
+      
+      node_type: (( 
+        context.is_production && kubernetes.metrics.nodes > 20 ? "m5.xlarge" :
+        context.is_production ? "m5.large" :
+        "t3.medium"
+      ))
+      # Result: "m5.xlarge"
+    
+    # GPU pool for ML workloads
+    gpu:
+      enabled: (( context.is_enterprise && context.is_production ))
+      # Result: true
+      
+      min_nodes: (( kubernetes.node_pools.gpu.enabled ? 1 : 0 ))
+      max_nodes: (( kubernetes.node_pools.gpu.enabled ? 10 : 0 ))
+      
+      node_type: (( kubernetes.node_pools.gpu.enabled ? "p3.2xlarge" : "" ))
+    
+  # Resource quotas
+  quotas:
+    # Namespace quotas based on environment
+    cpu_limit: (( 
+      context.is_production ? "1000" :
+      context.environment == "staging" ? "500" :
+      "200"
+    ))
+    # Result: "1000"
+    
+    memory_limit: (( 
+      context.is_production ? "2000Gi" :
+      context.environment == "staging" ? "1000Gi" :
+      "500Gi"
+    ))
+    # Result: "2000Gi"
+    
+    # Pod limits
+    max_pods: (( 
+      kubernetes.metrics.nodes <= 10 ? 100 :
+      kubernetes.metrics.nodes <= 50 ? 500 :
+      kubernetes.metrics.nodes <= 100 ? 1000 :
+      2000
+    ))
+    # Result: 500 (25 <= 50)
+
+# Cost optimization rules
+cost_optimization:
+  # Current costs
+  current:
+    hourly_cost: 450
+    daily_average: 10000
+    monthly_projection: 300000
+    
+  # Thresholds
+  thresholds:
+    hourly_warning: 500
+    hourly_critical: 750
+    daily_budget: 12000
+    monthly_budget: 350000
+    
+  # Optimization actions
+  actions:
+    # Scale down non-critical resources
+    reduce_dev_resources: (( 
+      cost_optimization.current.hourly_cost > cost_optimization.thresholds.hourly_warning &&
+      !context.is_production
+    ))
+    # Result: false (is production)
+    
+    # Use spot instances
+    enable_spot_instances: (( 
+      cost_optimization.current.hourly_cost > cost_optimization.thresholds.hourly_warning ||
+      cost_optimization.current.monthly_projection > cost_optimization.thresholds.monthly_budget * 0.8
+    ))
+    # Result: false (450 <= 500 and 300000 <= 280000)
+    
+    # Reduce redundancy
+    reduce_replicas: (( 
+      cost_optimization.current.hourly_cost > cost_optimization.thresholds.hourly_critical &&
+      context.is_production
+    ))
+    # Result: false (450 <= 750)
+    
+    # Archive old data
+    enable_data_archival: (( 
+      storage.metrics.total_data_tb > 10 ||
+      cost_optimization.current.monthly_projection > cost_optimization.thresholds.monthly_budget * 0.9
+    ))
+    # Result: false (5.2 <= 10 and 300000 <= 315000)
+
+# Summary of allocated resources
+resource_summary:
+  compute:
+    instances: (( compute.scaling.final_instances ))
+    instance_type: (( compute.instance_selection.recommended_type ))
+    
+  database:
+    instance_class: (( database.sizing.required_class ))
+    read_replicas: (( database.sizing.read_replicas ))
+    storage_gb: (( database.sizing.new_storage_size ))
+    
+  cache:
+    redis_nodes: (( cache.redis.num_nodes ))
+    node_type: (( cache.redis.node_type ))
+    
+  cdn:
+    coverage: (( cdn.config.coverage ))
+    waf_rules: (( cdn.config.waf_rule_set ))
+    
+  kubernetes:
+    target_nodes: (( kubernetes.node_pools.general.target_nodes ))
+    gpu_enabled: (( kubernetes.node_pools.gpu.enabled ))
+    
+  estimated_hourly_cost: (( 
+    compute.scaling.final_instances * 0.5 +
+    (database.sizing.read_replicas + 1) * 2.0 +
+    cache.redis.num_nodes * 0.8 +
+    kubernetes.node_pools.general.target_nodes * 0.4
+  ))
+  # Result: 46.4 (24*0.5 + 3*2.0 + 3*0.8 + 30*0.4)

@@ -1,0 +1,52 @@
+---
+# Basic defer operator examples
+
+meta:
+  name: example-app
+  version: 1.2.3
+
+# Normal evaluation - these get resolved immediately
+evaluated:
+  app_name: (( grab meta.name ))
+  version: (( grab meta.version ))
+  identifier: (( concat (grab meta.name) "-" (grab meta.version) ))
+
+# Deferred expressions - these remain as Spruce operators in the output
+deferred:
+  # Single operator deferral
+  name: (( defer grab meta.name ))
+  # Output will be: name: (( grab meta.name ))
+  
+  # Defer a concat expression
+  full_name: (( defer concat (grab app.name) "-" (grab app.version) ))
+  # Output will be: full_name: (( concat (grab app.name) "-" (grab app.version) ))
+  
+  # Defer with literal values
+  timeout: (( defer grab config.timeout || 30 ))
+  # Output will be: timeout: (( grab config.timeout || 30 ))
+
+# Practical example: Creating a template for later use
+template:
+  # These will be evaluated when the template is used, not now
+  database:
+    host: (( defer grab database.host ))
+    port: (( defer grab database.port || 5432 ))
+    url: (( defer concat "postgres://" (grab database.host) ":" (grab database.port) ))
+  
+  cache:
+    host: (( defer grab cache.host || "localhost" ))
+    port: (( defer grab cache.port || 6379 ))
+
+# Mix of evaluated and deferred
+hybrid:
+  # This gets evaluated now
+  template_version: (( grab meta.version ))
+  
+  # These are deferred for later
+  runtime_config:
+    environment: (( defer grab ENV ))
+    debug: (( defer grab DEBUG || false ))
+    
+  # Create a deferred expression using current values
+  banner: (( defer concat "Welcome to " (grab meta.name) " in " (grab runtime_config.environment) ))
+  # Note: meta.name is available now, but runtime_config.environment will be resolved later

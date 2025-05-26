@@ -1,0 +1,74 @@
+---
+# Basic Arithmetic Operations in Spruce
+# This file demonstrates the fundamental arithmetic operators
+
+# Addition examples
+addition:
+  simple: (( 10 + 5 ))                    # 15
+  multiple: (( 10 + 20 + 30 ))            # 60
+  with_decimals: (( 10.5 + 20.7 ))        # 31.2
+  negative_numbers: (( 10 + -5 ))         # 5
+  
+# Subtraction examples
+subtraction:
+  simple: (( 100 - 30 ))                  # 70
+  multiple: (( 100 - 20 - 10 ))           # 70
+  with_decimals: (( 50.5 - 10.3 ))        # 40.2
+  negative_result: (( 10 - 25 ))          # -15
+  double_negative: (( 10 - -5 ))          # 15
+
+# Multiplication examples
+multiplication:
+  simple: (( 5 * 6 ))                     # 30
+  multiple: (( 2 * 3 * 5 ))               # 30
+  with_decimals: (( 2.5 * 4 ))            # 10
+  by_zero: (( 100 * 0 ))                  # 0
+  negative: (( -5 * 6 ))                  # -30
+  
+# Division examples
+division:
+  simple: (( 100 / 4 ))                   # 25
+  with_remainder: (( 10 / 3 ))            # 3.333...
+  multiple: (( 100 / 5 / 2 ))             # 10
+  by_decimal: (( 10 / 2.5 ))              # 4
+  # Note: Division by zero will cause an error
+  # by_zero: (( 10 / 0 ))                 # ERROR
+  
+# Modulo (remainder) examples
+modulo:
+  simple: (( 10 % 3 ))                    # 1
+  no_remainder: (( 20 % 5 ))              # 0
+  larger_divisor: (( 3 % 10 ))            # 3
+  negative_dividend: (( -10 % 3 ))        # -1
+  with_floats: (( 10.5 % 3 ))             # 1.5
+
+# Using references in calculations
+values:
+  a: 10
+  b: 20
+  c: 5
+
+references:
+  sum: (( values.a + values.b ))         # 30
+  difference: (( values.b - values.a ))   # 10
+  product: (( values.a * values.c ))      # 50
+  quotient: (( values.b / values.a ))     # 2
+  remainder: (( values.b % values.a ))    # 0
+
+# Order of operations (PEMDAS)
+order_of_operations:
+  # Multiplication before addition
+  no_parens: (( 10 + 5 * 2 ))            # 20 (not 30)
+  with_parens: (( (10 + 5) * 2 ))        # 30
+  
+  # Division before subtraction
+  example1: (( 20 - 10 / 2 ))             # 15 (not 5)
+  example2: (( (20 - 10) / 2 ))           # 5
+  
+  # Complex expression
+  complex: (( 100 - 20 * 2 + 10 / 5 ))   # 62 (100 - 40 + 2)
+
+# Type coercion
+type_mixing:
+  int_and_float: (( 10 + 5.5 ))          # 15.5
+  result_type: (( 10 / 4 ))               # 2.5 (float result)

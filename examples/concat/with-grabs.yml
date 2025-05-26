@@ -1,0 +1,58 @@
+---
+# Concatenating values grabbed from elsewhere
+
+meta:
+  app_name: awesome-app
+  environment: production
+  version: 2.1.0
+  region: us-east-1
+  domain: example.com
+
+user:
+  first_name: John
+  last_name: Doe
+  id: 12345
+
+# Concatenating grabbed values
+application:
+  # Build full identifier
+  full_name: (( concat (grab meta.app_name) "-" (grab meta.environment) ))
+  
+  # Version string
+  version_string: (( concat (grab meta.app_name) "-v" (grab meta.version) ))
+  
+  # User display name
+  display_name: (( concat (grab user.first_name) " " (grab user.last_name) ))
+  
+  # Email address
+  email: (( concat (grab user.first_name) "." (grab user.last_name) "@" (grab meta.domain) ))
+
+# Building resource names
+resources:
+  s3_bucket: (( concat (grab meta.app_name) "-" (grab meta.environment) "-" (grab meta.region) "-data" ))
+  
+  queue_name: (( concat (grab meta.environment) "-" (grab meta.app_name) "-processing-queue" ))
+  
+  database_name: (( concat (grab meta.app_name) "_" (grab meta.environment) "_db" ))
+
+# Complex concatenations
+deployment:
+  # Docker image tag
+  image_tag: (( concat (grab meta.app_name) ":" (grab meta.version) "-" (grab meta.environment) ))
+  
+  # Kubernetes labels
+  labels:
+    app: (( grab meta.app_name ))
+    version: (( grab meta.version ))
+    environment: (( grab meta.environment ))
+    full_version: (( concat (grab meta.app_name) "-" (grab meta.version) "-" (grab meta.environment) ))
+
+# Using concat with conditionals
+notifications:
+  is_prod: (( grab meta.environment == "production" ))
+  
+  # Different prefixes based on environment
+  alert_prefix: (( concat "[" (grab notifications.is_prod ? "CRITICAL" : "INFO") "] " ))
+  
+  # Build notification message
+  deployment_message: (( concat (grab notifications.alert_prefix) "Deploying " (grab application.version_string) " to " (grab meta.environment) ))

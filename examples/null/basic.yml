@@ -1,0 +1,187 @@
+# Basic Null Operator Examples
+#
+# Demonstrates the basic usage of the null operator
+
+# Testing different types of null values
+null_checks:
+  # Actual null/nil values
+  explicit_null: null
+  is_null: (( null null_checks.explicit_null ))
+  # Result: true
+  
+  yaml_null: ~
+  is_yaml_null: (( null null_checks.yaml_null ))
+  # Result: true
+  
+  # Empty values
+  empty_string: ""
+  is_empty_string: (( null null_checks.empty_string ))
+  # Result: true
+  
+  empty_array: []
+  is_empty_array: (( null null_checks.empty_array ))
+  # Result: true
+  
+  empty_map: {}
+  is_empty_map: (( null null_checks.empty_map ))
+  # Result: true
+  
+  # Non-existent references
+  is_undefined: (( null null_checks.non_existent_key ))
+  # Result: true
+  
+  # Non-null values
+  string_value: "hello"
+  is_string_null: (( null null_checks.string_value ))
+  # Result: false
+  
+  zero: 0
+  is_zero_null: (( null null_checks.zero ))
+  # Result: false
+  
+  false_value: false
+  is_false_null: (( null null_checks.false_value ))
+  # Result: false
+  
+  array_with_items: [1, 2, 3]
+  is_array_null: (( null null_checks.array_with_items ))
+  # Result: false
+  
+  map_with_keys:
+    key: value
+  is_map_null: (( null null_checks.map_with_keys ))
+  # Result: false
+  
+  # Space is not empty
+  space_string: " "
+  is_space_null: (( null null_checks.space_string ))
+  # Result: false
+
+# Nested null checks
+nested_data:
+  level1:
+    level2:
+      value: null
+      data: ""
+    level2_exists:
+      value: "present"
+  
+  # Check nested nulls
+  checks:
+    nested_null: (( null nested_data.level1.level2.value ))
+    # Result: true
+    
+    nested_empty: (( null nested_data.level1.level2.data ))
+    # Result: true
+    
+    nested_exists: (( null nested_data.level1.level2_exists.value ))
+    # Result: false
+    
+    deep_undefined: (( null nested_data.level1.level2.level3.level4 ))
+    # Result: true
+
+# Arrays with null elements
+array_nulls:
+  mixed_array:
+    - "first"
+    - null
+    - ""
+    - []
+    - "last"
+  
+  # Check individual elements
+  element_checks:
+    first: (( null array_nulls.mixed_array.[0] ))
+    # Result: false
+    
+    second: (( null array_nulls.mixed_array.[1] ))
+    # Result: true
+    
+    third: (( null array_nulls.mixed_array.[2] ))
+    # Result: true
+    
+    fourth: (( null array_nulls.mixed_array.[3] ))
+    # Result: true
+    
+    fifth: (( null array_nulls.mixed_array.[4] ))
+    # Result: false
+
+# Common patterns
+patterns:
+  # Check multiple conditions
+  config:
+    database_url: ""
+    api_key: null
+    debug_mode: false
+  
+  # All null checks
+  missing_config:
+    no_database: (( null patterns.config.database_url ))
+    # Result: true
+    
+    no_api_key: (( null patterns.config.api_key ))
+    # Result: true
+    
+    no_debug: (( null patterns.config.debug_mode ))
+    # Result: false (false is not null)
+  
+  # Combined checks
+  any_missing: (( null patterns.config.database_url || null patterns.config.api_key ))
+  # Result: true (at least one is null)
+  
+  all_present: (( ! (null patterns.config.database_url) && ! (null patterns.config.api_key) ))
+  # Result: false (not all are present)
+
+# Edge cases
+edge_cases:
+  # Numbers
+  zero_int: 0
+  zero_float: 0.0
+  zero_checks:
+    int_null: (( null edge_cases.zero_int ))
+    # Result: false
+    float_null: (( null edge_cases.zero_float ))
+    # Result: false
+  
+  # Booleans
+  true_val: true
+  false_val: false
+  bool_checks:
+    true_null: (( null edge_cases.true_val ))
+    # Result: false
+    false_null: (( null edge_cases.false_val ))
+    # Result: false
+  
+  # Special strings
+  special_strings:
+    null_string: "null"
+    nil_string: "nil"
+    none_string: "none"
+  string_checks:
+    null_str: (( null edge_cases.special_strings.null_string ))
+    # Result: false (string "null" is not null)
+    nil_str: (( null edge_cases.special_strings.nil_string ))
+    # Result: false
+    none_str: (( null edge_cases.special_strings.none_string ))
+    # Result: false
+
+# Grab with null checks
+references:
+  source:
+    present: "value"
+    empty: ""
+    missing: null
+  
+  # Safe references with null checks
+  safe_refs:
+    has_present: (( ! (null references.source.present) ))
+    # Result: true
+    
+    has_empty: (( ! (null references.source.empty) ))
+    # Result: false
+    
+    has_missing: (( ! (null references.source.missing) ))
+    # Result: false
+    
+    has_undefined: (( ! (null references.source.undefined) ))
+    # Result: false

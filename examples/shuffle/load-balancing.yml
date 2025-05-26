@@ -1,0 +1,289 @@
+# Load Balancing with Shuffle
+#
+# Using shuffle for distributing load across servers and resources
+
+# Server pools
+servers:
+  web_servers:
+    - name: web-1
+      ip: 10.0.1.10
+      capacity: 100
+      current_load: 45
+    - name: web-2
+      ip: 10.0.1.11
+      capacity: 100
+      current_load: 67
+    - name: web-3
+      ip: 10.0.1.12
+      capacity: 150
+      current_load: 23
+    - name: web-4
+      ip: 10.0.1.13
+      capacity: 150
+      current_load: 89
+  
+  app_servers:
+    - name: app-1
+      ip: 10.0.2.10
+      capacity: 200
+    - name: app-2
+      ip: 10.0.2.11
+      capacity: 200
+    - name: app-3
+      ip: 10.0.2.12
+      capacity: 250
+  
+  cache_servers:
+    - name: cache-1
+      ip: 10.0.3.10
+      memory: 16GB
+    - name: cache-2
+      ip: 10.0.3.11
+      memory: 16GB
+    - name: cache-3
+      ip: 10.0.3.12
+      memory: 32GB
+
+# Random server selection
+load_balancing:
+  # Shuffle for round-robin approximation
+  web_rotation: (( shuffle servers.web_servers ))
+  app_rotation: (( shuffle servers.app_servers ))
+  cache_rotation: (( shuffle servers.cache_servers ))
+  
+  # Next server to receive traffic
+  next_web: (( grab load_balancing.web_rotation.0 ))
+  next_app: (( grab load_balancing.app_rotation.0 ))
+  next_cache: (( grab load_balancing.cache_rotation.0 ))
+
+# Database read replica distribution
+database:
+  replicas:
+    - name: replica-1
+      region: us-east-1
+      lag_seconds: 0.5
+    - name: replica-2
+      region: us-east-1
+      lag_seconds: 1.2
+    - name: replica-3
+      region: us-west-2
+      lag_seconds: 2.1
+    - name: replica-4
+      region: us-west-2
+      lag_seconds: 0.8
+  
+  # Randomize read distribution
+  read_distribution: (( shuffle database.replicas ))
+  
+  # Select replicas for different query types
+  fast_queries: (( grab database.read_distribution.0 ))
+  analytics_queries: (( grab database.read_distribution.1 ))
+
+# Task queue distribution
+task_queues:
+  workers:
+    - id: worker-1
+      type: general
+      capacity: 10
+    - id: worker-2
+      type: general
+      capacity: 10
+    - id: worker-3
+      type: priority
+      capacity: 5
+    - id: worker-4
+      type: priority
+      capacity: 5
+    - id: worker-5
+      type: bulk
+      capacity: 20
+  
+  # Shuffle workers for task assignment
+  available_workers: (( shuffle task_queues.workers ))
+  
+  # Assign tasks to workers
+  task_assignment:
+    - task_id: task-001
+      assigned_to: (( grab (shuffle task_queues.workers).0.id ))
+    - task_id: task-002
+      assigned_to: (( grab (shuffle task_queues.workers).1.id ))
+    - task_id: task-003
+      assigned_to: (( grab (shuffle task_queues.workers).2.id ))
+
+# CDN edge server selection
+cdn:
+  edge_locations:
+    - location: "New York"
+      code: "NYC"
+      capacity: 1000
+    - location: "Los Angeles"
+      code: "LAX"
+      capacity: 1000
+    - location: "Chicago"
+      code: "ORD"
+      capacity: 800
+    - location: "Dallas"
+      code: "DFW"
+      capacity: 800
+    - location: "Seattle"
+      code: "SEA"
+      capacity: 600
+  
+  # Randomize edge selection for load distribution
+  edge_distribution: (( shuffle cdn.edge_locations ))
+  
+  # Multi-region distribution
+  primary_edge: (( grab cdn.edge_distribution.0 ))
+  secondary_edge: (( grab cdn.edge_distribution.1 ))
+  tertiary_edge: (( grab cdn.edge_distribution.2 ))
+
+# Microservices instance selection
+microservices:
+  user_service:
+    instances:
+      - id: user-1
+        endpoint: "http://10.0.4.10:8080"
+      - id: user-2
+        endpoint: "http://10.0.4.11:8080"
+      - id: user-3
+        endpoint: "http://10.0.4.12:8080"
+  
+  order_service:
+    instances:
+      - id: order-1
+        endpoint: "http://10.0.5.10:8081"
+      - id: order-2
+        endpoint: "http://10.0.5.11:8081"
+      - id: order-3
+        endpoint: "http://10.0.5.12:8081"
+  
+  # Service discovery with random selection
+  discovery:
+    user_endpoints: (( shuffle microservices.user_service.instances ))
+    order_endpoints: (( shuffle microservices.order_service.instances ))
+    
+    # Current active endpoints
+    active_user_endpoint: (( grab microservices.discovery.user_endpoints.0.endpoint ))
+    active_order_endpoint: (( grab microservices.discovery.order_endpoints.0.endpoint ))
+
+# Shard distribution
+sharding:
+  # Database shards
+  shards:
+    - id: shard-1
+      range: "A-F"
+      server: "db-shard-1.example.com"
+    - id: shard-2
+      range: "G-L"
+      server: "db-shard-2.example.com"
+    - id: shard-3
+      range: "M-R"
+      server: "db-shard-3.example.com"
+    - id: shard-4
+      range: "S-Z"
+      server: "db-shard-4.example.com"
+  
+  # Shuffle for maintenance or rebalancing
+  maintenance_order: (( shuffle sharding.shards ))
+  
+  # Shard to maintain first
+  next_maintenance: (( grab sharding.maintenance_order.0 ))
+
+# Message broker partition assignment
+messaging:
+  partitions:
+    - partition: 0
+      leader: broker-1
+    - partition: 1
+      leader: broker-2
+    - partition: 2
+      leader: broker-3
+    - partition: 3
+      leader: broker-1
+    - partition: 4
+      leader: broker-2
+    - partition: 5
+      leader: broker-3
+  
+  # Shuffle for consumer assignment
+  consumer_assignment: (( shuffle messaging.partitions ))
+  
+  consumers:
+    - id: consumer-1
+      assigned_partitions: []  # Would get first 2 from shuffle
+    - id: consumer-2
+      assigned_partitions: []  # Would get next 2 from shuffle
+    - id: consumer-3
+      assigned_partitions: []  # Would get last 2 from shuffle
+
+# Request routing
+routing:
+  # Backend pools
+  backends:
+    static_content:
+      - server: cdn-1
+        weight: 100
+      - server: cdn-2
+        weight: 100
+      - server: cdn-3
+        weight: 100
+    
+    dynamic_content:
+      - server: app-1
+        weight: 150
+      - server: app-2
+        weight: 150
+      - server: app-3
+        weight: 200
+    
+    api_requests:
+      - server: api-1
+        weight: 100
+      - server: api-2
+        weight: 100
+      - server: api-3
+        weight: 100
+      - server: api-4
+        weight: 100
+  
+  # Shuffle each pool for distribution
+  routes:
+    static: (( shuffle routing.backends.static_content ))
+    dynamic: (( shuffle routing.backends.dynamic_content ))
+    api: (( shuffle routing.backends.api_requests ))
+
+# Health check rotation
+health_checks:
+  # Services to check
+  services:
+    - name: web
+      endpoint: "/health"
+      interval: 10s
+    - name: api
+      endpoint: "/api/health"
+      interval: 10s
+    - name: database
+      endpoint: "/db/health"
+      interval: 30s
+    - name: cache
+      endpoint: "/cache/health"
+      interval: 15s
+    - name: queue
+      endpoint: "/queue/health"
+      interval: 20s
+  
+  # Randomize check order to prevent thundering herd
+  check_order: (( shuffle health_checks.services ))
+  
+  # Stagger checks across time
+  schedule:
+    - service: (( grab health_checks.check_order.0.name ))
+      offset: 0s
+    - service: (( grab health_checks.check_order.1.name ))
+      offset: 2s
+    - service: (( grab health_checks.check_order.2.name ))
+      offset: 4s
+    - service: (( grab health_checks.check_order.3.name ))
+      offset: 6s
+    - service: (( grab health_checks.check_order.4.name ))
+      offset: 8s

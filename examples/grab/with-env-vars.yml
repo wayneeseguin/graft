@@ -1,0 +1,58 @@
+---
+# Environment variable expansion in grab paths
+# Run with: ENV=production REGION=us-east-1 spruce merge with-env-vars.yml
+
+configurations:
+  development:
+    database: dev-db.local
+    cache: dev-cache.local
+    debug: true
+  staging:
+    database: staging-db.aws.internal
+    cache: staging-cache.aws.internal
+    debug: true
+  production:
+    database: prod-db.aws.internal
+    cache: prod-cache.aws.internal
+    debug: false
+
+regions:
+  us-east-1:
+    ami: ami-12345678
+    zone: us-east-1a
+  us-west-2:
+    ami: ami-87654321
+    zone: us-west-2a
+  eu-west-1:
+    ami: ami-11111111
+    zone: eu-west-1a
+
+# Grab using environment variables in path
+deployment:
+  # $ENV expands to the environment variable value
+  environment: (( grab configurations.$ENV ))
+  database: (( grab configurations.$ENV.database ))
+  cache: (( grab configurations.$ENV.cache ))
+  debug_mode: (( grab configurations.$ENV.debug ))
+  
+  # $REGION expands for region-specific config
+  region_config: (( grab regions.$REGION ))
+  ami: (( grab regions.$REGION.ami ))
+  availability_zone: (( grab regions.$REGION.zone ))
+
+# Multiple environment variables in one path
+services:
+  primary:
+    us-east-1:
+      production: api.example.com
+      staging: api-staging.example.com
+    us-west-2:
+      production: api-west.example.com
+      staging: api-staging-west.example.com
+
+api:
+  # Using both $REGION and $ENV
+  endpoint: (( grab services.primary.$REGION.$ENV ))
+  
+  # With fallback to default
+  url: (( grab services.primary.$REGION.$ENV || "http://localhost:8080" ))

@@ -1,0 +1,147 @@
+# Basic Shuffle Examples
+#
+# Randomly reordering arrays with the shuffle operator
+
+# Simple array shuffling
+simple:
+  # Original arrays
+  numbers: [1, 2, 3, 4, 5]
+  letters: ["a", "b", "c", "d", "e"]
+  words: ["apple", "banana", "cherry", "date", "elderberry"]
+  
+  # Shuffled versions (order will be random each time)
+  shuffled_numbers: (( shuffle simple.numbers ))
+  shuffled_letters: (( shuffle simple.letters ))
+  shuffled_words: (( shuffle simple.words ))
+
+# Shuffling different data types
+types:
+  # Boolean array
+  booleans: [true, false, true, false, true]
+  shuffled_bools: (( shuffle types.booleans ))
+  
+  # Mixed types
+  mixed: ["string", 123, true, null, 3.14]
+  shuffled_mixed: (( shuffle types.mixed ))
+  
+  # Empty array (remains empty)
+  empty: []
+  shuffled_empty: (( shuffle types.empty ))
+
+# Shuffling arrays of objects
+objects:
+  users:
+    - name: Alice
+      id: 1
+    - name: Bob
+      id: 2
+    - name: Charlie
+      id: 3
+    - name: David
+      id: 4
+    - name: Eve
+      id: 5
+  
+  # Randomly ordered users
+  randomized_users: (( shuffle objects.users ))
+
+# Combining and shuffling multiple arrays
+combining:
+  list1: ["red", "green", "blue"]
+  list2: ["yellow", "orange", "purple"]
+  list3: ["black", "white", "gray"]
+  
+  # Shuffle individual lists
+  shuffled1: (( shuffle combining.list1 ))
+  shuffled2: (( shuffle combining.list2 ))
+  shuffled3: (( shuffle combining.list3 ))
+  
+  # Combine all lists and shuffle together
+  all_colors: (( shuffle combining.list1 combining.list2 combining.list3 ))
+
+# Practical examples
+practical:
+  # Server list for round-robin
+  servers:
+    - host: server1.example.com
+      port: 8080
+    - host: server2.example.com
+      port: 8080
+    - host: server3.example.com
+      port: 8080
+    - host: server4.example.com
+      port: 8080
+  
+  # Randomize server order for load distribution
+  load_balanced_servers: (( shuffle practical.servers ))
+  
+  # Pick first server from shuffled list
+  primary_server: (( grab (shuffle practical.servers).0 ))
+
+# Card deck example
+cards:
+  # Define suits and ranks
+  suits: ["♠", "♥", "♦", "♣"]
+  ranks: ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
+  
+  # Shuffle for dealing
+  shuffled_suits: (( shuffle cards.suits ))
+  shuffled_ranks: (( shuffle cards.ranks ))
+
+# Team assignment
+teams:
+  players:
+    - Alice
+    - Bob
+    - Charlie
+    - David
+    - Eve
+    - Frank
+    - Grace
+    - Henry
+  
+  # Randomly order players
+  randomized_players: (( shuffle teams.players ))
+  
+  # Assign to teams (would need additional logic for actual splitting)
+  team_order: (( shuffle teams.players ))
+
+# Priority queue randomization
+tasks:
+  high_priority:
+    - task: "Deploy hotfix"
+    - task: "Fix critical bug"
+    - task: "Update security patch"
+  
+  medium_priority:
+    - task: "Refactor code"
+    - task: "Update documentation"
+    - task: "Review PRs"
+  
+  # Shuffle within priority levels
+  random_high: (( shuffle tasks.high_priority ))
+  random_medium: (( shuffle tasks.medium_priority ))
+  
+  # Mix priorities (not recommended in practice!)
+  all_random: (( shuffle tasks.high_priority tasks.medium_priority ))
+
+# Test data generation
+test_data:
+  # Sample data sets
+  firstnames: ["John", "Jane", "Bob", "Alice", "Charlie"]
+  lastnames: ["Smith", "Johnson", "Williams", "Brown", "Jones"]
+  domains: ["example.com", "test.org", "demo.net", "sample.io"]
+  
+  # Generate random combinations
+  random_first: (( shuffle test_data.firstnames ))
+  random_last: (( shuffle test_data.lastnames ))
+  random_domain: (( shuffle test_data.domains ))
+
+# A/B testing groups
+ab_testing:
+  users: ["user1", "user2", "user3", "user4", "user5", "user6", "user7", "user8"]
+  
+  # Randomly assign users to groups
+  randomized: (( shuffle ab_testing.users ))
+  
+  # Note: This just shows the order, actual group assignment would need additional logic

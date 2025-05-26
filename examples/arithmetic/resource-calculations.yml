@@ -1,0 +1,151 @@
+---
+# Resource Calculations for Cloud and Infrastructure Management
+# This file demonstrates practical arithmetic operations for resource planning
+
+# VM Resource Calculations
+virtual_machines:
+  # Base specifications
+  base_vm:
+    cpu_cores: 4
+    memory_gb: 16
+    disk_gb: 100
+    network_mbps: 1000
+  
+  # Scaling calculations
+  scaling:
+    instances: 5
+    total_cpu_cores: (( virtual_machines.base_vm.cpu_cores * virtual_machines.scaling.instances ))      # 20
+    total_memory_gb: (( virtual_machines.base_vm.memory_gb * virtual_machines.scaling.instances ))      # 80
+    total_disk_gb: (( virtual_machines.base_vm.disk_gb * virtual_machines.scaling.instances ))          # 500
+    total_network_mbps: (( virtual_machines.base_vm.network_mbps * virtual_machines.scaling.instances )) # 5000
+    
+    # Cost calculations
+    cost_per_instance_hour: 0.75
+    daily_cost: (( virtual_machines.scaling.cost_per_instance_hour * 24 * virtual_machines.scaling.instances ))    # 90
+    monthly_cost: (( virtual_machines.scaling.daily_cost * 30 ))                                                    # 2700
+    yearly_cost: (( virtual_machines.scaling.monthly_cost * 12 ))                                                   # 32400
+
+# Container Resource Allocation
+kubernetes:
+  cluster:
+    nodes: 10
+    cores_per_node: 16
+    memory_gb_per_node: 64
+    
+    # Total cluster capacity
+    total_cores: (( kubernetes.cluster.nodes * kubernetes.cluster.cores_per_node ))           # 160
+    total_memory_gb: (( kubernetes.cluster.nodes * kubernetes.cluster.memory_gb_per_node ))   # 640
+    
+    # System overhead (15% for k8s components)
+    overhead_percent: 15
+    system_cores: (( kubernetes.cluster.total_cores * kubernetes.cluster.overhead_percent / 100 ))        # 24
+    system_memory_gb: (( kubernetes.cluster.total_memory_gb * kubernetes.cluster.overhead_percent / 100 )) # 96
+    
+    # Available for workloads
+    available_cores: (( kubernetes.cluster.total_cores - kubernetes.cluster.system_cores ))               # 136
+    available_memory_gb: (( kubernetes.cluster.total_memory_gb - kubernetes.cluster.system_memory_gb ))   # 544
+  
+  # Pod resource calculations
+  workload:
+    pod_cpu_request: 0.5
+    pod_memory_gb_request: 2
+    pod_cpu_limit: 1
+    pod_memory_gb_limit: 4
+    
+    # Maximum pods based on requests
+    max_pods_by_cpu: (( kubernetes.cluster.available_cores / kubernetes.workload.pod_cpu_request ))        # 272
+    max_pods_by_memory: (( kubernetes.cluster.available_memory_gb / kubernetes.workload.pod_memory_gb_request ))  # 272
+    
+    # Actual max pods (minimum of both constraints)
+    # Note: In real scenarios, you'd use min() function
+    max_pods: 272  # Would be (( min(max_pods_by_cpu, max_pods_by_memory) ))
+    
+    # Resource utilization at max capacity
+    total_cpu_requests: (( kubernetes.workload.max_pods * kubernetes.workload.pod_cpu_request ))          # 136
+    total_memory_requests: (( kubernetes.workload.max_pods * kubernetes.workload.pod_memory_gb_request ))  # 544
+    cpu_utilization_percent: (( kubernetes.workload.total_cpu_requests / kubernetes.cluster.available_cores * 100 ))       # 100
+    memory_utilization_percent: (( kubernetes.workload.total_memory_requests / kubernetes.cluster.available_memory_gb * 100 )) # 100
+
+# Database Capacity Planning
+database:
+  # Current metrics
+  current:
+    size_gb: 500
+    daily_growth_gb: 2.5
+    transactions_per_second: 1000
+    avg_transaction_size_kb: 10
+  
+  # Growth projections
+  projections:
+    days: 365
+    growth_gb: (( database.current.daily_growth_gb * database.projections.days ))                    # 912.5
+    projected_size_gb: (( database.current.size_gb + database.projections.growth_gb ))               # 1412.5
+    
+    # Transaction volume calculations
+    transactions_per_day: (( database.current.transactions_per_second * 60 * 60 * 24 ))              # 86400000
+    daily_transaction_size_gb: (( database.projections.transactions_per_day * database.current.avg_transaction_size_kb / 1024 / 1024 ))  # ~823
+    
+    # IOPS requirements (assuming 4 IOPS per transaction)
+    iops_required: (( database.current.transactions_per_second * 4 ))                                # 4000
+    
+    # Backup calculations
+    full_backup_size_gb: (( database.projections.projected_size_gb * 1.1 ))                          # 1553.75 (10% overhead)
+    incremental_backup_size_gb: (( database.current.daily_growth_gb * 1.1 ))                         # 2.75
+    weekly_backup_storage_gb: (( database.projections.full_backup_size_gb + database.projections.incremental_backup_size_gb * 6 ))  # 1570.25
+
+# Network Bandwidth Calculations
+network:
+  # Application requirements
+  application:
+    users: 10000
+    avg_bandwidth_per_user_kbps: 100
+    peak_multiplier: 3
+    
+    # Bandwidth calculations
+    normal_bandwidth_mbps: (( network.application.users * network.application.avg_bandwidth_per_user_kbps / 1024 ))     # ~976.5
+    peak_bandwidth_mbps: (( network.application.normal_bandwidth_mbps * network.application.peak_multiplier ))          # ~2929.5
+    
+    # 95th percentile (typically 1.5x normal)
+    percentile_95_bandwidth_mbps: (( network.application.normal_bandwidth_mbps * 1.5 ))                                 # ~1464.75
+  
+  # CDN calculations
+  cdn:
+    monthly_requests_millions: 100
+    avg_object_size_kb: 50
+    cache_hit_ratio: 0.85
+    
+    # Data transfer calculations
+    total_data_transfer_gb: (( network.cdn.monthly_requests_millions * 1000000 * network.cdn.avg_object_size_kb / 1024 / 1024 ))  # ~4768
+    origin_data_transfer_gb: (( network.cdn.total_data_transfer_gb * (1 - network.cdn.cache_hit_ratio) ))                         # ~715
+    cdn_served_gb: (( network.cdn.total_data_transfer_gb * network.cdn.cache_hit_ratio ))                                         # ~4053
+
+# Storage Tiering Calculations
+storage_tiering:
+  # Data classification
+  total_data_tb: 100
+  
+  # Tier percentages
+  hot_tier_percent: 20
+  warm_tier_percent: 30
+  cold_tier_percent: 50
+  
+  # Tier sizes
+  hot_tier_tb: (( storage_tiering.total_data_tb * storage_tiering.hot_tier_percent / 100 ))       # 20
+  warm_tier_tb: (( storage_tiering.total_data_tb * storage_tiering.warm_tier_percent / 100 ))     # 30
+  cold_tier_tb: (( storage_tiering.total_data_tb * storage_tiering.cold_tier_percent / 100 ))     # 50
+  
+  # Cost per TB per month
+  hot_tier_cost_per_tb: 100
+  warm_tier_cost_per_tb: 50
+  cold_tier_cost_per_tb: 10
+  
+  # Monthly costs
+  hot_tier_monthly_cost: (( storage_tiering.hot_tier_tb * storage_tiering.hot_tier_cost_per_tb ))     # 2000
+  warm_tier_monthly_cost: (( storage_tiering.warm_tier_tb * storage_tiering.warm_tier_cost_per_tb ))  # 1500
+  cold_tier_monthly_cost: (( storage_tiering.cold_tier_tb * storage_tiering.cold_tier_cost_per_tb ))  # 500
+  total_monthly_cost: (( storage_tiering.hot_tier_monthly_cost + storage_tiering.warm_tier_monthly_cost + storage_tiering.cold_tier_monthly_cost ))  # 4000
+  
+  # Cost optimization - all in cold storage
+  all_cold_cost: (( storage_tiering.total_data_tb * storage_tiering.cold_tier_cost_per_tb ))          # 1000
+  monthly_savings: (( storage_tiering.total_monthly_cost - storage_tiering.all_cold_cost ))           # 3000
+  yearly_savings: (( storage_tiering.monthly_savings * 12 ))                                          # 36000

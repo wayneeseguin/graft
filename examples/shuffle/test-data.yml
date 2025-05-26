@@ -1,0 +1,197 @@
+# Test Data Randomization with Shuffle
+#
+# Using shuffle to generate randomized test data
+
+# User test data
+test_users:
+  # Base data pools
+  first_names: ["John", "Jane", "Michael", "Sarah", "David", "Emma", "Robert", "Lisa", "James", "Mary"]
+  last_names: ["Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Rodriguez", "Martinez"]
+  email_domains: ["gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "example.com", "test.org"]
+  roles: ["admin", "user", "moderator", "guest", "subscriber"]
+  
+  # Generate randomized test users
+  random_users:
+    - first_name: (( grab (shuffle test_users.first_names).0 ))
+      last_name: (( grab (shuffle test_users.last_names).0 ))
+      email_domain: (( grab (shuffle test_users.email_domains).0 ))
+      role: (( grab (shuffle test_users.roles).0 ))
+    
+    - first_name: (( grab (shuffle test_users.first_names).1 ))
+      last_name: (( grab (shuffle test_users.last_names).1 ))
+      email_domain: (( grab (shuffle test_users.email_domains).1 ))
+      role: (( grab (shuffle test_users.roles).1 ))
+    
+    - first_name: (( grab (shuffle test_users.first_names).2 ))
+      last_name: (( grab (shuffle test_users.last_names).2 ))
+      email_domain: (( grab (shuffle test_users.email_domains).2 ))
+      role: (( grab (shuffle test_users.roles).2 ))
+
+# Product test data
+test_products:
+  # Product attributes
+  categories: ["Electronics", "Clothing", "Books", "Home & Garden", "Sports", "Toys", "Food", "Beauty"]
+  conditions: ["New", "Like New", "Very Good", "Good", "Acceptable"]
+  brands: ["BrandA", "BrandB", "BrandC", "BrandD", "BrandE", "Generic"]
+  
+  # Price ranges
+  price_ranges:
+    - min: 10
+      max: 50
+    - min: 50
+      max: 100
+    - min: 100
+      max: 500
+    - min: 500
+      max: 1000
+  
+  # Generate random products
+  products:
+    - category: (( grab (shuffle test_products.categories).0 ))
+      condition: (( grab (shuffle test_products.conditions).0 ))
+      brand: (( grab (shuffle test_products.brands).0 ))
+      price_range: (( grab (shuffle test_products.price_ranges).0 ))
+    
+    - category: (( grab (shuffle test_products.categories).1 ))
+      condition: (( grab (shuffle test_products.conditions).1 ))
+      brand: (( grab (shuffle test_products.brands).1 ))
+      price_range: (( grab (shuffle test_products.price_ranges).1 ))
+
+# API endpoint testing
+api_testing:
+  # Test scenarios
+  http_methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+  endpoints: ["/users", "/products", "/orders", "/cart", "/checkout", "/profile", "/settings"]
+  status_codes: [200, 201, 400, 401, 403, 404, 500, 503]
+  
+  # Generate random test cases
+  test_cases:
+    - method: (( grab (shuffle api_testing.http_methods).0 ))
+      endpoint: (( grab (shuffle api_testing.endpoints).0 ))
+      expected_status: (( grab (shuffle api_testing.status_codes).0 ))
+    
+    - method: (( grab (shuffle api_testing.http_methods).1 ))
+      endpoint: (( grab (shuffle api_testing.endpoints).1 ))
+      expected_status: (( grab (shuffle api_testing.status_codes).1 ))
+    
+    - method: (( grab (shuffle api_testing.http_methods).2 ))
+      endpoint: (( grab (shuffle api_testing.endpoints).2 ))
+      expected_status: (( grab (shuffle api_testing.status_codes).2 ))
+
+# Load testing scenarios
+load_testing:
+  # User behavior patterns
+  user_actions:
+    - action: "browse_catalog"
+      weight: 40
+    - action: "search_product"
+      weight: 25
+    - action: "view_product"
+      weight: 20
+    - action: "add_to_cart"
+      weight: 10
+    - action: "checkout"
+      weight: 5
+  
+  # Shuffle for random user behavior
+  random_actions: (( shuffle load_testing.user_actions ))
+  
+  # Geographic distribution
+  regions: ["North America", "Europe", "Asia", "South America", "Africa", "Oceania"]
+  random_region_order: (( shuffle load_testing.regions ))
+  
+  # Time-based patterns
+  peak_hours: [9, 10, 11, 14, 15, 16, 17, 18, 19, 20]
+  random_peak_pattern: (( shuffle load_testing.peak_hours ))
+
+# Database seeding
+database_seed:
+  # Table data
+  statuses: ["pending", "processing", "completed", "cancelled", "failed"]
+  priorities: ["low", "medium", "high", "critical"]
+  types: ["typeA", "typeB", "typeC", "typeD"]
+  
+  # Generate random records
+  records:
+    - status: (( grab (shuffle database_seed.statuses).0 ))
+      priority: (( grab (shuffle database_seed.priorities).0 ))
+      type: (( grab (shuffle database_seed.types).0 ))
+    
+    - status: (( grab (shuffle database_seed.statuses).1 ))
+      priority: (( grab (shuffle database_seed.priorities).1 ))
+      type: (( grab (shuffle database_seed.types).1 ))
+    
+    - status: (( grab (shuffle database_seed.statuses).2 ))
+      priority: (( grab (shuffle database_seed.priorities).2 ))
+      type: (( grab (shuffle database_seed.types).2 ))
+
+# A/B testing groups
+ab_testing:
+  # Test variations
+  variations: ["control", "variant_a", "variant_b", "variant_c"]
+  
+  # User IDs
+  user_ids: ["user001", "user002", "user003", "user004", "user005", "user006", "user007", "user008"]
+  
+  # Randomly assign users to variations
+  assignments: (( shuffle ab_testing.user_ids ))
+  
+  # Group distribution (would need additional logic)
+  groups:
+    control: []      # Would get first 25% of shuffled users
+    variant_a: []    # Would get next 25%
+    variant_b: []    # Would get next 25%
+    variant_c: []    # Would get last 25%
+
+# Network testing
+network_testing:
+  # IP addresses
+  source_ips: ["192.168.1.10", "192.168.1.20", "192.168.1.30", "192.168.1.40", "192.168.1.50"]
+  dest_ports: [80, 443, 8080, 8443, 3000, 5000, 9090]
+  protocols: ["TCP", "UDP", "ICMP"]
+  
+  # Generate random test patterns
+  test_patterns:
+    - source: (( grab (shuffle network_testing.source_ips).0 ))
+      port: (( grab (shuffle network_testing.dest_ports).0 ))
+      protocol: (( grab (shuffle network_testing.protocols).0 ))
+    
+    - source: (( grab (shuffle network_testing.source_ips).1 ))
+      port: (( grab (shuffle network_testing.dest_ports).1 ))
+      protocol: (( grab (shuffle network_testing.protocols).1 ))
+
+# Chaos engineering
+chaos_testing:
+  # Failure scenarios
+  failures: ["network_delay", "packet_loss", "service_down", "cpu_spike", "memory_leak", "disk_full"]
+  
+  # Target services
+  services: ["web", "api", "database", "cache", "queue", "storage"]
+  
+  # Random failure injection
+  experiments:
+    - failure_type: (( grab (shuffle chaos_testing.failures).0 ))
+      target_service: (( grab (shuffle chaos_testing.services).0 ))
+    
+    - failure_type: (( grab (shuffle chaos_testing.failures).1 ))
+      target_service: (( grab (shuffle chaos_testing.services).1 ))
+    
+    - failure_type: (( grab (shuffle chaos_testing.failures).2 ))
+      target_service: (( grab (shuffle chaos_testing.services).2 ))
+
+# Performance testing
+performance_testing:
+  # Request patterns
+  request_sizes: ["1KB", "10KB", "100KB", "1MB", "10MB"]
+  concurrency_levels: [1, 10, 50, 100, 500, 1000]
+  durations: ["1m", "5m", "10m", "30m", "1h"]
+  
+  # Generate random test configurations
+  test_configs:
+    - request_size: (( grab (shuffle performance_testing.request_sizes).0 ))
+      concurrency: (( grab (shuffle performance_testing.concurrency_levels).0 ))
+      duration: (( grab (shuffle performance_testing.durations).0 ))
+    
+    - request_size: (( grab (shuffle performance_testing.request_sizes).1 ))
+      concurrency: (( grab (shuffle performance_testing.concurrency_levels).1 ))
+      duration: (( grab (shuffle performance_testing.durations).1 ))

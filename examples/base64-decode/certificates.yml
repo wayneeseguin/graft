@@ -1,0 +1,188 @@
+# Decoding Certificates with Base64-Decode
+#
+# Examples of decoding certificates and keys from base64 format
+
+# TLS certificates
+tls_certificates:
+  # Base64 encoded certificates (common in K8s, cloud configs)
+  encoded:
+    # Self-signed certificate for testing
+    server_cert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURhekNDQWxPZ0F3SUJBZ0lVY0pxQnFQR0xWZVFTOG92bXdmNzdGYktoaHhNd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1JURUxNQWtHQTFVRUJoTUNRVlV4RXpBUkJnTlZCQWdNQ2xOdmJXVXRVM1JoZEdVeElUQWZCZ05WQkFvTQpHRWx1ZEdWeWJtVjBJRmRwWkdkcGRITWdVSFI1SUV4MFpEQWVGdzB5TkRBeE1qTXdOVFV6TXpCYUZ3MHlOVEF4Ck1qSXdOVFV6TXpCYU1FVXhDekFKQmdOVkJBWVRBa0ZWTVJNd0VRWURWUVFJREFwVGIyMWxMVk4wWVhSbE1TRXcKSHdZRFZRUUtEQmhKYm5SbGNtNWxkQ0JYYVdSbmFYUnpJRkIwZVNCTWRHUXdnZ0VpTUEwR0NTcUdTSWIzRFFFQgpBUVVBQTRJQkR3QXdnZ0VLQW9JQkFRRGRXY3VZKzFyZzRIMGN2OVp4UWhxL3hzYXNlak1UMGlqbTFCMG9HVHkKYTBBPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0t"
+    
+    # Private key
+    server_key: "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRRGRXY3VZKzFyZzRIMGMKdjlaeFEvaC94c2FzZWpNVDBpam0xQjBvR1R5YTBNdmJVeXJHK0pYSnRuSFROaHNTdUZEVnJFOE5hT1lYOEQwbgphYkphdVdxdGRRPT0KLS0tLS1FTkQgUFJJVkFURSBLRVktLS0tLQ=="
+    
+    # CA certificate chain
+    ca_bundle: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURuekNDQW9lZ0F3SUJBZ0lKQUlTekRGRTRBRjJZTUEwR0NTcUdTSWIzRFFFQkN3VUFNRzR4Q3pBSkJnTlYKQkFZVEFsVlRNUk13RVFZRFZRUUlEQXBEWVd4cFptOXlibWxoTVJZd0ZBWURWUVFIREExTmIzVnVkR0ZwYmlCVgphV1YzTVJRd0VnWURWUVFLREF0RmVHRnRjR3hsSUVOdmNuQXhEakFNQmdOVkJBc01CVkJsYjNCc1pURU1NQW9HCkExVUVBd3dEUTBFd0hoY05NVGd3TlRJd01UVXdNakV4V2hjTk1UZ3dOakU1TVRVd01qRXhXakJ1TVFzd0NRWUQKVlFRR0V3SlZVekVUTUJFR0ExVUVDQXdLUTJGc2FXWnZjbTVwWVRFV01CUUdBMVVFQnd3TlRXOTFiblJoYVc0ZwpWbWxsZHpFVU1CSUdBMVVFQ2d3TFJYaGhiWEJzWlNCRGIzSndNUTR3REFZRFZRUUxEQVZRWlc5d2JHVXhEREFLCkJnTlZCQU1NQTBOQk1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBcWJOOURTb3AKYUxRPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0t"
+    
+    # Client certificate for mTLS
+    client_cert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURNVENDQWhtZ0F3SUJBZ0lVZlZZaG5KREI5TENGdmhXSlVYdnV2Y0RWRlMwd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tERUxNQWtHQTFVRUJoTUNWVk14R1RBWEJnTlZCQU1NRUdOc2FXVnVkQzFqWlhKMGFXWnBZMkYwWlRBZQpGdzB5TkRBeE1qTXdOakF4TURkYUZ3MHlOVEF4TWpJd05qQXhNRGRhTUNneEN6QUpCZ05WQkFZVEFsVlRNUmt3CkZ3WURWUVFEREJCM2JHbGxiblF0WTJWeWRHbG1hV05oZEdVd2dnRWlNQTBHQ1NxR1NJYjNEUUVCQVFVQUE0SUIKRHdBd2dnRUtBb0lCQVFEYS9YL2lwOGJxSmQ2SEoyOFFmaDhFdmxWMDdyTWlPN3R6YnBHUW5IUjJXY0pucjN3NgpJUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0="
+    client_key: "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRRGEvWC9pcDhicUpkNkgKSjI4UWZoOEV2bFYwN3JNaU83dHpicEdRbkhSMldjSm5yM3c2SVFqcndTMGdBUWhNTkRxaUhJaFpaVHhKMDNLNgphUT09Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0="
+  
+  # Decoded certificates
+  decoded:
+    server_cert: (( base64-decode tls_certificates.encoded.server_cert ))
+    # Result: Full PEM formatted certificate
+    server_key: (( base64-decode tls_certificates.encoded.server_key ))
+    # Result: Full PEM formatted private key
+    ca_bundle: (( base64-decode tls_certificates.encoded.ca_bundle ))
+    # Result: Full PEM formatted CA certificate
+    client_cert: (( base64-decode tls_certificates.encoded.client_cert ))
+    # Result: Full PEM formatted client certificate
+    client_key: (( base64-decode tls_certificates.encoded.client_key ))
+    # Result: Full PEM formatted client private key
+
+# SSH keys
+ssh_keys:
+  # Encoded SSH keys
+  encoded:
+    # RSA private key (traditional format)
+    rsa_private: "LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcEFJQkFBS0NBUUVBMWRyT3E5TERIREJnQzN5aXBCekdXckJJSnRBMGx5OEQ4VUJwSExCN0VSQUhCbjFVCjdWNk5IcUZrUnJQenJKaWRtMXpDTDlDa1FHZnJVUnNxSjJRPT0KLS0tLS1FTkQgUlNBIFBSSVZBVEUgS0VZLS0tLS0="
+    
+    # ED25519 private key (OpenSSH format)
+    ed25519_private: "LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaV1F5TlRVeE9RQUFBQUNBcTNwQmNQejE3ajdXNHBKZmhBdUFzOVFkbW4yTXJQYXhzTGhCUFQycW93QUFBQUpEZmVibnczM201OEFBQUFDM056YUMxbFpESTFOVEU1QUFBQUVJQ3Jla0Z3L1BYdVB0YmlrbCtFQzRDejFCMmFmWXlzOXJHd3VFRTlQYXFqQUFBQUVEalRJakxCbTJhaHlqY0ZHdm9sT25IM0ZEa3pBTU5sNzJON1A1NEZHZUZjRT0KLS0tLS1FTkQgT1BFTlNTSCBQUklWQVRFIEtFWS0tLS0t"
+    
+    # RSA public key
+    rsa_public: "c3NoLXJzYSBBQUFBQjNOemFDMXljMkVBQUFBREFRQUJBQUFCQVFEVjJzNnIwc01jTUdBTGZLS2tITVphc0VnbTBEU1hMd1B4UUdrY3NIc1JFQWNHZlZUdFhvMGVvV1JHcy9Pc21KMmJYTUl2MEtSQVordFJHeW9uWkJTQS9zUnJpUW9NUXBmMFdST2hVU1pJQQ=="
+    
+    # ED25519 public key
+    ed25519_public: "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSUQ0ejFQOVh1UHRiaWtsK0VDNEN6MUIyYWZZeXM5ckd3dUVFOVBhcWpBPT0="
+  
+  # Decoded SSH keys
+  decoded:
+    rsa_private: (( base64-decode ssh_keys.encoded.rsa_private ))
+    ed25519_private: (( base64-decode ssh_keys.encoded.ed25519_private ))
+    rsa_public: (( base64-decode ssh_keys.encoded.rsa_public ))
+    ed25519_public: (( base64-decode ssh_keys.encoded.ed25519_public ))
+  
+  # SSH configuration using decoded keys
+  ssh_config:
+    host: bastion.example.com
+    user: deploy
+    port: 22
+    private_key: (( base64-decode ssh_keys.encoded.ed25519_private ))
+    public_key: (( base64-decode ssh_keys.encoded.ed25519_public ))
+
+# Code signing certificates
+code_signing:
+  # Encoded code signing materials
+  encoded:
+    # Windows code signing certificate
+    windows_cert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURtekNDQW9PZ0F3SUJBZ0lVWTdNWHFXRXFNQWJwQzZXdlU1aFBJanU3ZUNjd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1h6RUxNQWtHQTFVRUJoTUNWVk14RXpBUkJnTlZCQWdNQ2xkaGMyaHBibWQwYjI0eEVEQU9CZ05WQkFjTQpCMU5sWVhSMGJHVXhGREFTQmdOVkJBb01DMFY0WVcxd2JHVWdRMjl5Y0RFTE1Bb0dBMVVFQXd3RFJFVldNQjRYCkRUSTBNREV5TXpBMk1Ea3pORm9YRFRJMU1ERXlNakEyTURrek5Gb3dYekVMTUFrR0ExVUVCaE1DVlZNeEV6QVIKQmdOVkJBZ01DbGRoYzJocGJtZDBiMjR4RURBT0JnTlZCQWNNQjFObFlYUjBiR1V4RkRBU0JnTlZCQW9NQzBWNApZVzF3YkdVZ1EyOXljREVUTUJFR0ExVUVBd3dLUkVWV0lGTnBaMjVsY2pDQ0FTSXdEUVlKS29aSWh2Y05BUUVCCkJRQURnZ0VQQURDQ0FRb0NnZ0VCQUw2RDhIQkl0Y0VzN3d6NmxvODJZUEY0Y3RVRmFRPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ=="
+    windows_key: "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRQytqL0J3U0xYQkxPOE0KK3BhUE5tRHhlSExWQldrTkpVT2h1QnppOFBSTU5mR3JZOE41dXBQPQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0t"
+    
+    # macOS Developer ID certificate
+    macos_cert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURtVENDQW9HZ0F3SUJBZ0lVRytGSGNFeFB0dnlvQUpJTjNIL1kyZUV1Y0Zvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1hERUxNQWtHQTFVRUJoTUNWVk14RXpBUkJnTlZCQWdNQ2tOaGJHbG1iM0p1YVdFeEZqQVVCZ05WQkFjTQpEVU4xY0dWeWRHbHVieUJEU1RFVk1CTUdBMVVFQ2d3TVJHVjJaV3h2Y0dWeUlFbGtNUWt3QndZRFZRUUREQUF3CkhoY05NalF3TVRJek1EWXhNakUwV2hjTk1qVXdNVEl5TURZeE1qRTBXakJjTVFzd0NRWURWUVFHRXdKVlV6RVQKTUJFR0ExVUVDQXdLUTJGc2FXWnZjbTVwWVRFV01CUUdBMVVFQnd3TlEzVndaWEowYVc1dklFTkpNUlV3RXdZRApWUVFLREF4RVpYWmxiRzl3WlhJZ1NXUXhDVEFIQmdOVkJBTU1BRENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFECmdnRVBBRENDQVFvQ2dnRUJBTVdOODhBMEh5MDJaT2ZJbXdLUkJ6PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ=="
+    macos_key: "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktZd2dnU2lBZ0VBQW9JQkFRREZqZlBBTkI4dE5tVG4KeUpzQ2tRYzRGYlhldjdrUXpjVHV1VUUvVHRLbD0KLS0tLS1FTkQgUFJJVkFURSBLRVktLS0tLQ=="
+  
+  # Decoded code signing certificates
+  decoded:
+    windows:
+      certificate: (( base64-decode code_signing.encoded.windows_cert ))
+      private_key: (( base64-decode code_signing.encoded.windows_key ))
+    
+    macos:
+      certificate: (( base64-decode code_signing.encoded.macos_cert ))
+      private_key: (( base64-decode code_signing.encoded.macos_key ))
+
+# SAML certificates
+saml_certificates:
+  # Encoded SAML signing and encryption certificates
+  encoded:
+    # IdP signing certificate
+    idp_signing_cert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURsekNDQW4rZ0F3SUJBZ0lVZkYwUjV2SjROWnptdThINXhQenV3RThoVlRvd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1d6RUxNQWtHQTFVRUJoTUNWVk14RXpBUkJnTlZCQWdNQ2xkaGMyaHBibWQwYjI0eEVEQU9CZ05WQkFjTQpCMU5sWVhSMGJHVXhFVEFQQmdOVkJBb01DRWxrVUNCVWI5OXNNUkl3RUFZRFZRUUREQWxKWkZBZ1UybG5ibVZ5Ck1CNFhEVEkwTURFeU16QTJNVFl4TkZvWERUSTVNREV5TVRBMk1UWXhORm93V3pFTE1Ba0dBMVVFQmhNQ1ZWTXgKRXpBUkJnTlZCQWdNQ2xkaGMyaHBibWQwYjI0eEVEQU9CZ05WQkFjTUIxTmxZWFIwYkdVeEVUQVBCZ05WQkFvTQpDRWxrVUNCVWI5OXNNUkl3RUFZRFZRUUREQWxKWkZBZ1UybG5ibVZ5TUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGCkFBT0NBUThBTUlJQkNnS0NBUUVBc0pPRkFYaGJVNXpoTGVIUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0="
+    
+    # SP encryption certificate
+    sp_encryption_cert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURsRENDQW55Z0F3SUJBZ0lVTXNaUUYxV3ExZ0xQK1hIMWdCTXNLMXRxQnJJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1dERUxNQWtHQTFVRUJoTUNWVk14RXpBUkJnTlZCQWdNQ2xkaGMyaHBibWQwYjI0eEVEQU9CZ05WQkFjTQpCMU5sWVhSMGJHVXhFakFRQmdOVkJBb01DVk5RSUZSdmIyeHpNUTR3REFZRFZRUUREQVZUVUNCU1pXTXdIaGNOCk1qUXdNVEl6TURZeE9ESTJXaGNOTWpVd01USXlNRFl4T0RJMldqQllNUXN3Q1FZRFZRUUdFd0pWVXpFVE1CRUcKQTFVRUNBd0tWMkZ6YUdsdVozUnZiakVRTUE0R0ExVUVCd3dIVTJWaGRIUnNaVEVTTUJBR0ExVUVDZ3dKVTFBZwpWRzl2YkhNeERqQU1CZ05WQkFNTUJWTlFJRkpsWXpDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDCkFRb0NnZ0VCQU1GQ0t3SU1TRGJKYjJGUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0="
+    sp_encryption_key: "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRREJRaXNDREVnMnlXOWgKVVBHSmkydzRLeENhWnZ0T1Jkd2lCUlp3TkdmPQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0t"
+  
+  # Decoded SAML certificates
+  decoded:
+    idp_signing_cert: (( base64-decode saml_certificates.encoded.idp_signing_cert ))
+    sp_encryption_cert: (( base64-decode saml_certificates.encoded.sp_encryption_cert ))
+    sp_encryption_key: (( base64-decode saml_certificates.encoded.sp_encryption_key ))
+
+# Kubernetes TLS secrets format
+k8s_tls_secret:
+  # Standard K8s TLS secret structure
+  type: kubernetes.io/tls
+  data:
+    # Base64 encoded certificate and key
+    "tls.crt": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURQekNDQWllZ0F3SUJBZ0lVRHF1OTBXR3dJMnppZXlsYllLTW04YnE2VkRjd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0x6RXRNQ3NHQTFVRUF3d2tLaTVoY0hCekxtdDFZbVZ5Ym1WMFpYTXVaWGhoYlhCc1pTNWpiMjB3SGhjTgpNalF3TVRJek1EWXlNelV5V2hjTk1qVXdNVEl5TURZeU16VXlXakF2TVMwd0t3WURWUVFEREVJcUxtRndjSE11CmEzVmlaWEp1WlhSbGN5NWxlR0Z0Y0d4bExtTnZiVENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFEZ2dFUEFEQ0MKQVFvQ2dnRUJBTTlXMGEvdmczdE9GTDk3Uko1PT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ=="
+    "tls.key": "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRRFBWdEd2NzRON1RoUy8KZTBTZVpxbmlIMkZzQm5pUDZESGluRlVzPQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0t"
+  
+  # Decoded for use in applications
+  decoded_tls:
+    certificate: (( base64-decode k8s_tls_secret.data."tls.crt" ))
+    private_key: (( base64-decode k8s_tls_secret.data."tls.key" ))
+  
+  # Use in ingress configuration
+  ingress:
+    tls:
+      - hosts:
+          - "*.apps.kubernetes.example.com"
+        secretName: wildcard-tls
+        # Secret contains the base64 encoded cert and key above
+
+# mTLS configuration
+mutual_tls:
+  # Encoded mTLS certificates
+  encoded:
+    # Server certificates
+    server:
+      cert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURRVENDQWltZ0F3SUJBZ0lVVW1nYnNXcDdyazU4UGNQeGdGVGNBRnJlT0Rjd0RRWUpLb1pJaHZjTkFRRUwKQlFBd01ERUxNQWtHQTFVRUJoTUNWVk14RHpBTkJnTlZCQWdNQms5eVpXZHZiakVRTUE0R0ExVUVDZ3dIYlZSTQpVeUJCVUVrd0hoY05NalF3TVRJek1EWXlOakF4V2hjTk1qVXdNVEl5TURZeU5qQXhXakF3TVFzd0NRWURWUVFHCkV3SlZVekVQTUEwR0ExVUVDQXdHVDNKbFoyOXVNUkF3RGdZRFZRUUtEQWR0VkV4VElFRlFTVENDQVNJd0RRWUoKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTUJLT2lOQzdpZz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ=="
+      key: "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktZd2dnU2lBZ0VBQW9JQkFRREFTam9qUXU0b011T2wKaXVrM1lOTVlBPQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0t"
+    
+    # Client certificates
+    client:
+      cert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURRVENDQWltZ0F3SUJBZ0lVYzNJRFJOdmRrcmVRUXlaK3F4L1pGdDBvRUlBd0RRWUpLb1pJaHZjTkFRRUwKQlFBd01ERUxNQWtHQTFVRUJoTUNWVk14RHpBTkJnTlZCQWdNQms5eVpXZHZiakVRTUE0R0ExVUVDZ3dIYlZSTQpVeUJCVUVrd0hoY05NalF3TVRJek1EWXlOekE0V2hjTk1qVXdNVEl5TURZeU56QTRXakF3TVFzd0NRWURWUVFHCkV3SlZVekVQTUEwR0ExVUVDQXdHVDNKbFoyOXVNUkF3RGdZRFZRUUtEQWR0VkV4VElFRlFTVENDQVNJd0RRWUoKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTDdKOCtiVncxUT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ=="
+      key: "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2QUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktZd2dnU2lBZ0VBQW9JQkFRQyt5ZlBtMWNOVU1QakwKQ0tjVUFkPQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0t"
+    
+    # CA certificate
+    ca_cert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURNVENDQWhtZ0F3SUJBZ0lVRWJQYzNEMFVab1Z5UGNaMmJSTWNKbXJHQTRBd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0tERUxNQWtHQTFVRUJoTUNWVk14R1RBWEJnTlZCQU1NRUUxVVRGTWdVbTl2ZENCRFFTQXhNQjRYRFRJMApNREV5TXpBMk1qZ3hPRm9YRFRJNU1ERXlNVEEyTWpneE9Gb3dLREVMTUFrR0ExVUVCaE1DVlZNeEdUQVhCZ05WCkJBTU1FRTFVVEZNZ1VtOXZkQ0JEUVNBeE1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0MKQVFFQXZmMGJIN1g1ejJiMmJJdW9MajdJPQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0t"
+  
+  # Decoded mTLS configuration
+  decoded:
+    server:
+      cert: (( base64-decode mutual_tls.encoded.server.cert ))
+      key: (( base64-decode mutual_tls.encoded.server.key ))
+    client:
+      cert: (( base64-decode mutual_tls.encoded.client.cert ))
+      key: (( base64-decode mutual_tls.encoded.client.key ))
+    ca_cert: (( base64-decode mutual_tls.encoded.ca_cert ))
+
+# Certificate validation example
+certificate_validation:
+  # Encoded certificate to validate
+  unknown_cert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURRVENDQWltZ0F3SUJBZ0lVVDE0VHJXd0tGaG9aSGdGVnJzSHV1dEJwN2dZd0RRWUpLb1pJaHZjTkFRRUwKQlFBd01ERUxNQWtHQTFVRUJoTUNWVk14RHpBTkJnTlZCQWdNQms5eVpXZHZiakVRTUE0R0ExVUVDZ3dIVlc1cgpibTkzYmpBZUZ3MHlOREF4TWpNd05qTXdORGRhRncweU5UQXhNakl3TmpNd05EZGFNREF4Q3pBSkJnTlZCQVlUCkFsVlRNUTh3RFFZRFZRUUlEQVpQY21WbmIyNHhFREFPQmdOVkJBb01CMVZ1YTI1dmQyNHdnZ0VpTUEwR0NTcUcKU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLQW9JQkFRRE4yNGI0Q3ByOD0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ=="
+  
+  # Decode and examine
+  decoded_cert: (( base64-decode certificate_validation.unknown_cert ))
+  
+  # Would be used with external tools to validate:
+  # - Certificate chain
+  # - Expiration dates
+  # - Subject/Issuer information
+  # - Key usage extensions
+
+# Combined with other operators
+cert_management:
+  # Environment-based certificate selection
+  environment: production
+  
+  certs:
+    production:
+      tls_cert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCnByb2R1Y3Rpb24gY2VydGlmaWNhdGUKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ=="
+      tls_key: "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCnByb2R1Y3Rpb24ga2V5Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0="
+    staging:
+      tls_cert: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCnN0YWdpbmcgY2VydGlmaWNhdGUKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQ=="
+      tls_key: "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCnN0YWdpbmcga2V5Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0="
+  
+  # Select and decode based on environment
+  active_cert: (( base64-decode (grab cert_management.certs.[cert_management.environment].tls_cert) ))
+  active_key: (( base64-decode (grab cert_management.certs.[cert_management.environment].tls_key) ))
+  
+  # Chain with vault for secure storage
+  from_vault:
+    encoded_cert: (( vault "secret/certificates/production:cert" ))
+    decoded_cert: (( base64-decode cert_management.from_vault.encoded_cert ))

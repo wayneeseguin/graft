@@ -1,0 +1,149 @@
+# Conditional Logic with Empty Operator
+#
+# Using empty operator in conditional expressions
+
+# Basic conditional with ternary operator
+user_input:
+  name: ""  # Try changing this to test different scenarios
+  email: "user@example.com"
+  phone: null
+  
+  # Set defaults for empty values
+  display_name: (( empty user_input.name ? "Anonymous User" : user_input.name ))
+  contact_email: (( empty user_input.email ? "no-email@example.com" : user_input.email ))
+  contact_phone: (( empty user_input.phone ? "N/A" : user_input.phone ))
+
+# Configuration with optional overrides
+config:
+  defaults:
+    host: "localhost"
+    port: 8080
+    timeout: 30
+    retries: 3
+  
+  overrides:
+    host: ""  # Empty - use default
+    port: 9090  # Override
+    timeout: null  # Empty - use default
+    # retries not specified - grab will return null, which is empty
+  
+  # Final configuration using empty checks
+  final:
+    host: (( empty config.overrides.host ? config.defaults.host : config.overrides.host ))
+    port: (( empty config.overrides.port ? config.defaults.port : config.overrides.port ))
+    timeout: (( empty config.overrides.timeout ? config.defaults.timeout : config.overrides.timeout ))
+    retries: (( empty (grab config.overrides.retries) ? config.defaults.retries : config.overrides.retries ))
+
+# Feature flags with empty checks
+features:
+  # Environment variables or parameters
+  enable_new_ui: ""  # Not set
+  enable_analytics: "true"  # Set
+  enable_debug: null  # Not set
+  
+  # Resolved feature flags
+  flags:
+    new_ui: (( ! empty features.enable_new_ui ? features.enable_new_ui : "false" ))
+    analytics: (( ! empty features.enable_analytics ? features.enable_analytics : "false" ))
+    debug: (( ! empty features.enable_debug ? features.enable_debug : "false" ))
+
+# Multi-level fallback
+environment:
+  # Try multiple sources in order
+  user_provided: ""
+  config_file: null
+  system_default: "production"
+  
+  # Use first non-empty value
+  active: (( ! empty environment.user_provided ? environment.user_provided : 
+             ! empty environment.config_file ? environment.config_file : 
+             environment.system_default ))
+
+# Array filtering based on empty
+data:
+  items:
+    - name: "Item 1"
+      value: 100
+      description: ""
+    - name: "Item 2"
+      value: 200
+      description: "This item has a description"
+    - name: ""
+      value: 300
+      description: "No name"
+  
+  # Check which items have complete data
+  validation:
+    - valid: (( ! empty data.items.0.name && ! empty data.items.0.description ))  # false (empty description)
+    - valid: (( ! empty data.items.1.name && ! empty data.items.1.description ))  # true
+    - valid: (( ! empty data.items.2.name && ! empty data.items.2.description ))  # false (empty name)
+
+# Database configuration with conditional connections
+database:
+  primary:
+    host: "db.example.com"
+    port: 5432
+    username: "dbuser"
+    password: ""  # Missing password
+  
+  fallback:
+    host: "backup.db.example.com"
+    port: 5432
+    username: "dbuser"
+    password: "secret123"
+  
+  # Use fallback if primary is not fully configured
+  use_fallback: (( empty database.primary.password ))
+  
+  active: (( database.use_fallback ? database.fallback : database.primary ))
+
+# Complex conditional logic
+deployment:
+  environments:
+    dev:
+      replicas: 1
+      resources: {}  # Empty
+    staging:
+      replicas: 2
+      resources:
+        memory: "512Mi"
+        cpu: "250m"
+    prod:
+      replicas: ""  # Invalid/empty
+      resources:
+        memory: "2Gi"
+        cpu: "1000m"
+  
+  # Validate and set defaults
+  validated:
+    dev:
+      replicas: (( deployment.environments.dev.replicas ))
+      resources: (( empty deployment.environments.dev.resources ? { memory: "256Mi", cpu: "100m" } : deployment.environments.dev.resources ))
+    staging:
+      replicas: (( deployment.environments.staging.replicas ))
+      resources: (( deployment.environments.staging.resources ))
+    prod:
+      replicas: (( empty deployment.environments.prod.replicas ? 3 : deployment.environments.prod.replicas ))
+      resources: (( deployment.environments.prod.resources ))
+
+# Nested empty checks in complex structures
+api_config:
+  endpoints:
+    - path: "/users"
+      auth:
+        required: true
+        token: ""
+    - path: "/public"
+      auth:
+        required: false
+        token: ""
+    - path: "/admin"
+      auth:
+        required: true
+        token: "admin-token"
+  
+  # Check which endpoints are properly configured
+  status:
+    - ready: (( ! api_config.endpoints.0.auth.required || ! empty api_config.endpoints.0.auth.token ))  # false
+    - ready: (( ! api_config.endpoints.1.auth.required || ! empty api_config.endpoints.1.auth.token ))  # true
+    - ready: (( ! api_config.endpoints.2.auth.required || ! empty api_config.endpoints.2.auth.token ))  # true

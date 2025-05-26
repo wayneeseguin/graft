@@ -1,0 +1,26 @@
+---
+environment: production
+debug: false
+log_level: error
+
+database:
+  host: prod-db.example.com
+  port: 5432
+  name: myapp_prod
+  ssl: true
+  pool_size: 50
+  
+api:
+  base_url: https://api.example.com
+  timeout: 10
+  rate_limit: 100
+  
+features:
+  experimental: false
+  debug_toolbar: false
+  mock_external_apis: false
+  
+monitoring:
+  enabled: true
+  apm_enabled: true
+  error_tracking: true

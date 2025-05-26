@@ -1,0 +1,307 @@
+# Multi-Document Configuration with Stringify
+#
+# Working with multiple configurations and document generation
+
+# Base configurations for different services
+services:
+  api_service:
+    name: api-gateway
+    version: 2.1.0
+    port: 8080
+    health_check:
+      path: /health
+      interval: 30s
+      timeout: 5s
+    routes:
+      - path: /api/v1/users
+        service: user-service
+      - path: /api/v1/orders
+        service: order-service
+      - path: /api/v1/products
+        service: product-service
+  
+  auth_service:
+    name: auth-service
+    version: 1.5.0
+    port: 8081
+    jwt:
+      issuer: https://auth.example.com
+      expiry: 3600
+      algorithm: RS256
+    providers:
+      - name: google
+        client_id: google-client-id
+      - name: github
+        client_id: github-client-id
+  
+  notification_service:
+    name: notification-service
+    version: 1.2.0
+    port: 8082
+    channels:
+      email:
+        smtp_host: smtp.example.com
+        smtp_port: 587
+      sms:
+        provider: twilio
+        from_number: "+1234567890"
+      push:
+        fcm_enabled: true
+        apns_enabled: true
+
+# Convert each service to a separate config string
+service_configs:
+  api_config_yaml: (( stringify services.api_service ))
+  auth_config_yaml: (( stringify services.auth_service ))
+  notification_config_yaml: (( stringify services.notification_service ))
+
+# Generate Helm values for each service
+helm_values:
+  api_gateway:
+    replicaCount: 3
+    image:
+      repository: myregistry/api-gateway
+      tag: 2.1.0
+      pullPolicy: IfNotPresent
+    
+    service:
+      type: ClusterIP
+      port: 8080
+    
+    ingress:
+      enabled: true
+      className: nginx
+      hosts:
+        - host: api.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+    
+    config: (( stringify services.api_service ))
+  
+  auth_service:
+    replicaCount: 2
+    image:
+      repository: myregistry/auth-service
+      tag: 1.5.0
+      pullPolicy: IfNotPresent
+    
+    service:
+      type: ClusterIP
+      port: 8081
+    
+    secrets:
+      jwt_private_key: vault:secret/jwt/private
+      jwt_public_key: vault:secret/jwt/public
+    
+    config: (( stringify services.auth_service ))
+
+# Generate multiple Kubernetes manifests
+kubernetes_manifests:
+  # Deployment manifest with embedded config
+  api_deployment: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: api-gateway
+      labels:
+        app: api-gateway
+    spec:
+      replicas: 3
+      selector:
+        matchLabels:
+          app: api-gateway
+      template:
+        metadata:
+          labels:
+            app: api-gateway
+        spec:
+          containers:
+          - name: api-gateway
+            image: myregistry/api-gateway:2.1.0
+            ports:
+            - containerPort: 8080
+            env:
+            - name: CONFIG
+              value: |
+                (( indent 16 service_configs.api_config_yaml ))
+  
+  # ConfigMap for each service
+  configmaps:
+    api_configmap:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: api-gateway-config
+      data:
+        config.yml: (( stringify services.api_service ))
+    
+    auth_configmap:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: auth-service-config
+      data:
+        config.yml: (( stringify services.auth_service ))
+    
+    notification_configmap:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: notification-service-config
+      data:
+        config.yml: (( stringify services.notification_service ))
+
+# Generate environment-specific configurations
+environments:
+  development:
+    global:
+      environment: development
+      log_level: debug
+      enable_profiling: true
+    
+    services: (( grab services ))
+    
+    overrides:
+      api_service:
+        port: 8080
+        routes:
+          - path: /debug
+            service: debug-service
+    
+    # Merge and stringify
+    final_config: (( stringify environments.development ))
+  
+  production:
+    global:
+      environment: production
+      log_level: info
+      enable_profiling: false
+    
+    services: (( grab services ))
+    
+    overrides:
+      api_service:
+        health_check:
+          interval: 10s
+          timeout: 3s
+    
+    # Merge and stringify
+    final_config: (( stringify environments.production ))
+
+# Generate documentation from configuration
+documentation:
+  service_catalog:
+    title: "Service Catalog"
+    version: "1.0.0"
+    services:
+      - id: api-gateway
+        name: "API Gateway"
+        description: "Central API gateway for routing requests"
+        configuration: (( stringify services.api_service ))
+        
+      - id: auth-service
+        name: "Authentication Service"
+        description: "Handles authentication and authorization"
+        configuration: (( stringify services.auth_service ))
+        
+      - id: notification-service
+        name: "Notification Service"
+        description: "Manages email, SMS, and push notifications"
+        configuration: (( stringify services.notification_service ))
+  
+  # Generate markdown documentation
+  markdown_docs:
+    api_gateway_md: |
+      # API Gateway Configuration
+      
+      ## Overview
+      The API Gateway service routes incoming requests to appropriate microservices.
+      
+      ## Configuration
+      ```yaml
+      (( stringify services.api_service ))
+      ```
+      
+      ## Endpoints
+      - Health Check: `GET /health`
+      - User Service: `/api/v1/users/*`
+      - Order Service: `/api/v1/orders/*`
+      - Product Service: `/api/v1/products/*`
+
+# Terraform variables from config
+terraform_vars:
+  # Convert service configs to Terraform variables
+  services_json: (( stringify services ))
+  
+  # Individual service variables
+  variables:
+    api_gateway_config:
+      type: string
+      description: "API Gateway configuration"
+      default: (( stringify services.api_service ))
+    
+    auth_service_config:
+      type: string
+      description: "Auth Service configuration"
+      default: (( stringify services.auth_service ))
+    
+    notification_service_config:
+      type: string
+      description: "Notification Service configuration"
+      default: (( stringify services.notification_service ))
+
+# Generate multiple output formats
+output_formats:
+  # All services as single YAML
+  all_services_yaml: (( stringify services ))
+  
+  # Services as JSON-like structure
+  services_list:
+    - name: api-gateway
+      config: (( stringify services.api_service ))
+    - name: auth-service
+      config: (( stringify services.auth_service ))
+    - name: notification-service
+      config: (( stringify services.notification_service ))
+  
+  # Combined configuration
+  combined:
+    timestamp: "2024-01-15T10:00:00Z"
+    version: "1.0.0"
+    services: (( grab services ))
+    
+  combined_yaml: (( stringify output_formats.combined ))
+
+# CI/CD pipeline configuration
+pipeline:
+  stages:
+    - name: build
+      config: (( stringify build_config ))
+    - name: test
+      config: (( stringify test_config ))
+    - name: deploy
+      config: (( stringify deploy_config ))
+
+build_config:
+  docker:
+    registry: myregistry
+    build_args:
+      - NODE_ENV=production
+      - API_VERSION=2.1.0
+
+test_config:
+  unit_tests:
+    enabled: true
+    coverage_threshold: 80
+  integration_tests:
+    enabled: true
+    environments:
+      - staging
+
+deploy_config:
+  kubernetes:
+    namespace: production
+    rollout_strategy: rolling
+    max_surge: 1
+    max_unavailable: 0

@@ -1,0 +1,173 @@
+# Test Matrix Generation with Cartesian Product
+#
+# Creating comprehensive test matrices for CI/CD pipelines
+
+# Browser compatibility testing
+browser_testing:
+  # Test dimensions
+  browsers: ["chrome", "firefox", "safari", "edge"]
+  versions:
+    - "latest"
+    - "latest-1"
+    - "latest-2"
+  operating_systems: ["windows", "macos", "ubuntu"]
+  
+  # Generate full test matrix (4 x 3 x 3 = 36 test combinations)
+  test_matrix: (( cartesian-product browser_testing.browsers browser_testing.versions browser_testing.operating_systems ))
+  
+  # Filtered matrix (would need additional logic to filter)
+  # E.g., Safari only on macOS, Edge not on Ubuntu, etc.
+
+# Mobile app testing
+mobile_testing:
+  # Device configurations
+  platforms: ["ios", "android"]
+  device_types: ["phone", "tablet"]
+  os_versions:
+    ios: ["15.0", "16.0", "17.0"]
+    android: ["12", "13", "14"]
+  screen_sizes: ["small", "medium", "large", "xlarge"]
+  
+  # Generate test combinations
+  all_combinations: (( cartesian-product mobile_testing.platforms mobile_testing.device_types mobile_testing.screen_sizes ))
+  
+  # Platform-specific matrices
+  ios_matrix: (( cartesian-product ["ios"] mobile_testing.device_types mobile_testing.os_versions.ios mobile_testing.screen_sizes ))
+  android_matrix: (( cartesian-product ["android"] mobile_testing.device_types mobile_testing.os_versions.android mobile_testing.screen_sizes ))
+
+# API testing scenarios
+api_testing:
+  # Test parameters
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+  auth_types: ["none", "basic", "bearer", "api_key"]
+  content_types: ["application/json", "application/xml", "text/plain", "multipart/form-data"]
+  response_codes: [200, 201, 400, 401, 403, 404, 500]
+  
+  # Generate all test scenarios
+  test_scenarios: (( cartesian-product api_testing.methods api_testing.auth_types api_testing.content_types ))
+  
+  # Specific endpoint testing
+  endpoints:
+    users: ["/users", "/users/{id}"]
+    auth: ["/login", "/logout", "/refresh"]
+    products: ["/products", "/products/{id}", "/products/search"]
+  
+  # User endpoint test matrix
+  user_tests: (( cartesian-product api_testing.endpoints.users api_testing.methods api_testing.auth_types ))
+
+# Database testing
+database_testing:
+  # Database engines
+  engines: ["postgresql", "mysql", "mongodb", "redis"]
+  versions:
+    postgresql: ["13", "14", "15"]
+    mysql: ["5.7", "8.0"]
+    mongodb: ["4.4", "5.0", "6.0"]
+    redis: ["6.2", "7.0"]
+  
+  # Connection parameters
+  connection_modes: ["single", "pooled", "cluster"]
+  ssl_modes: ["disable", "require", "verify-full"]
+  
+  # Test matrix for PostgreSQL
+  postgres_matrix: (( cartesian-product ["postgresql"] database_testing.versions.postgresql database_testing.connection_modes database_testing.ssl_modes ))
+  
+  # Test matrix for all databases (simplified)
+  all_db_tests: (( cartesian-product database_testing.engines database_testing.connection_modes database_testing.ssl_modes ))
+
+# Performance testing matrix
+performance_testing:
+  # Load test parameters
+  concurrent_users: [10, 50, 100, 500, 1000]
+  request_rates: [100, 500, 1000, 5000]  # requests per second
+  test_durations: ["1m", "5m", "15m", "30m"]
+  scenarios: ["browse", "checkout", "api_heavy", "mixed"]
+  
+  # Generate performance test matrix
+  load_test_matrix: (( cartesian-product performance_testing.concurrent_users performance_testing.request_rates performance_testing.test_durations performance_testing.scenarios ))
+  
+  # Stress test combinations
+  stress_patterns: ["ramp_up", "spike", "steady", "wave"]
+  stress_matrix: (( cartesian-product performance_testing.concurrent_users performance_testing.stress_patterns performance_testing.test_durations ))
+
+# Security testing
+security_testing:
+  # Vulnerability scan types
+  scan_types: ["SAST", "DAST", "dependency", "container"]
+  environments: ["development", "staging", "production"]
+  scan_depth: ["quick", "standard", "deep"]
+  
+  # Security test matrix
+  security_matrix: (( cartesian-product security_testing.scan_types security_testing.environments security_testing.scan_depth ))
+  
+  # Penetration testing scenarios
+  attack_vectors: ["sql_injection", "xss", "csrf", "auth_bypass"]
+  target_components: ["web_ui", "api", "admin_panel", "mobile_app"]
+  
+  pentest_matrix: (( cartesian-product security_testing.attack_vectors security_testing.target_components ))
+
+# Integration testing
+integration_testing:
+  # Service combinations
+  services: ["auth", "api", "database", "cache", "queue"]
+  service_versions: ["v1", "v2", "canary"]
+  deployment_modes: ["local", "docker", "kubernetes"]
+  
+  # Integration test combinations
+  integration_matrix: (( cartesian-product integration_testing.services integration_testing.service_versions integration_testing.deployment_modes ))
+  
+  # Service dependency testing
+  primary_service: ["api", "web"]
+  dependent_services: ["auth", "database", "cache"]
+  failure_modes: ["down", "slow", "intermittent", "corrupt"]
+  
+  dependency_tests: (( cartesian-product integration_testing.primary_service integration_testing.dependent_services integration_testing.failure_modes ))
+
+# Localization testing
+i18n_testing:
+  # Locales
+  languages: ["en", "es", "fr", "de", "ja", "zh"]
+  regions: ["US", "GB", "CA", "MX", "JP", "CN"]
+  
+  # Locale combinations
+  locale_matrix: (( cartesian-product i18n_testing.languages i18n_testing.regions ))
+  
+  # UI element testing
+  ui_elements: ["buttons", "forms", "messages", "menus"]
+  text_lengths: ["short", "medium", "long", "very_long"]
+  directions: ["ltr", "rtl"]
+  
+  ui_i18n_matrix: (( cartesian-product i18n_testing.languages i18n_testing.ui_elements i18n_testing.text_lengths ))
+
+# Deployment testing
+deployment_testing:
+  # Deployment strategies
+  strategies: ["blue_green", "canary", "rolling", "recreate"]
+  environments: ["dev", "staging", "prod"]
+  regions: ["us-east-1", "us-west-2", "eu-west-1", "ap-southeast-1"]
+  
+  # Deployment test matrix
+  deployment_matrix: (( cartesian-product deployment_testing.strategies deployment_testing.environments deployment_testing.regions ))
+  
+  # Rollback scenarios
+  failure_points: ["pre_deploy", "mid_deploy", "post_deploy", "smoke_test"]
+  rollback_triggers: ["error_rate", "latency", "health_check", "manual"]
+  
+  rollback_matrix: (( cartesian-product deployment_testing.strategies deployment_testing.failure_points deployment_testing.rollback_triggers ))
+
+# Compatibility testing
+compatibility_testing:
+  # Client versions
+  client_versions: ["1.0", "1.1", "2.0", "2.1"]
+  server_versions: ["1.0", "1.1", "2.0", "2.1"]
+  protocols: ["http1.1", "http2", "websocket", "grpc"]
+  
+  # Compatibility matrix
+  compatibility_matrix: (( cartesian-product compatibility_testing.client_versions compatibility_testing.server_versions compatibility_testing.protocols ))
+  
+  # Upgrade path testing
+  from_versions: ["1.0", "1.1", "2.0"]
+  to_versions: ["1.1", "2.0", "2.1"]
+  upgrade_methods: ["in_place", "blue_green", "migration"]
+  
+  upgrade_matrix: (( cartesian-product compatibility_testing.from_versions compatibility_testing.to_versions compatibility_testing.upgrade_methods ))

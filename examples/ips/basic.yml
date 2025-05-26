@@ -1,0 +1,153 @@
+# Basic IPs Operator Examples
+#
+# Simple IP address arithmetic operations
+
+# Single IP calculations
+single_ips:
+  # Starting from a specific IP
+  base_ip: "192.168.1.100"
+  
+  # Add positive offset
+  plus_5: (( ips single_ips.base_ip 5 ))      # 192.168.1.105
+  plus_10: (( ips single_ips.base_ip 10 ))    # 192.168.1.110
+  plus_50: (( ips single_ips.base_ip 50 ))    # 192.168.1.150
+  
+  # Same IP (offset 0)
+  same: (( ips single_ips.base_ip 0 ))        # 192.168.1.100
+  
+  # Negative offset (count backwards)
+  minus_5: (( ips single_ips.base_ip -5 ))    # 192.168.1.95
+  minus_10: (( ips single_ips.base_ip -10 ))  # 192.168.1.90
+
+# CIDR-based calculations
+cidr_calculations:
+  # Starting from network address
+  network: "10.0.0.0/24"
+  
+  # Network address (offset 0)
+  network_addr: (( ips cidr_calculations.network 0 ))    # 10.0.0.0
+  
+  # Common network IPs
+  gateway: (( ips cidr_calculations.network 1 ))         # 10.0.0.1
+  dns_primary: (( ips cidr_calculations.network 2 ))     # 10.0.0.2
+  dns_secondary: (( ips cidr_calculations.network 3 ))   # 10.0.0.3
+  
+  # Host IPs
+  first_host: (( ips cidr_calculations.network 10 ))     # 10.0.0.10
+  second_host: (( ips cidr_calculations.network 11 ))    # 10.0.0.11
+  
+  # From end of network (negative offset)
+  broadcast: (( ips cidr_calculations.network -1 ))      # 10.0.0.255
+  last_usable: (( ips cidr_calculations.network -2 ))    # 10.0.0.254
+  second_last: (( ips cidr_calculations.network -3 ))    # 10.0.0.253
+
+# Generating IP ranges
+ip_ranges:
+  # Base for ranges
+  start_ip: "172.16.0.10"
+  cidr: "172.16.0.0/24"
+  
+  # Generate 5 consecutive IPs from an IP
+  five_ips: (( ips ip_ranges.start_ip 0 5 ))
+  # Result: ["172.16.0.10", "172.16.0.11", "172.16.0.12", "172.16.0.13", "172.16.0.14"]
+  
+  # Generate range with offset
+  next_five: (( ips ip_ranges.start_ip 5 5 ))
+  # Result: ["172.16.0.15", "172.16.0.16", "172.16.0.17", "172.16.0.18", "172.16.0.19"]
+  
+  # Generate from CIDR
+  first_ten: (( ips ip_ranges.cidr 1 10 ))
+  # Result: ["172.16.0.1", "172.16.0.2", ..., "172.16.0.10"]
+  
+  # Generate from end of network
+  last_five: (( ips ip_ranges.cidr -5 5 ))
+  # Result: ["172.16.0.250", "172.16.0.251", "172.16.0.252", "172.16.0.253", "172.16.0.254"]
+
+# Different subnet sizes
+subnet_sizes:
+  # /24 network (256 addresses)
+  subnet_24: "192.168.1.0/24"
+  subnet_24_first: (( ips subnet_sizes.subnet_24 1 ))      # 192.168.1.1
+  subnet_24_last: (( ips subnet_sizes.subnet_24 -2 ))      # 192.168.1.254
+  
+  # /25 network (128 addresses)
+  subnet_25: "192.168.1.0/25"
+  subnet_25_first: (( ips subnet_sizes.subnet_25 1 ))      # 192.168.1.1
+  subnet_25_last: (( ips subnet_sizes.subnet_25 -2 ))      # 192.168.1.126
+  
+  # /28 network (16 addresses)
+  subnet_28: "192.168.1.0/28"
+  subnet_28_first: (( ips subnet_sizes.subnet_28 1 ))      # 192.168.1.1
+  subnet_28_last: (( ips subnet_sizes.subnet_28 -2 ))      # 192.168.1.14
+  
+  # /30 network (4 addresses - point-to-point)
+  subnet_30: "192.168.1.0/30"
+  subnet_30_first: (( ips subnet_sizes.subnet_30 1 ))      # 192.168.1.1
+  subnet_30_second: (( ips subnet_sizes.subnet_30 2 ))     # 192.168.1.2
+
+# IP arithmetic across octets
+octet_crossing:
+  # Starting near octet boundary
+  base: "10.0.0.250"
+  
+  # Cross into next octet
+  plus_10: (( ips octet_crossing.base 10 ))    # 10.0.1.4
+  plus_20: (( ips octet_crossing.base 20 ))    # 10.0.1.14
+  
+  # Multiple octet crossing
+  base2: "10.0.255.250"
+  plus_10_multi: (( ips octet_crossing.base2 10 ))    # 10.1.0.4
+  
+  # Crossing subnet boundary
+  subnet_base: "10.0.0.240/28"  # .240-.255
+  beyond_subnet: (( ips octet_crossing.subnet_base 20 ))  # 10.0.1.4
+
+# Private network ranges
+private_networks:
+  # Class A private
+  class_a: "10.0.0.0/8"
+  class_a_sample: (( ips private_networks.class_a 1000000 ))  # 10.15.66.64
+  
+  # Class B private
+  class_b: "172.16.0.0/12"
+  class_b_sample: (( ips private_networks.class_b 65536 ))    # 172.17.0.0
+  
+  # Class C private
+  class_c: "192.168.0.0/16"
+  class_c_sample: (( ips private_networks.class_c 256 ))      # 192.168.1.0
+
+# Practical examples
+practical:
+  # Office network
+  office_network: "192.168.10.0/24"
+  
+  # Network infrastructure
+  router: (( ips practical.office_network 1 ))              # 192.168.10.1
+  managed_switch: (( ips practical.office_network 2 ))      # 192.168.10.2
+  wifi_ap_1: (( ips practical.office_network 3 ))          # 192.168.10.3
+  wifi_ap_2: (( ips practical.office_network 4 ))          # 192.168.10.4
+  
+  # Servers (starting at .10)
+  servers: (( ips practical.office_network 10 5 ))
+  # Result: ["192.168.10.10", "192.168.10.11", "192.168.10.12", "192.168.10.13", "192.168.10.14"]
+  
+  # DHCP pool (100-200)
+  dhcp_start: (( ips practical.office_network 100 ))       # 192.168.10.100
+  dhcp_pool: (( ips practical.office_network 100 101 ))    # .100-.200
+  
+  # Reserved IPs at end
+  reserved: (( ips practical.office_network -10 10 ))      # .245-.254
+
+# Edge cases
+edge_cases:
+  # Maximum values
+  near_max: "255.255.255.250"
+  at_boundary: (( ips edge_cases.near_max 5 ))   # Would exceed valid IP range
+  
+  # Minimum values
+  start_addr: "0.0.0.1"
+  from_start: (( ips edge_cases.start_addr 10 )) # 0.0.0.11
+  
+  # Large offsets
+  base: "10.0.0.0/8"
+  large_offset: (( ips edge_cases.base 16777215 ))  # 10.255.255.255 (last IP in /8)

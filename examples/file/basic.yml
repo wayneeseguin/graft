@@ -1,0 +1,35 @@
+---
+# Basic file operator examples
+# Run setup.sh first to create the sample files!
+
+application:
+  # Read script files
+  startup_script: (( file "scripts/startup.sh" ))
+  health_check_script: (( file "scripts/healthcheck.sh" ))
+  
+  # Read certificate
+  tls:
+    certificate: (( file "certificates/server.crt" ))
+    # In real usage, you might also have:
+    # private_key: (( file "certificates/server.key" ))
+  
+  # Read configuration file
+  database_config: (( file "configs/dev/database.conf" ))
+
+# File operator returns the content as a string
+# Perfect for embedding scripts in ConfigMaps, for example:
+kubernetes:
+  configmap:
+    name: app-scripts
+    data:
+      startup.sh: (( file "scripts/startup.sh" ))
+      healthcheck.sh: (( file "scripts/healthcheck.sh" ))
+
+# You can also use it for documentation
+docs:
+  readme: (( file "README.md" ))
+  
+# Or for including JSON/YAML as raw strings (not parsed)
+raw_configs:
+  features_json: (( file "configs/features.json" ))
+  # Note: This is the raw JSON string. To parse it, use (( load )) instead

@@ -1,0 +1,359 @@
+# Feature Flag Management with Ternary Operator
+#
+# Managing feature flags and conditional features using ternary operator
+
+# User context
+user:
+  id: 12345
+  email: "john@example.com"
+  role: "premium"  # "free", "premium", "enterprise"
+  country: "US"
+  created_at: "2023-01-15"
+  beta_tester: true
+  internal: false
+  
+  # Computed properties
+  is_new_user: false  # Less than 30 days
+  is_premium: (( user.role == "premium" || user.role == "enterprise" ? true : false ))
+  is_enterprise: (( user.role == "enterprise" ? true : false ))
+
+# Feature flag definitions
+feature_flags:
+  # Simple boolean flags
+  new_ui:
+    enabled: true
+    rollout_percentage: 100
+    
+  dark_mode:
+    enabled: true
+    rollout_percentage: 50
+    
+  advanced_search:
+    enabled: true
+    rollout_percentage: 0  # Only for specific users
+    
+  ai_suggestions:
+    enabled: false
+    rollout_percentage: 10
+    
+  # Conditional features
+  video_uploads:
+    enabled: true
+    rollout_percentage: 100
+    min_role: "premium"
+    
+  api_access:
+    enabled: true
+    rollout_percentage: 100
+    min_role: "premium"
+    
+  custom_branding:
+    enabled: true
+    rollout_percentage: 100
+    min_role: "enterprise"
+    
+  priority_support:
+    enabled: true
+    rollout_percentage: 100
+    min_role: "enterprise"
+
+# Feature availability checks
+features:
+  # Basic feature check
+  has_new_ui: (( feature_flags.new_ui.enabled ? true : false ))
+  # Result: true
+  
+  # Rollout percentage check (simplified - would use hash in real implementation)
+  has_dark_mode: (( 
+    feature_flags.dark_mode.enabled && 
+    feature_flags.dark_mode.rollout_percentage >= 50 ? 
+    true : false 
+  ))
+  # Result: true
+  
+  # Role-based features
+  has_video_uploads: (( 
+    feature_flags.video_uploads.enabled && 
+    (user.role == "premium" || user.role == "enterprise") ? 
+    true : false 
+  ))
+  # Result: true (user is premium)
+  
+  has_api_access: (( 
+    feature_flags.api_access.enabled && 
+    user.is_premium ? 
+    true : false 
+  ))
+  # Result: true
+  
+  has_custom_branding: (( 
+    feature_flags.custom_branding.enabled && 
+    user.is_enterprise ? 
+    true : false 
+  ))
+  # Result: false (user is premium, not enterprise)
+  
+  has_priority_support: (( 
+    feature_flags.priority_support.enabled && 
+    user.role == "enterprise" ? 
+    true : false 
+  ))
+  # Result: false
+  
+  # Beta features
+  has_ai_suggestions: (( 
+    feature_flags.ai_suggestions.enabled && 
+    user.beta_tester ? 
+    true : false 
+  ))
+  # Result: false (feature not enabled)
+  
+  # Advanced search (specific users only)
+  has_advanced_search: (( 
+    feature_flags.advanced_search.enabled && 
+    (user.beta_tester || user.internal) ? 
+    true : false 
+  ))
+  # Result: true (user is beta tester)
+
+# UI configuration based on features
+ui_config:
+  # Theme selection
+  theme: (( features.has_dark_mode && user.preferences.dark_mode ? "dark" : "light" ))
+  
+  # Navigation items
+  nav_items:
+    - name: "Dashboard"
+      path: "/dashboard"
+      visible: true
+    
+    - name: "Search"
+      path: "/search"
+      visible: true
+      advanced: (( features.has_advanced_search ? true : false ))
+    
+    - name: "Videos"
+      path: "/videos"
+      visible: (( features.has_video_uploads ? true : false ))
+    
+    - name: "API"
+      path: "/api"
+      visible: (( features.has_api_access ? true : false ))
+    
+    - name: "Branding"
+      path: "/branding"
+      visible: (( features.has_custom_branding ? true : false ))
+  
+  # Dashboard widgets
+  widgets:
+    analytics:
+      enabled: true
+      expanded: (( user.is_premium ? true : false ))
+      
+    quick_actions:
+      enabled: true
+      items: (( user.is_premium ? 10 : 5 ))
+      
+    ai_insights:
+      enabled: (( features.has_ai_suggestions ? true : false ))
+      
+    video_library:
+      enabled: (( features.has_video_uploads ? true : false ))
+
+# API configuration based on features
+api_config:
+  # Rate limits
+  rate_limit:
+    requests_per_hour: (( 
+      user.is_enterprise ? 10000 :
+      user.is_premium ? 1000 :
+      100
+    ))
+    
+    burst_limit: (( 
+      user.is_enterprise ? 100 :
+      user.is_premium ? 50 :
+      10
+    ))
+  
+  # Endpoint access
+  endpoints:
+    basic:
+      enabled: true
+      auth_required: true
+      
+    advanced:
+      enabled: (( features.has_api_access ? true : false ))
+      auth_required: true
+      
+    admin:
+      enabled: (( user.internal ? true : false ))
+      auth_required: true
+  
+  # Response features
+  response:
+    include_metadata: (( user.is_premium ? true : false ))
+    include_analytics: (( user.is_enterprise ? true : false ))
+    max_results: (( 
+      user.is_enterprise ? 1000 :
+      user.is_premium ? 100 :
+      10
+    ))
+
+# Storage limits based on role
+storage:
+  # Base limits
+  limits:
+    max_file_size_mb: (( 
+      user.is_enterprise ? 1000 :
+      user.is_premium ? 100 :
+      10
+    ))
+    
+    total_storage_gb: (( 
+      user.is_enterprise ? 1000 :
+      user.is_premium ? 100 :
+      1
+    ))
+    
+    file_types: (( 
+      features.has_video_uploads ? 
+      ["image/*", "video/*", "application/pdf"] :
+      ["image/*", "application/pdf"]
+    ))
+    
+    retention_days: (( 
+      user.is_enterprise ? 365 :
+      user.is_premium ? 90 :
+      30
+    ))
+
+# Notification settings
+notifications:
+  # Channel availability
+  channels:
+    email:
+      enabled: true
+      available: true
+      
+    sms:
+      enabled: (( user.is_premium ? true : false ))
+      available: (( user.country == "US" || user.country == "CA" ? true : false ))
+      
+    push:
+      enabled: true
+      available: (( features.has_new_ui ? true : false ))
+      
+    webhook:
+      enabled: (( user.is_enterprise ? true : false ))
+      available: (( features.has_api_access ? true : false ))
+  
+  # Notification types
+  types:
+    marketing:
+      enabled: (( user.preferences.marketing_emails ? true : false ))
+      channels: ["email"]
+      
+    updates:
+      enabled: true
+      channels: (( 
+        user.is_premium ? 
+        ["email", "push", "sms"] :
+        ["email", "push"]
+      ))
+      
+    alerts:
+      enabled: true
+      channels: (( 
+        user.is_enterprise ? 
+        ["email", "push", "sms", "webhook"] :
+        user.is_premium ?
+        ["email", "push", "sms"] :
+        ["email"]
+      ))
+
+# A/B testing configuration
+ab_tests:
+  # Homepage redesign
+  homepage_v2:
+    enabled: true
+    variant: (( user.id % 2 == 0 ? "control" : "treatment" ))
+    
+  # Pricing page
+  pricing_test:
+    enabled: (( !user.is_premium ? true : false ))
+    variant: (( 
+      !ab_tests.pricing_test.enabled ? "none" :
+      user.id % 3 == 0 ? "variant_a" :
+      user.id % 3 == 1 ? "variant_b" :
+      "variant_c"
+    ))
+    
+  # Onboarding flow
+  onboarding_flow:
+    enabled: (( user.is_new_user ? true : false ))
+    variant: (( 
+      !ab_tests.onboarding_flow.enabled ? "none" :
+      user.beta_tester ? "new_flow" :
+      "classic_flow"
+    ))
+
+# Performance settings based on features
+performance:
+  # Caching
+  cache:
+    enabled: true
+    ttl: (( user.is_premium ? 3600 : 300 ))
+    aggressive: (( user.role == "free" ? true : false ))
+    
+  # Image optimization
+  images:
+    lazy_load: true
+    webp_enabled: (( features.has_new_ui ? true : false ))
+    quality: (( user.is_premium ? 90 : 70 ))
+    max_width: (( user.is_premium ? 2048 : 1024 ))
+    
+  # Video settings
+  video:
+    enabled: (( features.has_video_uploads ? true : false ))
+    max_bitrate: (( 
+      user.is_enterprise ? "10M" :
+      user.is_premium ? "5M" :
+      "1M"
+    ))
+    formats: (( 
+      user.is_enterprise ? ["mp4", "webm", "mov"] :
+      user.is_premium ? ["mp4", "webm"] :
+      ["mp4"]
+    ))
+
+# Summary of active features
+active_features:
+  ui:
+    - (( features.has_new_ui ? "New UI" : ~ ))
+    - (( features.has_dark_mode ? "Dark Mode" : ~ ))
+    - (( features.has_advanced_search ? "Advanced Search" : ~ ))
+    - (( features.has_ai_suggestions ? "AI Suggestions" : ~ ))
+    
+  capabilities:
+    - (( features.has_video_uploads ? "Video Uploads" : ~ ))
+    - (( features.has_api_access ? "API Access" : ~ ))
+    - (( features.has_custom_branding ? "Custom Branding" : ~ ))
+    - (( features.has_priority_support ? "Priority Support" : ~ ))
+    
+  limits:
+    storage: (( concat storage.limits.total_storage_gb " GB" ))
+    api_calls: (( concat api_config.rate_limit.requests_per_hour " requests/hour" ))
+    file_size: (( concat storage.limits.max_file_size_mb " MB" ))
+
+# Feature recommendations
+recommendations:
+  upgrade_prompts:
+    show_premium: (( user.role == "free" && !user.is_new_user ? true : false ))
+    show_enterprise: (( user.role == "premium" && !user.is_new_user ? true : false ))
+    
+  suggested_features:
+    - (( !features.has_video_uploads && user.role == "free" ? "Upgrade to Premium for video uploads" : ~ ))
+    - (( !features.has_api_access && user.role == "free" ? "Get API access with Premium" : ~ ))
+    - (( !features.has_custom_branding && user.is_premium ? "Upgrade to Enterprise for custom branding" : ~ ))
+    - (( !features.has_priority_support && user.is_premium ? "Get priority support with Enterprise" : ~ ))

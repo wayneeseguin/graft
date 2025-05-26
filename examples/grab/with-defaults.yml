@@ -1,0 +1,48 @@
+---
+# Using || (logical OR) for fallback values with grab
+
+# Config might be partially defined
+partial_config:
+  host: example.com
+  # port is not defined
+  # protocol is not defined
+
+# System defaults
+defaults:
+  port: 8080
+  protocol: https
+  timeout: 30s
+  retries: 3
+
+# Using grab with || for fallbacks
+service:
+  # Will use partial_config values if they exist, otherwise defaults
+  host: (( grab partial_config.host || defaults.host ))
+  port: (( grab partial_config.port || defaults.port ))
+  protocol: (( grab partial_config.protocol || defaults.protocol ))
+  timeout: (( grab partial_config.timeout || defaults.timeout ))
+  
+  # Chain multiple fallbacks
+  url: (( concat (grab partial_config.protocol || defaults.protocol) "://" (grab partial_config.host) ":" (grab partial_config.port || defaults.port) ))
+
+# Environment-specific with defaults
+environments:
+  production:
+    database: prod-db.example.com
+    # cache not defined for production
+
+app_config:
+  # Try environment-specific first, then fall back to defaults
+  database: (( grab environments.$ENV.database || "localhost" ))
+  cache: (( grab environments.$ENV.cache || "localhost:6379" ))
+  
+  # Multiple fallback levels
+  api_key: (( grab environments.$ENV.api_key || grab defaults.api_key || "development-key" ))
+
+# Conditional defaults based on other values
+smart_defaults:
+  is_production: (( grab ENV == "production" ))
+  
+  # Different defaults based on environment
+  log_level: (( grab config.log_level || (grab smart_defaults.is_production ? "error" : "debug") ))
+  cache_ttl: (( grab config.cache_ttl || (grab smart_defaults.is_production ? 3600 : 60) ))

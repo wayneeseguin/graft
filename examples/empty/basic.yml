@@ -1,0 +1,109 @@
+# Basic Empty Operator Examples
+#
+# Demonstrates the empty operator with different data types
+
+# Test various empty values
+empty_values:
+  null_value: null
+  empty_string: ""
+  empty_array: []
+  empty_map: {}
+  
+  # Check if each is empty
+  checks:
+    is_null_empty: (( empty empty_values.null_value ))        # true
+    is_string_empty: (( empty empty_values.empty_string ))     # true
+    is_array_empty: (( empty empty_values.empty_array ))       # true
+    is_map_empty: (( empty empty_values.empty_map ))           # true
+
+# Test non-empty values
+non_empty_values:
+  string: "hello"
+  number: 42
+  zero: 0
+  false_bool: false
+  array: [1, 2, 3]
+  map:
+    key: value
+  
+  # Check if each is empty
+  checks:
+    is_string_empty: (( empty non_empty_values.string ))       # false
+    is_number_empty: (( empty non_empty_values.number ))       # false
+    is_zero_empty: (( empty non_empty_values.zero ))           # false (0 is not empty)
+    is_false_empty: (( empty non_empty_values.false_bool ))    # false (false is not empty)
+    is_array_empty: (( empty non_empty_values.array ))         # false
+    is_map_empty: (( empty non_empty_values.map ))             # false
+
+# Edge cases
+edge_cases:
+  whitespace: " "
+  newline: "\n"
+  tab: "\t"
+  array_with_null: [null]
+  map_with_empty:
+    key: ""
+  
+  checks:
+    # Whitespace is NOT empty
+    is_whitespace_empty: (( empty edge_cases.whitespace ))     # false
+    is_newline_empty: (( empty edge_cases.newline ))           # false
+    is_tab_empty: (( empty edge_cases.tab ))                   # false
+    
+    # Arrays/maps with empty values are NOT empty themselves
+    is_null_array_empty: (( empty edge_cases.array_with_null )) # false
+    is_empty_map_empty: (( empty edge_cases.map_with_empty ))   # false
+
+# Using not operator with empty
+not_empty_checks:
+  # Check if values are NOT empty
+  has_value: "something"
+  no_value: ""
+  
+  # Using ! (not) operator
+  has_content: (( ! empty not_empty_checks.has_value ))        # true
+  no_content: (( ! empty not_empty_checks.no_value ))          # false
+
+# Checking nested values
+nested:
+  level1:
+    level2:
+      value: "deep value"
+      empty: ""
+  
+  # Check nested paths
+  deep_check: (( empty nested.level1.level2.value ))           # false
+  deep_empty: (( empty nested.level1.level2.empty ))           # true
+  
+  # Check non-existent path (returns null, which is empty)
+  missing: (( empty nested.level1.level2.nonexistent ))        # true
+
+# Combined empty checks
+combined:
+  values:
+    a: ""
+    b: []
+    c: {}
+    d: "not empty"
+  
+  # All empty
+  all_empty: (( empty combined.values.a && empty combined.values.b && empty combined.values.c ))  # true
+  
+  # Any empty
+  any_empty: (( empty combined.values.a || empty combined.values.d ))  # true
+  
+  # None empty
+  none_empty: (( ! empty combined.values.a && ! empty combined.values.b && ! empty combined.values.c && ! empty combined.values.d ))  # false
+
+# Expected output:
+# empty_values:
+#   null_value: null
+#   empty_string: ""
+#   empty_array: []
+#   empty_map: {}
+#   checks:
+#     is_null_empty: true
+#     is_string_empty: true
+#     is_array_empty: true
+#     is_map_empty: true
+# ... (continues with all resolved values)

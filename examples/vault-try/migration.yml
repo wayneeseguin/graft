@@ -1,0 +1,232 @@
+# Vault Path Migration Scenarios
+#
+# Using vault-try to migrate from old to new secret paths
+
+# Simple path migration
+path_migration:
+  # Old structure: secret/myapp/prod/database
+  # New structure: secret/prod/myapp/database
+  
+  database:
+    # Try new path first, fall back to old
+    host: (( vault-try 
+      "secret/prod/myapp/database:host"
+      "secret/myapp/prod/database:host"
+      "localhost" ))
+    
+    port: (( vault-try 
+      "secret/prod/myapp/database:port"
+      "secret/myapp/prod/database:port"
+      5432 ))
+    
+    username: (( vault-try 
+      "secret/prod/myapp/database:username"
+      "secret/myapp/prod/database:username"
+      "postgres" ))
+    
+    password: (( vault-try 
+      "secret/prod/myapp/database:password"
+      "secret/myapp/prod/database:password"
+      "changeme" ))
+
+# Namespace reorganization
+namespace_migration:
+  # Old: flat namespace
+  # New: hierarchical namespace
+  
+  # Old path: secret/myapp-prod-api-key
+  # New path: secret/myapp/prod/api/key
+  api_credentials:
+    key: (( vault-try 
+      "secret/myapp/prod/api:key"
+      "secret/myapp-prod-api-key:value"
+      "default-api-key" ))
+    
+    secret: (( vault-try 
+      "secret/myapp/prod/api:secret"
+      "secret/myapp-prod-api-secret:value"
+      "default-api-secret" ))
+
+# Version migration
+version_migration:
+  # Migrating from v1 to v2 secret structure
+  
+  # V1: Single secret with all fields
+  # V2: Separate secrets for different concerns
+  
+  # Old structure - all in one secret
+  old_all_in_one: (( vault-try "secret/myapp/config:all" "{}" ))
+  
+  # New structure - split into multiple secrets
+  new_structure:
+    database: (( vault-try 
+      "secret/v2/myapp/database:config"
+      "secret/myapp/config:database"
+      "{}" ))
+    
+    cache: (( vault-try 
+      "secret/v2/myapp/cache:config"
+      "secret/myapp/config:cache"
+      "{}" ))
+    
+    features: (( vault-try 
+      "secret/v2/myapp/features:flags"
+      "secret/myapp/config:features"
+      "{}" ))
+
+# Team ownership migration
+team_migration:
+  # Old: Central secret management
+  # New: Team-based secret management
+  
+  # Platform team secrets
+  platform:
+    database_url: (( vault-try 
+      "secret/teams/platform/myapp/database:url"
+      "secret/central/myapp/database:url"
+      "postgresql://localhost/myapp" ))
+    
+    redis_url: (( vault-try 
+      "secret/teams/platform/myapp/redis:url"
+      "secret/central/myapp/redis:url"
+      "redis://localhost:6379" ))
+  
+  # Application team secrets
+  application:
+    api_keys: (( vault-try 
+      "secret/teams/app/myapp/external:api_keys"
+      "secret/central/myapp/external:api_keys"
+      "{}" ))
+    
+    feature_flags: (( vault-try 
+      "secret/teams/app/myapp/features:flags"
+      "secret/central/myapp/features:flags"
+      "{}" ))
+
+# Environment-based migration
+environment_migration:
+  # Determine environment
+  environment: (( grab $ENVIRONMENT || "development" ))
+  
+  # Old: environment in path
+  # New: environment in mount point
+  secrets:
+    database_password: (( vault-try 
+      (concat environment_migration.environment "-secrets/myapp/database:password")
+      (concat "secret/" environment_migration.environment "/myapp/database:password")
+      (concat "secret/myapp/" environment_migration.environment "/database:password")
+      "default-password" ))
+    
+    api_token: (( vault-try 
+      (concat environment_migration.environment "-secrets/myapp/api:token")
+      (concat "secret/" environment_migration.environment "/myapp/api:token")
+      (concat "secret/myapp/" environment_migration.environment "/api:token")
+      "default-token" ))
+
+# KV v1 to KV v2 migration
+kv_version_migration:
+  # KV v2 has different path structure with /data/ in path
+  
+  # Try KV v2 path first, then KV v1
+  database:
+    connection: (( vault-try 
+      "secret/data/myapp/database:connection"  # KV v2
+      "secret/myapp/database:connection"        # KV v1
+      "host=localhost port=5432" ))
+  
+  # Handling metadata paths
+  metadata:
+    last_updated: (( vault-try 
+      "secret/metadata/myapp/info:last_updated"  # KV v2 metadata
+      "secret/myapp/info:last_updated"            # KV v1
+      "unknown" ))
+
+# Gradual rollout migration
+gradual_migration:
+  # Percentage of traffic using new paths
+  migration_percentage: 30
+  
+  # Service-by-service migration
+  services:
+    user_service:
+      # Already migrated
+      config: (( vault-try 
+        "secret/v2/services/user:config"
+        "secret/v1/user-service:config"
+        "{}" ))
+    
+    order_service:
+      # In migration
+      config: (( vault-try 
+        "secret/v2/services/order:config"
+        "secret/v1/order-service:config"
+        "{}" ))
+    
+    inventory_service:
+      # Not yet migrated - try old path first
+      config: (( vault-try 
+        "secret/v1/inventory-service:config"
+        "secret/v2/services/inventory:config"
+        "{}" ))
+
+# Mount point migration
+mount_migration:
+  # Moving from one mount to another
+  
+  # Old mount: secret/
+  # New mount: appsecrets/
+  
+  credentials:
+    aws: (( vault-try 
+      "appsecrets/myapp/aws:credentials"
+      "secret/myapp/aws:credentials"
+      "{}" ))
+    
+    gcp: (( vault-try 
+      "appsecrets/myapp/gcp:credentials"
+      "secret/myapp/gcp:credentials"
+      "{}" ))
+
+# Policy-based migration
+policy_migration:
+  # Different paths based on access policies
+  
+  # Try paths in order of specificity
+  highly_sensitive:
+    master_key: (( vault-try 
+      "restricted/myapp/master:key"      # New restricted path
+      "secret/sensitive/myapp:master_key" # Old sensitive path
+      "secret/myapp:master_key"          # Legacy path
+      "development-only-key" ))
+  
+  moderately_sensitive:
+    api_key: (( vault-try 
+      "internal/myapp/api:key"
+      "secret/myapp:api_key"
+      "default-api-key" ))
+  
+  public_config:
+    endpoint: (( vault-try 
+      "config/myapp/public:endpoint"
+      "secret/myapp:public_endpoint"
+      "https://api.example.com" ))
+
+# Datacenter migration
+datacenter_migration:
+  # Moving secrets between datacenters
+  current_dc: "us-east-1"
+  new_dc: "us-west-2"
+  
+  # Try new datacenter first, fall back to current
+  regional_secrets:
+    database: (( vault-try 
+      (concat "secret/" datacenter_migration.new_dc "/myapp/db:config")
+      (concat "secret/" datacenter_migration.current_dc "/myapp/db:config")
+      "secret/global/myapp/db:config"
+      "{}" ))
+    
+    cache: (( vault-try 
+      (concat "secret/" datacenter_migration.new_dc "/myapp/cache:config")
+      (concat "secret/" datacenter_migration.current_dc "/myapp/cache:config")
+      "secret/global/myapp/cache:config"
+      "{}" ))
