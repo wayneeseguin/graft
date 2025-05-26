@@ -46,7 +46,8 @@ func (JoinOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, error) 
 	}
 
 	var separator string
-	var list []string
+	list := GetStringSlice()
+	defer PutStringSlice(list)
 
 	for i, arg := range args {
 		if i == 0 { // argument #0: separator
@@ -92,7 +93,7 @@ func (JoinOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, error) 
 						return nil, ansi.Errorf("entry #%d in list is not compatible for @c{(( join ... ))}", idx)
 
 					default:
-						list = append(list, fmt.Sprintf("%v", entry))
+						*list = append(*list, fmt.Sprintf("%v", entry))
 					}
 				}
 
@@ -102,16 +103,16 @@ func (JoinOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, error) 
 
 			default:
 				DEBUG("     [%d]: resolved to a literal value", i)
-				list = append(list, fmt.Sprintf("%v", v))
+				*list = append(*list, fmt.Sprintf("%v", v))
 			}
 		}
 	}
 
 	// finally, join and return
-	DEBUG("  joined list: %s", strings.Join(list, separator))
+	DEBUG("  joined list: %s", strings.Join(*list, separator))
 	return &Response{
 		Type:  Replace,
-		Value: strings.Join(list, separator),
+		Value: strings.Join(*list, separator),
 	}, nil
 }
 

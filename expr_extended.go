@@ -15,7 +15,8 @@ func (e *Expr) Op() string {
 // SetOp sets the operator name for OperatorCall expressions
 func (e *Expr) SetOp(op string) {
 	if e.Type == OperatorCall {
-		e.Name = op
+		// Intern operator names
+		e.Name = InternString(op)
 	}
 }
 
@@ -86,7 +87,7 @@ func (e *Expr) storeArgs(args []*Expr) {
 func NewOperatorCall(op string, args []*Expr) *Expr {
 	expr := &Expr{
 		Type: OperatorCall,
-		Name: op,
+		Name: InternString(op), // Intern operator names
 	}
 	expr.SetArgs(args)
 	return expr
@@ -96,7 +97,7 @@ func NewOperatorCall(op string, args []*Expr) *Expr {
 func NewOperatorCallWithPos(op string, args []*Expr, pos Position) *Expr {
 	expr := &Expr{
 		Type: OperatorCall,
-		Name: op,
+		Name: InternString(op), // Intern operator names
 		Pos:  pos,
 	}
 	expr.SetArgs(args)

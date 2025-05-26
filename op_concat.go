@@ -49,7 +49,8 @@ func (ConcatOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	DEBUG("running (( concat ... )) operation at $.%s", ev.Here)
 	defer DEBUG("done with (( concat ... )) operation at $%s\n", ev.Here)
 
-	var l []string
+	l := GetStringSlice()
+	defer PutStringSlice(l)
 
 	if len(args) < 2 {
 		return nil, fmt.Errorf("concat operator requires at least two arguments")
@@ -86,10 +87,10 @@ func (ConcatOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		}
 		
 		DEBUG("  arg[%d]: appending '%s' to resultant string", i, str)
-		l = append(l, str)
+		*l = append(*l, str)
 	}
 
-	final := strings.Join(l, "")
+	final := strings.Join(*l, "")
 	DEBUG("  resolved (( concat ... )) operation to the string:\n    \"%s\"", final)
 
 	return &Response{

@@ -107,13 +107,13 @@ func NewEnhancedTokenizer(input string) *EnhancedTokenizer {
 		pos:    0,
 		line:   1,
 		col:    1,
-		tokens: make([]Token, 0),
+		tokens: make([]Token, 0, 8), // Pre-allocate for typical expressions
 	}
 }
 
 // Tokenize performs the tokenization
 func (t *EnhancedTokenizer) Tokenize() []Token {
-	t.tokens = make([]Token, 0)
+	t.tokens = make([]Token, 0, cap(t.tokens)) // Reuse existing capacity
 	var current strings.Builder
 	
 	for t.pos < len(t.input) {
@@ -444,6 +444,13 @@ func (t *EnhancedTokenizer) addToken(value string, tokType TokenType) {
 
 // addTokenAt adds a token at a specific position
 func (t *EnhancedTokenizer) addTokenAt(value string, tokType TokenType, pos, col int) {
+	// Intern operator names and common literals
+	if tokType == TokenOperator || tokType == TokenLiteral {
+		if tokType == TokenOperator || value == "true" || value == "false" || value == "null" || value == "nil" {
+			value = InternString(value)
+		}
+	}
+	
 	t.tokens = append(t.tokens, Token{
 		Value: value,
 		Type:  tokType,

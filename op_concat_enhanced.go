@@ -47,7 +47,8 @@ func (ConcatOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, error
 	DEBUG("running (( concat ... )) operation at $.%s", ev.Here)
 	defer DEBUG("done with (( concat ... )) operation at $%s\n", ev.Here)
 
-	var l []string
+	l := GetStringSlice()
+	defer PutStringSlice(l)
 
 	if len(args) < 2 {
 		return nil, fmt.Errorf("concat operator requires at least two arguments")
@@ -78,27 +79,28 @@ func (ConcatOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, error
 		}
 
 		DEBUG("  arg[%d]: using '%s'", i, stringVal)
-		l = append(l, stringVal)
+		*l = append(*l, stringVal)
 	}
 
 	// Escape the result for shell safety if needed
-	var out []string
-	for _, s := range l {
+	out := GetStringSlice()
+	defer PutStringSlice(out)
+	for _, s := range *l {
 		if len(s) == 0 {
-			out = append(out, "''")
+			*out = append(*out, "''")
 		} else if strings.Contains(s, "'") {
-			out = append(out, fmt.Sprintf(`"%s"`, strings.Replace(s, `"`, `\"`, -1)))
+			*out = append(*out, fmt.Sprintf(`"%s"`, strings.Replace(s, `"`, `\"`, -1)))
 		} else if strings.ContainsAny(s, " \t\n\"$") {
-			out = append(out, fmt.Sprintf("'%s'", s))
+			*out = append(*out, fmt.Sprintf("'%s'", s))
 		} else {
-			out = append(out, s)
+			*out = append(*out, s)
 		}
 	}
 
-	DEBUG("  result: %s", ansi.Sprintf("@c{%s}", strings.Join(l, "")))
+	DEBUG("  result: %s", ansi.Sprintf("@c{%s}", strings.Join(*l, "")))
 	return &Response{
 		Type:  Replace,
-		Value: strings.Join(l, ""),
+		Value: strings.Join(*l, ""),
 	}, nil
 }
 

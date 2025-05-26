@@ -89,7 +89,7 @@ func (p *EnhancedParser) ParseMultiple() ([]*Expr, error) {
 		return []*Expr{}, nil
 	}
 	
-	var expressions []*Expr
+	expressions := make([]*Expr, 0, 4) // Pre-allocate for typical arg counts
 	
 	for !p.isAtEnd() {
 		// Skip commas between arguments
@@ -411,7 +411,7 @@ func (p *EnhancedParser) parseOperatorCall() (*Expr, error) {
 	p.advance() // consume operator
 	
 	// Parse arguments
-	args := []*Expr{}
+	args := make([]*Expr, 0, 4) // Pre-allocate for typical arg counts
 	
 	// Determine if this is a function-style call
 	// Function style is when there's no space between operator and opening paren

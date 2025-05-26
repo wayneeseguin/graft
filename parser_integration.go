@@ -449,7 +449,7 @@ func parseOpcallLegacyArgs(op Operator, argStr string, src string, phase Operato
 
 // splitLegacyArgs splits arguments respecting quoted strings
 func splitLegacyArgs(src string) []string {
-	var tokens []string
+	tokens := make([]string, 0, 8) // Pre-allocate for typical argument counts
 	var current strings.Builder
 	inQuotes := false
 	escaped := false
