@@ -1,0 +1,76 @@
+# Performance profile optimized for memory-constrained environments
+# Best for: Container environments, edge computing, limited resources
+performance:
+  cache:
+    expression_cache_size: 1000       # Small cache
+    operator_cache_size: 5000         # Small operator cache
+    token_cache_size: 2000           # Small token cache
+    ttl_seconds: 600                 # 10 minutes - quick expiry
+    hierarchical:
+      l1_size: 100                   # Tiny L1
+      l2_size: 1000                  # Small L2
+      l2_enabled: false              # Disable to save memory
+      sync_interval_seconds: 0
+    warming:
+      enabled: false                 # Disable to save memory
+      strategy: "frequency"
+      startup_timeout_seconds: 10
+      top_expressions: 10
+
+  concurrency:
+    max_workers: 10                  # Few workers
+    queue_size: 100                  # Small queue
+    worker_idle_timeout_seconds: 15  # Quick recycling
+    rate_limit:
+      enabled: true
+      requests_per_second: 100       # Limited throughput
+      burst_size: 10
+
+  memory:
+    max_heap_mb: 512                # Very limited memory
+    gc_percent: 50                  # Aggressive GC
+    pool_sizes:
+      buffer_pool: 100              # Tiny pools
+      string_slice_pool: 500
+      token_pool: 1000
+    string_interning:
+      enabled: false                # Disable to save memory
+      max_entries: 0
+
+  parsing:
+    memoization:
+      enabled: true                 # Still useful
+      cache_size: 500               # Very small cache
+      ttl_seconds: 300              # 5 minutes
+    lazy_evaluation:
+      enabled: true                 # Essential for memory saving
+      expensive_operators:
+        - vault
+        - file
+        - awsparam
+        - awssecret
+        - load
+        - grab
+        - concat
+
+  io:
+    connection_pool_size: 5         # Minimal connections
+    request_timeout_seconds: 30
+    retry_attempts: 1               # Minimal retries
+    retry_backoff_seconds: 1
+    deduplication:
+      enabled: false                # Disable to save memory
+      window_seconds: 0
+      max_pending: 0
+
+  monitoring:
+    metrics_enabled: false          # Disable to save memory
+    metrics_interval_seconds: 300
+    performance_tracking: false
+    slow_operation_threshold_ms: 1000
+
+  auto_tuning:
+    enabled: false                  # Disable to save resources
+    analysis_interval_seconds: 3600
+    adjustment_threshold: 0.3
+    max_adjustments_per_hour: 1

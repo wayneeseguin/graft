@@ -1,0 +1,69 @@
+# Performance profile optimized for small YAML documents
+# Best for: Documents < 10KB, high request rate, low latency requirements
+performance:
+  cache:
+    expression_cache_size: 20000      # Larger cache for more unique small expressions
+    operator_cache_size: 100000       # Very large operator cache
+    token_cache_size: 50000          # Large token cache for fast parsing
+    ttl_seconds: 7200                # 2 hours - small docs don't change often
+    hierarchical:
+      l1_size: 5000                  # Large L1 for hot expressions
+      l2_size: 50000                 # Very large L2
+      l2_enabled: true
+      sync_interval_seconds: 600     # Less frequent sync
+    warming:
+      enabled: true
+      strategy: "frequency"          # Focus on most used
+      startup_timeout_seconds: 60    # More time to warm up
+      top_expressions: 100           # Cache more expressions
+
+  concurrency:
+    max_workers: 200                 # High concurrency for small tasks
+    queue_size: 5000                 # Large queue for bursts
+    worker_idle_timeout_seconds: 30  # Quick worker recycling
+    rate_limit:
+      enabled: true
+      requests_per_second: 5000      # High throughput
+      burst_size: 500
+
+  memory:
+    max_heap_mb: 2048               # Moderate memory usage
+    gc_percent: 150                 # Less aggressive GC
+    pool_sizes:
+      buffer_pool: 2000             # Large buffer pool
+      string_slice_pool: 10000      # Very large for small docs
+      token_pool: 20000             # Very large token pool
+    string_interning:
+      enabled: true
+      max_entries: 20000            # Large interning table
+
+  parsing:
+    memoization:
+      enabled: true
+      cache_size: 10000             # Large memoization cache
+      ttl_seconds: 3600             # 1 hour
+    lazy_evaluation:
+      enabled: false                # Evaluate everything upfront for small docs
+      expensive_operators: []
+
+  io:
+    connection_pool_size: 100       # Large connection pool
+    request_timeout_seconds: 10     # Quick timeout for small operations
+    retry_attempts: 2               # Fewer retries
+    retry_backoff_seconds: 0.5      # Quick backoff
+    deduplication:
+      enabled: true
+      window_seconds: 2             # Short dedup window
+      max_pending: 200
+
+  monitoring:
+    metrics_enabled: true
+    metrics_interval_seconds: 30    # Frequent metrics
+    performance_tracking: true
+    slow_operation_threshold_ms: 50 # Low threshold for small docs
+
+  auto_tuning:
+    enabled: true
+    analysis_interval_seconds: 300
+    adjustment_threshold: 0.05      # More sensitive to changes
+    max_adjustments_per_hour: 10

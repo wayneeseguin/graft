@@ -1,0 +1,73 @@
+# Performance profile optimized for high concurrent request processing
+# Best for: API servers, microservices, high parallel workloads
+performance:
+  cache:
+    expression_cache_size: 15000      # Balanced cache size
+    operator_cache_size: 75000        # Large for varied workloads
+    token_cache_size: 30000          # Large for concurrent parsing
+    ttl_seconds: 3600                # 1 hour
+    hierarchical:
+      l1_size: 2000                  # Moderate L1
+      l2_size: 20000                 # Large L2
+      l2_enabled: true
+      sync_interval_seconds: 300
+    warming:
+      enabled: true
+      strategy: "hybrid"             # Both frequency and pattern
+      startup_timeout_seconds: 45
+      top_expressions: 75
+
+  concurrency:
+    max_workers: 500                 # Very high worker count
+    queue_size: 10000                # Very large queue
+    worker_idle_timeout_seconds: 45  # Balanced timeout
+    rate_limit:
+      enabled: true
+      requests_per_second: 10000     # Very high throughput
+      burst_size: 1000               # Large burst capacity
+
+  memory:
+    max_heap_mb: 4096               # Moderate memory
+    gc_percent: 125                 # Slightly less aggressive GC
+    pool_sizes:
+      buffer_pool: 5000             # Very large pools
+      string_slice_pool: 20000      # Very large for concurrency
+      token_pool: 30000             # Very large
+    string_interning:
+      enabled: true
+      max_entries: 30000            # Large for shared strings
+
+  parsing:
+    memoization:
+      enabled: true
+      cache_size: 7500              # Large cache
+      ttl_seconds: 2700             # 45 minutes
+    lazy_evaluation:
+      enabled: true                 # Save CPU cycles
+      expensive_operators:
+        - vault
+        - file
+        - awsparam
+        - awssecret
+
+  io:
+    connection_pool_size: 200       # Very large pool
+    request_timeout_seconds: 20     # Moderate timeout
+    retry_attempts: 2               # Quick fail for high concurrency
+    retry_backoff_seconds: 1
+    deduplication:
+      enabled: true
+      window_seconds: 5
+      max_pending: 500              # Large for concurrent requests
+
+  monitoring:
+    metrics_enabled: true
+    metrics_interval_seconds: 60
+    performance_tracking: true
+    slow_operation_threshold_ms: 100
+
+  auto_tuning:
+    enabled: true
+    analysis_interval_seconds: 300
+    adjustment_threshold: 0.1
+    max_adjustments_per_hour: 8     # More frequent adjustments

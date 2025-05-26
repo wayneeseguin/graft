@@ -1,0 +1,73 @@
+# Default performance profile - balanced for general use
+# Best for: Mixed workloads, unknown document sizes, general purpose
+performance:
+  cache:
+    expression_cache_size: 10000
+    operator_cache_size: 50000
+    token_cache_size: 20000
+    ttl_seconds: 3600
+    hierarchical:
+      l1_size: 1000
+      l2_size: 10000
+      l2_enabled: true
+      sync_interval_seconds: 300
+    warming:
+      enabled: true
+      strategy: "hybrid"
+      startup_timeout_seconds: 30
+      top_expressions: 50
+
+  concurrency:
+    max_workers: 100
+    queue_size: 1000
+    worker_idle_timeout_seconds: 60
+    rate_limit:
+      enabled: true
+      requests_per_second: 1000
+      burst_size: 100
+
+  memory:
+    max_heap_mb: 4096
+    gc_percent: 100
+    pool_sizes:
+      buffer_pool: 1000
+      string_slice_pool: 5000
+      token_pool: 10000
+    string_interning:
+      enabled: true
+      max_entries: 10000
+
+  parsing:
+    memoization:
+      enabled: true
+      cache_size: 5000
+      ttl_seconds: 1800
+    lazy_evaluation:
+      enabled: true
+      expensive_operators:
+        - vault
+        - file
+        - awsparam
+        - awssecret
+
+  io:
+    connection_pool_size: 50
+    request_timeout_seconds: 30
+    retry_attempts: 3
+    retry_backoff_seconds: 1
+    deduplication:
+      enabled: true
+      window_seconds: 5
+      max_pending: 100
+
+  monitoring:
+    metrics_enabled: true
+    metrics_interval_seconds: 60
+    performance_tracking: true
+    slow_operation_threshold_ms: 100
+
+  auto_tuning:
+    enabled: false
+    analysis_interval_seconds: 300
+    adjustment_threshold: 0.1
+    max_adjustments_per_hour: 6

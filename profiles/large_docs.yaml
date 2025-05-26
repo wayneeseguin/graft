@@ -1,0 +1,74 @@
+# Performance profile optimized for large YAML documents
+# Best for: Documents > 100KB, throughput over latency, batch processing
+performance:
+  cache:
+    expression_cache_size: 5000       # Smaller cache, fewer unique expressions
+    operator_cache_size: 25000        # Moderate operator cache
+    token_cache_size: 10000          # Smaller token cache
+    ttl_seconds: 1800                # 30 minutes - balance memory usage
+    hierarchical:
+      l1_size: 500                   # Small L1 to save memory
+      l2_size: 5000                  # Moderate L2
+      l2_enabled: true
+      sync_interval_seconds: 300     # Regular sync
+    warming:
+      enabled: true
+      strategy: "pattern"            # Focus on patterns in large docs
+      startup_timeout_seconds: 30
+      top_expressions: 25            # Cache fewer expressions
+
+  concurrency:
+    max_workers: 50                  # Fewer workers for CPU-intensive tasks
+    queue_size: 500                  # Smaller queue
+    worker_idle_timeout_seconds: 120 # Keep workers longer
+    rate_limit:
+      enabled: true
+      requests_per_second: 500       # Lower throughput
+      burst_size: 50
+
+  memory:
+    max_heap_mb: 8192               # Large memory for big documents
+    gc_percent: 100                 # Standard GC
+    pool_sizes:
+      buffer_pool: 500              # Moderate buffer pool
+      string_slice_pool: 2000       # Moderate slice pool
+      token_pool: 5000              # Moderate token pool
+    string_interning:
+      enabled: true
+      max_entries: 50000            # Very large for repeated strings
+
+  parsing:
+    memoization:
+      enabled: true
+      cache_size: 2000              # Smaller cache
+      ttl_seconds: 900              # 15 minutes
+    lazy_evaluation:
+      enabled: true                 # Lazy eval for large docs
+      expensive_operators:
+        - vault
+        - file
+        - awsparam
+        - awssecret
+        - load
+
+  io:
+    connection_pool_size: 25        # Smaller pool
+    request_timeout_seconds: 60     # Longer timeout for large operations
+    retry_attempts: 3
+    retry_backoff_seconds: 2        # Longer backoff
+    deduplication:
+      enabled: true
+      window_seconds: 10            # Longer dedup window
+      max_pending: 50
+
+  monitoring:
+    metrics_enabled: true
+    metrics_interval_seconds: 120   # Less frequent metrics
+    performance_tracking: true
+    slow_operation_threshold_ms: 500 # Higher threshold for large docs
+
+  auto_tuning:
+    enabled: true
+    analysis_interval_seconds: 600  # Less frequent analysis
+    adjustment_threshold: 0.2       # Less sensitive
+    max_adjustments_per_hour: 4
