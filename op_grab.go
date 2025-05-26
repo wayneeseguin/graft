@@ -53,6 +53,9 @@ func (GrabOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		// Special handling for references to preserve environment variable expansion
 		if arg.Type == Reference {
 			DEBUG("  arg[%d]: trying to resolve reference $.%s", i, arg.Reference)
+			// Expand environment variables in the reference path
+			arg.Reference.Nodes = ResolveEnv(arg.Reference.Nodes)
+			DEBUG("  arg[%d]: after env expansion: $.%s", i, arg.Reference)
 			s, err := arg.Reference.Resolve(ev.Tree)
 			if err != nil {
 				DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
@@ -92,10 +95,18 @@ func (GrabOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		for i, lst := range vals {
 			switch lst.(type) {
 			case []interface{}:
-				DEBUG("    [%d]: $.%s is a list; flattening it out", i, args[i].Reference)
+				if args[i].Type == Reference {
+					DEBUG("    [%d]: $.%s is a list; flattening it out", i, args[i].Reference)
+				} else {
+					DEBUG("    [%d]: argument is a list; flattening it out", i)
+				}
 				flat = append(flat, lst.([]interface{})...)
 			default:
-				DEBUG("    [%d]: $.%s is not a list; appending it as-is", i, args[i].Reference)
+				if args[i].Type == Reference {
+					DEBUG("    [%d]: $.%s is not a list; appending it as-is", i, args[i].Reference)
+				} else {
+					DEBUG("    [%d]: argument is not a list; appending it as-is", i)
+				}
 				flat = append(flat, lst)
 			}
 		}

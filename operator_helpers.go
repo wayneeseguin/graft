@@ -20,6 +20,9 @@ func ResolveOperatorArgument(ev *Evaluator, arg *Expr) (interface{}, error) {
 	case Reference:
 		// Use the existing reference resolution
 		DEBUG("ResolveOperatorArgument: resolving reference %s", arg.Reference.String())
+		// Expand environment variables in the reference path
+		arg.Reference.Nodes = ResolveEnv(arg.Reference.Nodes)
+		DEBUG("ResolveOperatorArgument: after env expansion: %s", arg.Reference.String())
 		val, err := arg.Reference.Resolve(ev.Tree)
 		DEBUG("ResolveOperatorArgument: reference %s resolved to %v (type %T)", arg.Reference.String(), val, val)
 		return val, err
@@ -117,6 +120,16 @@ func AsString(val interface{}) (string, error) {
 		return v, nil
 	case fmt.Stringer:
 		return v.String(), nil
+	case map[interface{}]interface{}:
+		return "", fmt.Errorf("value is a map, not a string")
+	case map[string]interface{}:
+		return "", fmt.Errorf("value is a map, not a string")
+	case []interface{}:
+		return "", fmt.Errorf("value is a list, not a string")
+	case []string:
+		return "", fmt.Errorf("value is a list, not a string")
+	case int, int32, int64, float32, float64:
+		return fmt.Sprintf("%v", v), nil
 	default:
 		return fmt.Sprintf("%v", v), nil
 	}

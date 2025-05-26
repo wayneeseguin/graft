@@ -61,6 +61,10 @@ func (ConcatOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		if err != nil {
 			DEBUG("  arg[%d]: failed to resolve expression to a concrete value", i)
 			DEBUG("     [%d]: error was: %s", i, err)
+			// Wrap error to maintain backward compatibility
+			if arg.Type == Reference {
+				return nil, fmt.Errorf("Unable to resolve `%s`: %s", arg.Reference, err)
+			}
 			return nil, err
 		}
 

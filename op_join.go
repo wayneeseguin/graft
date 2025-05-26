@@ -121,6 +121,10 @@ func (JoinOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 			val, err := ResolveOperatorArgument(ev, arg)
 			if err != nil {
 				DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
+				// Wrap error to maintain backward compatibility
+				if arg.Type == Reference {
+					return nil, fmt.Errorf("Unable to resolve `%s`: %s", arg.Reference, err)
+				}
 				return nil, err
 			}
 

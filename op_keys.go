@@ -36,39 +36,42 @@ func (KeysOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	var vals []string
 
 	for i, arg := range args {
-		v, err := arg.Resolve(ev.Tree)
+		// The keys operator traditionally only accepts references, not literals or expressions
+		if arg.Type == Literal {
+			DEBUG("  arg[%d]: found literal value", i)
+			DEBUG("           (keys operator only handles references to other parts of the YAML tree)")
+			return nil, fmt.Errorf("keys operator only accepts key reference arguments")
+		}
+
+		// Use ResolveOperatorArgument to support nested expressions
+		val, err := ResolveOperatorArgument(ev, arg)
 		if err != nil {
 			DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
+			// Wrap error to maintain backward compatibility
+			if arg.Type == Reference {
+				return nil, fmt.Errorf("Unable to resolve `%s`: %s", arg.Reference, err)
+			}
 			return nil, err
 		}
 
-		switch v.Type {
-		case Literal:
-			DEBUG("  arg[%d]: found string literal '%s'", i, v.Literal)
-			DEBUG("           (keys operator only handles references to other parts of the YAML tree)")
-			return nil, fmt.Errorf("keys operator only accepts key reference arguments")
-
-		case Reference:
-			DEBUG("  arg[%d]: trying to resolve reference $.%s", i, v.Reference)
-			s, err := v.Reference.Resolve(ev.Tree)
-			if err != nil {
-				DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
-				return nil, fmt.Errorf("Unable to resolve `%s`: %s", v.Reference, err)
-			}
-
-			m, ok := s.(map[interface{}]interface{})
-			if !ok {
-				DEBUG("     [%d]: resolved to something that is not a map.  that is unacceptable.", i)
-				return nil, ansi.Errorf("@c{%s} @R{is not a map}", v.Reference)
-			}
+		// Check if the resolved value is a map
+		switch m := val.(type) {
+		case map[interface{}]interface{}:
 			DEBUG("     [%d]: resolved to a map; extracting keys", i)
 			for k := range m {
 				vals = append(vals, k.(string))
 			}
-
+		case map[string]interface{}:
+			DEBUG("     [%d]: resolved to a map; extracting keys", i)
+			for k := range m {
+				vals = append(vals, k)
+			}
 		default:
-			DEBUG("  arg[%d]: I don't know what to do with '%v'", i, arg)
-			return nil, fmt.Errorf("keys operator only accepts key reference arguments")
+			DEBUG("     [%d]: resolved to something that is not a map.  that is unacceptable.", i)
+			if arg.Type == Reference {
+				return nil, ansi.Errorf("@c{%s} @R{is not a map}", arg.Reference)
+			}
+			return nil, ansi.Errorf("@R{argument is not a map}")
 		}
 		DEBUG("")
 	}

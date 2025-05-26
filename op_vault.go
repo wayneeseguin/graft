@@ -225,6 +225,10 @@ func (VaultOperator) resolveVaultArgs(ev *Evaluator, args []*Expr) (string, erro
 		if err != nil {
 			DEBUG("  arg[%d]: failed to resolve expression to a concrete value", i)
 			DEBUG("     [%d]: error was: %s", i, err)
+			// Maintain backward compatibility with error messages
+			if arg.Type == Reference {
+				return "", fmt.Errorf("Unable to resolve `%s`: %s", arg.Reference, err)
+			}
 			return "", err
 		}
 
