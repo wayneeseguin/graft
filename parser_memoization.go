@@ -1,8 +1,6 @@
 package spruce
 
 import (
-	"crypto/sha256"
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -51,13 +49,8 @@ func NewParserMemoizationCache(maxSize int, ttl time.Duration) *ParserMemoizatio
 
 // CacheKey generates a cache key for an expression input
 func (c *ParserMemoizationCache) CacheKey(input string, operatorRegistry *OperatorRegistry) string {
-	h := sha256.New()
-	h.Write([]byte(input))
-	// Include a simplified registry hash to invalidate cache when operators change
-	if operatorRegistry != nil {
-		h.Write([]byte(fmt.Sprintf("reg:%d", len(operatorRegistry.operators))))
-	}
-	return fmt.Sprintf("%x", h.Sum(nil))[:16] // Use first 16 chars for efficiency
+	// Use optimized key generation
+	return DefaultKeyGenerator.GenerateExpressionKey(input, operatorRegistry)
 }
 
 // GetExpression retrieves a cached expression
