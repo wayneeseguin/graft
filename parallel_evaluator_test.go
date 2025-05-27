@@ -12,7 +12,6 @@ import (
 
 // TestParallelEvaluator tests the parallel evaluator functionality
 func TestParallelEvaluator(t *testing.T) {
-	t.Skip("Temporarily skipping ParallelEvaluator test - investigate goroutine issue")
 	t.Run("WaveDetection", func(t *testing.T) {
 		// Create a test document with independent operations
 		doc := map[interface{}]interface{}{
@@ -89,7 +88,7 @@ func TestParallelEvaluator(t *testing.T) {
 		
 		// Should have multiple waves due to dependencies
 		if len(waves) < 2 {
-			t.Fatal("Expected at least 2 waves due to dependencies")
+			t.Fatalf("Expected at least 2 waves due to dependencies, got %d", len(waves))
 		}
 		
 		// Verify that dependent operations are in different waves

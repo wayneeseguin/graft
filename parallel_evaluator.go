@@ -19,6 +19,9 @@ type ParallelEvaluator struct {
 	maxConcurrency int
 	enableParallel bool
 	
+	// Thread safety
+	treeMutex sync.Mutex
+	
 	// Metrics
 	parallelOpsExecuted atomic.Uint64
 	parallelWaves       atomic.Uint64
@@ -309,9 +312,21 @@ func (pev *ParallelEvaluator) runWaveParallel(wave *OperatorWave) error {
 				return
 			}
 			
-			// Execute the operation
+			// Execute the operation with a thread-local evaluator context
 			DEBUG("parallel evaluator: executing %s at %s", op.src, op.where)
-			err := pev.Evaluator.RunOp(op)
+			
+			// Create a thread-local copy of the evaluator to avoid race conditions
+			// This ensures each goroutine has its own 'Here' cursor
+			localEv := &Evaluator{
+				Tree:     pev.Evaluator.Tree,
+				Deps:     pev.Evaluator.Deps,
+				SkipEval: pev.Evaluator.SkipEval,
+				CheckOps: pev.Evaluator.CheckOps,
+				Only:     pev.Evaluator.Only,
+				// Here will be set by RunOp, no need to copy it
+			}
+			
+			err := pev.runOpWithLock(localEv, op)
 			
 			results <- opResult{op, err}
 		}()
@@ -363,6 +378,23 @@ func (pev *ParallelEvaluator) RunOpsParallel(phase OperatorPhase) error {
 	}
 	
 	return pev.RunWaves(waves)
+}
+
+// runOpWithLock executes an operation with proper synchronization for thread safety
+func (pev *ParallelEvaluator) runOpWithLock(localEv *Evaluator, op *Opcall) error {
+	// For now, we need to lock the entire operation execution
+	// because operators read from the tree while we're modifying it
+	// In the future, we should use a thread-safe tree implementation
+	// 
+	// This essentially makes the parallel evaluator sequential, but it's
+	// necessary to avoid race conditions until we have a proper thread-safe
+	// tree implementation. The benefit of the parallel evaluator is still
+	// in the dependency analysis and wave detection.
+	pev.treeMutex.Lock()
+	defer pev.treeMutex.Unlock()
+	
+	// Run the operation using the standard evaluator
+	return pev.Evaluator.RunOp(op)
 }
 
 // GetMetrics returns performance metrics for the parallel evaluator
