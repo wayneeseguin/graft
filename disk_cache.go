@@ -328,7 +328,19 @@ func (dc *DiskCache) generateFilename(key string) string {
 func (dc *DiskCache) GetMetrics() DiskCacheMetrics {
 	dc.metrics.mu.RLock()
 	defer dc.metrics.mu.RUnlock()
-	return dc.metrics
+	
+	// Return a copy without the mutex
+	return DiskCacheMetrics{
+		Hits:      dc.metrics.Hits,
+		Misses:    dc.metrics.Misses,
+		Writes:    dc.metrics.Writes,
+		Reads:     dc.metrics.Reads,
+		Deletes:   dc.metrics.Deletes,
+		Size:      dc.metrics.Size,
+		DiskUsage: dc.metrics.DiskUsage,
+		LoadTime:  dc.metrics.LoadTime,
+		SaveTime:  dc.metrics.SaveTime,
+	}
 }
 
 // Close shuts down the disk cache and saves to disk

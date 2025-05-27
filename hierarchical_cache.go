@@ -141,20 +141,18 @@ func (hc *HierarchicalCache) Set(key string, value interface{}) {
 	// Always store in L1 first
 	hc.l1Cache.Set(key, value)
 	
-	// Optionally store in L2 (async to avoid blocking)
+	// Optionally store in L2
 	if hc.config.L2Enabled && hc.l2Cache != nil {
-		go func() {
-			entry := &CacheEntry{
-				Key:          key,
-				Value:        value,
-				Timestamp:    time.Now(),
-				LastAccessed: time.Now(),
-				HitCount:     0,
-				Size:         hc.estimateSize(value),
-				TTL:          hc.config.TTL,
-			}
-			hc.l2Cache.Set(key, entry)
-		}()
+		entry := &CacheEntry{
+			Key:          key,
+			Value:        value,
+			Timestamp:    time.Now(),
+			LastAccessed: time.Now(),
+			HitCount:     0,
+			Size:         hc.estimateSize(value),
+			TTL:          hc.config.TTL,
+		}
+		hc.l2Cache.Set(key, entry)
 	}
 }
 
@@ -283,7 +281,18 @@ func (hc *HierarchicalCache) estimateSize(value interface{}) int64 {
 func (hc *HierarchicalCache) GetMetrics() HierarchicalCacheMetrics {
 	hc.metrics.mu.RLock()
 	defer hc.metrics.mu.RUnlock()
-	return hc.metrics
+	
+	// Return a copy without the mutex
+	return HierarchicalCacheMetrics{
+		L1Hits:         hc.metrics.L1Hits,
+		L1Misses:       hc.metrics.L1Misses,
+		L2Hits:         hc.metrics.L2Hits,
+		L2Misses:       hc.metrics.L2Misses,
+		Promotions:     hc.metrics.Promotions,
+		Demotions:      hc.metrics.Demotions,
+		SyncOperations: hc.metrics.SyncOperations,
+		Errors:         hc.metrics.Errors,
+	}
 }
 
 // getAllL1Entries gets all entries from L1 cache
@@ -334,12 +343,15 @@ func (hc *HierarchicalCache) GetDetailedMetrics() map[string]interface{} {
 
 // Close shuts down the hierarchical cache
 func (hc *HierarchicalCache) Close() error {
+	// Sync to disk before closing (without holding lock)
+	if hc.config.L2Enabled && hc.l2Cache != nil {
+		hc.syncL1ToL2()
+	}
+	
 	hc.mu.Lock()
 	defer hc.mu.Unlock()
 	
-	// Sync to disk before closing
 	if hc.config.L2Enabled && hc.l2Cache != nil {
-		hc.syncL1ToL2()
 		return hc.l2Cache.Close()
 	}
 	

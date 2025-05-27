@@ -88,11 +88,11 @@ func TestWorkerPool(t *testing.T) {
 		}
 		
 		elapsed := time.Since(start)
-		// With 10/second rate limit, 20 tasks should take at least 1.9 seconds
-		// But with 4 workers starting immediately, first 4 complete without delay
-		// So we expect ~1.6 seconds minimum
-		if elapsed < 1500*time.Millisecond {
-			t.Fatalf("Tasks completed too quickly: %v (expected ~1.6s)", elapsed)
+		// With 10/second rate limit and initial bucket of 10 tokens,
+		// first 10 tasks complete immediately, then 10 more at 10/second
+		// So minimum time is about 1 second for the remaining 10 tasks
+		if elapsed < 900*time.Millisecond {
+			t.Fatalf("Tasks completed too quickly: %v (expected ~1s)", elapsed)
 		}
 		if elapsed > 3000*time.Millisecond {
 			t.Fatalf("Tasks took too long: %v (expected <3s)", elapsed)
@@ -320,9 +320,8 @@ func TestRaceConditions(t *testing.T) {
 		pool := NewWorkerPool(WorkerPoolConfig{
 			Name:      "race-test",
 			Workers:   10,
-			QueueSize: 100,
+			QueueSize: 1000,
 		})
-		defer pool.Shutdown()
 		
 		var wg sync.WaitGroup
 		
@@ -342,18 +341,21 @@ func TestRaceConditions(t *testing.T) {
 		}
 		
 		// Read results concurrently
-		wg.Add(1)
+		resultsDone := make(chan bool)
 		go func() {
-			defer wg.Done()
 			count := 0
+			timeout := time.After(10 * time.Second)
 			for count < 1000 {
 				select {
 				case <-pool.Results():
 					count++
-				case <-time.After(10 * time.Second):
+				case <-timeout:
+					t.Errorf("Timeout waiting for results, got %d/1000", count)
+					resultsDone <- false
 					return
 				}
 			}
+			resultsDone <- true
 		}()
 		
 		// Read metrics concurrently
@@ -366,7 +368,18 @@ func TestRaceConditions(t *testing.T) {
 			}
 		}()
 		
+		// Wait for task submission to complete
 		wg.Wait()
+		
+		// Wait for all results to be read
+		success := <-resultsDone
+		
+		// Now safe to shutdown
+		pool.Shutdown()
+		
+		if !success {
+			t.Fatal("Failed to read all results")
+		}
 	})
 	
 	t.Run("CacheRace", func(t *testing.T) {

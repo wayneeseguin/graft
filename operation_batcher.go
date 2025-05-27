@@ -335,7 +335,15 @@ func (ob *OperationBatcher) updateBatchMetrics(batches []OperationBatch, origina
 func (ob *OperationBatcher) GetMetrics() BatchMetrics {
 	ob.metrics.mu.RLock()
 	defer ob.metrics.mu.RUnlock()
-	return *ob.metrics
+	
+	// Return a copy without the mutex
+	return BatchMetrics{
+		TotalBatches:     ob.metrics.TotalBatches,
+		TotalOperations:  ob.metrics.TotalOperations,
+		AverageBatchSize: ob.metrics.AverageBatchSize,
+		BatchHitRate:     ob.metrics.BatchHitRate,
+		TimeSaved:        ob.metrics.TimeSaved,
+	}
 }
 
 // BatchExecutor handles batch execution

@@ -249,7 +249,7 @@ var OperatorInfoRegistry = map[string]OperatorInfo{
 		Name:       "vault",
 		Precedence: PrecedenceCall,
 		MinArgs:    1,
-		MaxArgs:    2,
+		MaxArgs:    -1, // unlimited args for paths with defaults
 		Phase:      EvalPhase,
 	},
 	// Arithmetic operators

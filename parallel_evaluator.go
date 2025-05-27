@@ -294,9 +294,10 @@ func (pev *ParallelEvaluator) runWaveParallel(wave *OperatorWave) error {
 	
 	// Execute operations concurrently
 	for _, op := range wave.Operations {
+		op := op // capture loop variable
 		wg.Add(1)
 		
-		go func(operation *Opcall) {
+		go func() {
 			defer wg.Done()
 			
 			// Acquire semaphore
@@ -304,16 +305,16 @@ func (pev *ParallelEvaluator) runWaveParallel(wave *OperatorWave) error {
 			case semaphore <- struct{}{}:
 				defer func() { <-semaphore }()
 			case <-ctx.Done():
-				results <- opResult{operation, ctx.Err()}
+				results <- opResult{op, ctx.Err()}
 				return
 			}
 			
 			// Execute the operation
-			DEBUG("parallel evaluator: executing %s at %s", operation.src, operation.where)
-			err := pev.Evaluator.RunOp(operation)
+			DEBUG("parallel evaluator: executing %s at %s", op.src, op.where)
+			err := pev.Evaluator.RunOp(op)
 			
-			results <- opResult{operation, err}
-		}(op)
+			results <- opResult{op, err}
+		}()
 	}
 	
 	// Wait for all operations to complete

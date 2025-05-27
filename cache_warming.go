@@ -291,7 +291,15 @@ func (cw *CacheWarming) updateWarmingStats(duration time.Duration, total, warmed
 func (cw *CacheWarming) GetWarmingStats() CacheWarmingStats {
 	cw.warmingStats.mu.RLock()
 	defer cw.warmingStats.mu.RUnlock()
-	return cw.warmingStats
+	
+	// Return a copy without the mutex
+	return CacheWarmingStats{
+		LastWarmingTime:   cw.warmingStats.LastWarmingTime,
+		WarmingDuration:   cw.warmingStats.WarmingDuration,
+		ExpressionsWarmed: cw.warmingStats.ExpressionsWarmed,
+		SuccessfulWarms:   cw.warmingStats.SuccessfulWarms,
+		FailedWarms:       cw.warmingStats.FailedWarms,
+	}
 }
 
 // UsageAnalytics methods
