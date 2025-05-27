@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 	"gopkg.in/yaml.v3"
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 func TestEnhancedBase64Operators(t *testing.T) {

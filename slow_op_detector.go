@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -278,7 +278,7 @@ func InitializeSlowOpDetector(config *PerformanceConfig) {
 				}
 				
 				// Register slow operation metric if not exists
-				metricName := "spruce_slow_operations_total"
+				metricName := "graft_slow_operations_total"
 				if _, exists := mc.CustomMetrics[metricName]; !exists {
 					mc.RegisterCustomMetric(metricName, "Total number of slow operations", MetricTypeCounter)
 				}

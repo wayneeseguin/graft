@@ -122,9 +122,9 @@ common_patterns:
   
   # Padded vs unpadded
   with_padding:
-    encoded: "U3BydWNl"  # "Spruce" without padding
+    encoded: "U3BydWNl"  # "Graft" without padding
     decoded: (( base64-decode common_patterns.with_padding.encoded ))
-    # Result: "Spruce"
+    # Result: "Graft"
 
 # Concatenated decoding
 concatenated:

@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"testing"
@@ -60,7 +60,7 @@ func TestEnhancedParserIntegration(t *testing.T) {
 			Convey("Evaluating nested operators works", func() {
 				ev := &Evaluator{
 					Tree: map[interface{}]interface{}{
-						"name":   "spruce",
+						"name":   "graft",
 						"prefix": "hello",
 						"suffix": "world",
 					},
@@ -76,7 +76,7 @@ func TestEnhancedParserIntegration(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(resp, ShouldNotBeNil)
 				So(resp.Type, ShouldEqual, Replace)
-				So(resp.Value, ShouldEqual, "spruce is awesome")
+				So(resp.Value, ShouldEqual, "graft is awesome")
 			})
 			
 			Convey("Deeply nested operators work", func() {
@@ -101,7 +101,7 @@ func TestEnhancedParserIntegration(t *testing.T) {
 		})
 		
 		Convey("Environment variable control", func() {
-			// Test that SPRUCE_ENHANCED_PARSER env var works
+			// Test that GRAFT_ENHANCED_PARSER env var works
 			// This is tested indirectly through InitEnhancedParser()
 			So(UseEnhancedParser, ShouldEqual, originalFlag)
 		})

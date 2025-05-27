@@ -14,7 +14,7 @@ import (
 	"github.com/geofffranks/simpleyaml"
 	"github.com/geofffranks/yaml"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -233,7 +233,7 @@ func TestMain(t *testing.T) {
 		}
 
 		Convey("Should output usage if bad args are passed", func() {
-			os.Args = []string{"spruce", "fdsafdada"}
+			os.Args = []string{"graft", "fdsafdada"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -241,7 +241,7 @@ func TestMain(t *testing.T) {
 			So(rc, ShouldEqual, 1)
 		})
 		Convey("Should output usage if no args at all", func() {
-			os.Args = []string{"spruce"}
+			os.Args = []string{"graft"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -249,7 +249,7 @@ func TestMain(t *testing.T) {
 			So(rc, ShouldEqual, 1)
 		})
 		Convey("Should error if no args to merge and no files listed", func() {
-			os.Args = []string{"spruce", "merge"}
+			os.Args = []string{"graft", "merge"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -258,26 +258,26 @@ func TestMain(t *testing.T) {
 		})
 		Convey("Should output version", func() {
 			Convey("When '-v' is specified", func() {
-				os.Args = []string{"spruce", "-v"}
+				os.Args = []string{"graft", "-v"}
 				stdout = ""
 				stderr = ""
 				main()
-				So(stdout, ShouldStartWith, fmt.Sprintf("spruce - Version %s", Version))
+				So(stdout, ShouldStartWith, fmt.Sprintf("graft - Version %s", Version))
 				So(stderr, ShouldEqual, "")
 				So(rc, ShouldEqual, 0)
 			})
 			Convey("When '--version' is specified", func() {
-				os.Args = []string{"spruce", "--version"}
+				os.Args = []string{"graft", "--version"}
 				stdout = ""
 				stderr = ""
 				main()
-				So(stdout, ShouldStartWith, fmt.Sprintf("spruce - Version %s", Version))
+				So(stdout, ShouldStartWith, fmt.Sprintf("graft - Version %s", Version))
 				So(stderr, ShouldEqual, "")
 				So(rc, ShouldEqual, 0)
 			})
 		})
 		Convey("Should panic on errors merging docs", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/merge/bad.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/merge/bad.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -289,7 +289,7 @@ func TestMain(t *testing.T) {
 		})
 		*/
 		Convey("Should output merged yaml on success", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/merge/first.yml", "../../assets/merge/second.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/merge/first.yml", "../../assets/merge/second.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -330,7 +330,7 @@ map:
 			So(stderr, ShouldEqual, "")
 		})
 		Convey("Should output merged yaml with multi-doc enabled", func() {
-			os.Args = []string{"spruce", "merge", "-m", "../../assets/merge/multi-doc.yml"}
+			os.Args = []string{"graft", "merge", "-m", "../../assets/merge/multi-doc.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -342,8 +342,8 @@ map:
 `)
 			So(stderr, ShouldEqual, "")
 		})
-		Convey("Should not evaluate spruce logic when --no-eval", func() {
-			os.Args = []string{"spruce", "merge", "--skip-eval", "../../assets/no-eval/first.yml", "../../assets/no-eval/second.yml"}
+		Convey("Should not evaluate graft logic when --no-eval", func() {
+			os.Args = []string{"graft", "merge", "--skip-eval", "../../assets/no-eval/first.yml", "../../assets/no-eval/second.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -365,7 +365,7 @@ properties:
 			So(stderr, ShouldEqual, "")
 		})
 		Convey("Should execute --prunes  when --no-eval", func() {
-			os.Args = []string{"spruce", "merge", "--skip-eval", "--prune", "jobs", "../../assets/no-eval/first.yml", "../../assets/no-eval/second.yml"}
+			os.Args = []string{"graft", "merge", "--skip-eval", "--prune", "jobs", "../../assets/no-eval/first.yml", "../../assets/no-eval/second.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -382,7 +382,7 @@ properties:
 			So(stderr, ShouldEqual, "")
 		})
 		Convey("Should execute --cherry-picks  when --no-eval", func() {
-			os.Args = []string{"spruce", "merge", "--skip-eval", "--cherry-pick", "properties", "../../assets/no-eval/first.yml", "../../assets/no-eval/second.yml"}
+			os.Args = []string{"graft", "merge", "--skip-eval", "--cherry-pick", "properties", "../../assets/no-eval/first.yml", "../../assets/no-eval/second.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -396,7 +396,7 @@ properties:
 			So(stderr, ShouldEqual, "")
 		})
 		Convey("Should handle de-referencing", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/dereference/first.yml", "../../assets/dereference/second.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/dereference/first.yml", "../../assets/dereference/second.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -413,7 +413,7 @@ properties:
 			So(stderr, ShouldEqual, "")
 		})
 		Convey("De-referencing cyclical datastructures should throw an error", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/dereference/cyclic-data.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/dereference/cyclic-data.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -423,7 +423,7 @@ properties:
 		})
 		Convey("Dereferencing multiple values should behave as desired", func() {
 			//UsedIPs = map[string]string{} // required because of globalness
-			os.Args = []string{"spruce", "merge", "../../assets/dereference/multi-value.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/dereference/multi-value.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -461,7 +461,7 @@ properties:
 `)
 		})
 		Convey("Should output error on bad de-reference", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/dereference/bad.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/dereference/bad.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -469,7 +469,7 @@ properties:
 			So(rc, ShouldEqual, 2)
 		})
 		Convey("Pruning should happen after de-referencing", func() {
-			os.Args = []string{"spruce", "merge", "--prune", "jobs", "--prune", "properties.client.servers", "../../assets/dereference/first.yml", "../../assets/dereference/second.yml"}
+			os.Args = []string{"graft", "merge", "--prune", "jobs", "--prune", "properties.client.servers", "../../assets/dereference/first.yml", "../../assets/dereference/second.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -480,7 +480,7 @@ properties:
 `)
 		})
 		Convey("can dereference ~ / null values", func() {
-			os.Args = []string{"spruce", "merge", "--prune", "meta", "../../assets/dereference/null.yml"}
+			os.Args = []string{"graft", "merge", "--prune", "meta", "../../assets/dereference/null.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -490,7 +490,7 @@ properties:
 `)
 		})
 		Convey("can dereference nestedly", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/dereference/multi.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/dereference/multi.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -503,7 +503,7 @@ name4: name
 `)
 		})
 		Convey("static_ips() failures return errors to the user", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/static_ips/jobs.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/static_ips/jobs.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -511,7 +511,7 @@ name4: name
 			So(stdout, ShouldEqual, "")
 		})
 		Convey("static_ips() get resolved, and are resolved prior to dereferencing", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/static_ips/properties.yml", "../../assets/static_ips/jobs.yml", "../../assets/static_ips/network.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/static_ips/properties.yml", "../../assets/static_ips/jobs.yml", "../../assets/static_ips/network.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -539,9 +539,9 @@ properties:
 `)
 		})
 		Convey("Included yaml file is escaped", func() {
-			os.Setenv("SPRUCE_FILE_BASE_PATH", "../../assets/file_operator")
-			defer os.Unsetenv("SPRUCE_FILE_BASE_PATH")
-			os.Args = []string{"spruce", "merge", "../../assets/file_operator/test.yml"}
+			os.Setenv("GRAFT_FILE_BASE_PATH", "../../assets/file_operator")
+			defer os.Unsetenv("GRAFT_FILE_BASE_PATH")
+			os.Args = []string{"graft", "merge", "../../assets/file_operator/test.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -563,7 +563,7 @@ meta:
 		})
 
 		Convey("Parameters override their requirement", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/params/global.yml", "../../assets/params/good.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/params/global.yml", "../../assets/params/good.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -579,7 +579,7 @@ storage: 4096
 			So(stderr, ShouldEqual, "")
 		})
 		Convey("Parameters must be specified", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/params/global.yml", "../../assets/params/fail.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/params/global.yml", "../../assets/params/fail.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -587,7 +587,7 @@ storage: 4096
 			So(stderr, ShouldContainSubstring, "$.nested.key.override: provide nested override\n")
 		})
 		Convey("Pruning takes place after parameters", func() {
-			os.Args = []string{"spruce", "merge", "--prune", "nested", "../../assets/params/global.yml", "../../assets/params/fail.yml"}
+			os.Args = []string{"graft", "merge", "--prune", "nested", "../../assets/params/global.yml", "../../assets/params/fail.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -599,7 +599,7 @@ storage: 4096
 			So(stdout, ShouldEqual, "")
 		})
 		Convey("string concatenation works", func() {
-			os.Args = []string{"spruce", "merge", "--prune", "local", "--prune", "env", "--prune", "cluster", "../../assets/concat/concat.yml"}
+			os.Args = []string{"graft", "merge", "--prune", "local", "--prune", "env", "--prune", "cluster", "../../assets/concat/concat.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -609,7 +609,7 @@ storage: 4096
 `)
 		})
 		Convey("string concatenation handles non-strings correctly", func() {
-			os.Args = []string{"spruce", "merge", "--prune", "local", "../../assets/concat/coerce.yml"}
+			os.Args = []string{"graft", "merge", "--prune", "local", "../../assets/concat/coerce.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -619,7 +619,7 @@ storage: 4096
 `)
 		})
 		Convey("string concatenation failure detected", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/concat/fail.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/concat/fail.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -627,7 +627,7 @@ storage: 4096
 			So(stderr, ShouldContainSubstring, "$.ident: Unable to resolve `local.sites.42.uuid`:")
 		})
 		Convey("string concatentation handles multiple levels of reference", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/concat/multi.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/concat/multi.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -639,7 +639,7 @@ quux: quux
 
 `)
 			Convey("string concatenation handles infinite loop self-reference", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/concat/loop.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/concat/loop.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -649,7 +649,7 @@ quux: quux
 		})
 
 		Convey("only param errors are displayed, if present", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/errors/multi.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/errors/multi.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -662,7 +662,7 @@ quux: quux
 		})
 
 		Convey("multiple errors of the same type on the same level are displayed", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/errors/multi2.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/errors/multi2.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -677,7 +677,7 @@ quux: quux
 		})
 
 		Convey("json command converts YAML to JSON", func() {
-			os.Args = []string{"spruce", "json", "../../assets/json/in.yml"}
+			os.Args = []string{"graft", "json", "../../assets/json/in.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -686,7 +686,7 @@ quux: quux
 		})
 
 		Convey("json command handles malformed YAML", func() {
-			os.Args = []string{"spruce", "json", "../../assets/json/malformed.yml"}
+			os.Args = []string{"graft", "json", "../../assets/json/malformed.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -695,7 +695,7 @@ quux: quux
 		})
 
 		Convey("vaultinfo lists vault calls in given file", func() {
-			os.Args = []string{"spruce", "vaultinfo", "../../assets/vaultinfo/single.yml"}
+			os.Args = []string{"graft", "vaultinfo", "../../assets/vaultinfo/single.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -709,7 +709,7 @@ quux: quux
 		})
 
 		Convey("vaultinfo can handle multiple references to the same key", func() {
-			os.Args = []string{"spruce", "vaultinfo", "../../assets/vaultinfo/duplicate.yml"}
+			os.Args = []string{"graft", "vaultinfo", "../../assets/vaultinfo/duplicate.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -724,7 +724,7 @@ quux: quux
 		})
 
 		Convey("vaultinfo can handle there being no vault references", func() {
-			os.Args = []string{"spruce", "vaultinfo", "../../assets/vaultinfo/novault.yml"}
+			os.Args = []string{"graft", "vaultinfo", "../../assets/vaultinfo/novault.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -735,7 +735,7 @@ quux: quux
 		})
 
 		Convey("vaultinfo can handle concatenated vault secrets", func() {
-			os.Args = []string{"spruce", "vaultinfo", "../../assets/vaultinfo/concat.yml"}
+			os.Args = []string{"graft", "vaultinfo", "../../assets/vaultinfo/concat.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -755,7 +755,7 @@ quux: quux
 		})
 
 		Convey("vaultinfo can merge multiple files", func() {
-			os.Args = []string{"spruce", "vaultinfo", "../../assets/vaultinfo/merge1.yml", "../../assets/vaultinfo/merge2.yml"}
+			os.Args = []string{"graft", "vaultinfo", "../../assets/vaultinfo/merge1.yml", "../../assets/vaultinfo/merge2.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -772,7 +772,7 @@ quux: quux
 		})
 
 		Convey("vaultinfo can handle improper yaml", func() {
-			os.Args = []string{"spruce", "vaultinfo", "../../assets/vaultinfo/improper.yml"}
+			os.Args = []string{"graft", "vaultinfo", "../../assets/vaultinfo/improper.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -783,7 +783,7 @@ quux: quux
 		})
 
 		Convey("Adding (dynamic) prune support for list entries (edge case scenario)", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/prune/prune-in-lists/fileA.yml", "../../assets/prune/prune-in-lists/fileB.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/prune/prune-in-lists/fileA.yml", "../../assets/prune/prune-in-lists/fileB.yml"}
 			stdout = ""
 			stderr = ""
 
@@ -797,7 +797,7 @@ quux: quux
 `)
 		})
 		Convey("vaultinfo handles gopatch files", func() {
-			os.Args = []string{"spruce", "vaultinfo", "--go-patch", "../../assets/vaultinfo/merge1.yml", "../../assets/vaultinfo/go-patch.yml"}
+			os.Args = []string{"graft", "vaultinfo", "--go-patch", "../../assets/vaultinfo/merge1.yml", "../../assets/vaultinfo/go-patch.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -817,7 +817,7 @@ quux: quux
 		})
 
 		Convey("Adding (static) prune support for list entries (edge case scenario)", func() {
-			os.Args = []string{"spruce", "merge", "--prune", "meta.list.1", "../../assets/prune/prune-in-lists/fileA.yml"}
+			os.Args = []string{"graft", "merge", "--prune", "meta.list.1", "../../assets/prune/prune-in-lists/fileA.yml"}
 			stdout = ""
 			stderr = ""
 
@@ -832,7 +832,7 @@ quux: quux
 		})
 
 		Convey("Issue - prune and inject cause side-effect", func() {
-			os.Args = []string{"spruce", "merge", "--prune", "meta", "../../assets/prune/prune-issue-with-inject/fileA.yml", "../../assets/prune/prune-issue-with-inject/fileB.yml"}
+			os.Args = []string{"graft", "merge", "--prune", "meta", "../../assets/prune/prune-issue-with-inject/fileA.yml", "../../assets/prune/prune-issue-with-inject/fileB.yml"}
 			stdout = ""
 			stderr = ""
 
@@ -859,7 +859,7 @@ quux: quux
 		})
 
 		Convey("Issue - prune and new-list-entry cause side-effect", func() {
-			os.Args = []string{"spruce", "merge", "--prune", "meta", "../../assets/prune/prune-issue-in-lists-with-new-entry/fileA.yml", "../../assets/prune/prune-issue-in-lists-with-new-entry/fileB.yml"}
+			os.Args = []string{"graft", "merge", "--prune", "meta", "../../assets/prune/prune-issue-in-lists-with-new-entry/fileA.yml", "../../assets/prune/prune-issue-in-lists-with-new-entry/fileB.yml"}
 			stdout = ""
 			stderr = ""
 
@@ -881,8 +881,8 @@ quux: quux
 `)
 		})
 
-		Convey("Issue #158 prune doesn't work when goes at the end (regression?) - variant A (https://github.com/geofffranks/spruce/issues/158)", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/prune/issue-158/test.yml", "../../assets/prune/issue-158/prune.yml"}
+		Convey("Issue #158 prune doesn't work when goes at the end (regression?) - variant A (https://github.com/wayneeseguin/graft/issues/158)", func() {
+			os.Args = []string{"graft", "merge", "../../assets/prune/issue-158/test.yml", "../../assets/prune/issue-158/prune.yml"}
 			stdout = ""
 			stderr = ""
 
@@ -893,8 +893,8 @@ quux: quux
 `)
 		})
 
-		Convey("Issue #158 prune doesn't work when goes at the end (regression?) - variant B (https://github.com/geofffranks/spruce/issues/158)", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/prune/issue-158/prune.yml", "../../assets/prune/issue-158/test.yml"}
+		Convey("Issue #158 prune doesn't work when goes at the end (regression?) - variant B (https://github.com/wayneeseguin/graft/issues/158)", func() {
+			os.Args = []string{"graft", "merge", "../../assets/prune/issue-158/prune.yml", "../../assets/prune/issue-158/test.yml"}
 			stdout = ""
 			stderr = ""
 
@@ -906,7 +906,7 @@ quux: quux
 		})
 
 		Convey("Text needed", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/prune/issue-250/fileA.yml", "../../assets/prune/issue-250/fileB.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/prune/issue-250/fileA.yml", "../../assets/prune/issue-250/fileB.yml"}
 			stdout = ""
 			stderr = ""
 
@@ -929,7 +929,7 @@ quux: quux
 		})
 
 		Convey("The delete operator deletes an entry in a simple list", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/delete/simple-string-fileA.yml", "../../assets/delete/simple-string-fileB.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/delete/simple-string-fileA.yml", "../../assets/delete/simple-string-fileB.yml"}
 			stdout = ""
 			stderr = ""
 
@@ -945,7 +945,7 @@ quux: quux
 		})
 
 		Convey("The delete operator deletes an entry with whitespaces or special characters in a simple list", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/delete/text-fileA.yml", "../../assets/delete/text-fileB.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/delete/text-fileA.yml", "../../assets/delete/text-fileB.yml"}
 			stdout = ""
 			stderr = ""
 
@@ -973,7 +973,7 @@ stuff:
 		})
 
 		Convey("Issue #156 Can use concat with static ips", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/static_ips/issue-156/concat.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/static_ips/issue-156/concat.yml"}
 			stdout = ""
 			stderr = ""
 
@@ -999,7 +999,7 @@ networks:
 		})
 
 		Convey("Issue #194 Globs with missing sub-items track data flow deps properly", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/static_ips/vips-plus-grab.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/static_ips/vips-plus-grab.yml"}
 			stdout = ""
 			stderr = ""
 
@@ -1027,7 +1027,7 @@ networks:
 		})
 		Convey("Issue #201 - using `azs` instead of `az` in subnets", func() {
 			Convey("jobs in only one zone can see the IPs of all subnets that mentioned that zone", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/static_ips/multi-azs-one-zone-job.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/static_ips/multi-azs-one-zone-job.yml"}
 				stdout = ""
 				stderr = ""
 
@@ -1064,7 +1064,7 @@ networks:
 `)
 			})
 			Convey("jobs in multiple zones can see the IPs of all subnets mentioning those zones", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/static_ips/multi-azs-multi-zone-job.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/static_ips/multi-azs-multi-zone-job.yml"}
 				stdout = ""
 				stderr = ""
 
@@ -1103,7 +1103,7 @@ networks:
 `)
 			})
 			Convey("a z2-only job cannot see z1-only IPs", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/static_ips/multi-azs-z2-underprovision.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/static_ips/multi-azs-z2-underprovision.yml"}
 				stdout = ""
 				stderr = ""
 
@@ -1116,7 +1116,7 @@ networks:
 				So(stdout, ShouldEqual, "")
 			})
 			Convey("jobs with multiple zones see one copy of available IPs, rather than one copy per zone", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/static_ips/multi-azs-multi-underprovision.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/static_ips/multi-azs-multi-underprovision.yml"}
 				stdout = ""
 				stderr = ""
 
@@ -1129,7 +1129,7 @@ networks:
 				So(stdout, ShouldEqual, "")
 			})
 			Convey("edge case - same index used for different IPs with multi-az subnets", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/static_ips/multi-azs-same-index-different-ip.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/static_ips/multi-azs-same-index-different-ip.yml"}
 				stdout = ""
 				stderr = ""
 
@@ -1173,7 +1173,7 @@ networks:
 `)
 			})
 			Convey("edge case - dont give out same IP when specified in jobs with different zones", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/static_ips/multi-azs-same-ip-different-zones.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/static_ips/multi-azs-same-ip-different-zones.yml"}
 				stdout = ""
 				stderr = ""
 
@@ -1186,7 +1186,7 @@ networks:
 				So(stdout, ShouldEqual, "")
 			})
 			Convey("edge case - don't give out same IP when using different offsets", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/static_ips/multi-azs-same-ip-different-index.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/static_ips/multi-azs-same-ip-different-index.yml"}
 				stdout = ""
 				stderr = ""
 
@@ -1206,7 +1206,7 @@ networks:
 			baseFile = "../../assets/empty/base.yml"
 
 			testEmpty := func(files ...string) {
-				os.Args = append([]string{"spruce", "merge"}, files...)
+				os.Args = append([]string{"graft", "merge"}, files...)
 				stdout = ""
 				stderr = ""
 				main()
@@ -1245,7 +1245,7 @@ networks:
 
 		Convey("Join operator works", func() {
 			Convey("when dependencies could cause improper evaluation order", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/join/issue-155/deps.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/join/issue-155/deps.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1267,7 +1267,7 @@ z:
 
 		Convey("Calc operator works", func() {
 			Convey("Calc comes with built-in functions", func() {
-				os.Args = []string{"spruce", "merge", "--prune", "meta", "../../assets/calc/functions.yml"}
+				os.Args = []string{"graft", "merge", "--prune", "meta", "../../assets/calc/functions.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1286,7 +1286,7 @@ z:
 			})
 
 			Convey("Calc works with dependencies", func() {
-				os.Args = []string{"spruce", "merge", "--prune", "meta", "../../assets/calc/dependencies.yml"}
+				os.Args = []string{"graft", "merge", "--prune", "meta", "../../assets/calc/dependencies.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1302,8 +1302,8 @@ z:
 `)
 			})
 
-			Convey("Calc expects only one argument which is a quoted mathematical expression (as a Literal in Spruce)", func() {
-				os.Args = []string{"spruce", "merge", "--prune", "meta", "../../assets/calc/wrong-syntax.yml"}
+			Convey("Calc expects only one argument which is a quoted mathematical expression (as a Literal in Graft)", func() {
+				os.Args = []string{"graft", "merge", "--prune", "meta", "../../assets/calc/wrong-syntax.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1317,7 +1317,7 @@ z:
 			})
 
 			Convey("Calc operator does not support named variables", func() {
-				os.Args = []string{"spruce", "merge", "--prune", "meta", "../../assets/calc/no-named-variables.yml"}
+				os.Args = []string{"graft", "merge", "--prune", "meta", "../../assets/calc/no-named-variables.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1330,7 +1330,7 @@ z:
 			})
 
 			Convey("Calc operator checks input for built-in functions", func() {
-				os.Args = []string{"spruce", "merge", "--prune", "meta", "../../assets/calc/bad-functions.yml"}
+				os.Args = []string{"graft", "merge", "--prune", "meta", "../../assets/calc/bad-functions.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1349,7 +1349,7 @@ z:
 			})
 
 			Convey("Calc operator checks referenced types", func() {
-				os.Args = []string{"spruce", "merge", "--prune", "meta", "../../assets/calc/wrong-type.yml"}
+				os.Args = []string{"graft", "merge", "--prune", "meta", "../../assets/calc/wrong-type.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1365,7 +1365,7 @@ z:
 			})
 
 			Convey("Calc returns int64s if possible", func() {
-				os.Args = []string{"spruce", "merge", "--prune", "meta", "../../assets/calc/large-ints.yml"}
+				os.Args = []string{"graft", "merge", "--prune", "meta", "../../assets/calc/large-ints.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1379,7 +1379,7 @@ int: 7776000
 
 		Convey("YAML output is ordered the same way each time (#184)", func() {
 			for i := 0; i < 30; i++ {
-				os.Args = []string{"spruce", "merge", "../../assets/output-order/sample.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/output-order/sample.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1400,7 +1400,7 @@ int: 7776000
 
 		Convey("Sort test cases", func() {
 			Convey("sort operator functionality", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/sort/base.yml", "../../assets/sort/op.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/sort/base.yml", "../../assets/sort/op.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1492,12 +1492,12 @@ name_list:
 			})
 		})
 
-		Convey("Given a Spruce merge using the (( load <location> )) operator", func() {
+		Convey("Given a Graft merge using the (( load <location> )) operator", func() {
 			Convey("When the location is a local location", func() {
 				Convey("The local data (via literal) should be loaded and inserted", func() {
-					os.Setenv("SPRUCE_FILE_BASE_PATH", "../../")
-					defer os.Unsetenv("SPRUCE_FILE_BASE_PATH")
-					os.Args = []string{"spruce", "merge", "../../assets/load/base-local.yml"}
+					os.Setenv("GRAFT_FILE_BASE_PATH", "../../")
+					defer os.Unsetenv("GRAFT_FILE_BASE_PATH")
+					os.Args = []string{"graft", "merge", "../../assets/load/base-local.yml"}
 					stdout = ""
 					stderr = ""
 					main()
@@ -1537,9 +1537,9 @@ name_list:
 						fmt.Println(pathErr)
 					}
 
-					os.Setenv("SPRUCE_FILE_BASE_PATH", "../../")
-					defer os.Unsetenv("SPRUCE_FILE_BASE_PATH")
-					os.Args = []string{"spruce", "merge", "--prune", "meta", file.Name()}
+					os.Setenv("GRAFT_FILE_BASE_PATH", "../../")
+					defer os.Unsetenv("GRAFT_FILE_BASE_PATH")
+					os.Args = []string{"graft", "merge", "--prune", "meta", file.Name()}
 					stdout = ""
 					stderr = ""
 					main()
@@ -1555,7 +1555,7 @@ name_list:
 				})
 
 				Convey("The local data (via reference) should be loaded and inserted", func() {
-					os.Args = []string{"spruce", "merge", "--prune", "meta", "../../assets/load/base-local-ref.yml"}
+					os.Args = []string{"graft", "merge", "--prune", "meta", "../../assets/load/base-local-ref.yml"}
 					stdout = ""
 					stderr = ""
 					main()
@@ -1571,7 +1571,7 @@ name_list:
 				})
 
 				Convey("That an error is returned if no file can be found", func() {
-					os.Args = []string{"spruce", "merge", "../../assets/load/base-local.yml"}
+					os.Args = []string{"graft", "merge", "../../assets/load/base-local.yml"}
 					stdout = ""
 					stderr = ""
 					main()
@@ -1602,7 +1602,7 @@ name_list:
 				time.Sleep(1 * time.Second)
 
 				Convey("The remote data should be loaded and inserted", func() {
-					os.Args = []string{"spruce", "merge", "../../assets/load/base-remote.yml"}
+					os.Args = []string{"graft", "merge", "../../assets/load/base-remote.yml"}
 					stdout = ""
 					stderr = ""
 					main()
@@ -1622,7 +1622,7 @@ name_list:
 
 		Convey("Cherry picking test cases", func() {
 			Convey("Cherry pick just one root level path", func() {
-				os.Args = []string{"spruce", "merge", "--cherry-pick", "properties", "../../assets/cherry-pick/fileA.yml", "../../assets/cherry-pick/fileB.yml"}
+				os.Args = []string{"graft", "merge", "--cherry-pick", "properties", "../../assets/cherry-pick/fileA.yml", "../../assets/cherry-pick/fileB.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1639,7 +1639,7 @@ name_list:
 			})
 
 			Convey("Cherry pick a path that is a list entry", func() {
-				os.Args = []string{"spruce", "merge", "--cherry-pick", "releases.vb", "../../assets/cherry-pick/fileA.yml", "../../assets/cherry-pick/fileB.yml"}
+				os.Args = []string{"graft", "merge", "--cherry-pick", "releases.vb", "../../assets/cherry-pick/fileA.yml", "../../assets/cherry-pick/fileB.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1651,7 +1651,7 @@ name_list:
 			})
 
 			Convey("Cherry pick a path that is deep down the structure", func() {
-				os.Args = []string{"spruce", "merge", "--cherry-pick", "meta.some.deep.structure.maplist", "../../assets/cherry-pick/fileA.yml", "../../assets/cherry-pick/fileB.yml"}
+				os.Args = []string{"graft", "merge", "--cherry-pick", "meta.some.deep.structure.maplist", "../../assets/cherry-pick/fileA.yml", "../../assets/cherry-pick/fileB.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1668,7 +1668,7 @@ name_list:
 			})
 
 			Convey("Cherry pick a series of different paths at the same time", func() {
-				os.Args = []string{"spruce", "merge", "--cherry-pick", "properties", "--cherry-pick", "releases.vb", "--cherry-pick", "meta.some.deep.structure.maplist", "../../assets/cherry-pick/fileA.yml", "../../assets/cherry-pick/fileB.yml"}
+				os.Args = []string{"graft", "merge", "--cherry-pick", "properties", "--cherry-pick", "releases.vb", "--cherry-pick", "meta.some.deep.structure.maplist", "../../assets/cherry-pick/fileA.yml", "../../assets/cherry-pick/fileB.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1694,7 +1694,7 @@ releases:
 			})
 
 			Convey("Cherry pick a path and prune something at the same time in a map", func() {
-				os.Args = []string{"spruce", "merge", "--cherry-pick", "properties", "--prune", "properties.vb.flags", "../../assets/cherry-pick/fileA.yml", "../../assets/cherry-pick/fileB.yml"}
+				os.Args = []string{"graft", "merge", "--cherry-pick", "properties", "--prune", "properties.vb.flags", "../../assets/cherry-pick/fileA.yml", "../../assets/cherry-pick/fileB.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1710,7 +1710,7 @@ releases:
 			})
 
 			Convey("Cherry picking should fail if you cherry-pick a prune path", func() {
-				os.Args = []string{"spruce", "merge", "--cherry-pick", "properties", "--prune", "properties", "../../assets/cherry-pick/fileA.yml", "../../assets/cherry-pick/fileB.yml"}
+				os.Args = []string{"graft", "merge", "--cherry-pick", "properties", "--prune", "properties", "../../assets/cherry-pick/fileA.yml", "../../assets/cherry-pick/fileB.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1720,7 +1720,7 @@ releases:
 			})
 
 			Convey("Cherry picking should fail if picking a sub-level path while prune wipes the parent", func() {
-				os.Args = []string{"spruce", "merge", "--cherry-pick", "releases.vb", "--prune", "releases", "../../assets/cherry-pick/fileA.yml", "../../assets/cherry-pick/fileB.yml"}
+				os.Args = []string{"graft", "merge", "--cherry-pick", "releases.vb", "--prune", "releases", "../../assets/cherry-pick/fileA.yml", "../../assets/cherry-pick/fileB.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1730,7 +1730,7 @@ releases:
 			})
 
 			Convey("Cherry pick a list entry path of a list that uses 'key' as its identifier", func() {
-				os.Args = []string{"spruce", "merge", "--cherry-pick", "list.two", "../../assets/cherry-pick/key-based-list.yml"}
+				os.Args = []string{"graft", "merge", "--cherry-pick", "list.two", "../../assets/cherry-pick/key-based-list.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1744,7 +1744,7 @@ releases:
 			})
 
 			Convey("Cherry pick a list entry path of a list that uses 'id' as its identifier", func() {
-				os.Args = []string{"spruce", "merge", "--cherry-pick", "list.two", "../../assets/cherry-pick/id-based-list.yml"}
+				os.Args = []string{"graft", "merge", "--cherry-pick", "list.two", "../../assets/cherry-pick/id-based-list.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1758,7 +1758,7 @@ releases:
 			})
 
 			Convey("Cherry pick one list entry path that references the index", func() {
-				os.Args = []string{"spruce", "merge", "--cherry-pick", "list.1", "../../assets/cherry-pick/name-based-list.yml"}
+				os.Args = []string{"graft", "merge", "--cherry-pick", "list.1", "../../assets/cherry-pick/name-based-list.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1772,7 +1772,7 @@ releases:
 			})
 
 			Convey("Cherry pick two list entry paths that reference indexes", func() {
-				os.Args = []string{"spruce", "merge", "--cherry-pick", "list.1", "--cherry-pick", "list.4", "../../assets/cherry-pick/name-based-list.yml"}
+				os.Args = []string{"graft", "merge", "--cherry-pick", "list.1", "--cherry-pick", "list.4", "../../assets/cherry-pick/name-based-list.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1789,7 +1789,7 @@ releases:
 			})
 
 			Convey("Cherry pick one list entry path that references an invalid index", func() {
-				os.Args = []string{"spruce", "merge", "--cherry-pick", "list.10", "../../assets/cherry-pick/name-based-list.yml"}
+				os.Args = []string{"graft", "merge", "--cherry-pick", "list.10", "../../assets/cherry-pick/name-based-list.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1799,7 +1799,7 @@ releases:
 			})
 
 			Convey("Cherry pick should only pick the exact name based on the path", func() {
-				os.Args = []string{"spruce", "merge", "--cherry-pick", "map", "--prune", "subkey", "../../assets/cherry-pick/test-exact-names.yml"}
+				os.Args = []string{"graft", "merge", "--cherry-pick", "map", "--prune", "subkey", "../../assets/cherry-pick/test-exact-names.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1812,7 +1812,7 @@ releases:
 			})
 
 			Convey("Cherry pick should only evaluate the dynamic operators that are relevant", func() {
-				os.Args = []string{"spruce", "merge", "--cherry-pick", "params", "../../assets/cherry-pick/partial-eval.yml"}
+				os.Args = []string{"graft", "merge", "--cherry-pick", "params", "../../assets/cherry-pick/partial-eval.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1827,7 +1827,7 @@ releases:
 		})
 
 		Convey("FallbackAppend should cause the default behavior after a key merge to go to append", func() {
-			os.Args = []string{"spruce", "merge", "--fallback-append", "../../assets/fallback-append/test1.yml", "../../assets/fallback-append/test2.yml"}
+			os.Args = []string{"graft", "merge", "--fallback-append", "../../assets/fallback-append/test1.yml", "../../assets/fallback-append/test2.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -1844,7 +1844,7 @@ releases:
 		})
 
 		Convey("Without FallbackAppend, the default merge behavior after a key merge should still be inline", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/fallback-append/test1.yml", "../../assets/fallback-append/test2.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/fallback-append/test1.yml", "../../assets/fallback-append/test2.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -1860,7 +1860,7 @@ releases:
 
 		Convey("Defer", func() {
 			Convey("should err if there are no arguments", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/defer/nothing.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/defer/nothing.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1873,7 +1873,7 @@ releases:
 			})
 
 			Convey("on a non-quoted string", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/defer/simple-ref.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/defer/simple-ref.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1884,7 +1884,7 @@ releases:
 			})
 
 			Convey("on a quoted string", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/defer/simple-string.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/defer/simple-string.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1895,7 +1895,7 @@ releases:
 			})
 
 			Convey("on a non-quoted string called nil", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/defer/simple-nil.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/defer/simple-nil.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1906,7 +1906,7 @@ releases:
 			})
 
 			Convey("on an integer", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/defer/simple-int.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/defer/simple-int.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1917,7 +1917,7 @@ releases:
 			})
 
 			Convey("on a float", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/defer/simple-float.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/defer/simple-float.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1928,7 +1928,7 @@ releases:
 			})
 
 			Convey("on an environment variable ", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/defer/simple-envvar.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/defer/simple-envvar.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1939,7 +1939,7 @@ releases:
 			})
 
 			Convey("on an unquoted string that could reference another key", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/defer/reference.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/defer/reference.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1951,7 +1951,7 @@ thing: (( thing ))
 			})
 
 			Convey("on a value with a logical-or", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/defer/or.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/defer/or.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1962,7 +1962,7 @@ thing: (( thing ))
 			})
 
 			Convey("with another operator in the defer", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/defer/grab.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/defer/grab.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -1977,7 +1977,7 @@ thing: boop
 
 		Convey("non-specific node tags specific test cases", func() {
 			Convey("non-specific node tags test case - style 1", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/non-specific-node-tags-issue/fileA-1.yml", "../../assets/non-specific-node-tags-issue/fileB.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/non-specific-node-tags-issue/fileA-1.yml", "../../assets/non-specific-node-tags-issue/fileB.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -2019,7 +2019,7 @@ thing: boop
 			})
 
 			Convey("non-specific node tags test case - style 2", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/non-specific-node-tags-issue/fileA-2.yml", "../../assets/non-specific-node-tags-issue/fileB.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/non-specific-node-tags-issue/fileA-2.yml", "../../assets/non-specific-node-tags-issue/fileB.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -2047,7 +2047,7 @@ thing: boop
 			})
 
 			Convey("Issue #198 - avoid nil panics when merging arrays with nil elements", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/issue-198/nil-array-elements.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/issue-198/nil-array-elements.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -2071,7 +2071,7 @@ nested_nil:
 			})
 
 			Convey("Issue #172 - don't panic if target key has map value", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/issue-172/implicitmergemap.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/issue-172/implicitmergemap.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -2086,7 +2086,7 @@ warning: Falling back to inline merge strategy
 `)
 			})
 			Convey("Issue #172 - don't panic if target key has sequence value", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/issue-172/implicitmergeseq.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/issue-172/implicitmergeseq.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -2102,7 +2102,7 @@ warning: Falling back to inline merge strategy
 			})
 
 			Convey("Issue #172 - error instead of panic if merge was specifically requested but target key has map value", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/issue-172/explicitmerge1.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/issue-172/explicitmerge1.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -2115,7 +2115,7 @@ warning: Falling back to inline merge strategy
 			})
 
 			Convey("Issue #172 - error instead of panic if merge on key was specifically requested but target key has map value", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/issue-172/explicitmergeonkey1.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/issue-172/explicitmergeonkey1.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -2130,7 +2130,7 @@ warning: Falling back to inline merge strategy
 
 		Convey("Issue #215 - Handle really big ints as operator arguments", func() {
 			Convey("We didn't break normal small ints", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/issue-215/smallint.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/issue-215/smallint.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -2139,7 +2139,7 @@ warning: Falling back to inline merge strategy
 			})
 
 			Convey("We can handle ints bigger than 2^63 - 1", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/issue-215/hugeint.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/issue-215/hugeint.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -2150,7 +2150,7 @@ warning: Falling back to inline merge strategy
 		})
 
 		Convey("Issue #153 - Cartesian Product should produce a []interface{}", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/cartesian-product/can-be-joined.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/cartesian-product/can-be-joined.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -2167,7 +2167,7 @@ join_ips_with_port: 1.2.3.4:80,2.2.3.4:80
 		})
 
 		Convey("Issue #169 - Cartesian Product should produce a []interface{}", func() {
-			os.Args = []string{"spruce", "merge", "../../assets/cartesian-product/can-be-grabbed.yml"}
+			os.Args = []string{"graft", "merge", "../../assets/cartesian-product/can-be-grabbed.yml"}
 			stdout = ""
 			stderr = ""
 			main()
@@ -2194,7 +2194,7 @@ meta:
 
 		Convey("Issue #267 - specifying an explicit merge operator must behave in the same way as relying on the default implicit merge operation", func() {
 			Convey("Option 1 - standard use-case: no explicit merge, named-entry list identifier key is the default called 'name'", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/issue-267/option1-fileA.yml", "../../assets/issue-267/option1-fileB.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/issue-267/option1-fileA.yml", "../../assets/issue-267/option1-fileB.yml"}
 				stdout = ""
 				stderr = ""
 
@@ -2210,7 +2210,7 @@ meta:
 			})
 
 			Convey("Option 2 - academic version of the option 1: same set-up, but with explicit usage of the merge operator", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/issue-267/option2-fileA.yml", "../../assets/issue-267/option2-fileB.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/issue-267/option2-fileA.yml", "../../assets/issue-267/option2-fileB.yml"}
 				stdout = ""
 				stderr = ""
 
@@ -2226,7 +2226,7 @@ meta:
 			})
 
 			Convey("Option 3 - even more academic version of the option 1: same set-up, but with explicit usage of the merge operator and specification of the default identifier key called 'name'", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/issue-267/option3-fileA.yml", "../../assets/issue-267/option3-fileB.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/issue-267/option3-fileA.yml", "../../assets/issue-267/option3-fileB.yml"}
 				stdout = ""
 				stderr = ""
 
@@ -2242,7 +2242,7 @@ meta:
 			})
 
 			Convey("Option 4 - actual real world use case, where the identifier key is call 'job_name' and therefore explicit merge on key is required", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/issue-267/option4-fileA.yml", "../../assets/issue-267/option4-fileB.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/issue-267/option4-fileA.yml", "../../assets/issue-267/option4-fileB.yml"}
 				stdout = ""
 				stderr = ""
 
@@ -2259,8 +2259,8 @@ meta:
 		})
 
 		Convey("Support go-patch files", func() {
-			Convey("go-patch can modify yaml files in the merge phase, and insert spruce operators as required", func() {
-				os.Args = []string{"spruce", "merge", "--go-patch", "../../assets/go-patch/base.yml", "../../assets/go-patch/patch.yml", "../../assets/go-patch/toMerge.yml"}
+			Convey("go-patch can modify yaml files in the merge phase, and insert graft operators as required", func() {
+				os.Args = []string{"graft", "merge", "--go-patch", "../../assets/go-patch/base.yml", "../../assets/go-patch/patch.yml", "../../assets/go-patch/toMerge.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -2269,8 +2269,13 @@ meta:
 - 10
 - 5
 - 6
+graft_array_grab:
+- add graft stuff in the beginning of the array
+- name: item7
+- name: item8
+- name: item9
 items:
-- add spruce stuff in the beginning of the array
+- add graft stuff in the beginning of the array
 - name: item7
 - name: item8
 - name: item9
@@ -2283,16 +2288,11 @@ key2:
   other: 3
 more_stuff: is here
 new_key: 10
-spruce_array_grab:
-- add spruce stuff in the beginning of the array
-- name: item7
-- name: item8
-- name: item9
 
 `)
 			})
 			Convey("go-patch throws errors to the front-end when there are go-patch issues", func() {
-				os.Args = []string{"spruce", "merge", "--go-patch", "../../assets/go-patch/base.yml", "../../assets/go-patch/err.yml", "../../assets/go-patch/toMerge.yml"}
+				os.Args = []string{"graft", "merge", "--go-patch", "../../assets/go-patch/base.yml", "../../assets/go-patch/err.yml", "../../assets/go-patch/toMerge.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -2302,7 +2302,7 @@ spruce_array_grab:
 				So(stdout, ShouldEqual, "")
 			})
 			Convey("yaml-parser throws errors when trying to parse gopatch from array-based files", func() {
-				os.Args = []string{"spruce", "merge", "--go-patch", "../../assets/go-patch/base.yml", "../../assets/go-patch/bad.yml"}
+				os.Args = []string{"graft", "merge", "--go-patch", "../../assets/go-patch/base.yml", "../../assets/go-patch/bad.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -2310,7 +2310,7 @@ spruce_array_grab:
 				So(stdout, ShouldEqual, "")
 			})
 			Convey("go-patch handles named arrays with :before syntax (#283)", func() {
-				os.Args = []string{"spruce", "merge", "--go-patch", "../../assets/go-patch/base.yml", "../../assets/go-patch/before.yml"}
+				os.Args = []string{"graft", "merge", "--go-patch", "../../assets/go-patch/base.yml", "../../assets/go-patch/before.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -2337,7 +2337,7 @@ key2:
 
 			os.Setenv("DEFAULT_ARRAY_MERGE_KEY", "id")
 			Convey("changes how arrays of maps are merged by default", func() {
-				os.Args = []string{"spruce", "merge", "../../assets/default-array-merge-var/first.yml", "../../assets/default-array-merge-var/second.yml"}
+				os.Args = []string{"graft", "merge", "../../assets/default-array-merge-var/first.yml", "../../assets/default-array-merge-var/second.yml"}
 				stdout = ""
 				stderr = ""
 				main()
@@ -2361,55 +2361,55 @@ func TestDebug(t *testing.T) {
 	usage = func() {}
 	Convey("debug flags:", t, func() {
 		Convey("-D enables debugging", func() {
-			os.Args = []string{"spruce", "-D"}
+			os.Args = []string{"graft", "-D"}
 			DebugOn = false
 			main()
 			So(DebugOn, ShouldBeTrue)
 		})
 		Convey("--debug enables debugging", func() {
-			os.Args = []string{"spruce", "--debug"}
+			os.Args = []string{"graft", "--debug"}
 			DebugOn = false
 			main()
 			So(DebugOn, ShouldBeTrue)
 		})
 		Convey("DEBUG=\"tRuE\" enables debugging", func() {
 			os.Setenv("DEBUG", "tRuE")
-			os.Args = []string{"spruce"}
+			os.Args = []string{"graft"}
 			DebugOn = false
 			main()
 			So(DebugOn, ShouldBeTrue)
 		})
 		Convey("DEBUG=1 enables debugging", func() {
 			os.Setenv("DEBUG", "1")
-			os.Args = []string{"spruce"}
+			os.Args = []string{"graft"}
 			DebugOn = false
 			main()
 			So(DebugOn, ShouldBeTrue)
 		})
 		Convey("DEBUG=randomval enables debugging", func() {
 			os.Setenv("DEBUG", "randomval")
-			os.Args = []string{"spruce"}
+			os.Args = []string{"graft"}
 			DebugOn = false
 			main()
 			So(DebugOn, ShouldBeTrue)
 		})
 		Convey("DEBUG=\"fAlSe\" disables debugging", func() {
 			os.Setenv("DEBUG", "fAlSe")
-			os.Args = []string{"spruce"}
+			os.Args = []string{"graft"}
 			DebugOn = false
 			main()
 			So(DebugOn, ShouldBeFalse)
 		})
 		Convey("DEBUG=0 disables debugging", func() {
 			os.Setenv("DEBUG", "0")
-			os.Args = []string{"spruce"}
+			os.Args = []string{"graft"}
 			DebugOn = false
 			main()
 			So(DebugOn, ShouldBeFalse)
 		})
 		Convey("DEBUG=\"\" disables debugging", func() {
 			os.Setenv("DEBUG", "")
-			os.Args = []string{"spruce"}
+			os.Args = []string{"graft"}
 			DebugOn = false
 			main()
 			So(DebugOn, ShouldBeFalse)
@@ -2438,8 +2438,8 @@ func TestFan(t *testing.T) {
 		exit(1)
 	}
 
-	Convey("spruce fan errors when failing to read a file it was given", t, func() {
-		os.Args = []string{"spruce", "fan", "../../assets/fan/nonexistent.yml", "../../assets/fan/multi-doc-1.yml"}
+	Convey("graft fan errors when failing to read a file it was given", t, func() {
+		os.Args = []string{"graft", "fan", "../../assets/fan/nonexistent.yml", "../../assets/fan/multi-doc-1.yml"}
 		stdout = ""
 		stderr = ""
 		main()
@@ -2447,8 +2447,8 @@ func TestFan(t *testing.T) {
 		So(stdout, ShouldEqual, "")
 		So(rc, ShouldEqual, 2)
 	})
-	Convey("spruce fan errors with the correct document index when there's an initial doc-separator", t, func() {
-		os.Args = []string{"spruce", "fan", "../../assets/fan/source.yml", "../../assets/fan/invalid-yaml-with-doc-separator.yml"}
+	Convey("graft fan errors with the correct document index when there's an initial doc-separator", t, func() {
+		os.Args = []string{"graft", "fan", "../../assets/fan/source.yml", "../../assets/fan/invalid-yaml-with-doc-separator.yml"}
 		stdout = ""
 		stderr = ""
 		main()
@@ -2456,8 +2456,8 @@ func TestFan(t *testing.T) {
 		So(stdout, ShouldEqual, "")
 		So(rc, ShouldEqual, 2)
 	})
-	Convey("spruce fan errors with the correct doc index when there is no initial doc separator", t, func() {
-		os.Args = []string{"spruce", "fan", "../../assets/fan/source.yml", "../../assets/fan/invalid-yaml.yml"}
+	Convey("graft fan errors with the correct doc index when there is no initial doc separator", t, func() {
+		os.Args = []string{"graft", "fan", "../../assets/fan/source.yml", "../../assets/fan/invalid-yaml.yml"}
 		stdout = ""
 		stderr = ""
 		main()
@@ -2465,17 +2465,17 @@ func TestFan(t *testing.T) {
 		So(stdout, ShouldEqual, "")
 		So(rc, ShouldEqual, 2)
 	})
-	Convey("spruce fan errors if no source file is provided", t, func() {
-		os.Args = []string{"spruce", "fan"}
+	Convey("graft fan errors if no source file is provided", t, func() {
+		os.Args = []string{"graft", "fan"}
 		stdout = ""
 		stderr = ""
 		main()
-		So(stderr, ShouldContainSubstring, "You must specify at least a source document to spruce fan. If no files are specified, STDIN is used. Using STDIN for source and target docs only works with -m")
+		So(stderr, ShouldContainSubstring, "You must specify at least a source document to graft fan. If no files are specified, STDIN is used. Using STDIN for source and target docs only works with -m")
 		So(stdout, ShouldEqual, "")
 		So(rc, ShouldEqual, 2)
 	})
-	Convey("spruce fan merges one doc into all the docs of the other files", t, func() {
-		os.Args = []string{"spruce", "fan", "--prune", "meta", "../../assets/fan/source.yml", "../../assets/fan/multi-doc-1.yml", "../../assets/fan/multi-doc-2.yml", "../../assets/fan/multi-doc-3.yml"}
+	Convey("graft fan merges one doc into all the docs of the other files", t, func() {
+		os.Args = []string{"graft", "fan", "--prune", "meta", "../../assets/fan/source.yml", "../../assets/fan/multi-doc-1.yml", "../../assets/fan/multi-doc-2.yml", "../../assets/fan/multi-doc-3.yml"}
 		stdout = ""
 		stderr = ""
 		main()
@@ -2511,8 +2511,8 @@ doc7:
 `)
 		So(rc, ShouldEqual, 0)
 	})
-	Convey("spruce fan merges a multi doc source into all the docs of the other files", t, func() {
-		os.Args = []string{"spruce", "fan", "-m", "--prune", "meta", "../../assets/fan/multi-doc-source.yml", "../../assets/fan/multi-doc-1.yml", "../../assets/fan/multi-doc-2.yml", "../../assets/fan/multi-doc-3.yml"}
+	Convey("graft fan merges a multi doc source into all the docs of the other files", t, func() {
+		os.Args = []string{"graft", "fan", "-m", "--prune", "meta", "../../assets/fan/multi-doc-source.yml", "../../assets/fan/multi-doc-1.yml", "../../assets/fan/multi-doc-2.yml", "../../assets/fan/multi-doc-3.yml"}
 		stdout = ""
 		stderr = ""
 		main()
@@ -2589,7 +2589,7 @@ func TestExamples(t *testing.T) {
 			expect := args[len(args)-1]
 			args = args[:len(args)-1]
 
-			os.Args = []string{"spruce", "merge"}
+			os.Args = []string{"graft", "merge"}
 			os.Args = append(os.Args, args...)
 			stdout, stderr = "", ""
 			main()

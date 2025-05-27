@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"encoding/json"
@@ -61,7 +61,7 @@ type ExpressionUsage struct {
 
 // NewCacheWarming creates a new cache warming system
 func NewCacheWarming(cache *HierarchicalCache, config CacheWarmingConfig) *CacheWarming {
-	analytics := NewUsageAnalytics(1000, "/tmp/spruce_usage.json")
+	analytics := NewUsageAnalytics(1000, "/tmp/graft_usage.json")
 	
 	cw := &CacheWarming{
 		analytics: analytics,

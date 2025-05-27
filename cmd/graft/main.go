@@ -14,8 +14,8 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/starkandwayne/goutils/ansi"
 
-	. "github.com/geofffranks/spruce"
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft"
+	. "github.com/wayneeseguin/graft/log"
 
 	"strings"
 
@@ -26,7 +26,7 @@ import (
 	"github.com/voxelbrain/goptions"
 )
 
-// Version holds the Current version of spruce
+// Version holds the Current version of graft
 var Version = "(development)"
 
 var printfStdOut = func(format string, args ...interface{}) {
@@ -66,7 +66,7 @@ type jsonOpts struct {
 }
 
 type mergeOpts struct {
-	SkipEval       bool               `goptions:"--skip-eval, description='Do not evaluate spruce logic after merging docs'"`
+	SkipEval       bool               `goptions:"--skip-eval, description='Do not evaluate graft logic after merging docs'"`
 	Prune          []string           `goptions:"--prune, description='Specify keys to prune from final output (may be specified more than once)'"`
 	CherryPick     []string           `goptions:"--cherry-pick, description='The opposite of prune, specify keys to cherry-pick from final output (may be specified more than once)'"`
 	FallbackAppend bool               `goptions:"--fallback-append, description='Default merge normally tries to key merge, then inline. This flag says do an append instead of an inline.'"`
@@ -350,7 +350,7 @@ func cmdFanEval(options mergeOpts) ([]map[interface{}]interface{}, error) {
 	}
 
 	if len(options.Files) == 0 {
-		return nil, ansi.Errorf("@R{Missing Input:} You must specify at least a source document to spruce fan. If no files are specified, STDIN is used. Using STDIN for source and target docs only works with -m.")
+		return nil, ansi.Errorf("@R{Missing Input:} You must specify at least a source document to graft fan. If no files are specified, STDIN is used. Using STDIN for source and target docs only works with -m.")
 	}
 
 	roots := []map[interface{}]interface{}{}
@@ -389,7 +389,7 @@ func cmdFanEval(options mergeOpts) ([]map[interface{}]interface{}, error) {
 	}
 
 	if len(docs) < 1 {
-		return nil, ansi.Errorf("@R{Missing Input:} You must specify at least one target document to spruce fan. If no files are specified, STDIN is used. Using STDIN for source and target docs only works with -m.")
+		return nil, ansi.Errorf("@R{Missing Input:} You must specify at least one target document to graft fan. If no files are specified, STDIN is used. Using STDIN for source and target docs only works with -m.")
 	}
 
 	for _, doc := range docs {

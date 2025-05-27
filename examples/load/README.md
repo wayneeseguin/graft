@@ -30,16 +30,16 @@ load/
 
 ```bash
 # Basic loading
-spruce merge basic.yml
+graft merge basic.yml
 
 # Modular configuration
-spruce merge modular-config.yml
+graft merge modular-config.yml
 
 # Environment-specific (set ENV variable)
-ENV=production spruce merge environment-specific.yml
+ENV=production graft merge environment-specific.yml
 
 # See what files are being loaded
-spruce merge --debug dynamic-loading.yml
+graft merge --debug dynamic-loading.yml
 ```
 
 ## Key Differences from `file`:
@@ -49,6 +49,6 @@ spruce merge --debug dynamic-loading.yml
 - Use `file` for scripts, certificates, templates
 
 ## Important Notes:
-- Loaded files are NOT evaluated for Spruce operators
+- Loaded files are NOT evaluated for Graft operators
 - Use relative paths from the main YAML file
 - Supports both YAML and JSON files

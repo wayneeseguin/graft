@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"bytes"

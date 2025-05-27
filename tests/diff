@@ -1,9 +1,9 @@
 # vim:ft=yaml
 #
-# Spruce tests for the `spruce diff` utility
+# Graft tests for the `graft diff` utility
 #
 # This file defines a set of tests for exercising the
-# functionality of the `spruce diff` utility.
+# functionality of the `graft diff` utility.
 #
 # Each test starts with '### (test name)' and runs
 # until the next '### ...', or end-of-file, whichever
@@ -24,7 +24,7 @@
 #    go test -run Diff | cat
 #
 # (the '|cat' but is in there to forcibly disable the
-#  ANSI colorizing you get when running `spruce diff`)
+#  ANSI colorizing you get when running `graft diff`)
 #
 # Happy Testing!
 #

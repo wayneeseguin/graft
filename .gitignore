@@ -1,9 +1,12 @@
 .DS_Store
-/spruce
-/spruce-*
+/graft
+/graft-*
 credentials.yml
 releases
 artifacts
 .svtoken
 *.swp
 .vscode
+*.tgz
+*.gz
+*.zip

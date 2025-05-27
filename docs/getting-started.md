@@ -1,38 +1,38 @@
-# Getting Started with Spruce
+# Getting Started with graft
 
-Spruce is a domain-specific YAML merging tool, designed to make it easy to manage and merge multi-part YAML configurations.
+graft is a domain-specific YAML merging tool, designed to make it easy to manage and merge multi-part YAML configurations.
 
 ## Installation
 
 ### macOS (Homebrew)
 
 ```bash
-brew install spruce
+brew install graft
 ```
 
 ### Linux/macOS (Binary)
 
 ```bash
 # Download the latest release
-curl -L https://github.com/geofffranks/spruce/releases/latest/download/spruce-$(uname -s | tr '[:upper:]' '[:lower:]')-amd64 -o spruce
+curl -L https://github.com/wayneeseguin/graft/releases/latest/download/graft-$(uname -s | tr '[:upper:]' '[:lower:]')-amd64 -o graft
 
 # Make it executable
-chmod +x spruce
+chmod +x graft
 
 # Move to PATH
-sudo mv spruce /usr/local/bin/
+sudo mv graft /usr/local/bin/
 ```
 
 ### From Source
 
 ```bash
-go get github.com/geofffranks/spruce/cmd/spruce
+go get github.com/wayneeseguin/graft/cmd/graft
 ```
 
 ### Verify Installation
 
 ```bash
-spruce --version
+graft --version
 ```
 
 ## Basic Usage
@@ -60,7 +60,7 @@ server:
 
 Merge them:
 ```bash
-spruce merge base.yml production.yml
+graft merge base.yml production.yml
 ```
 
 Output:
@@ -78,7 +78,7 @@ server:
 Files are merged left-to-right. Later files override values from earlier files:
 
 ```bash
-spruce merge first.yml second.yml third.yml
+graft merge first.yml second.yml third.yml
 ```
 
 - `first.yml` is the base
@@ -87,7 +87,7 @@ spruce merge first.yml second.yml third.yml
 
 ## Using Operators
 
-Spruce's power comes from its operators - special expressions that perform operations during merging.
+graft's power comes from its operators - special expressions that perform operations during merging.
 
 ### References with grab
 
@@ -233,10 +233,10 @@ config/
 Usage:
 ```bash
 # Development
-spruce merge config/base.yml config/development.yml
+graft merge config/base.yml config/development.yml
 
 # Production
-spruce merge config/base.yml config/production.yml
+graft merge config/base.yml config/production.yml
 ```
 
 ### Pruning Temporary Data
@@ -255,7 +255,7 @@ app:
 ```
 
 ```bash
-spruce merge base.yml --prune meta
+graft merge base.yml --prune meta
 ```
 
 ### Using Parameters
@@ -285,7 +285,7 @@ name: doc2
 ```
 
 ```bash
-spruce merge --multi-doc multi.yml
+graft merge --multi-doc multi.yml
 ```
 
 ### Cherry-Picking
@@ -293,7 +293,7 @@ spruce merge --multi-doc multi.yml
 Extract specific parts:
 
 ```bash
-spruce merge large-manifest.yml --cherry-pick jobs.web
+graft merge large-manifest.yml --cherry-pick jobs.web
 ```
 
 ### Vault Integration
@@ -367,10 +367,10 @@ password: (( grab $PASSWORD ))
 
 ### Debug Mode
 
-See what Spruce is doing:
+See what graft is doing:
 
 ```bash
-spruce merge --debug base.yml override.yml
+graft merge --debug base.yml override.yml
 ```
 
 ### Common Issues
@@ -409,7 +409,7 @@ result: (( concat "prefix" (stringify 123) ))
 
 ## Getting Help
 
-- Run `spruce -h` for command help
+- Run `graft -h` for command help
 - Check the [FAQ](reference/faq.md)
-- Visit the [GitHub repository](https://github.com/geofffranks/spruce)
+- Visit the [GitHub repository](https://github.com/wayneeseguin/graft)
 - Read the [Troubleshooting Guide](reference/troubleshooting.md)

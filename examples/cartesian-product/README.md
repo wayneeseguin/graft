@@ -35,13 +35,13 @@ combinations: (( cartesian-product colors sizes ))
 
 ```bash
 # Basic combinations
-spruce merge basic.yml
+graft merge basic.yml
 
 # Test matrix generation
-spruce merge test-matrix.yml
+graft merge test-matrix.yml
 
 # Configuration combinations
-spruce merge configurations.yml
+graft merge configurations.yml
 ```
 
 ## Common Use Cases:

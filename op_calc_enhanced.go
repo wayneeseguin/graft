@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/starkandwayne/goutils/ansi"
 	"github.com/starkandwayne/goutils/tree"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 // CalcOperatorEnhanced is an enhanced version that supports nested expressions
@@ -77,14 +77,14 @@ func (CalcOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, error) 
 		return nil, ansi.Errorf("@R{calc operator argument must resolve to a string or number, got} @r{%T}", val)
 	}
 
-	// Replace all Spruce references with the respective value
+	// Replace all Graft references with the respective value
 	DEBUG("  input expression: %s", input)
 	processed, replaceError := replaceReferencesEnhanced(ev, input)
 	if replaceError != nil {
 		return nil, replaceError
 	}
 
-	// Once all Spruce references (variables) are replaced, try to read the expression
+	// Once all Graft references (variables) are replaced, try to read the expression
 	DEBUG("  processed expression: %s", processed)
 	expression, expressionError := govaluate.NewEvaluableExpressionWithFunctions(processed, supportedFunctionsEnhanced())
 	if expressionError != nil {

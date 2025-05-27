@@ -1,11 +1,11 @@
-package spruce
+package graft
 
 import (
 	"fmt"
 
 	"github.com/starkandwayne/goutils/tree"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 // AddOperator implements the + operator

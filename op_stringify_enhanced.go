@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 	"gopkg.in/yaml.v3"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 // StringifyOperatorEnhanced is an enhanced version that supports nested expressions

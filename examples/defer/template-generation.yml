@@ -1,5 +1,5 @@
 ---
-# Generating reusable Spruce templates with defer
+# Generating reusable Graft templates with defer
 
 # Template metadata (evaluated during template generation)
 template_info:

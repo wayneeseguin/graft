@@ -1,19 +1,19 @@
-# Spruce Quick Reference
+# graft Quick Reference
 
 ## Command Line
 
 ```bash
 # Basic merge
-spruce merge base.yml override.yml
+graft merge base.yml override.yml
 
 # With options
-spruce merge --prune meta --cherry-pick jobs base.yml prod.yml
+graft merge --prune meta --cherry-pick jobs base.yml prod.yml
 
 # Other commands
-spruce diff file1.yml file2.yml
-spruce json config.yml
-spruce fan source.yml target1.yml target2.yml
-spruce vaultinfo manifest.yml
+graft diff file1.yml file2.yml
+graft json config.yml
+graft fan source.yml target1.yml target2.yml
+graft vaultinfo manifest.yml
 ```
 
 ## Common Operators
@@ -201,7 +201,7 @@ primary: (( grab all_hosts.[0] ))
 | `AWS_PROFILE` | AWS credentials profile |
 | `AWS_ROLE` | AWS role to assume |
 | `REDACT` | Show REDACTED for secrets |
-| `SPRUCE_DEBUG` | Enable debug mode |
+| `GRAFT_DEBUG` | Enable debug mode |
 
 ## Type Checking
 
@@ -235,11 +235,11 @@ critical: (( param "This value is required!" ))
 
 ## Debugging Tips
 
-1. **Use debug mode**: `spruce merge -d file.yml`
-2. **Check specific paths**: `spruce merge file.yml --cherry-pick path.to.check`
-3. **Validate without operators**: `spruce merge --skip-eval file.yml`
-4. **Show differences**: `spruce diff before.yml after.yml`
-5. **Check vault paths**: `spruce vaultinfo file.yml`
+1. **Use debug mode**: `graft merge -d file.yml`
+2. **Check specific paths**: `graft merge file.yml --cherry-pick path.to.check`
+3. **Validate without operators**: `graft merge --skip-eval file.yml`
+4. **Show differences**: `graft diff before.yml after.yml`
+5. **Check vault paths**: `graft vaultinfo file.yml`
 
 ## Common Errors
 

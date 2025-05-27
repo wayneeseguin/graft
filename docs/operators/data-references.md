@@ -103,7 +103,7 @@ applications:
 # Multiple injections
 common:
   metadata:
-    created_by: "spruce"
+    created_by: "graft"
     version: "1.0"
   security:
     ssl_enabled: true
@@ -139,12 +139,12 @@ See also: [inject examples](/examples/inject/)
 
 Usage: `(( defer EXPRESSION ))`
 
-The `(( defer ))` operator prevents evaluation of spruce operators, outputting them as literal strings. This is useful when generating configuration files that themselves contain spruce operators.
+The `(( defer ))` operator prevents evaluation of graft operators, outputting them as literal strings. This is useful when generating configuration files that themselves contain graft operators.
 
 ### Examples:
 
 ```yaml
-# Generate a spruce template
+# Generate a graft template
 template:
   name: (( defer (( grab meta.name )) ))
   version: (( defer (( grab meta.version )) ))
@@ -201,7 +201,7 @@ See also: [defer examples](/examples/defer/)
 
 Usage: `(( param "DESCRIPTION" ))`
 
-The `(( param ))` operator marks a value as required, causing spruce to fail if the value is not provided by a merge operation. This ensures critical values aren't accidentally omitted.
+The `(( param ))` operator marks a value as required, causing graft to fail if the value is not provided by a merge operation. This ensures critical values aren't accidentally omitted.
 
 ### Examples:
 

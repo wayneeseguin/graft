@@ -39,11 +39,11 @@ features:
 
 ```bash
 # Test basic negation
-spruce merge basic.yml
+graft merge basic.yml
 
 # Test with parameters
-spruce merge feature-flags.yml <(echo "debug: true")
+graft merge feature-flags.yml <(echo "debug: true")
 
 # Compare with ! operator (enhanced parser)
-spruce merge with-conditionals.yml
+graft merge with-conditionals.yml
 ```

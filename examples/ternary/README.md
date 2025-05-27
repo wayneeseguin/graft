@@ -1,6 +1,6 @@
 # Ternary Operator Examples
 
-The ternary operator (`?:`) in Spruce provides conditional expression evaluation, similar to the ternary operator in many programming languages.
+The ternary operator (`?:`) in Graft provides conditional expression evaluation, similar to the ternary operator in many programming languages.
 
 ## Overview
 
@@ -8,7 +8,7 @@ The `(( condition ? true_value : false_value ))` operator evaluates:
 - If `condition` is truthy, returns `true_value`
 - If `condition` is falsy, returns `false_value`
 
-Falsy values in Spruce:
+Falsy values in Graft:
 - `false` (boolean)
 - `null` or `nil`
 - `0` (numeric zero)
@@ -36,16 +36,16 @@ Falsy values in Spruce:
 
 ```bash
 # Basic ternary operations
-spruce merge basic.yml
+graft merge basic.yml
 
 # Environment-based configuration
-spruce merge environment-config.yml
+graft merge environment-config.yml
 
 # Feature flag examples
-spruce merge feature-flags.yml
+graft merge feature-flags.yml
 
 # Resource sizing examples
-spruce merge resource-sizing.yml
+graft merge resource-sizing.yml
 ```
 
 ## Key Concepts

@@ -34,13 +34,13 @@ items: (( sort by id ))
 
 ```bash
 # Basic sorting
-spruce merge basic.yml
+graft merge basic.yml
 
 # Named entries
-spruce merge named-entries.yml
+graft merge named-entries.yml
 
 # Complex scenarios
-spruce merge multi-level.yml
+graft merge multi-level.yml
 ```
 
 ## Important Notes:

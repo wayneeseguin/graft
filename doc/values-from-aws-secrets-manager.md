@@ -14,9 +14,9 @@ database:
   username: (( awssecret "services/myservice/db?key=user" ))
 ```
 
-When we run `spruce merge base.yml` we will get:
+When we run `graft merge base.yml` we will get:
 ```
-$ spruce merge base.yml
+$ graft merge base.yml
 database:
   password: mypass
   username: myuser
@@ -44,7 +44,7 @@ some_value: (( awssecret "external_service/some_value?stage=AWSPREVIOUS&key=subk
 ```
 
 ## Can I retrieve secrets stored as binary?
-It is not currently possible to retrieve secrets in binary as spruce is primarily a tool for working with text based formats.
+It is not currently possible to retrieve secrets in binary as graft is primarily a tool for working with text based formats.
 If you need to push something binary consider base64 encoding your binary data and pushing that as a string.
 
 ## What IAM permissions are required?

@@ -1,6 +1,6 @@
-# Arithmetic Operators in Spruce
+# Arithmetic Operators in Graft
 
-This directory contains examples demonstrating Spruce's arithmetic operators for performing mathematical calculations in YAML configurations.
+This directory contains examples demonstrating Graft's arithmetic operators for performing mathematical calculations in YAML configurations.
 
 ## Available Operators
 
@@ -54,13 +54,13 @@ remainder: (( 17 % 5 ))  # Result: 2
 To run these examples:
 ```bash
 # Single file
-spruce merge basic.yml
+graft merge basic.yml
 
 # Combine with base configuration
-spruce merge base.yml calculations.yml
+graft merge base.yml calculations.yml
 
 # See the results
-spruce merge resource-calculations.yml | spruce json
+graft merge resource-calculations.yml | graft json
 ```
 
 ## Common Patterns

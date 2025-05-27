@@ -79,7 +79,7 @@ spec:
               name: myapp-config
               key: database-host
         
-        # Secrets from Kubernetes Secret (populated by Vault via Spruce)
+        # Secrets from Kubernetes Secret (populated by Vault via Graft)
         - name: DATABASE_PASSWORD
           valueFrom:
             secretKeyRef:

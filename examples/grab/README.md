@@ -1,6 +1,6 @@
 # Grab Operator Examples
 
-The `grab` operator is the most fundamental operator in Spruce. It retrieves values from other parts of your YAML structure.
+The `grab` operator is the most fundamental operator in Graft. It retrieves values from other parts of your YAML structure.
 
 ## Examples in this directory:
 
@@ -14,11 +14,11 @@ The `grab` operator is the most fundamental operator in Spruce. It retrieves val
 
 ```bash
 # Basic example
-spruce merge basic.yml
+graft merge basic.yml
 
 # With environment variables
-ENV=production spruce merge with-env-vars.yml
+ENV=production graft merge with-env-vars.yml
 
 # See evaluation order
-spruce merge --debug nested.yml
+graft merge --debug nested.yml
 ```

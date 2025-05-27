@@ -35,14 +35,14 @@ instance:
 
 ```bash
 # Basic shuffling (run multiple times to see different outputs)
-spruce merge basic.yml
-spruce merge basic.yml  # Different order
+graft merge basic.yml
+graft merge basic.yml  # Different order
 
 # AZ distribution
-spruce merge availability-zones.yml
+graft merge availability-zones.yml
 
 # Test data generation
-spruce merge test-data.yml
+graft merge test-data.yml
 ```
 
 ## Notes:

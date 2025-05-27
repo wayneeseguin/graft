@@ -1,45 +1,45 @@
 #!/bin/bash
 
-echo "Bad YAML for 'spruce json'"
-echo '"3"' | ./spruce json
+echo "Bad YAML for 'graft json'"
+echo '"3"' | ./graft json
 echo
 
-echo "Bad stdin for 'spruce json'"
-./spruce json </dev/null
+echo "Bad stdin for 'graft json'"
+./graft json </dev/null
 echo
 
-echo "Bad file for 'spruce json'"
-./spruce json nonexistent.yml
+echo "Bad file for 'graft json'"
+./graft json nonexistent.yml
 echo; echo
 
 echo "Bad YAML root"
-./spruce merge assets/json/non-map.yml
+./graft merge assets/json/non-map.yml
 
 echo "Bad File"
-./spruce merge nonexistent.yml
+./graft merge nonexistent.yml
 echo
 
 echo "Bad YAML parsing"
-./spruce merge assets/json/malformed.yml
+./graft merge assets/json/malformed.yml
 
 echo Recursion Depth
-./spruce merge assets/dereference/cyclic-data.yml
+./graft merge assets/dereference/cyclic-data.yml
 echo; echo
 
 echo bad merge into non-array
-./spruce merge assets/merge/first.yml assets/merge/non-array-merge.yml
+./graft merge assets/merge/first.yml assets/merge/non-array-merge.yml
 
 echo bad merge using keys
-./spruce merge assets/merge/first.yml assets/merge/error.yml
+./graft merge assets/merge/first.yml assets/merge/error.yml
 
 echo bad merge using keys that don\'t exist
-./spruce merge assets/merge/first.yml assets/merge/no-key-merge.yml
+./graft merge assets/merge/first.yml assets/merge/no-key-merge.yml
 echo
 
 echo Syntax error
-./spruce merge assets/concat/fail.yml
+./graft merge assets/concat/fail.yml
 
 echo NotFoundError, TypeMisMatchErrors, all operator errors, all tree errors
-./spruce merge assets/errors/colortest.yml
+./graft merge assets/errors/colortest.yml
 
 exit 0

@@ -1,6 +1,6 @@
-# Spruce Operator Quick Reference
+# graft Operator Quick Reference
 
-A concise reference for all Spruce operators, organized by category.
+A concise reference for all graft operators, organized by category.
 
 ## Most Common Operators
 
@@ -177,10 +177,10 @@ count: (( calc "len($items)" ))
 ## Tips & Tricks
 
 ### Debugging
-- `spruce merge --debug` - See evaluation order
-- `spruce merge --trace` - Detailed trace output
-- `spruce diff` - Compare merge results
-- `spruce merge --cherry-pick path` - Extract specific paths
+- `graft merge --debug` - See evaluation order
+- `graft merge --trace` - Detailed trace output
+- `graft diff` - Compare merge results
+- `graft merge --cherry-pick path` - Extract specific paths
 
 ### Performance
 - Use `||` for defaults instead of multiple merges

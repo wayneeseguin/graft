@@ -35,13 +35,13 @@ password: (( base64-decode encoded_password ))
 
 ```bash
 # Basic decoding
-spruce merge basic.yml
+graft merge basic.yml
 
 # Decode secrets
-spruce merge secrets.yml
+graft merge secrets.yml
 
 # Process certificates
-spruce merge certificates.yml
+graft merge certificates.yml
 ```
 
 ## Common Use Cases:

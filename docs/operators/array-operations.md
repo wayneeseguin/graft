@@ -4,7 +4,7 @@ These operators provide powerful array manipulation capabilities, including merg
 
 ## Array Merge Operators
 
-Spruce provides several operators to control how arrays are merged between files. By default, arrays of maps merge by `name` key, but you can customize this behavior.
+graft provides several operators to control how arrays are merged between files. By default, arrays of maps merge by `name` key, but you can customize this behavior.
 
 ### (( append ))
 

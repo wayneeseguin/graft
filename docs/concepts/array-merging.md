@@ -1,6 +1,6 @@
 # Array Merging
 
-Arrays in YAML can contain simple types (strings, numbers) or complex types (maps/objects). Spruce provides powerful operators to control how arrays are merged.
+Arrays in YAML can contain simple types (strings, numbers) or complex types (maps/objects). graft provides powerful operators to control how arrays are merged.
 
 ## Array Types
 
@@ -33,7 +33,7 @@ jobs:
 
 ## Array Operators
 
-Spruce provides operators to modify arrays during merging:
+graft provides operators to modify arrays during merging:
 
 ### Universal Operators
 
@@ -306,9 +306,9 @@ items:
 ### Default Behavior
 
 Without explicit operators:
-1. If all array elements have a `name` field, Spruce uses `(( merge on name ))`
-2. Otherwise, Spruce uses `(( inline ))` merge
-3. With `--fallback-append` flag, Spruce uses `(( append ))` instead of `(( inline ))`
+1. If all array elements have a `name` field, graft uses `(( merge on name ))`
+2. Otherwise, graft uses `(( inline ))` merge
+3. With `--fallback-append` flag, graft uses `(( append ))` instead of `(( inline ))`
 
 ### Identifier Keys
 
@@ -323,7 +323,7 @@ Common identifier keys (in order of precedence):
 2. **Choose appropriate identifiers** - Use meaningful keys for merging
 3. **Be careful with inline** - Position-based merging is fragile
 4. **Document complex merges** - Add comments explaining the merge strategy
-5. **Test array merges** - Verify results with `spruce diff`
+5. **Test array merges** - Verify results with `graft diff`
 
 ## Common Patterns
 

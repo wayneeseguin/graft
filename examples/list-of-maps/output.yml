@@ -2,7 +2,7 @@ jobs:
 - instances: 5
   name: concatenator_z1
   properties:
-    spruce: is cool
+    graft: is cool
     this: is a new property added to an existing job
   resource_pool: small
 - instances: 4

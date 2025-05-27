@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"strings"
 	
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// EnhancedParser implements a precedence-climbing parser for Spruce expressions
+// EnhancedParser implements a precedence-climbing parser for Graft expressions
 type EnhancedParser struct {
 	tokens   []Token
 	current  int
@@ -22,7 +22,7 @@ type EnhancedParser struct {
 // NewEnhancedParser creates a new parser with the given tokens
 func NewEnhancedParser(tokens []Token, registry *OperatorRegistry) *EnhancedParser {
 	// Check if error collection is enabled
-	collectErrors := os.Getenv("SPRUCE_COLLECT_ERRORS") == "1"
+	collectErrors := os.Getenv("GRAFT_COLLECT_ERRORS") == "1"
 	maxErrors := 10
 	if !collectErrors {
 		maxErrors = 1

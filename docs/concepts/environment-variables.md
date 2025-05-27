@@ -1,6 +1,6 @@
-# Environment Variables in Spruce
+# Environment Variables in graft
 
-Spruce provides two powerful ways to work with environment variables: using them as literal values and expanding them within reference paths.
+graft provides two powerful ways to work with environment variables: using them as literal values and expanding them within reference paths.
 
 ## Using Environment Variables as Values
 
@@ -12,7 +12,7 @@ api_key: (( grab $API_KEY ))
 debug_mode: (( grab $DEBUG_ENABLED ))
 ```
 
-If the environment variable is not set, Spruce will error. To provide defaults, use the `||` operator:
+If the environment variable is not set, graft will error. To provide defaults, use the `||` operator:
 
 ```yaml
 port: (( grab $PORT || 8080 ))
@@ -240,10 +240,10 @@ config:
 
 ```bash
 # Test specific expansion
-echo 'value: (( grab config.$MY_VAR.key ))' | MY_VAR=test spruce merge -
+echo 'value: (( grab config.$MY_VAR.key ))' | MY_VAR=test graft merge -
 
 # Debug mode shows expansion
-spruce merge --debug config.yml
+graft merge --debug config.yml
 
 # List all environment variables
 env | sort

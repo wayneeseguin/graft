@@ -1,6 +1,6 @@
-# Parallel Execution in Spruce
+# Parallel Execution in graft
 
-Spruce now supports parallel execution of operators, providing significant performance improvements for large configuration files while maintaining data integrity and backward compatibility.
+graft now supports parallel execution of operators, providing significant performance improvements for large configuration files while maintaining data integrity and backward compatibility.
 
 ## Table of Contents
 - [Overview](#overview)
@@ -15,7 +15,7 @@ Spruce now supports parallel execution of operators, providing significant perfo
 
 ## Overview
 
-Parallel execution allows Spruce to evaluate multiple independent operators simultaneously, reducing processing time for large YAML files. This feature is particularly beneficial for:
+Parallel execution allows graft to evaluate multiple independent operators simultaneously, reducing processing time for large YAML files. This feature is particularly beneficial for:
 
 - Large configuration files with many operators
 - Files with network-based operations (vault, AWS)
@@ -37,10 +37,10 @@ Enable parallel execution with a single environment variable:
 
 ```bash
 # Enable parallel execution
-export SPRUCE_PARALLEL=true
+export GRAFT_PARALLEL=true
 
-# Run spruce as normal
-spruce merge base.yml overlay.yml
+# Run graft as normal
+graft merge base.yml overlay.yml
 ```
 
 ### Recommended Configuration
@@ -49,14 +49,14 @@ For optimal performance:
 
 ```bash
 # Enable parallel execution with 8 workers
-export SPRUCE_PARALLEL=true
-export SPRUCE_PARALLEL_WORKERS=8
+export GRAFT_PARALLEL=true
+export GRAFT_PARALLEL_WORKERS=8
 
 # Enable metrics for monitoring
-export SPRUCE_METRICS=true
+export GRAFT_METRICS=true
 
-# Run spruce
-spruce merge large-manifest.yml
+# Run graft
+graft merge large-manifest.yml
 ```
 
 ### Verify It's Working
@@ -65,9 +65,9 @@ With debug mode enabled, you'll see parallel execution information:
 
 ```bash
 export DEBUG=1
-export SPRUCE_PARALLEL=true
+export GRAFT_PARALLEL=true
 
-spruce merge base.yml overlay.yml
+graft merge base.yml overlay.yml
 # Output will include:
 # DEBUG> Running 45 operations: 30 in parallel, 15 sequential
 # DEBUG> Parallel execution completed in 1.2s (3.5x speedup)
@@ -79,12 +79,12 @@ spruce merge base.yml overlay.yml
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SPRUCE_PARALLEL` | `false` | Enable/disable parallel execution |
-| `SPRUCE_PARALLEL_WORKERS` | CPU count | Maximum number of worker threads |
-| `SPRUCE_PARALLEL_MIN_OPS` | `10` | Minimum operations required for parallel execution |
-| `SPRUCE_PARALLEL_STRATEGY` | `conservative` | Execution strategy: `conservative`, `aggressive`, or `adaptive` |
-| `SPRUCE_METRICS` | `false` | Enable metrics collection |
-| `SPRUCE_METRICS_PORT` | `9090` | Port for metrics HTTP server |
+| `GRAFT_PARALLEL` | `false` | Enable/disable parallel execution |
+| `GRAFT_PARALLEL_WORKERS` | CPU count | Maximum number of worker threads |
+| `GRAFT_PARALLEL_MIN_OPS` | `10` | Minimum operations required for parallel execution |
+| `GRAFT_PARALLEL_STRATEGY` | `conservative` | Execution strategy: `conservative`, `aggressive`, or `adaptive` |
+| `GRAFT_METRICS` | `false` | Enable metrics collection |
+| `GRAFT_METRICS_PORT` | `9090` | Port for metrics HTTP server |
 
 ### Execution Strategies
 
@@ -92,14 +92,14 @@ spruce merge base.yml overlay.yml
 Only operators on the safe list are executed in parallel. This ensures maximum safety.
 
 ```bash
-export SPRUCE_PARALLEL_STRATEGY=conservative
+export GRAFT_PARALLEL_STRATEGY=conservative
 ```
 
 #### Aggressive
 All operators except those explicitly blacklisted are executed in parallel. Use with caution.
 
 ```bash
-export SPRUCE_PARALLEL_STRATEGY=aggressive
+export GRAFT_PARALLEL_STRATEGY=aggressive
 ```
 
 #### Adaptive (Future)
@@ -110,10 +110,10 @@ Dynamically adjusts parallelization based on runtime behavior and metrics.
 For fine-grained control, use the programmatic API:
 
 ```go
-import "github.com/geofffranks/spruce"
+import "github.com/wayneeseguin/graft"
 
 // Get current features
-features := spruce.GetFeatures()
+features := graft.GetFeatures()
 
 // Enable parallel execution
 features.SetParallelEnabled(true)
@@ -129,7 +129,7 @@ features.EnableMetrics = true
 
 ### Dependency Analysis
 
-Spruce automatically analyzes operator dependencies to determine which operations can run in parallel:
+graft automatically analyzes operator dependencies to determine which operations can run in parallel:
 
 ```yaml
 # These can run in parallel (no dependencies)
@@ -164,7 +164,7 @@ admin_port: (( calc base_port + 1000 ))
 
 ### Thread Safety
 
-Spruce uses several mechanisms to ensure thread safety:
+graft uses several mechanisms to ensure thread safety:
 
 - **SafeTree**: RWMutex-protected tree for concurrent access
 - **COWTree**: Copy-on-Write tree for lock-free reads
@@ -207,15 +207,15 @@ These operators modify global state and run sequentially:
 
 ### Metrics Server
 
-When metrics are enabled, Spruce starts an HTTP server with monitoring endpoints:
+When metrics are enabled, graft starts an HTTP server with monitoring endpoints:
 
 ```bash
 # Enable metrics
-export SPRUCE_METRICS=true
-export SPRUCE_METRICS_PORT=9090
+export GRAFT_METRICS=true
+export GRAFT_METRICS_PORT=9090
 
-# Run spruce
-spruce merge manifest.yml
+# Run graft
+graft merge manifest.yml
 
 # In another terminal:
 # Prometheus metrics
@@ -233,21 +233,21 @@ curl http://localhost:9090/health
 #### Prometheus Format
 ```prometheus
 # Operations executed
-spruce_operations_total{type="parallel"} 150
-spruce_operations_total{type="sequential"} 50
-spruce_operations_total{type="failed"} 2
+graft_operations_total{type="parallel"} 150
+graft_operations_total{type="sequential"} 50
+graft_operations_total{type="failed"} 2
 
 # Operation duration percentiles
-spruce_operation_duration_seconds{quantile="0.5"} 0.010
-spruce_operation_duration_seconds{quantile="0.95"} 0.050
-spruce_operation_duration_seconds{quantile="0.99"} 0.100
+graft_operation_duration_seconds{quantile="0.5"} 0.010
+graft_operation_duration_seconds{quantile="0.95"} 0.050
+graft_operation_duration_seconds{quantile="0.99"} 0.100
 
 # Concurrency levels
-spruce_concurrency{type="current"} 4
-spruce_concurrency{type="max"} 8
+graft_concurrency{type="current"} 4
+graft_concurrency{type="max"} 8
 
 # Performance metrics
-spruce_speedup 3.5
+graft_speedup 3.5
 ```
 
 #### JSON Format
@@ -278,7 +278,7 @@ spruce_speedup 3.5
 
 ### Grafana Integration
 
-Import the Spruce dashboard for real-time monitoring:
+Import the graft dashboard for real-time monitoring:
 
 1. Add Prometheus data source pointing to `http://localhost:9090`
 2. Import dashboard from `examples/grafana-dashboard.json`
@@ -317,22 +317,22 @@ go test -bench='BenchmarkParallelExecution/(Sequential|Parallel)' -benchtime=10s
 
 1. **Increase workers for I/O-bound workloads**
    ```bash
-   export SPRUCE_PARALLEL_WORKERS=16
+   export GRAFT_PARALLEL_WORKERS=16
    ```
 
 2. **Use aggressive strategy for trusted inputs**
    ```bash
-   export SPRUCE_PARALLEL_STRATEGY=aggressive
+   export GRAFT_PARALLEL_STRATEGY=aggressive
    ```
 
 3. **Enable batching for similar operations**
    ```bash
-   export SPRUCE_BATCH=true
+   export GRAFT_BATCH=true
    ```
 
 4. **Monitor and tune based on metrics**
    ```bash
-   export SPRUCE_METRICS=true
+   export GRAFT_METRICS=true
    curl http://localhost:9090/metrics/json
    ```
 
@@ -342,19 +342,19 @@ go test -bench='BenchmarkParallelExecution/(Sequential|Parallel)' -benchtime=10s
 
 1. **Check if enabled**
    ```bash
-   echo $SPRUCE_PARALLEL  # Should be "true"
+   echo $GRAFT_PARALLEL  # Should be "true"
    ```
 
 2. **Verify minimum operations threshold**
    ```bash
    # Lower threshold for testing
-   export SPRUCE_PARALLEL_MIN_OPS=2
+   export GRAFT_PARALLEL_MIN_OPS=2
    ```
 
 3. **Enable debug logging**
    ```bash
    export DEBUG=1
-   spruce merge test.yml
+   graft merge test.yml
    # Look for: "Parallel execution disabled or too few ops"
    ```
 
@@ -363,7 +363,7 @@ go test -bench='BenchmarkParallelExecution/(Sequential|Parallel)' -benchtime=10s
 1. **Too many workers**
    - Reduce workers to match CPU cores
    ```bash
-   export SPRUCE_PARALLEL_WORKERS=4
+   export GRAFT_PARALLEL_WORKERS=4
    ```
 
 2. **Lock contention**
@@ -387,7 +387,7 @@ If you suspect race conditions:
 
 2. **Use conservative strategy**
    ```bash
-   export SPRUCE_PARALLEL_STRATEGY=conservative
+   export GRAFT_PARALLEL_STRATEGY=conservative
    ```
 
 3. **Report issues**
@@ -401,12 +401,12 @@ Enable comprehensive debugging:
 ```bash
 # Enable all debugging
 export DEBUG=1
-export SPRUCE_PARALLEL=true
-export SPRUCE_METRICS=true
-export SPRUCE_PARALLEL_WORKERS=2  # Low for easier debugging
+export GRAFT_PARALLEL=true
+export GRAFT_METRICS=true
+export GRAFT_PARALLEL_WORKERS=2  # Low for easier debugging
 
 # Run with verbose output
-spruce merge -v manifest.yml
+graft merge -v manifest.yml
 
 # Check metrics after run
 curl http://localhost:9090/metrics/json | jq
@@ -419,26 +419,26 @@ curl http://localhost:9090/metrics/json | jq
 ```go
 package main
 
-import "github.com/geofffranks/spruce"
+import "github.com/wayneeseguin/graft"
 
 // Enable parallel execution globally
-spruce.EnableParallelExecution(true)
+graft.EnableParallelExecution(true)
 
 // Configure parallel execution
-config := &spruce.ParallelEvaluatorConfig{
+config := &graft.ParallelEvaluatorConfig{
     Enabled:           true,
     MaxWorkers:        8,
     MinOpsForParallel: 5,
     Strategy:          "aggressive",
 }
-spruce.SetParallelConfig(config)
+graft.SetParallelConfig(config)
 
 // Use with evaluator
-ev := &spruce.Evaluator{Tree: data}
-err := ev.RunPhaseParallel(spruce.EvalPhase)
+ev := &graft.Evaluator{Tree: data}
+err := ev.RunPhaseParallel(graft.EvalPhase)
 
 // Get execution statistics
-stats := spruce.ParallelExecutionStats()
+stats := graft.ParallelExecutionStats()
 fmt.Printf("Speedup: %.2fx\n", stats["speedup"])
 ```
 
@@ -446,7 +446,7 @@ fmt.Printf("Speedup: %.2fx\n", stats["speedup"])
 
 ```go
 // Get feature flags
-features := spruce.GetFeatures()
+features := graft.GetFeatures()
 
 // Configure features
 features.SetParallelEnabled(true)
@@ -465,7 +465,7 @@ features.Update(map[string]interface{}{
 
 ```go
 // Get metrics collector
-metrics := spruce.GetParallelMetrics()
+metrics := graft.GetParallelMetrics()
 
 // Get current snapshot
 snapshot := metrics.GetSnapshot()
@@ -474,7 +474,7 @@ fmt.Printf("Operations: %d (%.1f%% parallel)\n",
     snapshot.ParallelRatio)
 
 // Start metrics server
-server := spruce.NewMetricsServer(metrics, 9090)
+server := graft.NewMetricsServer(metrics, 9090)
 server.Start()
 defer server.Stop()
 ```
@@ -494,13 +494,13 @@ defer server.Stop()
 1. **Test without changes**
    ```bash
    # Your existing command works unchanged
-   spruce merge base.yml overlay.yml
+   graft merge base.yml overlay.yml
    ```
 
 2. **Enable parallel execution**
    ```bash
-   export SPRUCE_PARALLEL=true
-   spruce merge base.yml overlay.yml
+   export GRAFT_PARALLEL=true
+   graft merge base.yml overlay.yml
    ```
 
 3. **Verify output is identical**
@@ -511,8 +511,8 @@ defer server.Stop()
 
 4. **Tune for performance**
    ```bash
-   export SPRUCE_PARALLEL_WORKERS=8
-   export SPRUCE_METRICS=true
+   export GRAFT_PARALLEL_WORKERS=8
+   export GRAFT_METRICS=true
    ```
 
 ### Gradual Rollout
@@ -522,22 +522,22 @@ For production environments:
 1. **Stage 1**: Enable for development
    ```bash
    # dev environment only
-   export SPRUCE_PARALLEL=true
+   export GRAFT_PARALLEL=true
    ```
 
 2. **Stage 2**: Enable for CI/CD
    ```yaml
    # .gitlab-ci.yml
    variables:
-     SPRUCE_PARALLEL: "true"
-     SPRUCE_PARALLEL_WORKERS: "4"
+     GRAFT_PARALLEL: "true"
+     GRAFT_PARALLEL_WORKERS: "4"
    ```
 
 3. **Stage 3**: Production with monitoring
    ```bash
-   export SPRUCE_PARALLEL=true
-   export SPRUCE_METRICS=true
-   export SPRUCE_PARALLEL_STRATEGY=conservative
+   export GRAFT_PARALLEL=true
+   export GRAFT_METRICS=true
+   export GRAFT_PARALLEL_STRATEGY=conservative
    ```
 
 ## Examples
@@ -546,22 +546,22 @@ For production environments:
 
 ```bash
 # Sequential: ~5 seconds
-time spruce merge cf-base.yml cf-prod.yml > manifest.yml
+time graft merge cf-base.yml cf-prod.yml > manifest.yml
 
 # Parallel: ~1.5 seconds (3.3x speedup)
-export SPRUCE_PARALLEL=true
-export SPRUCE_PARALLEL_WORKERS=8
-time spruce merge cf-base.yml cf-prod.yml > manifest.yml
+export GRAFT_PARALLEL=true
+export GRAFT_PARALLEL_WORKERS=8
+time graft merge cf-base.yml cf-prod.yml > manifest.yml
 ```
 
 ### Example 2: Vault-Heavy Configuration
 
 ```bash
 # Many vault lookups benefit greatly from parallelization
-export SPRUCE_PARALLEL=true
-export SPRUCE_PARALLEL_WORKERS=16  # Increase for I/O
+export GRAFT_PARALLEL=true
+export GRAFT_PARALLEL_WORKERS=16  # Increase for I/O
 
-spruce merge secrets.yml app.yml
+graft merge secrets.yml app.yml
 # 10x speedup for 50+ vault operations
 ```
 
@@ -571,11 +571,11 @@ spruce merge secrets.yml app.yml
 # .github/workflows/deploy.yml
 - name: Generate manifest
   env:
-    SPRUCE_PARALLEL: "true"
-    SPRUCE_PARALLEL_WORKERS: "4"
-    SPRUCE_METRICS: "true"
+    GRAFT_PARALLEL: "true"
+    GRAFT_PARALLEL_WORKERS: "4"
+    GRAFT_METRICS: "true"
   run: |
-    spruce merge base.yml ${{ matrix.env }}.yml > manifest.yml
+    graft merge base.yml ${{ matrix.env }}.yml > manifest.yml
     
     # Print performance metrics
     curl -s http://localhost:9090/metrics/json | \
@@ -584,6 +584,6 @@ spruce merge secrets.yml app.yml
 
 ## Conclusion
 
-Parallel execution in Spruce provides significant performance improvements while maintaining safety and backward compatibility. Start with conservative settings, monitor performance, and gradually increase parallelism based on your workload characteristics.
+Parallel execution in graft provides significant performance improvements while maintaining safety and backward compatibility. Start with conservative settings, monitor performance, and gradually increase parallelism based on your workload characteristics.
 
-For questions or issues, please visit the [GitHub repository](https://github.com/geofffranks/spruce/issues).
+For questions or issues, please visit the [GitHub repository](https://github.com/wayneeseguin/graft/issues).

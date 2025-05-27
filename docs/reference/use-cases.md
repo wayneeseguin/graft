@@ -1,6 +1,6 @@
-# Spruce Use Cases Guide
+# graft Use Cases Guide
 
-This guide helps you find the right Spruce operators and patterns for common configuration management tasks.
+This guide helps you find the right graft operators and patterns for common configuration management tasks.
 
 ## Table of Contents
 
@@ -128,7 +128,7 @@ endpoints:
 
 Usage:
 ```bash
-ENVIRONMENT=prod spruce merge base.yml <(echo "environment: prod")
+ENVIRONMENT=prod graft merge base.yml <(echo "environment: prod")
 ```
 
 See: [Environment Variables](../concepts/environment-variables.md)
@@ -260,7 +260,7 @@ See: [Null Examples](../../examples/null/)
 
 ## Template Generation
 
-### Problem: Generate configuration with Spruce operators
+### Problem: Generate configuration with graft operators
 
 **Solution: Use defer operator**
 ```yaml
@@ -344,7 +344,7 @@ See: [Arithmetic Examples](../../examples/arithmetic/), [Calc Examples](../../ex
 
 **"I need to..."**
 
-- **Merge YAML files** → Basic `spruce merge`
+- **Merge YAML files** → Basic `graft merge`
 - **Keep config DRY** → Use `(( grab ))`
 - **Store secrets** → Use `(( vault ))` or `(( awssecret ))`
 - **Build strings** → Use `(( concat ))`

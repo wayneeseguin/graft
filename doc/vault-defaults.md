@@ -1,6 +1,6 @@
 # Vault Operator Default Values
 
-As of Spruce v1.31.0, the vault operator supports default values using the logical OR (`||`) syntax. This allows you to specify fallback values when secrets are not found in Vault, preventing Spruce from failing when optional secrets are missing.
+As of graft v1.31.0, the vault operator supports default values using the logical OR (`||`) syntax. This allows you to specify fallback values when secrets are not found in Vault, preventing graft from failing when optional secrets are missing.
 
 ## Basic Usage
 
@@ -10,7 +10,7 @@ As of Spruce v1.31.0, the vault operator supports default values using the logic
 password: (( vault "secret/myapp:password" || "default-password" ))
 ```
 
-If the secret at `secret/myapp:password` doesn't exist in Vault, Spruce will use `"default-password"` instead of failing.
+If the secret at `secret/myapp:password` doesn't exist in Vault, graft will use `"default-password"` instead of failing.
 
 ### Reference as Default
 
@@ -130,7 +130,7 @@ If you're currently using wrapper scripts or pre-processing to handle missing va
 ```bash
 # wrapper.sh
 value=$(vault read -field=password secret/myapp 2>/dev/null || echo "default-password")
-spruce merge --prune meta <(echo "password: $value") base.yml
+graft merge --prune meta <(echo "password: $value") base.yml
 ```
 
 ### After (native support)

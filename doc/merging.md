@@ -1,12 +1,12 @@
 ## Merging Rules
 
-Merging in `spruce` is designed to be pretty intuitive. Files to merge are listed
+Merging in `graft` is designed to be pretty intuitive. Files to merge are listed
 in-order on the command line. The first file serves as the base to the file structure,
 and subsequent files are merged on top, adding when keys are new, replacing when keys
 exist.
 
-As `spruce` has grown, additional support for complicated operations has been added,
-and multiple phases have been introduced into `spruce` to handle the various tasks.
+As `graft` has grown, additional support for complicated operations has been added,
+and multiple phases have been introduced into `graft` to handle the various tasks.
 
 ## Order of Operations
 
@@ -38,11 +38,11 @@ and multiple phases have been introduced into `spruce` to handle the various tas
    The root document is scanned for `(( param ))` operators. If any exist at this point,
    it means a property had been defined in a way that required a later file to override it,
    but that did not happen. If any params were found, errors are printed out to the user,
-   indicating the missing parameters, and `spruce` exits with the failure.
+   indicating the missing parameters, and `graft` exits with the failure.
 
 4. **Eval Phase**
 
-   Unless the `--skip-eval` flag is specified to `spruce`, the root document is scanned
+   Unless the `--skip-eval` flag is specified to `graft`, the root document is scanned
    for [operators][operators], to generate a dependency graph and determine the order in
    which operators will be evaluated. Each operator is evaluated on the root document,
    modifying it in some way. All operators remaining in the document are evaluated at this stage.
@@ -61,13 +61,13 @@ and multiple phases have been introduced into `spruce` to handle the various tas
 7. **Output**
 
    Any errors occurring in the Eval Phase or while Pruning/Cherry Picking  are displayed to
-   the user, and `spruce` exits with the failure. If no errors are encountered, `spruce`
+   the user, and `graft` exits with the failure. If no errors are encountered, `graft`
    formats the root document as YAML, and prints the output to the user.
 
 ## What about arrays?
 
 Merging arrays together is slightly more complicated than merging arbitrary-key-values,
-because order matters. To aid in this, `spruce` has specific **array operators** that
+because order matters. To aid in this, `graft` has specific **array operators** that
 are used to tell it how to perform array merges:
 
 - `(( append ))` - Adds the data to the end of the corresponding array in the root document.
@@ -94,5 +94,5 @@ If no array merge operators are defined, arrays are merged according to the foll
 
 The array operators are further defined with examples in the [array merging documentation][array-merge].
 
-[array-merge]: https://github.com/geofffranks/spruce/blob/master/doc/array-merging.md
-[operators]:   https://github.com/geofffranks/spruce/blob/master/doc/operators.md
+[array-merge]: https://github.com/wayneeseguin/graft/blob/master/doc/array-merging.md
+[operators]:   https://github.com/wayneeseguin/graft/blob/master/doc/operators.md

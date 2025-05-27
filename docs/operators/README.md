@@ -1,6 +1,6 @@
-# Spruce Operators Documentation
+# graft Operators Documentation
 
-Spruce operators are special expressions that allow you to manipulate and transform your YAML/JSON data during the merge process. They are written in the form `(( operator arguments ))`.
+graft operators are special expressions that allow you to manipulate and transform your YAML/JSON data during the merge process. They are written in the form `(( operator arguments ))`.
 
 ## Operator Categories
 

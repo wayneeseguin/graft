@@ -1,6 +1,6 @@
 // +build race
 
-package spruce
+package graft
 
 import (
 	"fmt"

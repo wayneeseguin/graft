@@ -17,9 +17,9 @@ database:
   username: (( awsparam "/services/" service "/db?key=user" ))
 ```
 
-When we run `spruce merge base.yml` we will get:
+When we run `graft merge base.yml` we will get:
 ```
-$ spruce merge base.yml
+$ graft merge base.yml
 database:
   password: mypass
   test: test
@@ -34,7 +34,7 @@ It is not currently possible to parse the value and merge it as a structure.
 The `(( awsparam ))` operator supports all types currently available (`String`, `SecureString`, `StringList`) but will return `StringList` types as a single comma separated string rather than a list.
 
 ## What IAM permissions are required?
-In order to execute `spruce merge` with `awsparam` the calling user must have the appropriate IAM policy to `ssm:GetParameter` and, for `SecureString` type values, the permission to `kms:Decrypt` with the KMS key used to encrypt the value.
+In order to execute `graft merge` with `awsparam` the calling user must have the appropriate IAM policy to `ssm:GetParameter` and, for `SecureString` type values, the permission to `kms:Decrypt` with the KMS key used to encrypt the value.
 
 ## How can I use a profile / role?
 The `(( awsparam ))` operator uses three optional environment variables to determine role, profile and region configuration when establishing an AWS session.

@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/starkandwayne/goutils/ansi"
 	"github.com/starkandwayne/goutils/tree"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 // ConcatOperatorEnhanced is an enhanced version that handles nested operator calls

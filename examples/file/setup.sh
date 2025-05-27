@@ -56,4 +56,4 @@ cat > configs/features.json << 'EOF'
 EOF
 
 echo "Sample files created successfully!"
-echo "Run 'spruce merge basic.yml' to see the examples in action."
+echo "Run 'graft merge basic.yml' to see the examples in action."

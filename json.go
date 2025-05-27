@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"github.com/starkandwayne/goutils/ansi"
 
 	"github.com/geofffranks/simpleyaml"
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 func jsonifyData(data []byte, strict bool) (string, error) {

@@ -14,16 +14,16 @@ The `base64` and `base64-decode` operators are essential for handling credential
 
 ```bash
 # Basic encoding/decoding
-spruce merge basic.yml
+graft merge basic.yml
 
 # Credentials example
-USERNAME=admin PASSWORD=secret123 spruce merge credentials.yml
+USERNAME=admin PASSWORD=secret123 graft merge credentials.yml
 
 # Kubernetes secrets
-spruce merge kubernetes-secrets.yml
+graft merge kubernetes-secrets.yml
 
 # With vault integration
-VAULT_ADDR=http://localhost:8200 spruce merge with-vault.yml
+VAULT_ADDR=http://localhost:8200 graft merge with-vault.yml
 ```
 
 ## Common Use Cases:

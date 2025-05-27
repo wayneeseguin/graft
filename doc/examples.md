@@ -1,12 +1,12 @@
-## Do you have any examples or walkthroughs for what I can do with Spruce?
+## Do you have any examples or walkthroughs for what I can do with graft?
 
 In addition to the the examples provided in the [operator documentation][operator-docs],
-we have this document that walks through some more in depth examples of using `spruce`.
-If you've memorized the old README for `spruce`, this page may look pretty familiar.
+we have this document that walks through some more in depth examples of using `graft`.
+If you've memorized the old README for `graft`, this page may look pretty familiar.
 
 ## Merging Rules
 
-Merging in `spruce` is designed to be pretty intuitive. Files to merge are listed
+Merging in `graft` is designed to be pretty intuitive. Files to merge are listed
 in-order on the command line. The first file serves as the base to the file structure,
 and subsequent files are merged on top, adding when keys are new, replacing when keys
 exist.
@@ -122,7 +122,7 @@ Do you want to learn about array modifications in more detail? See [modifying ar
 To prune a map key from the final output, you can either use the `--prune` flag:<br>
 
 ```
-spruce merge --prune key.1.to.prune --prune key.2.to.prune file1.yml file2.yml
+graft merge --prune key.1.to.prune --prune key.2.to.prune file1.yml file2.yml
 ```
 
 or you can use the `(( prune ))` operator:
@@ -134,14 +134,14 @@ key_to_prune: (( prune ))
 If you actually want to prune everything but one or two paths from your YAML, you can use the `--cherry-pick` flag to only select what you want to have in the end:<br>
 
 ```
-spruce merge --cherry-pick jobs --cherry-pick properties file1.yml file2.yml
+graft merge --cherry-pick jobs --cherry-pick properties file1.yml file2.yml
 ```
 
 The `--cherry-pick` flag can be used in combination with the `--prune` flag as long as you do not prune the exact path you are about to cherry-pick.
 
 ### Referencing Other Data
 
-Need to reference existing data in your datastructure? No problem! `spruce` will wait until
+Need to reference existing data in your datastructure? No problem! `graft` will wait until
 all the data is merged together before dereferencing anything, but to handle this, you can
 use the `(( grab <thing> ))` syntax:
 
@@ -171,7 +171,7 @@ protocol: (( grab site.protocol || global.protocol || "http" ))
 
 In these examples, if the referenced key does not exist, the next
 reference is attempted, or the literal value (nil, numbers or
-strings) is used.  Spruce recognizes the following keywords and
+strings) is used.  graft recognizes the following keywords and
 uses the appropriate literal value:
 
   - `nil`, `null` and `~` map to the YAML null value
@@ -196,7 +196,7 @@ secrets:
     secret_key: (( grab $AWS_SECRET_KEY ))
 ```
 
-`spruce` will try to pull the named environment variables value
+`graft` will try to pull the named environment variables value
 from the environment, and fail if the value is not set, or is
 empty.  You can use the `||` syntax to provide defaults, á la:
 
@@ -205,15 +205,15 @@ meta:
   environment: (( grab $ENV_NAME || "default-env" ))
 ```
 
-### Hmm.. How about merging Spruce stubs without evaluating the commands? 
+### Hmm.. How about merging graft stubs without evaluating the commands? 
 
-In some cases you may want to merge 2 or more Spruce files into one so that you can apply their logic with a single file. In other to do that, you can make use of the option `--skip-eval` in merge.
+In some cases you may want to merge 2 or more graft files into one so that you can apply their logic with a single file. In other to do that, you can make use of the option `--skip-eval` in merge.
 
 Check out the [skip-eval example](#no-eval)
 
 ### Hmm.. How about auto-calculating static IPs for a BOSH manifest?
 
-`spruce` supports that too! Just use the same `(( static_ips(x, y, z) ))` syntax
+`graft` supports that too! Just use the same `(( static_ips(x, y, z) ))` syntax
 that you're used to with [spiff](https://github.com/cloudfoundry-incubator/spiff),
 to specify the offsets in the static IP range for a job's network.
 
@@ -221,7 +221,7 @@ Check out the [static_ips() example](#static-ips)
 
 ### Hmm.. How about calculating some simple mathematical expressions?
 
-This is also possible with `spruce`. You can use the `(( calc ... ))` operator to
+This is also possible with `graft`. You can use the `(( calc ... ))` operator to
 specify a mathematical expression. Inside these expressions you can reference
 other values using the same path syntax like `grab`. The mathematical expression
 needs to be put in quotes since it can contain parenthesis and white spaces
@@ -255,7 +255,7 @@ jobs:
 
 ### But I Want To Make Strings!!
 
-Yeah, `spruce` can do that!
+Yeah, `graft` can do that!
 
 ```yml
 env: production
@@ -298,7 +298,7 @@ properties:
 <a name="ex-basic"></a>
 ### Basic Example
 
-Here's a pretty broad example, that should cover all the functionality of spruce, to be used as a reference.
+Here's a pretty broad example, that should cover all the functionality of graft, to be used as a reference.
 
 If I start with this data:
 
@@ -368,10 +368,10 @@ top:
 othertop: you can add new top level keys too
 ```
 
-I would use `spruce` like this:
+I would use `graft` like this:
 
 ```yml
-$ spruce merge main.yml merge.yml
+$ graft merge main.yml merge.yml
 othertop: you can add new top level keys too
 top:
   1: You can change types too
@@ -413,7 +413,7 @@ top:
 <a name="ex-map-replacement"></a>
 ### Map Replacement
 
-Due to `spruce`'s ability to arbitrarily merge maps together with little effort,
+Due to `graft`'s ability to arbitrarily merge maps together with little effort,
 the case of replacing a map completely is a little harder. However, it can still
 be accomplished:
 
@@ -448,7 +448,7 @@ map_to_replace:
 And finally, merge it all together:
 
 ```yml
-$ spruce merge original.yml delete.yml insert.yml
+$ graft merge original.yml delete.yml insert.yml
 map_to_replace:
   my: special
   data: here
@@ -482,7 +482,7 @@ things:
 ```
 
 ```
-$ spruce merge --prune deleteme original.yml things.yml
+$ graft merge --prune deleteme original.yml things.yml
 ```
 
 The `deleteme` key is only useful for holding a temporary value,
@@ -505,7 +505,7 @@ jobs:
   instances: 5
   resource_pool: small
   properties:
-    spruce: is cool
+    graft: is cool
 - name: oldjob_z1
   instances: 4
   resource_pool: small
@@ -531,12 +531,12 @@ jobs:
 You would get this when merged:
 
 ```yml
-$ spruce merge original.yml new.yml
+$ graft merge original.yml new.yml
 jobs:
 - instances: 5
   name: concatenator_z1
   properties:
-    spruce: is cool
+    graft: is cool
     this: is a new property added to an existing job
   resource_pool: small
 - instances: 4
@@ -599,7 +599,7 @@ networks:
 Merge it all together, and see what we get:
 
 ```yml
-$ spruce merge jobs.yml properties.yml networks.yml
+$ graft merge jobs.yml properties.yml networks.yml
 jobs:
 - instances: 3
   name: staticIP_z1
@@ -693,7 +693,7 @@ networks:
 Merge it all together, and see what we get:
 
 ```yml
-$ spruce merge jobs.yml properties.yml networks.yml
+$ graft merge jobs.yml properties.yml networks.yml
 instance_groups:
 - name: staticIP
   instances: 3
@@ -772,7 +772,7 @@ Here, `$.green.size` will be `small`, but `$.green.color` stays as
 `green`:
 
 ```yml
-$ spruce merge --prune meta all-in-one.yml
+$ graft merge --prune meta all-in-one.yml
 green:
   color: green
   size: small
@@ -800,7 +800,7 @@ green:
 ```
 
 ```yml
-$ spruce merge --prune meta templates.yml green.yml
+$ graft merge --prune meta templates.yml green.yml
 green:
   color: green
   size: small
@@ -814,7 +814,7 @@ injection operator.
 <a name="skip-eval"></a>
 ### Option --skip-eval in merge 
 
-This option can be used to merge several stubs without evaluating the spruce logic inside such as `(( grab ))` or `(( concat ))`. For instance, if you have the following two files: 
+This option can be used to merge several stubs without evaluating the graft logic inside such as `(( grab ))` or `(( concat ))`. For instance, if you have the following two files: 
 
 ```
 $ cat first.yml
@@ -838,7 +838,7 @@ properties:
 You could merge them simply running: 
 
 ```
-$ spruce merge --skip-eval first.yml second.yml
+$ graft merge --skip-eval first.yml second.yml
 
 jobs:
 - name: cell 
@@ -866,13 +866,13 @@ natural state to allow for easy viewing, editing and processing, but then add
 it to YAML file as needed.  It supports specifying the file either by a string
 literal or a reference.
 
-The relative path to the file is based on where spruce is run from.
-Alternatively, you can set the `SPRUCE_FILE_BASE_PATH` environment variable to
+The relative path to the file is based on where graft is run from.
+Alternatively, you can set the `GRAFT_FILE_BASE_PATH` environment variable to
 the desired root that your YAML file uses as the reference to the relative
 file paths specified.  You can also specify an absolute path in the YAML
 
 ```yml
-$ SPRUCE_FILE_BASE_PATH=$HOME/myproj/configs
+$ GRAFT_FILE_BASE_PATH=$HOME/myproj/configs
 
 --- # Source file
 server:

@@ -33,11 +33,11 @@ jobs:
         CGO_ENABLED: 0
         GOOS: ${{ matrix.goos }}
         GOARCH: ${{ matrix.goarch }}
-      run: 'go build -v -o spruce-${{ matrix.goos }}-${{ matrix.goarch }} -ldflags="-X main.Version=${{ github.event.release.tag_name }}" ./cmd/spruce'
+      run: 'go build -v -o graft-${{ matrix.goos }}-${{ matrix.goarch }} -ldflags="-X main.Version=${{ github.event.release.tag_name }}" ./cmd/graft'
 
     - uses: geofffranks/upload-asset@v2
       with:
-        file: ./spruce-${{ matrix.goos }}-${{ matrix.goarch }}
+        file: ./graft-${{ matrix.goos }}-${{ matrix.goarch }}
         with_sha1: true
 
       env:

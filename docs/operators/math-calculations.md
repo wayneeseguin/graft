@@ -4,7 +4,7 @@ These operators perform arithmetic operations and mathematical calculations in y
 
 ## Basic Arithmetic Operators
 
-Spruce supports infix arithmetic operators that follow standard mathematical precedence rules (multiplication and division before addition and subtraction) and support parentheses for grouping.
+graft supports infix arithmetic operators that follow standard mathematical precedence rules (multiplication and division before addition and subtraction) and support parentheses for grouping.
 
 ### (( + )) - Addition
 

@@ -1,6 +1,6 @@
 # AWS Integration Examples
 
-This directory contains examples of using Spruce with AWS services:
+This directory contains examples of using Graft with AWS services:
 - AWS Systems Manager Parameter Store (`awsparam`)
 - AWS Secrets Manager (`awssecret`)
 
@@ -54,13 +54,13 @@ aws secretsmanager create-secret --name "myapp/dev/api-key" \
 
 ```bash
 # Test Parameter Store
-spruce merge parameter-store.yml
+graft merge parameter-store.yml
 
 # Test Secrets Manager
-spruce merge secrets-manager.yml
+graft merge secrets-manager.yml
 
 # Test with environment-specific paths
-ENV=prod spruce merge dynamic-paths.yml
+ENV=prod graft merge dynamic-paths.yml
 ```
 
 ## Important Notes

@@ -1,10 +1,10 @@
-package spruce
+package graft
 
 import (
 	"fmt"
 	"strings"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 // vaultArgProcessor handles argument processing for vault operator with LogicalOr support

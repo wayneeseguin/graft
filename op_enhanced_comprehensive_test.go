@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ func TestEnhancedOperatorsComprehensive(t *testing.T) {
 
 		Convey("file operator with nested concat", func() {
 			// Create a temp file
-			tmpDir, err := ioutil.TempDir("", "spruce-test")
+			tmpDir, err := ioutil.TempDir("", "graft-test")
 			So(err, ShouldBeNil)
 			defer os.RemoveAll(tmpDir)
 			
@@ -98,7 +98,7 @@ result: (( stringify (grab data.users) ))
 
 		Convey("complex nested expressions", func() {
 			// Create temp files
-			tmpDir, err := ioutil.TempDir("", "spruce-test")
+			tmpDir, err := ioutil.TempDir("", "graft-test")
 			So(err, ShouldBeNil)
 			defer os.RemoveAll(tmpDir)
 			

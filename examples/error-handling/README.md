@@ -1,6 +1,6 @@
 # Error Handling Examples
 
-This directory contains examples that demonstrate Spruce's improved error handling capabilities.
+This directory contains examples that demonstrate Graft's improved error handling capabilities.
 
 ## Enhanced Error Messages
 
@@ -29,7 +29,7 @@ Try merging the syntax-errors.yml file to see error messages:
 
 ```bash
 # This will show various syntax errors with detailed messages
-spruce merge syntax-errors.yml
+graft merge syntax-errors.yml
 
 # Example output:
 # Syntax Error: 1:15: expected closing parenthesis to match opening parenthesis
@@ -44,7 +44,7 @@ The parser can be configured to collect multiple errors instead of stopping at t
 
 ```bash
 # Set environment variable to collect all errors
-SPRUCE_COLLECT_ERRORS=1 spruce merge syntax-errors.yml
+GRAFT_COLLECT_ERRORS=1 graft merge syntax-errors.yml
 ```
 
 This helps identify multiple issues in a single run rather than fixing them one at a time.
@@ -93,7 +93,7 @@ Error: "Reference Error: reference not found: meta.undefined.path"
 
 1. **Use --trace flag** for detailed parsing information:
    ```bash
-   spruce merge --trace syntax-errors.yml
+   graft merge --trace syntax-errors.yml
    ```
 
 2. **Test expressions in isolation** by creating small test files

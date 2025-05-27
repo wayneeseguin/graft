@@ -14,13 +14,13 @@ The `concat` operator joins multiple strings together. It's one of the most freq
 
 ```bash
 # Basic concatenation
-spruce merge basic.yml
+graft merge basic.yml
 
 # URL building example
-ENV=production spruce merge building-urls.yml
+ENV=production graft merge building-urls.yml
 
 # See how nested concat works
-spruce merge --debug nested-concat.yml
+graft merge --debug nested-concat.yml
 ```
 
 ## Common Patterns:

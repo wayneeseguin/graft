@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"encoding/json"
@@ -355,7 +355,7 @@ func (api *TuningAPI) handleExportConfig(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.Header().Set("Content-Type", "application/x-yaml")
-	w.Header().Set("Content-Disposition", "attachment; filename=spruce_performance.yaml")
+	w.Header().Set("Content-Disposition", "attachment; filename=graft_performance.yaml")
 	w.Write([]byte(yamlStr))
 }
 

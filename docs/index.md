@@ -1,22 +1,22 @@
-# Spruce Documentation
+# graft Documentation
 
-Welcome to the Spruce documentation! Spruce is a general purpose YAML & JSON merging tool with complex expression operators.
+Welcome to the graft documentation! graft is a general purpose YAML & JSON merging tool with complex expression operators.
 
 ## Documentation Structure
 
 ### 🚀 [Getting Started](getting-started.md)
-New to Spruce? Start here to learn the basics of YAML merging and simple operators.
+New to graft? Start here to learn the basics of YAML merging and simple operators.
 
 ### 📚 Concepts
-Understand the core concepts behind Spruce:
-- [Merging Rules](concepts/merging.md) - How Spruce merges YAML files
+Understand the core concepts behind graft:
+- [Merging Rules](concepts/merging.md) - How graft merges YAML files
 - [Expression Evaluation](concepts/expression-evaluation.md) - How operators are processed
 - [Nested Expressions](concepts/nested-expressions.md) - Composing operators within operators
 - [Array Merging](concepts/array-merging.md) - Special array merge operators
 - [Environment Variables](concepts/environment-variables.md) - Using environment variables
 
 ### 📖 Operator Reference
-Detailed reference for all Spruce operators, organized by category:
+Detailed reference for all graft operators, organized by category:
 
 #### Data Manipulation
 - [concat](operators/data-manipulation.md#concat) - String concatenation
@@ -77,15 +77,15 @@ Practical guides for common tasks:
 - [Using with CredHub](guides/integrating-with-credhub.md) 
 - [Vault Integration](guides/vault-integration.md)
 - [AWS Integration](guides/aws-integration.md)
-- [Generating Spruce with Spruce](guides/meta-programming.md)
+- [Generating graft with graft](guides/meta-programming.md)
 - [Working with Go Patches](guides/go-patch.md)
 
 ### 📋 Command Reference
-- [spruce merge](reference/commands.md#merge) - Merge YAML files
-- [spruce diff](reference/commands.md#diff) - Diff YAML files
-- [spruce json](reference/commands.md#json) - Convert to JSON
-- [spruce fan](reference/commands.md#fan) - Process multi-document YAML
-- [spruce vaultinfo](reference/commands.md#vaultinfo) - Extract Vault paths
+- [graft merge](reference/commands.md#merge) - Merge YAML files
+- [graft diff](reference/commands.md#diff) - Diff YAML files
+- [graft json](reference/commands.md#json) - Convert to JSON
+- [graft fan](reference/commands.md#fan) - Process multi-document YAML
+- [graft vaultinfo](reference/commands.md#vaultinfo) - Extract Vault paths
 
 ### 📖 Reference Documents
 - [Operator Quick Reference](reference/operator-quick-reference.md) - Concise operator syntax reference
@@ -107,7 +107,7 @@ Practical guides for common tasks:
 
 ## Enhanced Parser
 
-As of v1.31.0, Spruce includes an enhanced parser that supports:
+As of v1.31.0, graft includes an enhanced parser that supports:
 - Nested operator expressions
 - Environment variable expansion in references
 - Complex arithmetic and boolean expressions
@@ -117,8 +117,8 @@ See [Expression Evaluation](concepts/expression-evaluation.md) for details.
 
 ## Contributing
 
-See our [Contributing Guide](../CONTRIBUTING.md) for information on contributing to Spruce.
+See our [Contributing Guide](../CONTRIBUTING.md) for information on contributing to graft.
 
 ## License
 
-Spruce is released under the [MIT License](../LICENSE).
+graft is released under the [MIT License](../LICENSE).

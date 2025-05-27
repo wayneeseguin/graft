@@ -1,10 +1,10 @@
-package spruce
+package graft
 
 import (
 	"os"
 	"strings"
 	
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 func init() {
@@ -12,7 +12,7 @@ func init() {
 	shouldEnableEnhanced := UseEnhancedParser // defaults to true from parser_integration.go
 	
 	// Check environment variables to override default
-	if env := os.Getenv("SPRUCE_LEGACY_PARSER"); env != "" {
+	if env := os.Getenv("GRAFT_LEGACY_PARSER"); env != "" {
 		env = strings.ToLower(strings.TrimSpace(env))
 		switch env {
 		case "1", "true", "yes", "on":
@@ -20,7 +20,7 @@ func init() {
 		case "0", "false", "no", "off":
 			shouldEnableEnhanced = true
 		}
-	} else if env := os.Getenv("SPRUCE_ENHANCED_PARSER"); env != "" {
+	} else if env := os.Getenv("GRAFT_ENHANCED_PARSER"); env != "" {
 		env = strings.ToLower(strings.TrimSpace(env))
 		switch env {
 		case "1", "true", "yes", "on":

@@ -4,7 +4,7 @@
 # Simple string literals
 greetings:
   hello: (( concat "Hello" " " "World" "!" ))
-  welcome: (( concat "Welcome " "to " "Spruce" ))
+  welcome: (( concat "Welcome " "to " "Graft" ))
   
 # Concatenating different types (numbers are converted to strings)
 versions:

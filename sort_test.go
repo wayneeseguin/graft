@@ -1,13 +1,17 @@
-package spruce
+package graft
 
 import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/starkandwayne/goutils/ansi"
 	"github.com/starkandwayne/goutils/tree"
 )
 
 func TestSort(t *testing.T) {
+	// Disable ANSI colors for testing
+	ansi.Color(false)
+	
 	Convey("that the actual Run function of the sort operator is dead code", t, func() {
 		op := &SortOperator{}
 		ev := &Evaluator{Here: &tree.Cursor{Nodes: []string{"foobar"}}}
@@ -40,10 +44,10 @@ func TestSort(t *testing.T) {
 	})
 
 	Convey("that sorting of strings works", t, func() {
-		list := []interface{}{"spruce", "spiff"}
+		list := []interface{}{"graft", "spiff"}
 		err := sortList("some.path", list, "")
 		So(err, ShouldBeNil)
-		So(list, ShouldResemble, []interface{}{"spiff", "spruce"})
+		So(list, ShouldResemble, []interface{}{"graft", "spiff"})
 	})
 
 	Convey("that sorting of named-entry lists works", t, func() {

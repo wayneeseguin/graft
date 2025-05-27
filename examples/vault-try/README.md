@@ -51,11 +51,11 @@ vault kv put secret/dev/myapp key=devkey
 # Test basic fallbacks
 export VAULT_ADDR=http://localhost:8200
 export VAULT_TOKEN=your-token
-spruce merge basic.yml
+graft merge basic.yml
 
 # Test migration scenarios
-spruce merge migration.yml
+graft merge migration.yml
 
 # Test with environment variables
-ENV=prod spruce merge regional.yml
+ENV=prod graft merge regional.yml
 ```

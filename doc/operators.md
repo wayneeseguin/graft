@@ -1,6 +1,6 @@
-## What are all the Spruce operators?
+## What are all the graft operators?
 
-> **Enhanced Parser Note**: Spruce now uses an enhanced parser by default that supports additional expression operators. See the [Expression Operators](expression-operators.md) section for details on boolean logic, comparisons, ternary operator, and more.
+> **Enhanced Parser Note**: graft now uses an enhanced parser by default that supports additional expression operators. See the [Expression Operators](expression-operators.md) section for details on boolean logic, comparisons, ternary operator, and more.
 
 > **New Features**: 
 > - **[Nested Expressions](nested-expressions.md)** - Operators can now be nested within other operators for powerful compositions
@@ -52,18 +52,18 @@ see the [array merging documentation][array-merging]:
 - `(( delete ))` - Deletes data at a specific index, or objects identified by the value
   of a specified key.
 
-*Please note:* You cannot use the convenient Spruce path syntax
+*Please note:* You cannot use the convenient graft path syntax
 (`path.to.your.property`) in case one of the elements (e.g. named entry
 element) contains a dot as part of the actual key. The dot is in line with the
-YAML syntax, however it cannot be used since Spruce uses it as a separator
+YAML syntax, however it cannot be used since graft uses it as a separator
 internally. This also applies to operators, where it is not immediately obvious
 that a path is used like with the `(( prune ))` operator. As a workaround,
-depending on the actual use-case, it is often possible to replace the Spruce
+depending on the actual use-case, it is often possible to replace the graft
 operator with a equivalent [go-patch] operator file.
 
 ## Operator Arguments
 
-Most `spruce` operators have arguments. There are three basic types to the arguments -
+Most `graft` operators have arguments. There are three basic types to the arguments -
 literal values (strings/numbers/booleans), references (paths defining a datastructure in
  the root document), and environment variables. Arguments can also make use of a logical-or
 (`||`) to failover to other values. See our notes on [environment variables and default values][env-var]
@@ -71,7 +71,7 @@ for more information on environment variables and the logical-or.
 
 ## Arithmetic Operators
 
-Spruce supports basic arithmetic operations using infix notation. These operators follow standard mathematical precedence rules (multiplication and division before addition and subtraction) and support parentheses for grouping.
+graft supports basic arithmetic operations using infix notation. These operators follow standard mathematical precedence rules (multiplication and division before addition and subtraction) and support parentheses for grouping.
 
 ### (( + )) - Addition
 
@@ -215,8 +215,8 @@ is not an array/map.
 
 Usage: `(( defer ... ))`
 
-Ever wanted to use `spruce` to generate something with a `spruce` operator
-in it, or perhaps something that looks like a spruce operator, like
+Ever wanted to use `graft` to generate something with a `graft` operator
+in it, or perhaps something that looks like a graft operator, like
 a CredHub value? Defer can be used for that. When evaluated, it outputs
 the contents of the operator, minus the initial defer operator.
 
@@ -226,7 +226,7 @@ the contents of the operator, minus the initial defer operator.
 
 Usage: `(( empty hash|map|array|list|string ))`
 
-This operator empties out the contents of the parent. Due to `spruce`'s merging
+This operator empties out the contents of the parent. Due to `graft`'s merging
 semantics, it can be a little tricky sometimes to overwrite an array with
 an empty aray, or a map with an empty map. Use this as a handy shortcut.
 
@@ -241,7 +241,7 @@ Perhaps it's an SSL cert, or a base64 encoded image? Of course you do! Enter the
  `(( file ))` operator. Instead of having to worry about the proper YAML indenting
  + multiline semantics when pasting your cert into your file, you can stick the contents
 in a file by itself, and provide a path to that file (absolute, or relative to where
-`spruce` is executed). The path provided can even be a reference to another part of the data
+`graft` is executed). The path provided can even be a reference to another part of the data
 structure, which might concat some values together to dynamically generate where the file
 will be.
 
@@ -266,7 +266,7 @@ load_ca_from_file_ref: (( file files.ca ))
 load_ca_from_file: (( file "ca-prod.crt" ))
 EOF
 
-$ spruce merge config.yml
+$ graft merge config.yml
 environment: prod
 files:
   ca: ca-prod.crt
@@ -337,14 +337,14 @@ Usage: `(( load LITERAL|REFERENCE ))`
 Similar to the `(( file ))` operator, this operator takes the content of another
 file to insert it into the main tree structure. However, `(( load ))` does not
 use the content as-is, but expects to parse valid YAML (or JSON). Like the
-`(( file ))` operator, you do not have to worry about indentation as Spruce will
+`(( file ))` operator, you do not have to worry about indentation as graft will
 cover that for you.
 
-_Note:_ Spruce will **not** evaluate any Spruce operators that might be in
+_Note:_ graft will **not** evaluate any graft operators that might be in
 the file that is loaded, because any path used by `grab` or similar would be
 ambigious in respect to the document root to be used. If you need to load a
-file with Spruce operators in it, you have to run a pre-processing step to
-evaluate the file first with another Spruce run.
+file with graft operators in it, you have to run a pre-processing step to
+evaluate the file first with another graft run.
 
 **Example:**
 ```
@@ -361,7 +361,7 @@ list: (( load "list.yml" ))
 ...
 EOF
 
-$ spruce merge config.yml
+$ graft merge config.yml
 list:
 - one
 - two
@@ -435,7 +435,7 @@ Usage: `(( static_ips INTEGER ... ))`
 Even with BOSH Links, and Cloud Config, it's still occsionally necessary to have static IPs
 in your manifest. This operator makes the IP calculation fairly easy, and should be familiar
 to anyone who has used `spiff` to do this in the past. You give `(( static_ips ))` a list of
-indexes. `spruce` will look through the root document, and find the relevant IP ranges for
+indexes. `graft` will look through the root document, and find the relevant IP ranges for
 static IPs for the network of a VM, and pull in as many as are needed based on the instance
 count. It even supports BOSH AZs fairly well.
 
@@ -470,7 +470,7 @@ Usage: `(( vault LITERAL|REFERENCE ... [|| DEFAULT] ))`
 
 Have sensitive material in your manifests that you don't want stored in the repo that your
 configs are in? What do you mean 'No'? Everybody does. The `(( vault ))` operator lets you
-store that data in [Vault][vault], and `spruce` will retrieve it at merge time. Simply
+store that data in [Vault][vault], and `graft` will retrieve it at merge time. Simply
 specify a vault path in the `secret` backend as the argument, and away it goes. If needed,
 you can pull in references to concatenate with info, resulting in an easy way to dynamically
 look up Vault paths.
@@ -526,7 +526,7 @@ Usage: `(( awsparam LITERAL|REFERENCE ... ))`
 
 The `(( awsparam ))` operator will let you pull a value from [AWS SSM Parameter Store](awsparamstore)
 at merge time. Specify the parameter store path in one or more arguments that will be joined
-to form the whole path and spruce will fetch it for you. Optionally you may pass `?key=...`
+to form the whole path and graft will fetch it for you. Optionally you may pass `?key=...`
 to extract a sub-key where the parameter store value is valid JSON or YAML.
 
 [Example][awsparam-example]
@@ -537,7 +537,7 @@ Usage: `(( awssecret LITERAL|REFERENCE ... ))`
 
 The `(( awssecret ))` operator will let you pull a value from [AWS Secrets Manager](awssecretsmanager)
 at merge time. Specify the secret name or ARN in one or more arguments that will be joined to
-form the whole identifier and spruce will fetch it for you. Optionally you may specify a sub-key
+form the whole identifier and graft will fetch it for you. Optionally you may specify a sub-key
 to extract with `?key=...` where the secret value is valid JSON or YAML and either a stage or
 version with `?stage=...` / `?version=...` respectively to fetch a specific stage or version.
 
@@ -572,33 +572,33 @@ decoded_properties_file_contents: (( concat "fookey=" decoded_string_1 "\nbarkey
 encoded_properties_file_contents: (( base64 decoded_properties_file_contents ))
 ```
 
-[array-merging]:      https://github.com/geofffranks/spruce/blob/master/doc/array-merging.md
-[env-var]:            https://github.com/geofffranks/spruce/blob/master/doc/environment-variables-and-defaults.md
+[array-merging]:      https://github.com/wayneeseguin/graft/blob/master/doc/array-merging.md
+[env-var]:            https://github.com/wayneeseguin/graft/blob/master/doc/environment-variables-and-defaults.md
 [vault]:              https://vaultproject.io
 [go-patch]:           https://github.com/cppforlife/go-patch
 [awsparamstore]:      https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html
 [awssecretsmanager]:  https://docs.aws.amazon.com/secretsmanager/latest/userguide/intro.html
 
-[calc-example]:       http://play.spruce.cf/#537ceec949163403ff42fc52331d2c26
-[cartesian-example]:  http://play.spruce.cf/#a1bb0cde87c2787b0a46603f3263a70d
-[concat-example]:     http://play.spruce.cf/#1420db7abb3e0b39d55e9f6a6dc9c1b4
-[defer-example]:      http://play.spruce.cf/#a152b838a0d5fa604a0fd3025127f56b
-[empty-example]:      http://play.spruce.cf/#e56b31547de342db18d3283f45301620
-[grab-example]:       http://play.spruce.cf/#31673047fdc3f28674c25c42b06b96c7
-[inject-example]:     http://play.spruce.cf/#ff8cc8c76b7d54a5d0fcdc2ea0b1d5f8
-[join-example]:       http://play.spruce.cf/#0d729640d8dc936d89d2a76d490bcb34
-[keys-example]:       http://play.spruce.cf/#b3da7f17c25b1e81799a6ee63a260be8
-[param-example]:      http://play.spruce.cf/#b7944defbd5d987c70c25fcbae1756a8
-[prune-example]:      http://play.spruce.cf/#ce52f99a0c7470aa2a1e8fd4dddbafff
-[static_ips-example]: http://play.spruce.cf/#ce52f99a0c7470aa2a1e8fd4dddbafff
-[stringify-example]:  https://play.spruce.cf/#f302027e6a6d6f77c04437d18a420db0
-[vault-example]:      https://github.com/geofffranks/spruce/blob/master/doc/pulling-creds-from-vault.md
-[vault-try-example]:  https://github.com/geofffranks/spruce/blob/master/examples/vault-defaults/
-[vault-defaults-doc]: https://github.com/geofffranks/spruce/blob/master/doc/vault-defaults.md
-[ips-example]:        https://spruce.cf/#568526af82aec5448ddf34740dbd70a3
+[calc-example]:       http://play.graft.cf/#537ceec949163403ff42fc52331d2c26
+[cartesian-example]:  http://play.graft.cf/#a1bb0cde87c2787b0a46603f3263a70d
+[concat-example]:     http://play.graft.cf/#1420db7abb3e0b39d55e9f6a6dc9c1b4
+[defer-example]:      http://play.graft.cf/#a152b838a0d5fa604a0fd3025127f56b
+[empty-example]:      http://play.graft.cf/#e56b31547de342db18d3283f45301620
+[grab-example]:       http://play.graft.cf/#31673047fdc3f28674c25c42b06b96c7
+[inject-example]:     http://play.graft.cf/#ff8cc8c76b7d54a5d0fcdc2ea0b1d5f8
+[join-example]:       http://play.graft.cf/#0d729640d8dc936d89d2a76d490bcb34
+[keys-example]:       http://play.graft.cf/#b3da7f17c25b1e81799a6ee63a260be8
+[param-example]:      http://play.graft.cf/#b7944defbd5d987c70c25fcbae1756a8
+[prune-example]:      http://play.graft.cf/#ce52f99a0c7470aa2a1e8fd4dddbafff
+[static_ips-example]: http://play.graft.cf/#ce52f99a0c7470aa2a1e8fd4dddbafff
+[stringify-example]:  https://play.graft.cf/#f302027e6a6d6f77c04437d18a420db0
+[vault-example]:      https://github.com/wayneeseguin/graft/blob/master/doc/pulling-creds-from-vault.md
+[vault-try-example]:  https://github.com/wayneeseguin/graft/blob/master/examples/vault-defaults/
+[vault-defaults-doc]: https://github.com/wayneeseguin/graft/blob/master/doc/vault-defaults.md
+[ips-example]:        https://graft.cf/#568526af82aec5448ddf34740dbd70a3
 [awsparam-example]:   values-from-aws-parameter-store.md
 [awssecret-example]:  values-from-aws-secrets-manager.md
-[base64-example]:     https://spruce.cf/#0aa8626b70fd5757fd148d7da4ffec37?update/with/new/version/when/released
+[base64-example]:     https://graft.cf/#0aa8626b70fd5757fd148d7da4ffec37?update/with/new/version/when/released
 
 
 ## Expression Operators

@@ -1,6 +1,6 @@
-# Nested Expressions in Spruce
+# Nested Expressions in graft
 
-> **Enhanced Parser Feature**: Spruce supports nesting operators within other operators, enabling powerful expression composition.
+> **Enhanced Parser Feature**: graft supports nesting operators within other operators, enabling powerful expression composition.
 
 ## Overview
 
@@ -206,14 +206,14 @@ value: (( (grab config.key) || (grab defaults.key) ))
 
 ### 3. Test Complex Expressions
 
-Use `spruce merge` with `--debug` to verify behavior:
+Use `graft merge` with `--debug` to verify behavior:
 
 ```bash
 # Enable debug output to see evaluation order
-spruce merge --debug config.yml
+graft merge --debug config.yml
 
 # Test expressions in isolation
-echo 'test: (( concat "Hello " (grab name) ))' | spruce merge --debug -
+echo 'test: (( concat "Hello " (grab name) ))' | graft merge --debug -
 ```
 
 ### 4. Consider Performance
@@ -263,14 +263,14 @@ If you have existing configurations:
 
 1. **No breaking changes** - Old syntax continues to work
 2. **Incremental adoption** - Add nested expressions as needed
-3. **Legacy mode available** - Use `SPRUCE_LEGACY_PARSER=1` or `--legacy-parser` if needed
+3. **Legacy mode available** - Use `GRAFT_LEGACY_PARSER=1` or `--legacy-parser` if needed
 
 ```bash
 # Use legacy parser if needed
-SPRUCE_LEGACY_PARSER=1 spruce merge config.yml
+GRAFT_LEGACY_PARSER=1 graft merge config.yml
 
 # Or with flag
-spruce merge --legacy-parser config.yml
+graft merge --legacy-parser config.yml
 ```
 
 ## Performance Considerations

@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ func TestHierarchicalCache(t *testing.T) {
 	Convey("Hierarchical Cache System", t, func() {
 		
 		// Create temporary directory for testing
-		tempDir, err := os.MkdirTemp("", "spruce_cache_test")
+		tempDir, err := os.MkdirTemp("", "graft_cache_test")
 		So(err, ShouldBeNil)
 		defer os.RemoveAll(tempDir)
 		
@@ -234,7 +234,7 @@ func TestHierarchicalCache(t *testing.T) {
 func TestDiskCache(t *testing.T) {
 	Convey("Disk Cache Operations", t, func() {
 		
-		tempDir, err := os.MkdirTemp("", "spruce_disk_cache_test")
+		tempDir, err := os.MkdirTemp("", "graft_disk_cache_test")
 		So(err, ShouldBeNil)
 		defer os.RemoveAll(tempDir)
 		
@@ -370,7 +370,7 @@ func TestDiskCache(t *testing.T) {
 }
 
 func BenchmarkHierarchicalCache(b *testing.B) {
-	tempDir, _ := os.MkdirTemp("", "spruce_bench_cache")
+	tempDir, _ := os.MkdirTemp("", "graft_bench_cache")
 	defer os.RemoveAll(tempDir)
 	
 	config := HierarchicalCacheConfig{

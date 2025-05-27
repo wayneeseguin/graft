@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 
 	"github.com/starkandwayne/goutils/tree"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 // CartesianProductOperator ...
@@ -144,7 +144,7 @@ func (CartesianProductOperator) Run(ev *Evaluator, args []*Expr) (*Response, err
 
 // input 'a' and the output are always a list of strings, but we need it to be
 // a list of interfaces in the Go type system in order to be consistent with the
-// way that the rest of spruce handles yaml lists
+// way that the rest of graft handles yaml lists
 func cartesian(a []interface{}, b []string) []interface{} {
 	if len(a) == 0 || len(b) == 0 {
 		return []interface{}{}

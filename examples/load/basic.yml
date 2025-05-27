@@ -41,7 +41,7 @@ users:
   # Count users (would need calc operator)
   # admin_count: (( calc "$( (grab users.data.admins) | len )" ))
 
-# Important: Spruce operators in loaded files are NOT evaluated
+# Important: Graft operators in loaded files are NOT evaluated
 # If database.yml contained (( grab some.value )), it would be loaded as-is
 # This is different from the merge behavior
 

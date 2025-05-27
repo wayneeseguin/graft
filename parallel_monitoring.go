@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 // ParallelMetricsCollector collects parallel execution metrics
@@ -386,26 +386,26 @@ func (ms *MetricsServer) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	snapshot := ms.collector.GetSnapshot()
 	
 	// Write Prometheus-style metrics
-	fmt.Fprintf(w, "# HELP spruce_operations_total Total number of operations executed\n")
-	fmt.Fprintf(w, "# TYPE spruce_operations_total counter\n")
-	fmt.Fprintf(w, "spruce_operations_total{type=\"parallel\"} %d\n", snapshot.OpsParallel)
-	fmt.Fprintf(w, "spruce_operations_total{type=\"sequential\"} %d\n", snapshot.OpsSequential)
-	fmt.Fprintf(w, "spruce_operations_total{type=\"failed\"} %d\n", snapshot.OpsFailed)
+	fmt.Fprintf(w, "# HELP graft_operations_total Total number of operations executed\n")
+	fmt.Fprintf(w, "# TYPE graft_operations_total counter\n")
+	fmt.Fprintf(w, "graft_operations_total{type=\"parallel\"} %d\n", snapshot.OpsParallel)
+	fmt.Fprintf(w, "graft_operations_total{type=\"sequential\"} %d\n", snapshot.OpsSequential)
+	fmt.Fprintf(w, "graft_operations_total{type=\"failed\"} %d\n", snapshot.OpsFailed)
 	
-	fmt.Fprintf(w, "\n# HELP spruce_operation_duration_seconds Operation execution duration\n")
-	fmt.Fprintf(w, "# TYPE spruce_operation_duration_seconds summary\n")
-	fmt.Fprintf(w, "spruce_operation_duration_seconds{quantile=\"0.5\"} %f\n", snapshot.OpDurationP50.Seconds())
-	fmt.Fprintf(w, "spruce_operation_duration_seconds{quantile=\"0.95\"} %f\n", snapshot.OpDurationP95.Seconds())
-	fmt.Fprintf(w, "spruce_operation_duration_seconds{quantile=\"0.99\"} %f\n", snapshot.OpDurationP99.Seconds())
+	fmt.Fprintf(w, "\n# HELP graft_operation_duration_seconds Operation execution duration\n")
+	fmt.Fprintf(w, "# TYPE graft_operation_duration_seconds summary\n")
+	fmt.Fprintf(w, "graft_operation_duration_seconds{quantile=\"0.5\"} %f\n", snapshot.OpDurationP50.Seconds())
+	fmt.Fprintf(w, "graft_operation_duration_seconds{quantile=\"0.95\"} %f\n", snapshot.OpDurationP95.Seconds())
+	fmt.Fprintf(w, "graft_operation_duration_seconds{quantile=\"0.99\"} %f\n", snapshot.OpDurationP99.Seconds())
 	
-	fmt.Fprintf(w, "\n# HELP spruce_concurrency Current and maximum concurrency\n")
-	fmt.Fprintf(w, "# TYPE spruce_concurrency gauge\n")
-	fmt.Fprintf(w, "spruce_concurrency{type=\"current\"} %d\n", snapshot.CurrentConcurrency)
-	fmt.Fprintf(w, "spruce_concurrency{type=\"max\"} %d\n", snapshot.MaxConcurrency)
+	fmt.Fprintf(w, "\n# HELP graft_concurrency Current and maximum concurrency\n")
+	fmt.Fprintf(w, "# TYPE graft_concurrency gauge\n")
+	fmt.Fprintf(w, "graft_concurrency{type=\"current\"} %d\n", snapshot.CurrentConcurrency)
+	fmt.Fprintf(w, "graft_concurrency{type=\"max\"} %d\n", snapshot.MaxConcurrency)
 	
-	fmt.Fprintf(w, "\n# HELP spruce_speedup Parallel execution speedup factor\n")
-	fmt.Fprintf(w, "# TYPE spruce_speedup gauge\n")
-	fmt.Fprintf(w, "spruce_speedup %f\n", snapshot.Speedup)
+	fmt.Fprintf(w, "\n# HELP graft_speedup Parallel execution speedup factor\n")
+	fmt.Fprintf(w, "# TYPE graft_speedup gauge\n")
+	fmt.Fprintf(w, "graft_speedup %f\n", snapshot.Speedup)
 }
 
 // handleMetricsJSON serves metrics in JSON format

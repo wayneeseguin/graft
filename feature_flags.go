@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -51,26 +51,26 @@ func GetFeatures() *FeatureFlags {
 func loadFeatureFlags() *FeatureFlags {
 	flags := &FeatureFlags{
 		// Parallel execution defaults
-		ParallelExecution:  getEnvBool("SPRUCE_PARALLEL", false),
-		ParallelMaxWorkers: getEnvInt("SPRUCE_PARALLEL_WORKERS", 0), // 0 = auto
-		ParallelMinOps:     getEnvInt("SPRUCE_PARALLEL_MIN_OPS", 10),
-		ParallelStrategy:   getEnvString("SPRUCE_PARALLEL_STRATEGY", "conservative"),
-		ParallelAutoTune:   getEnvBool("SPRUCE_PARALLEL_AUTO_TUNE", false),
+		ParallelExecution:  getEnvBool("GRAFT_PARALLEL", false),
+		ParallelMaxWorkers: getEnvInt("GRAFT_PARALLEL_WORKERS", 0), // 0 = auto
+		ParallelMinOps:     getEnvInt("GRAFT_PARALLEL_MIN_OPS", 10),
+		ParallelStrategy:   getEnvString("GRAFT_PARALLEL_STRATEGY", "conservative"),
+		ParallelAutoTune:   getEnvBool("GRAFT_PARALLEL_AUTO_TUNE", false),
 		
 		// Monitoring defaults
-		EnableMetrics:      getEnvBool("SPRUCE_METRICS", false),
-		EnableTracing:      getEnvBool("SPRUCE_TRACING", false),
-		MetricsPort:        getEnvInt("SPRUCE_METRICS_PORT", 9090),
+		EnableMetrics:      getEnvBool("GRAFT_METRICS", false),
+		EnableTracing:      getEnvBool("GRAFT_TRACING", false),
+		MetricsPort:        getEnvInt("GRAFT_METRICS_PORT", 9090),
 		
 		// Safety defaults
-		StrictMode:         getEnvBool("SPRUCE_STRICT", false),
-		ValidateOperators:  getEnvBool("SPRUCE_VALIDATE_OPS", true),
-		EnableRaceDetection: getEnvBool("SPRUCE_RACE_DETECTION", false),
+		StrictMode:         getEnvBool("GRAFT_STRICT", false),
+		ValidateOperators:  getEnvBool("GRAFT_VALIDATE_OPS", true),
+		EnableRaceDetection: getEnvBool("GRAFT_RACE_DETECTION", false),
 		
 		// Performance defaults
-		EnableCaching:      getEnvBool("SPRUCE_CACHE", true),
-		EnableBatching:     getEnvBool("SPRUCE_BATCH", true),
-		CacheSize:          getEnvInt("SPRUCE_CACHE_SIZE", 1000),
+		EnableCaching:      getEnvBool("GRAFT_CACHE", true),
+		EnableBatching:     getEnvBool("GRAFT_BATCH", true),
+		CacheSize:          getEnvInt("GRAFT_CACHE_SIZE", 1000),
 	}
 	
 	// Validate settings

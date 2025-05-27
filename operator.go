@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/geofffranks/yaml"
 	"github.com/starkandwayne/goutils/ansi"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 	"github.com/starkandwayne/goutils/tree"
 )
 

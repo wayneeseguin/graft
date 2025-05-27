@@ -1,9 +1,9 @@
 ## Fanning source out to multi-doc YAML files
 
-`spruce fan` will take a source file and multiple target files (multi-doc YAML supported in target files!),
+`graft fan` will take a source file and multiple target files (multi-doc YAML supported in target files!),
 and merge the target documents on top of the source, outputting a giant multi-doc YAML stream.
 
-`spruce fan` takes all the same flags as a spruce merge, and supports merging the same way, with the
+`graft fan` takes all the same flags as a graft merge, and supports merging the same way, with the
 exception that only two documents are ever merged together (source, and each target doc independently).
 
 ### Examples
@@ -33,7 +33,7 @@ bats: (( grab meta.these ))
 
 Usage:
 ```
-spruce fan --prune meta source.yml target-1.yml target-2.yml
+graft fan --prune meta source.yml target-1.yml target-2.yml
 ---
 stuff: is a thing
 ---

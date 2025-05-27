@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"bufio"
@@ -16,9 +16,13 @@ import (
 	"github.com/geofffranks/yaml"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/starkandwayne/goutils/ansi"
 )
 
 func TestVault(t *testing.T) {
+	// Disable ANSI colors for testing
+	ansi.Color(false)
+	
 	YAML := func(s string) map[interface{}]interface{} {
 		y, err := simpleyaml.NewYaml([]byte(s))
 		So(err, ShouldBeNil)
@@ -37,7 +41,7 @@ func TestVault(t *testing.T) {
 		return ToYAML(YAML(s))
 	}
 	RunTests := func(src string) {
-		//Act like we're running Spruce freshly
+		//Act like we're running Graft freshly
 		kv = nil
 
 		var test, input, output string

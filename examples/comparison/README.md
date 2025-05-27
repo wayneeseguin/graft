@@ -1,10 +1,10 @@
 # Comparison Operator Examples
 
-The comparison operators in Spruce allow you to compare values and create conditional logic in your configurations.
+The comparison operators in Graft allow you to compare values and create conditional logic in your configurations.
 
 ## Overview
 
-Spruce provides the following comparison operators:
+Graft provides the following comparison operators:
 - `==` - Equal to
 - `!=` - Not equal to
 - `<` - Less than
@@ -34,16 +34,16 @@ All comparison operators return boolean values (`true` or `false`).
 
 ```bash
 # Basic comparison operations
-spruce merge basic.yml
+graft merge basic.yml
 
 # Threshold validation examples
-spruce merge threshold-checks.yml
+graft merge threshold-checks.yml
 
 # Conditional resource allocation
-spruce merge conditional-resources.yml
+graft merge conditional-resources.yml
 
 # Version comparison examples
-spruce merge version-comparisons.yml
+graft merge version-comparisons.yml
 ```
 
 ## Key Concepts

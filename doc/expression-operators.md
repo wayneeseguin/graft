@@ -1,6 +1,6 @@
 # Expression Operators Guide
 
-This guide covers the enhanced expression operators available in Spruce, including arithmetic, comparison, boolean logic, and conditional expressions.
+This guide covers the enhanced expression operators available in graft, including arithmetic, comparison, boolean logic, and conditional expressions.
 
 ## Table of Contents
 
@@ -15,7 +15,7 @@ This guide covers the enhanced expression operators available in Spruce, includi
 
 ## Overview
 
-Spruce's enhanced parser (enabled by default) supports a rich set of operators for building complex expressions:
+graft's enhanced parser (enabled by default) supports a rich set of operators for building complex expressions:
 
 ```yaml
 # Simple arithmetic
@@ -259,7 +259,7 @@ is_valid: (( !error && (count > min && count < max) || override ))
 
 ### Nested Operator Calls
 
-Combine operators with Spruce's built-in operators:
+Combine operators with graft's built-in operators:
 
 ```yaml
 # Arithmetic with grab
@@ -326,11 +326,11 @@ The enhanced parser is backward compatible, but if you need to use the legacy pa
 
 ```bash
 # Via environment variable
-export SPRUCE_LEGACY_PARSER=true
-spruce merge file.yml
+export GRAFT_LEGACY_PARSER=true
+graft merge file.yml
 
 # Via command line flag
-spruce merge --legacy-parser file.yml
+graft merge --legacy-parser file.yml
 ```
 
 ### Common Patterns
@@ -375,18 +375,18 @@ result: (( base * multiplier ))  # 150
 2. **Leverage short-circuit evaluation** for safety checks
 3. **Prefer arithmetic operators** over string concatenation for math
 4. **Use ternary operator** for simple conditionals instead of complex YAML structures
-5. **Test expressions** with `spruce eval` for debugging
+5. **Test expressions** with `graft eval` for debugging
 
 ### Debugging Expressions
 
-Use `spruce eval` to test expressions:
+Use `graft eval` to test expressions:
 
 ```bash
 # Test an expression directly
-echo 'result: (( 10 + 5 * 2 ))' | spruce eval
+echo 'result: (( 10 + 5 * 2 ))' | graft eval
 
 # With references
-cat <<EOF | spruce eval
+cat <<EOF | graft eval
 values:
   a: 10
   b: 5
@@ -396,6 +396,6 @@ EOF
 
 ## See Also
 
-- [Spruce Operators Documentation](operators.md) - Complete list of all Spruce operators
-- [Merging Documentation](merging.md) - How Spruce merges YAML files
+- [graft Operators Documentation](operators.md) - Complete list of all graft operators
+- [Merging Documentation](merging.md) - How graft merges YAML files
 - [Environment Variables](environment-variables-and-defaults.md) - Using environment variables in expressions

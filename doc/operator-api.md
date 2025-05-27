@@ -1,10 +1,10 @@
 # Operator API Documentation
 
-This guide explains how to create new operators for Spruce and integrate them with the enhanced parser system.
+This guide explains how to create new operators for graft and integrate them with the enhanced parser system.
 
 ## Overview
 
-Spruce operators are special functions that transform data during YAML/JSON merging. They are invoked using the `(( operator args ))` syntax and can perform operations ranging from simple value transformations to complex data manipulation.
+graft operators are special functions that transform data during YAML/JSON merging. They are invoked using the `(( operator args ))` syntax and can perform operations ranging from simple value transformations to complex data manipulation.
 
 ## The Operator Interface
 
@@ -43,11 +43,11 @@ Most operators run in `EvalPhase`. Special operators like `param` run earlier.
 Create a new file `op_myoperator.go`:
 
 ```go
-package spruce
+package graft
 
 import (
     "fmt"
-    "github.com/starkandwayne/spruce/tree"
+    "github.com/starkandwayne/graft/tree"
 )
 
 // MyOperator implements a custom transformation
@@ -432,7 +432,7 @@ func (e *MyCustomExpr) String() string {
 ### 1. Enable Debug Logging
 
 ```go
-import "github.com/starkandwayne/spruce/log"
+import "github.com/starkandwayne/graft/log"
 
 func (o MyOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
     log.DEBUG("MyOperator called with %d args", len(args))
@@ -456,10 +456,10 @@ log.DEBUG("Evaluated expression: %v -> %v (err: %v)", args[0], resp, err)
 
 ```bash
 # Test with enhanced parser
-SPRUCE_ENHANCED_PARSER=1 spruce merge test.yml
+GRAFT_ENHANCED_PARSER=1 graft merge test.yml
 
 # Or use the legacy parser to compare
-spruce merge --legacy-parser test.yml
+graft merge --legacy-parser test.yml
 ```
 
 ## Common Patterns

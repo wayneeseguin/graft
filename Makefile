@@ -13,4 +13,4 @@ clitests: build
 	./assets/cli_tests
 
 build:
-	go build ./cmd/spruce
+	go build ./cmd/graft

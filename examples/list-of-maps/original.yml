@@ -3,7 +3,7 @@ jobs:
   instances: 5
   resource_pool: small
   properties:
-    spruce: is cool
+    graft: is cool
 - name: oldjob_z1
   instances: 4
   resource_pool: small

@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"encoding/json"
@@ -360,23 +360,23 @@ func (cli *TuningCLI) resetConfig() error {
 
 // PrintHelp prints help information for config commands
 func PrintConfigHelp() {
-	fmt.Println(`Spruce Performance Configuration Commands:
+	fmt.Println(`Graft Performance Configuration Commands:
 
-  spruce config show [--json]           Show current configuration
-  spruce config get <path>              Get a specific configuration value
-  spruce config set <path>=<value>      Set a configuration value
-  spruce config profile <name>          Apply a performance profile
-  spruce config profiles                List available profiles
-  spruce config export [file]           Export configuration to file or stdout
-  spruce config import <file>           Import configuration from file
-  spruce config validate [file]         Validate configuration
-  spruce config reset                   Reset to default configuration
+  graft config show [--json]           Show current configuration
+  graft config get <path>              Get a specific configuration value
+  graft config set <path>=<value>      Set a configuration value
+  graft config profile <name>          Apply a performance profile
+  graft config profiles                List available profiles
+  graft config export [file]           Export configuration to file or stdout
+  graft config import <file>           Import configuration from file
+  graft config validate [file]         Validate configuration
+  graft config reset                   Reset to default configuration
 
 Examples:
-  spruce config get performance.cache.expression_cache_size
-  spruce config set performance.cache.expression_cache_size=20000
-  spruce config profile high-concurrency
-  spruce config export my_config.yaml
+  graft config get performance.cache.expression_cache_size
+  graft config set performance.cache.expression_cache_size=20000
+  graft config profile high-concurrency
+  graft config export my_config.yaml
 
 Configuration Paths:
   performance.cache.expression_cache_size

@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"context"
@@ -234,7 +234,7 @@ func (ms *MonitoringServer) handleDashboard(w http.ResponseWriter, r *http.Reque
 	tmpl := `<!DOCTYPE html>
 <html>
 <head>
-    <title>Spruce Performance Dashboard</title>
+    <title>Graft Performance Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
         h1 { color: #333; }
@@ -271,7 +271,7 @@ func (ms *MonitoringServer) handleDashboard(w http.ResponseWriter, r *http.Reque
 </head>
 <body>
     <div class="container">
-        <h1>Spruce Performance Dashboard</h1>
+        <h1>Graft Performance Dashboard</h1>
         
         <div class="nav">
             <a href="/">Dashboard</a>
@@ -322,13 +322,13 @@ func (ms *MonitoringServer) handleDashboard(w http.ResponseWriter, r *http.Reque
                 .then(resp => resp.json())
                 .then(data => {
                     // Update overview cards
-                    const opsPerSec = getMetricValue(data, 'spruce_operations_per_second');
+                    const opsPerSec = getMetricValue(data, 'graft_operations_per_second');
                     document.getElementById('ops-per-sec').textContent = 
                         opsPerSec ? opsPerSec.toFixed(1) : '0';
                     
                     // Calculate cache hit rate
-                    const cacheHits = getMetricSum(data, 'spruce_cache_hits_total');
-                    const cacheMisses = getMetricSum(data, 'spruce_cache_misses_total');
+                    const cacheHits = getMetricSum(data, 'graft_cache_hits_total');
+                    const cacheMisses = getMetricSum(data, 'graft_cache_misses_total');
                     const hitRate = cacheHits + cacheMisses > 0 ? 
                         (cacheHits / (cacheHits + cacheMisses) * 100) : 0;
                     document.getElementById('cache-hit-rate').textContent = hitRate.toFixed(1);

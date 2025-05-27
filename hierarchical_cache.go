@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -56,7 +56,7 @@ func DefaultHierarchicalCacheConfig() HierarchicalCacheConfig {
 		L1Size:       1000,
 		L2Size:       10000,
 		L2Enabled:    true,
-		StoragePath:  "/tmp/spruce_cache",
+		StoragePath:  "/tmp/graft_cache",
 		TTL:          30 * time.Minute,
 		Persistence:  true,
 		SyncInterval: 5 * time.Minute,

@@ -38,11 +38,11 @@ any_empty: (( empty a || empty b || empty c ))
 
 ```bash
 # Test individual examples
-spruce merge basic.yml
+graft merge basic.yml
 
 # See how empty interacts with parameters
-spruce merge validation.yml <(echo "name: John")
+graft merge validation.yml <(echo "name: John")
 
 # Test with different input values
-echo "items: []" | spruce merge -
+echo "items: []" | graft merge -
 ```

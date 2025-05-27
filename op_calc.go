@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 	"github.com/starkandwayne/goutils/ansi"
 	"github.com/starkandwayne/goutils/tree"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 // CalcOperator is invoked with (( calc <expression> ))
@@ -61,14 +61,14 @@ func (CalcOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 	switch args[0].Type {
 	case Literal:
-		// Replace all Spruce references with the respective value
+		// Replace all Graft references with the respective value
 		DEBUG("  input expression: %s", args[0].Literal.(string))
 		input, replaceError := replaceReferences(ev, args[0].Literal.(string))
 		if replaceError != nil {
 			return nil, replaceError
 		}
 
-		// Once all Spruce references (variables) are replaced, try to read the expression
+		// Once all Graft references (variables) are replaced, try to read the expression
 		DEBUG("  processed expression: %s", input)
 		expression, expressionError := govaluate.NewEvaluableExpressionWithFunctions(input, supportedFunctions())
 		if expressionError != nil {

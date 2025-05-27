@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 // ExtendedExpr adds new fields to support operator calls
 // This extends the functionality of the base Expr struct

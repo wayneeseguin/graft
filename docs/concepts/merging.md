@@ -1,10 +1,10 @@
 # Merging Rules
 
-Merging in Spruce is designed to be intuitive. Files to merge are listed in-order on the command line. The first file serves as the base, and subsequent files are merged on top, adding new keys and replacing existing ones.
+Merging in graft is designed to be intuitive. Files to merge are listed in-order on the command line. The first file serves as the base, and subsequent files are merged on top, adding new keys and replacing existing ones.
 
 ## Order of Operations
 
-Spruce processes files through multiple phases to handle various operations:
+graft processes files through multiple phases to handle various operations:
 
 ### 1. Build the Root Document
 
@@ -22,11 +22,11 @@ Since `(( inject ))` happens after array operators, you cannot use array operato
 
 ### 3. Param Phase
 
-The document is scanned for `(( param ))` operators. If any exist, it means a required property wasn't overridden by later files. Spruce will print errors for missing parameters and exit.
+The document is scanned for `(( param ))` operators. If any exist, it means a required property wasn't overridden by later files. graft will print errors for missing parameters and exit.
 
 ### 4. Eval Phase
 
-Unless `--skip-eval` is specified, Spruce scans for operators, generates a dependency graph, and evaluates them in order. Each operator modifies the document. All remaining operators are evaluated at this stage.
+Unless `--skip-eval` is specified, graft scans for operators, generates a dependency graph, and evaluates them in order. Each operator modifies the document. All remaining operators are evaluated at this stage.
 
 ### 5. Pruning
 
@@ -38,11 +38,11 @@ If `--cherry-pick` is specified, only the requested data structures are extracte
 
 ### 7. Output
 
-Any errors from the Eval Phase or Pruning/Cherry Picking are displayed. If successful, Spruce formats the document as YAML and outputs it.
+Any errors from the Eval Phase or Pruning/Cherry Picking are displayed. If successful, graft formats the document as YAML and outputs it.
 
 ## Array Merging
 
-Arrays require special handling because order matters. Spruce provides array operators to control merging:
+Arrays require special handling because order matters. graft provides array operators to control merging:
 
 - `(( append ))` - Adds data to the end of the array
 - `(( prepend ))` - Inserts data at the beginning
@@ -101,7 +101,7 @@ features:
   cache: true
   logging: true
 
-# Result: spruce merge base.yml override.yml
+# Result: graft merge base.yml override.yml
 name: my-app
 port: 9090
 features:
@@ -149,7 +149,7 @@ credentials:
 
 4. **Organize operators** - Group related operators together for clarity
 
-5. **Test merges** - Use `spruce diff` to verify merge results
+5. **Test merges** - Use `graft diff` to verify merge results
 
 ## See Also
 

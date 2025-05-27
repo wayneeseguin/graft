@@ -1,9 +1,9 @@
-package spruce
+package graft
 
 import (
 	"fmt"
 
-	"github.com/geofffranks/spruce/log"
+	"github.com/wayneeseguin/graft/log"
 	"github.com/starkandwayne/goutils/tree"
 )
 

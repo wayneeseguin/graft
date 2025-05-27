@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -48,13 +48,13 @@ func BenchmarkParallelExecution(b *testing.B) {
 			
 			// Configure parallel execution
 			if scenario.parallel {
-				os.Setenv("SPRUCE_PARALLEL", "true")
-				os.Setenv("SPRUCE_PARALLEL_WORKERS", fmt.Sprintf("%d", scenario.workers))
+				os.Setenv("GRAFT_PARALLEL", "true")
+				os.Setenv("GRAFT_PARALLEL_WORKERS", fmt.Sprintf("%d", scenario.workers))
 			} else {
-				os.Setenv("SPRUCE_PARALLEL", "false")
+				os.Setenv("GRAFT_PARALLEL", "false")
 			}
-			defer os.Unsetenv("SPRUCE_PARALLEL")
-			defer os.Unsetenv("SPRUCE_PARALLEL_WORKERS")
+			defer os.Unsetenv("GRAFT_PARALLEL")
+			defer os.Unsetenv("GRAFT_PARALLEL_WORKERS")
 			
 			// Reset features to pick up env changes
 			globalFeaturesOnce = sync.Once{}
@@ -199,13 +199,13 @@ func BenchmarkOperatorTypes(b *testing.B) {
 					
 					// Configure parallel execution
 					if parallel {
-						os.Setenv("SPRUCE_PARALLEL", "true")
-						os.Setenv("SPRUCE_PARALLEL_WORKERS", "8")
+						os.Setenv("GRAFT_PARALLEL", "true")
+						os.Setenv("GRAFT_PARALLEL_WORKERS", "8")
 					} else {
-						os.Setenv("SPRUCE_PARALLEL", "false")
+						os.Setenv("GRAFT_PARALLEL", "false")
 					}
-					defer os.Unsetenv("SPRUCE_PARALLEL")
-					defer os.Unsetenv("SPRUCE_PARALLEL_WORKERS")
+					defer os.Unsetenv("GRAFT_PARALLEL")
+					defer os.Unsetenv("GRAFT_PARALLEL_WORKERS")
 					
 					// Reset features
 					globalFeaturesOnce = sync.Once{}
@@ -237,10 +237,10 @@ func BenchmarkScaling(b *testing.B) {
 	maxWorkers := runtime.NumCPU() * 2
 	for workers := 1; workers <= maxWorkers; workers *= 2 {
 		b.Run(fmt.Sprintf("%d-workers", workers), func(b *testing.B) {
-			os.Setenv("SPRUCE_PARALLEL", "true")
-			os.Setenv("SPRUCE_PARALLEL_WORKERS", fmt.Sprintf("%d", workers))
-			defer os.Unsetenv("SPRUCE_PARALLEL")
-			defer os.Unsetenv("SPRUCE_PARALLEL_WORKERS")
+			os.Setenv("GRAFT_PARALLEL", "true")
+			os.Setenv("GRAFT_PARALLEL_WORKERS", fmt.Sprintf("%d", workers))
+			defer os.Unsetenv("GRAFT_PARALLEL")
+			defer os.Unsetenv("GRAFT_PARALLEL_WORKERS")
 			
 			// Reset features
 			globalFeaturesOnce = sync.Once{}
@@ -338,8 +338,8 @@ func BenchmarkRealWorld(b *testing.B) {
 			
 			// Test sequential
 			b.Run("sequential", func(b *testing.B) {
-				os.Setenv("SPRUCE_PARALLEL", "false")
-				defer os.Unsetenv("SPRUCE_PARALLEL")
+				os.Setenv("GRAFT_PARALLEL", "false")
+				defer os.Unsetenv("GRAFT_PARALLEL")
 				globalFeaturesOnce = sync.Once{}
 				
 				b.ResetTimer()
@@ -348,10 +348,10 @@ func BenchmarkRealWorld(b *testing.B) {
 			
 			// Test parallel
 			b.Run("parallel", func(b *testing.B) {
-				os.Setenv("SPRUCE_PARALLEL", "true")
-				os.Setenv("SPRUCE_PARALLEL_WORKERS", fmt.Sprintf("%d", runtime.NumCPU()))
-				defer os.Unsetenv("SPRUCE_PARALLEL")
-				defer os.Unsetenv("SPRUCE_PARALLEL_WORKERS")
+				os.Setenv("GRAFT_PARALLEL", "true")
+				os.Setenv("GRAFT_PARALLEL_WORKERS", fmt.Sprintf("%d", runtime.NumCPU()))
+				defer os.Unsetenv("GRAFT_PARALLEL")
+				defer os.Unsetenv("GRAFT_PARALLEL_WORKERS")
 				globalFeaturesOnce = sync.Once{}
 				
 				b.ResetTimer()

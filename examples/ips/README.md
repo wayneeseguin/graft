@@ -45,11 +45,11 @@ from_end: (( ips "10.0.0.0/24" -1 ))  # Returns "10.0.0.254"
 
 ```bash
 # Basic IP calculations
-spruce merge basic.yml
+graft merge basic.yml
 
 # Network planning
-spruce merge network-planning.yml
+graft merge network-planning.yml
 
 # Service allocations
-spruce merge service-allocation.yml
+graft merge service-allocation.yml
 ```

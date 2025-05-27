@@ -1,6 +1,6 @@
 ---
 # Dynamic file paths with nested expressions
-# Run with: ENV=production spruce merge dynamic-paths.yml
+# Run with: ENV=production graft merge dynamic-paths.yml
 
 meta:
   environment: (( grab $ENV || "dev" ))

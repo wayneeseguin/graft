@@ -1,20 +1,20 @@
-# Spruce Command Reference
+# graft Command Reference
 
-Spruce provides several commands for working with YAML and JSON files.
+graft provides several commands for working with YAML and JSON files.
 
-## spruce merge
+## graft merge
 
 The primary command for merging YAML files together.
 
 ### Synopsis
 
 ```bash
-spruce merge [options] file1.yml file2.yml ... fileN.yml
+graft merge [options] file1.yml file2.yml ... fileN.yml
 ```
 
 ### Description
 
-Merges multiple YAML files together in order, with later files overriding earlier ones. Evaluates Spruce operators to produce the final output.
+Merges multiple YAML files together in order, with later files overriding earlier ones. Evaluates graft operators to produce the final output.
 
 ### Options
 
@@ -32,32 +32,32 @@ Merges multiple YAML files together in order, with later files overriding earlie
 
 Basic merge:
 ```bash
-spruce merge base.yml override.yml > result.yml
+graft merge base.yml override.yml > result.yml
 ```
 
 With pruning:
 ```bash
-spruce merge --prune meta --prune tmp base.yml prod.yml
+graft merge --prune meta --prune tmp base.yml prod.yml
 ```
 
 Cherry-picking specific keys:
 ```bash
-spruce merge --cherry-pick jobs large-manifest.yml
+graft merge --cherry-pick jobs large-manifest.yml
 ```
 
 Reading from stdin:
 ```bash
-echo "name: test" | spruce merge - override.yml
+echo "name: test" | graft merge - override.yml
 ```
 
-## spruce diff
+## graft diff
 
 Shows the differences between files after merging and evaluation.
 
 ### Synopsis
 
 ```bash
-spruce diff file1.yml file2.yml
+graft diff file1.yml file2.yml
 ```
 
 ### Description
@@ -67,22 +67,22 @@ Displays a unified diff showing what changes when file2 is merged on top of file
 ### Examples
 
 ```bash
-spruce diff base.yml changes.yml
+graft diff base.yml changes.yml
 ```
 
 Comparing with stdin:
 ```bash
-cat current.yml | spruce diff - new.yml
+cat current.yml | graft diff - new.yml
 ```
 
-## spruce json
+## graft json
 
 Converts YAML to JSON format.
 
 ### Synopsis
 
 ```bash
-spruce json [options] file.yml
+graft json [options] file.yml
 ```
 
 ### Description
@@ -98,27 +98,27 @@ Reads YAML input and outputs equivalent JSON. Can also convert the other directi
 
 YAML to JSON:
 ```bash
-spruce json config.yml > config.json
+graft json config.yml > config.json
 ```
 
 JSON to YAML:
 ```bash
-spruce json --reverse config.json > config.yml
+graft json --reverse config.json > config.yml
 ```
 
 From stdin:
 ```bash
-kubectl get pods -o yaml | spruce json
+kubectl get pods -o yaml | graft json
 ```
 
-## spruce fan
+## graft fan
 
 Spreads a source file across multiple target documents.
 
 ### Synopsis
 
 ```bash
-spruce fan [options] source.yml target1.yml target2.yml ...
+graft fan [options] source.yml target1.yml target2.yml ...
 ```
 
 ### Description
@@ -127,7 +127,7 @@ Takes a source file and merges it with each document in the target files indepen
 
 ### Options
 
-Same as `spruce merge`:
+Same as `graft merge`:
 - `--skip-eval`
 - `--prune KEY`
 - `--cherry-pick KEY`
@@ -155,7 +155,7 @@ region: (( grab meta.region ))
 
 Usage:
 ```bash
-spruce fan --prune meta source.yml targets.yml
+graft fan --prune meta source.yml targets.yml
 ```
 
 Output:
@@ -168,14 +168,14 @@ name: worker
 region: us-east-1
 ```
 
-## spruce vaultinfo
+## graft vaultinfo
 
 Extracts information about Vault paths used in a manifest.
 
 ### Synopsis
 
 ```bash
-spruce vaultinfo [options] file.yml
+graft vaultinfo [options] file.yml
 ```
 
 ### Description
@@ -191,7 +191,7 @@ Scans files for `(( vault ))` operators and reports on the Vault paths that will
 ### Example
 
 ```bash
-spruce vaultinfo manifest.yml
+graft vaultinfo manifest.yml
 ```
 
 Output:
@@ -208,7 +208,7 @@ These options work with all commands:
 
 ### Environment Variables
 
-- `SPRUCE_DEBUG` - Set to enable debug mode
+- `GRAFT_DEBUG` - Set to enable debug mode
 - `REDACT` - Prevent specific keys from being shown in output
 - `VAULT_ADDR` - Vault server address
 - `VAULT_TOKEN` - Vault authentication token
@@ -238,14 +238,14 @@ Use `--trace` for even more detail including:
 
 ### Input Sources
 
-- Files: `spruce merge file1.yml file2.yml`
-- Stdin: `spruce merge - file.yml` or `cat file.yml | spruce merge`
+- Files: `graft merge file1.yml file2.yml`
+- Stdin: `graft merge - file.yml` or `cat file.yml | graft merge`
 - Multiple files: Processed in order given
 
 ### Output Format
 
 - Default: YAML to stdout
-- JSON: Use `spruce json` command
+- JSON: Use `graft json` command
 - Files: Redirect with `> output.yml`
 
 ### Multi-Document Support
@@ -258,17 +258,17 @@ Use `--multi-doc` flag to process files containing multiple YAML documents separ
 
 ```bash
 # Development
-spruce merge base.yml dev.yml > manifest.yml
+graft merge base.yml dev.yml > manifest.yml
 
 # Production  
-spruce merge base.yml prod.yml --prune meta > manifest.yml
+graft merge base.yml prod.yml --prune meta > manifest.yml
 ```
 
 ### Pipeline Usage
 
 ```bash
 # In CI/CD pipeline
-spruce merge \
+graft merge \
   base.yml \
   environments/${ENVIRONMENT}.yml \
   secrets.yml \
@@ -281,10 +281,10 @@ spruce merge \
 
 ```bash
 # See what's happening
-spruce merge --debug base.yml override.yml
+graft merge --debug base.yml override.yml
 
 # Check specific operator
-spruce merge manifest.yml 2>&1 | grep -A5 "grab"
+graft merge manifest.yml 2>&1 | grep -A5 "grab"
 ```
 
 ## See Also

@@ -50,7 +50,7 @@ servers:
   first_server_ip: (( grab metadata.servers[0].ip ))
   
   # Note: For named access to list items, you'd need to use 
-  # Spruce's list merging features or restructure the data
+  # Graft's list merging features or restructure the data
 
 # Combining with other operators
 infrastructure:

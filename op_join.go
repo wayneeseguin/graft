@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/starkandwayne/goutils/ansi"
 	"github.com/starkandwayne/goutils/tree"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 // JoinOperator is invoked with (( join <separator> <lists/strings>... )) and

@@ -13,13 +13,13 @@ The `keys` operator extracts all the keys from a map/hash and returns them as a 
 
 ```bash
 # Basic example
-spruce merge basic.yml
+graft merge basic.yml
 
 # Dynamic iteration
-spruce merge dynamic-iteration.yml
+graft merge dynamic-iteration.yml
 
 # With nested expressions
-spruce merge with-nested-grab.yml
+graft merge with-nested-grab.yml
 ```
 
 ## Common Use Cases:

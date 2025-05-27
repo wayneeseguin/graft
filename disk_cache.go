@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"encoding/json"
@@ -46,7 +46,7 @@ type DiskCacheMetrics struct {
 func NewDiskCache(config DiskCacheConfig) (*DiskCache, error) {
 	// Set defaults
 	if config.FilePrefix == "" {
-		config.FilePrefix = "spruce_cache"
+		config.FilePrefix = "graft_cache"
 	}
 	if config.TTL == 0 {
 		config.TTL = time.Hour

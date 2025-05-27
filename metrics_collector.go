@@ -1,11 +1,11 @@
-package spruce
+package graft
 
 import (
 	"fmt"
 	"time"
 )
 
-// MetricsCollector collects metrics for Spruce operations
+// MetricsCollector collects metrics for Graft operations
 type MetricsCollector struct {
 	// Parsing metrics
 	ParseOperations  *MetricFamily
@@ -52,124 +52,124 @@ func NewMetricsCollector() *MetricsCollector {
 	return &MetricsCollector{
 		// Parsing metrics
 		ParseOperations: NewMetricFamily(
-			"spruce_parse_operations_total",
+			"graft_parse_operations_total",
 			"Total number of parse operations",
 			MetricTypeCounter,
 		),
 		ParseDuration: NewMetricFamily(
-			"spruce_parse_duration_seconds",
+			"graft_parse_duration_seconds",
 			"Parse operation duration in seconds",
 			MetricTypeHistogram,
 		),
 		ParseErrors: NewMetricFamily(
-			"spruce_parse_errors_total",
+			"graft_parse_errors_total",
 			"Total number of parse errors",
 			MetricTypeCounter,
 		),
 		
 		// Evaluation metrics
 		EvalOperations: NewMetricFamily(
-			"spruce_eval_operations_total",
+			"graft_eval_operations_total",
 			"Total number of evaluation operations",
 			MetricTypeCounter,
 		),
 		EvalDuration: NewMetricFamily(
-			"spruce_eval_duration_seconds",
+			"graft_eval_duration_seconds",
 			"Evaluation operation duration in seconds",
 			MetricTypeHistogram,
 		),
 		OperatorCalls: NewMetricFamily(
-			"spruce_operator_calls_total",
+			"graft_operator_calls_total",
 			"Total number of operator calls",
 			MetricTypeCounter,
 		),
 		OperatorDuration: NewMetricFamily(
-			"spruce_operator_duration_seconds",
+			"graft_operator_duration_seconds",
 			"Operator execution duration in seconds",
 			MetricTypeHistogram,
 		),
 		
 		// Cache metrics
 		CacheHits: NewMetricFamily(
-			"spruce_cache_hits_total",
+			"graft_cache_hits_total",
 			"Total number of cache hits",
 			MetricTypeCounter,
 		),
 		CacheMisses: NewMetricFamily(
-			"spruce_cache_misses_total",
+			"graft_cache_misses_total",
 			"Total number of cache misses",
 			MetricTypeCounter,
 		),
 		CacheEvictions: NewMetricFamily(
-			"spruce_cache_evictions_total",
+			"graft_cache_evictions_total",
 			"Total number of cache evictions",
 			MetricTypeCounter,
 		),
 		CacheSize: NewMetricFamily(
-			"spruce_cache_size",
+			"graft_cache_size",
 			"Current cache size",
 			MetricTypeGauge,
 		),
 		
 		// I/O metrics
 		ExternalCalls: NewMetricFamily(
-			"spruce_external_calls_total",
+			"graft_external_calls_total",
 			"Total number of external system calls",
 			MetricTypeCounter,
 		),
 		ExternalDuration: NewMetricFamily(
-			"spruce_external_duration_seconds",
+			"graft_external_duration_seconds",
 			"External call duration in seconds",
 			MetricTypeHistogram,
 		),
 		ConnectionsActive: NewMetricFamily(
-			"spruce_connections_active",
+			"graft_connections_active",
 			"Number of active connections",
 			MetricTypeGauge,
 		),
 		
 		// Resource metrics
 		HeapAlloc: NewMetricFamily(
-			"spruce_heap_alloc_bytes",
+			"graft_heap_alloc_bytes",
 			"Current heap allocation in bytes",
 			MetricTypeGauge,
 		),
 		HeapObjects: NewMetricFamily(
-			"spruce_heap_objects",
+			"graft_heap_objects",
 			"Number of allocated heap objects",
 			MetricTypeGauge,
 		),
 		GCPauseTime: NewMetricFamily(
-			"spruce_gc_pause_seconds",
+			"graft_gc_pause_seconds",
 			"GC pause duration in seconds",
 			MetricTypeHistogram,
 		),
 		Goroutines: NewMetricFamily(
-			"spruce_goroutines",
+			"graft_goroutines",
 			"Number of goroutines",
 			MetricTypeGauge,
 		),
 		
 		// Throughput metrics
 		DocumentsProcessed: NewMetricFamily(
-			"spruce_documents_processed_total",
+			"graft_documents_processed_total",
 			"Total number of documents processed",
 			MetricTypeCounter,
 		),
 		BytesProcessed: NewMetricFamily(
-			"spruce_bytes_processed_total",
+			"graft_bytes_processed_total",
 			"Total bytes processed",
 			MetricTypeCounter,
 		),
 		OperationsPerSecond: NewMetricFamily(
-			"spruce_operations_per_second",
+			"graft_operations_per_second",
 			"Operations per second",
 			MetricTypeGauge,
 		),
 		
 		// Error metrics
 		ErrorsByType: NewMetricFamily(
-			"spruce_errors_total",
+			"graft_errors_total",
 			"Total errors by type",
 			MetricTypeCounter,
 		),

@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -13,8 +13,8 @@ import (
 func TestParallelEvaluatorIntegration(t *testing.T) {
 	Convey("Parallel Evaluator Integration", t, func() {
 		Convey("should execute operations sequentially when disabled", func() {
-			os.Setenv("SPRUCE_PARALLEL", "false")
-			defer os.Unsetenv("SPRUCE_PARALLEL")
+			os.Setenv("GRAFT_PARALLEL", "false")
+			defer os.Unsetenv("GRAFT_PARALLEL")
 
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{
@@ -32,8 +32,8 @@ func TestParallelEvaluatorIntegration(t *testing.T) {
 		})
 
 		Convey("should execute operations in parallel when enabled", func() {
-			os.Setenv("SPRUCE_PARALLEL", "true")
-			defer os.Unsetenv("SPRUCE_PARALLEL")
+			os.Setenv("GRAFT_PARALLEL", "true")
+			defer os.Unsetenv("GRAFT_PARALLEL")
 
 			// Create evaluator with many independent operations
 			ev := &Evaluator{
@@ -99,8 +99,8 @@ func TestParallelEvaluatorIntegration(t *testing.T) {
 		})
 
 		Convey("should respect dependencies", func() {
-			os.Setenv("SPRUCE_PARALLEL", "true")
-			defer os.Unsetenv("SPRUCE_PARALLEL")
+			os.Setenv("GRAFT_PARALLEL", "true")
+			defer os.Unsetenv("GRAFT_PARALLEL")
 
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{

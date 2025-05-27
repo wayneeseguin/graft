@@ -1,10 +1,10 @@
 # Boolean Operator Examples
 
-The boolean operators in Spruce provide logical operations for combining conditions and controlling flow.
+The boolean operators in Graft provide logical operations for combining conditions and controlling flow.
 
 ## Overview
 
-Spruce provides the following boolean operators:
+Graft provides the following boolean operators:
 - `&&` - Logical AND
 - `||` - Logical OR  
 - `!` - Logical NOT (negation)
@@ -31,16 +31,16 @@ These operators are essential for creating complex conditions and implementing b
 
 ```bash
 # Basic boolean operations
-spruce merge basic.yml
+graft merge basic.yml
 
 # Access control examples
-spruce merge access-control.yml
+graft merge access-control.yml
 
 # Validation rule examples
-spruce merge validation-rules.yml
+graft merge validation-rules.yml
 
 # Feature combination examples
-spruce merge feature-combinations.yml
+graft merge feature-combinations.yml
 ```
 
 ## Key Concepts

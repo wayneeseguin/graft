@@ -35,14 +35,14 @@ metadata: (( stringify complex_structure ))
 
 ```bash
 # Basic stringification
-spruce merge basic.yml
+graft merge basic.yml
 
 # Generate Kubernetes manifests
-spruce merge kubernetes-configmap.yml > configmap.yaml
+graft merge kubernetes-configmap.yml > configmap.yaml
 kubectl apply -f configmap.yaml
 
 # Complex nested configs
-spruce merge nested-configs.yml
+graft merge nested-configs.yml
 ```
 
 ## Notes:

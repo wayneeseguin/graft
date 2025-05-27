@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 
 	"github.com/starkandwayne/goutils/ansi"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 type listOp int
@@ -108,7 +108,7 @@ func (m *Merger) mergeMap(orig map[interface{}]interface{}, n map[interface{}]in
 	for k, val := range n {
 		path := fmt.Sprintf("%s.%v", node, k)
 		if s, ok := val.(string); ok && mergeRx.MatchString(s) {
-			m.Errors.Append(ansi.Errorf("@m{%s}: @R{inappropriate use of} @c{(( merge ))} @R{operator outside of a list} (this is @G{spruce}, after all)", path))
+			m.Errors.Append(ansi.Errorf("@m{%s}: @R{inappropriate use of} @c{(( merge ))} @R{operator outside of a list} (this is @G{graft}, after all)", path))
 		}
 
 		if _, exists := orig[k]; exists {

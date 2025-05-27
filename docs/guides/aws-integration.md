@@ -1,6 +1,6 @@
 # AWS Integration Guide
 
-Spruce integrates with AWS services to retrieve configuration values and secrets from Parameter Store and Secrets Manager.
+graft integrates with AWS services to retrieve configuration values and secrets from Parameter Store and Secrets Manager.
 
 ## AWS Parameter Store
 
@@ -187,7 +187,7 @@ export AWS_REGION=us-east-1
 # Or specify role to assume
 export AWS_ROLE=arn:aws:iam::123456789012:role/MyRole
 
-spruce merge config.yml
+graft merge config.yml
 ```
 
 ## Best Practices
@@ -337,11 +337,11 @@ export AWS_PROFILE=mycompany
 export AWS_REGION=us-east-1
 
 # 2. Development environment
-ENVIRONMENT=development spruce merge config.yml > dev-config.yml
+ENVIRONMENT=development graft merge config.yml > dev-config.yml
 
 # 3. Production environment with role assumption
 export AWS_ROLE=arn:aws:iam::123456789012:role/ProductionRole
-ENVIRONMENT=production spruce merge config.yml > prod-config.yml
+ENVIRONMENT=production graft merge config.yml > prod-config.yml
 
 # 4. Clean up
 rm -f dev-config.yml prod-config.yml

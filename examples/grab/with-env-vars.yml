@@ -1,6 +1,6 @@
 ---
 # Environment variable expansion in grab paths
-# Run with: ENV=production REGION=us-east-1 spruce merge with-env-vars.yml
+# Run with: ENV=production REGION=us-east-1 graft merge with-env-vars.yml
 
 configurations:
   development:

@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 // ParallelEvaluatorConfig controls parallel execution behavior
@@ -25,14 +25,14 @@ type ParallelEvaluatorConfig struct {
 // DefaultParallelConfig returns default configuration
 func DefaultParallelConfig() *ParallelEvaluatorConfig {
 	maxWorkers := runtime.NumCPU()
-	if env := os.Getenv("SPRUCE_PARALLEL_WORKERS"); env != "" {
+	if env := os.Getenv("GRAFT_PARALLEL_WORKERS"); env != "" {
 		if n, err := strconv.Atoi(env); err == nil && n > 0 {
 			maxWorkers = n
 		}
 	}
 
 	return &ParallelEvaluatorConfig{
-		Enabled:           os.Getenv("SPRUCE_PARALLEL") == "true",
+		Enabled:           os.Getenv("GRAFT_PARALLEL") == "true",
 		MaxWorkers:        maxWorkers,
 		MinOpsForParallel: 10, // Don't parallelize small workloads
 		Strategy:          "conservative",

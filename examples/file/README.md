@@ -21,13 +21,13 @@ First, create the sample files:
 
 ```bash
 # Basic file inclusion
-spruce merge basic.yml
+graft merge basic.yml
 
 # Dynamic file paths
-ENV=production spruce merge dynamic-paths.yml
+ENV=production graft merge dynamic-paths.yml
 
 # With base path
-spruce merge with-base-path.yml --file-base-path ./configs
+graft merge with-base-path.yml --file-base-path ./configs
 ```
 
 ## Important Notes:

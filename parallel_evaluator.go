@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/starkandwayne/goutils/tree"
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 // ParallelEvaluator extends the standard evaluator with parallel processing capabilities

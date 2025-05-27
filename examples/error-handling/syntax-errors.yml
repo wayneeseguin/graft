@@ -1,4 +1,4 @@
-# This file demonstrates improved error handling in Spruce
+# This file demonstrates improved error handling in Graft
 
 # Example 1: Unclosed parenthesis
 unclosed: (( grab meta.name

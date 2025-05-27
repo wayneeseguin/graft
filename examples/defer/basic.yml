@@ -11,7 +11,7 @@ evaluated:
   version: (( grab meta.version ))
   identifier: (( concat (grab meta.name) "-" (grab meta.version) ))
 
-# Deferred expressions - these remain as Spruce operators in the output
+# Deferred expressions - these remain as Graft operators in the output
 deferred:
   # Single operator deferral
   name: (( defer grab meta.name ))

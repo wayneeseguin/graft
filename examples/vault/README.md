@@ -31,22 +31,22 @@ vault kv put secret/app/production db_password=prod-pass api_key=prod-key
 
 ```bash
 # Basic vault operations
-spruce merge basic.yml
+graft merge basic.yml
 
 # With defaults (some secrets might not exist)
-spruce merge with-defaults.yml
+graft merge with-defaults.yml
 
 # Database secrets
-spruce merge database-secrets.yml
+graft merge database-secrets.yml
 
 # Skip vault (see the placeholders)
-SPRUCE_SKIP_VAULT=1 spruce merge basic.yml
+GRAFT_SKIP_VAULT=1 graft merge basic.yml
 ```
 
 ## Important Notes:
 
 - Requires `VAULT_ADDR` and `VAULT_TOKEN` environment variables
-- Use `SPRUCE_SKIP_VAULT=1` to skip vault lookups (returns "REDACTED")
+- Use `GRAFT_SKIP_VAULT=1` to skip vault lookups (returns "REDACTED")
 - Vault paths use format: `path/to/secret:key`
 - KV v2 secrets engine paths need `data/` after mount point
 - See [Vault documentation](../doc/pulling-creds-from-vault.md) for setup details

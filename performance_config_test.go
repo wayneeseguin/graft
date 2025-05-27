@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"os"
@@ -33,13 +33,13 @@ func TestPerformanceConfig(t *testing.T) {
 
 		Convey("Environment Variable Overrides", func() {
 			// Set some environment variables
-			os.Setenv("SPRUCE_EXPRESSION_CACHE_SIZE", "20000")
-			os.Setenv("SPRUCE_MAX_WORKERS", "200")
-			os.Setenv("SPRUCE_CACHE_WARMING_ENABLED", "false")
+			os.Setenv("GRAFT_EXPRESSION_CACHE_SIZE", "20000")
+			os.Setenv("GRAFT_MAX_WORKERS", "200")
+			os.Setenv("GRAFT_CACHE_WARMING_ENABLED", "false")
 			defer func() {
-				os.Unsetenv("SPRUCE_EXPRESSION_CACHE_SIZE")
-				os.Unsetenv("SPRUCE_MAX_WORKERS")
-				os.Unsetenv("SPRUCE_CACHE_WARMING_ENABLED")
+				os.Unsetenv("GRAFT_EXPRESSION_CACHE_SIZE")
+				os.Unsetenv("GRAFT_MAX_WORKERS")
+				os.Unsetenv("GRAFT_CACHE_WARMING_ENABLED")
 			}()
 
 			config := &PerformanceConfig{}

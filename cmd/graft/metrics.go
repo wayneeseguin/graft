@@ -5,8 +5,8 @@ import (
 	"os"
 	"strconv"
 
-	. "github.com/geofffranks/spruce"
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 // StartMetricsServer starts the metrics server if enabled
@@ -18,7 +18,7 @@ func StartMetricsServer() *MetricsServer {
 	}
 	
 	port := features.MetricsPort
-	if portStr := os.Getenv("SPRUCE_METRICS_PORT"); portStr != "" {
+	if portStr := os.Getenv("GRAFT_METRICS_PORT"); portStr != "" {
 		if p, err := strconv.Atoi(portStr); err == nil {
 			port = p
 		}

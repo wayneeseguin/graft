@@ -1,21 +1,42 @@
 ```
-          *          .---. ,---.  ,---.  .-. .-.  ,--,  ,---.         *
-         /.\        ( .-._)| .-.\ | .-.\ | | | |.' .')  | .-'        /.\
-        /..'\      (_) \   | |-' )| `-'/ | | | ||  |(_) | `-.       /..'\
-        /'.'\      _  \ \  | |--' |   (  | | | |\  \    | .-'       /'.'\
-       /.''.'\    ( `-'  ) | |    | |\ \ | `-')| \  `-. |  `--.    /.''.'\
-       /.'.'.\     `----'  /(     |_| \)\`---(_)  \____\/( __.'    /.'.'.\
-"'""""/'.''.'.\""'"'""""""(__)""""""""(__)"""""""""""""(__)""'""""/'.''.'.\""'"'"
-      ^^^[_]^^^                                                   ^^^[_]^^^
+                                       ┌── 🍃 (simple value)
+                             ┌── 🌿 ───┤
+                   ┌── 🌲 ───┤         └── 🍂 ─── 🍁 (chained)
+                   │         │
+                   │         └── 🌱 ───┬── 🌸
+                   │                   └── 🌼 ─── 🌺 ─── 🌻 (triple chain)
+YAML <── graft <───┤
+                   │         ┌── 🌾 ───┬── 🍃
+                   ├── 🌳 ───┤         └── 🍂 ─┬─ 🍁 ─┬─ 🌸 (complex chain)
+                   │         │                 │      └─ 🌼
+                   │         │                 └─ 🌺
+                   │         │
+                   │         └── 🌿 ───── 🌻 (simple)
+                   │
+                   ├── 🌴 ───┬── 🌱 ───┬── 🍃 ─── 🍂 ─── 🍁 ─── 🌸 (long chain)
+                   │         │         │
+                   │         │         └── 🌼 (simple)
+                   │         │
+                   │         └── 🌾 ───┬── 🌺
+                   │                   ├── 🌻 ─── 🍃 (double)
+                   │                   └── 🍂 ─┬─ 🍁 ─── 🌸 (nested chain)
+                   │                           └─ 🌼
+                   │
+                   └── 🌵 ───┬── 🌺 ───── 🌻 (simple pair)
+                             │
+                             └── 🌿 ───┬── 🍃
+                                       ├── 🍂 ─── 🍁
+                                       └── 🌸 ─┬─ 🌼 ─── 🌺 (branched chain)
+                                               └─ 🌻
 ```
 
-> **Note**: As of version 1.31.0, Spruce uses an enhanced parser by default that supports additional operators including boolean logic (`&&`, `||`), comparisons (`==`, `!=`, `<`, `>`, `<=`, `>=`), ternary operator (`? :`), and negation (`!`). To use the legacy parser, set the environment variable `SPRUCE_LEGACY_PARSER=1` or use the `--legacy-parser` flag.
+> **Note**: As of version 1.31.0, graft uses an enhanced parser by default that supports additional operators including boolean logic (`&&`, `||`), comparisons (`==`, `!=`, `<`, `>`, `<=`, `>=`), ternary operator (`? :`), and negation (`!`). To use the legacy parser, set the environment variable `GRAFT_LEGACY_PARSER=1` or use the `--legacy-parser` flag.
 
-[![Slack][slack-badge]][slack-channel] ( We'll be in `#spruce`)
+[![Slack][slack-badge]][slack-channel] ( We'll be in `#graft`)
 
-## Introducing Spruce
+## Introducing graft
 
-`spruce` is a general purpose YAML & JSON merging tool.
+`graft` is a general purpose YAML & JSON merging tool.
 
 It is designed to be an intuitive utility for merging YAML/JSON templates together
 to generate complicated YAML/JSON config files in a repeatable fashion. It can be used
@@ -24,7 +45,7 @@ for site-specific configurations to [DRY][dry-definition] your configs up as muc
 
 ## How do I get started?
 
-`spruce` is available via Homebrew, just `brew tap starkandwayne/cf; brew install spruce`
+`graft` is available via Homebrew, just `brew tap starkandwayne/cf; brew install graft`
 
 Alternatively, you can download a [prebuilt binaries for 64-bit Linux, or Mac OS X][releases]
 
@@ -39,8 +60,8 @@ Alternatively, you can download a [prebuilt binaries for 64-bit Linux, or Mac OS
 ## How do I compile from source?
 
 1. [Install Go][install-go], e.g. on Ubuntu `sudo snap install --classic go`
-1. Fetch sources via `go get github.com/geofffranks/spruce`
-1. Change current directory to the source root `cd ~/go/src/github.com/geofffranks/spruce/`
+1. Fetch sources via `go get github.com/wayneeseguin/graft`
+1. Change current directory to the source root `cd ~/go/src/github.com/wayneeseguin/graft/`
 1. Compile and execute tests `make all`
 
 ## A Quick Example
@@ -65,8 +86,8 @@ heres_an_array:
 - zeroth element
 more_data: 84
 
-# what happens when we spruce merge?
-$ spruce merge first.yml second.yml
+# what happens when we graft merge?
+$ graft merge first.yml second.yml
 a_random_map:
   key1: some data
   key2: adding more data
@@ -79,37 +100,37 @@ some_data: 42
 
 The data in `second.yml` is overlayed on top of the data in `first.yml`. Check out the
 [merge semantics][merge-semantics] and [array merging][array-merge] for more info on how that was done. Or,
-check out [this example on play.spruce.cf][play.spruce-example]
+check out [this example on play.graft.cf][play.graft-example]
 
 ## Documentation
 
-- [What are all the spruce operators, and how do they work?][operator-docs]
+- [What are all the graft operators, and how do they work?][operator-docs]
 - [How do I use expression operators (arithmetic, boolean, comparisons)?][expression-operators]
-- [What are the merge semantics of spruce?][merge-semantics]
-- [How can I manipulate arrays with spruce?][array-merge]
+- [What are the merge semantics of graft?][merge-semantics]
+- [How can I manipulate arrays with graft?][array-merge]
 - [Can I specify defaults for an operation, or use environment variables?][env-var-defaults]
-- [Can I use spruce with go-patch files?][go-patch-support]
-- [Can I use spruce with CredHub?][credhub-support]
-- [Can I use spruce with Vault?][vault-support]
+- [Can I use graft with go-patch files?][go-patch-support]
+- [Can I use graft with CredHub?][credhub-support]
+- [Can I use graft with Vault?][vault-support]
 - [How can I use default values with Vault?][vault-defaults]
-- [How can I generate spruce templates with spruce itself?][defer]
-- [How can I use spruce with BOSH's Cloud Config?][cloud-config-support]
+- [How can I generate graft templates with graft itself?][defer]
+- [How can I use graft with BOSH's Cloud Config?][cloud-config-support]
 - [How do I create new operators?][operator-api]
 
-## What else can Spruce do for you?
+## What else can graft do for you?
 
-`spruce` doesn't just stop at merging datastructures together. It also has the following
+`graft` doesn't just stop at merging datastructures together. It also has the following
 helpful subcommands:
 
-`spruce diff` - Allows you to get a useful diff of two YAML files, to see where they differ
+`graft diff` - Allows you to get a useful diff of two YAML files, to see where they differ
 semantically. This is more than a simple diff tool, as it examines the functional differences,
 rather than just textual (e.g. key-ordering differences would be ignored)
 
-`spruce json` - Allows you to convert a YAML document into JSON, for consumption by something
-that requires a JSON input. `spruce merge` will handle both YAML + JSON documents, but produce
+`graft json` - Allows you to convert a YAML document into JSON, for consumption by something
+that requires a JSON input. `graft merge` will handle both YAML + JSON documents, but produce
 only YAML output.
 
-`spruce vaultinfo` - Takes a list of files that would be merged together, and analyzes what paths
+`graft vaultinfo` - Takes a list of files that would be merged together, and analyzes what paths
 in Vault would be looked up. Useful for determining explicitly what access an automated process
 might need to Vault to obtain the right credentials, and nothing more. Also useful if you need
 to audit what credentials your configs are retrieving for a system..
@@ -119,21 +140,21 @@ to audit what credentials your configs are retrieving for a system..
 Licensed under [the MIT License][license]
 
 
-[slack-channel]:        https://cloudfoundry.slack.com/messages/spruce/
+[slack-channel]:        https://cloudfoundry.slack.com/messages/graft/
 [slack-badge]:          http://slack.cloudfoundry.org/badge.svg
 [dry-definition]:       https://en.wikipedia.org/wiki/Don%27t_repeat_yourself
-[releases]:             https://github.com/geofffranks/spruce/releases/
-[operator-docs]:        https://github.com/geofffranks/spruce/blob/master/docs/operators/README.md
-[expression-operators]: https://github.com/geofffranks/spruce/blob/master/doc/expression-operators.md
-[merge-semantics]:      https://github.com/geofffranks/spruce/blob/master/doc/merging.md
-[array-merge]:          https://github.com/geofffranks/spruce/blob/master/doc/array-merging.md
-[env-var-defaults]:     https://github.com/geofffranks/spruce/blob/master/doc/environment-variables-and-defaults.md
-[go-patch-support]:     https://github.com/geofffranks/spruce/blob/master/doc/merging-go-patch-files.md
-[credhub-support]:      https://github.com/geofffranks/spruce/blob/master/doc/integrating-with-credhub.md
-[vault-support]:        https://github.com/geofffranks/spruce/blob/master/doc/pulling-creds-from-vault.md
-[vault-defaults]:       https://github.com/geofffranks/spruce/blob/master/doc/vault-defaults.md
-[defer]:                https://github.com/geofffranks/spruce/blob/master/doc/generating-spruce-with-spruce.md
-[cloud-config-support]: https://github.com/geofffranks/spruce/blob/master/doc/integrating-with-cloud-config.md
-[operator-api]:         https://github.com/geofffranks/spruce/blob/master/doc/operator-api.md
-[license]:              https://github.com/geofffranks/spruce/blob/master/LICENSE
+[releases]:             https://github.com/wayneeseguin/graft/releases/
+[operator-docs]:        https://github.com/wayneeseguin/graft/blob/master/docs/operators/README.md
+[expression-operators]: https://github.com/wayneeseguin/graft/blob/master/doc/expression-operators.md
+[merge-semantics]:      https://github.com/wayneeseguin/graft/blob/master/doc/merging.md
+[array-merge]:          https://github.com/wayneeseguin/graft/blob/master/doc/array-merging.md
+[env-var-defaults]:     https://github.com/wayneeseguin/graft/blob/master/doc/environment-variables-and-defaults.md
+[go-patch-support]:     https://github.com/wayneeseguin/graft/blob/master/doc/merging-go-patch-files.md
+[credhub-support]:      https://github.com/wayneeseguin/graft/blob/master/doc/integrating-with-credhub.md
+[vault-support]:        https://github.com/wayneeseguin/graft/blob/master/doc/pulling-creds-from-vault.md
+[vault-defaults]:       https://github.com/wayneeseguin/graft/blob/master/doc/vault-defaults.md
+[defer]:                https://github.com/wayneeseguin/graft/blob/master/doc/generating-graft-with-graft.md
+[cloud-config-support]: https://github.com/wayneeseguin/graft/blob/master/doc/integrating-with-cloud-config.md
+[operator-api]:         https://github.com/wayneeseguin/graft/blob/master/doc/operator-api.md
+[license]:              https://github.com/wayneeseguin/graft/blob/master/LICENSE
 [install-go]:           https://golang.org/doc/install

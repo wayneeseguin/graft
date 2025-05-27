@@ -1,6 +1,6 @@
 # Null Operator Examples
 
-The `null` operator in Spruce is used to check if a value is null, empty, or undefined. It returns true if the value is considered "null-like" and false otherwise.
+The `null` operator in Graft is used to check if a value is null, empty, or undefined. It returns true if the value is considered "null-like" and false otherwise.
 
 ## Overview
 
@@ -32,16 +32,16 @@ The `(( null <reference> ))` operator evaluates to:
 
 ```bash
 # Check basic null operations
-spruce merge basic.yml
+graft merge basic.yml
 
 # Conditional configuration based on null checks
-spruce merge conditional-config.yml
+graft merge conditional-config.yml
 
 # Default value handling
-spruce merge default-values.yml
+graft merge default-values.yml
 
 # Data validation examples
-spruce merge validation.yml
+graft merge validation.yml
 ```
 
 ## Key Concepts

@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/geofffranks/simpleyaml"
-	"github.com/geofffranks/spruce/log"
+	"github.com/wayneeseguin/graft/log"
 	"github.com/starkandwayne/goutils/ansi"
 	"github.com/starkandwayne/goutils/tree"
 )
@@ -121,9 +121,9 @@ func getBytesFromLocation(location string) ([]byte, error) {
 		return data, err
 	}
 
-	// Preprend the optional Spruce base path override
+	// Preprend the optional Graft base path override
 	if !filepath.IsAbs(location) {
-		location = filepath.Join(os.Getenv("SPRUCE_FILE_BASE_PATH"), location)
+		location = filepath.Join(os.Getenv("GRAFT_FILE_BASE_PATH"), location)
 	}
 
 	// Handle location as local file if there is a file at that location

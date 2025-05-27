@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -159,10 +159,10 @@ func TestMetricsServer(t *testing.T) {
 			content := string(body[:n])
 			
 			// Check for expected metrics
-			So(content, ShouldContainSubstring, "spruce_operations_total")
-			So(content, ShouldContainSubstring, "spruce_operation_duration_seconds")
-			So(content, ShouldContainSubstring, "spruce_concurrency")
-			So(content, ShouldContainSubstring, "spruce_speedup")
+			So(content, ShouldContainSubstring, "graft_operations_total")
+			So(content, ShouldContainSubstring, "graft_operation_duration_seconds")
+			So(content, ShouldContainSubstring, "graft_concurrency")
+			So(content, ShouldContainSubstring, "graft_speedup")
 		})
 		
 		Convey("should serve JSON metrics", func() {

@@ -65,7 +65,7 @@ command_args: (( join " " options ))
 # Empty separator
 words: ["s", "p", "r", "u", "c", "e"]
 word: (( join "" words ))
-# Result: "spruce"
+# Result: "graft"
 ```
 
 See also: [join examples](/examples/join/)

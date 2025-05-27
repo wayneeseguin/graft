@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/starkandwayne/goutils/tree"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 // FileOperator ...
@@ -54,7 +54,7 @@ func (FileOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		return nil, fmt.Errorf("file operator requires exactly one string or reference argument")
 	}
 
-	fbasepath := os.Getenv("SPRUCE_FILE_BASE_PATH")
+	fbasepath := os.Getenv("GRAFT_FILE_BASE_PATH")
 
 	// Use ResolveOperatorArgument to support nested expressions
 	val, err := ResolveOperatorArgument(ev, args[0])

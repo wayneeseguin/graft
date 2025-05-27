@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"os"
@@ -93,8 +93,8 @@ result: (( grab (concat meta.prefix "." meta.env "." meta.suffix) ))
 		})
 
 		Convey("should support environment variables in nested expressions", func() {
-			os.Setenv("SPRUCE_ENV", "staging")
-			defer os.Unsetenv("SPRUCE_ENV")
+			os.Setenv("GRAFT_ENV", "staging")
+			defer os.Unsetenv("GRAFT_ENV")
 
 			input := `
 config:
@@ -102,7 +102,7 @@ config:
     host: prod.example.com
   staging:
     host: stage.example.com
-result: (( grab (concat "config." $SPRUCE_ENV ".host") ))
+result: (( grab (concat "config." $GRAFT_ENV ".host") ))
 `
 			var data map[interface{}]interface{}
 			err := yaml.Unmarshal([]byte(input), &data)

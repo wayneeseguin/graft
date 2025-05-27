@@ -1,6 +1,6 @@
 ---
 # Loading environment-specific configurations
-# Run with: ENV=production spruce merge environment-specific.yml
+# Run with: ENV=production graft merge environment-specific.yml
 
 meta:
   # Get environment from ENV variable, default to 'dev'

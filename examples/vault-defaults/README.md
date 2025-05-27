@@ -1,6 +1,6 @@
 # Vault Defaults Example
 
-This example demonstrates how to use default values with the vault operator in Spruce.
+This example demonstrates how to use default values with the vault operator in Graft.
 
 ## Files
 
@@ -15,14 +15,14 @@ This example demonstrates how to use default values with the vault operator in S
 
 ```bash
 # Assuming vault has the secrets set up
-spruce merge defaults.yml base.yml > result.yml
+graft merge defaults.yml base.yml > result.yml
 ```
 
 ### When Vault is Not Available (using defaults)
 
 ```bash
 # With VAULT_SKIP_VERIFY=1, defaults will be used
-VAULT_SKIP_VERIFY=1 spruce merge defaults.yml base.yml > result.yml
+VAULT_SKIP_VERIFY=1 graft merge defaults.yml base.yml > result.yml
 ```
 
 ## Features Demonstrated

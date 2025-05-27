@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"context"
@@ -168,7 +168,7 @@ func (t *Timer) recordMetric() {
 		}
 	default:
 		// Custom timing - register if not exists
-		metricName := fmt.Sprintf("spruce_%s_duration_seconds", t.name)
+		metricName := fmt.Sprintf("graft_%s_duration_seconds", t.name)
 		if _, exists := mc.CustomMetrics[metricName]; !exists {
 			mc.RegisterCustomMetric(metricName, fmt.Sprintf("Duration of %s operations", t.name), MetricTypeHistogram)
 		}

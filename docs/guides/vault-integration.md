@@ -1,6 +1,6 @@
 # Vault Integration Guide
 
-Spruce integrates with [HashiCorp Vault](https://www.vaultproject.io/) to securely retrieve secrets during YAML processing.
+graft integrates with [HashiCorp Vault](https://www.vaultproject.io/) to securely retrieve secrets during YAML processing.
 
 ## Prerequisites
 
@@ -51,7 +51,7 @@ production:
 
 ### KV v1 (Default)
 
-By default, Spruce uses the KV v1 secrets engine:
+By default, graft uses the KV v1 secrets engine:
 
 ```yaml
 # Reads from KV v1 path: secret/myapp
@@ -66,7 +66,7 @@ To use KV v2, set the `VAULT_VERSION` environment variable:
 export VAULT_VERSION=2
 ```
 
-With KV v2, Spruce automatically handles the `/data/` path segment:
+With KV v2, graft automatically handles the `/data/` path segment:
 
 ```yaml
 # Reads from KV v2 path: secret/data/myapp
@@ -110,7 +110,7 @@ Prevent accidental credential exposure:
 
 ```bash
 # Show structure without revealing secrets
-REDACT=true spruce merge manifest.yml
+REDACT=true graft merge manifest.yml
 ```
 
 Output:
@@ -128,7 +128,7 @@ When you need actual secrets:
 
 ```bash
 # Generate temporary file with secrets
-spruce merge manifest.yml > /tmp/manifest-with-secrets.yml
+graft merge manifest.yml > /tmp/manifest-with-secrets.yml
 
 # Use the file
 deploy -f /tmp/manifest-with-secrets.yml
@@ -165,7 +165,7 @@ database:
   password: (( vault (concat "secret/" environment "/db:password") ))
 
 # Usage:
-# ENVIRONMENT=production spruce merge config.yml
+# ENVIRONMENT=production graft merge config.yml
 ```
 
 ### Shared Secrets
@@ -269,13 +269,13 @@ export VAULT_ADDR="https://vault.example.com:8200"
 export VAULT_TOKEN="s.abcdef123456"
 
 # 2. Preview without secrets
-REDACT=true spruce merge config.yml
+REDACT=true graft merge config.yml
 
 # 3. Test specific environment
-ENVIRONMENT=staging REDACT=true spruce merge config.yml
+ENVIRONMENT=staging REDACT=true graft merge config.yml
 
 # 4. Generate final configuration
-ENVIRONMENT=production spruce merge config.yml > final.yml
+ENVIRONMENT=production graft merge config.yml > final.yml
 
 # 5. Deploy and cleanup
 kubectl apply -f final.yml
@@ -315,7 +315,7 @@ vault token lookup
 Enable debug mode to see Vault operations:
 
 ```bash
-spruce merge --debug manifest.yml 2>&1 | grep -i vault
+graft merge --debug manifest.yml 2>&1 | grep -i vault
 ```
 
 ## vaultinfo Command
@@ -324,13 +324,13 @@ Analyze Vault usage in your manifests:
 
 ```bash
 # List all Vault paths
-spruce vaultinfo manifest.yml
+graft vaultinfo manifest.yml
 
 # Output as YAML
-spruce vaultinfo --yaml manifest.yml
+graft vaultinfo --yaml manifest.yml
 
 # Check multiple files
-spruce vaultinfo base.yml production.yml
+graft vaultinfo base.yml production.yml
 ```
 
 ## Migration from Plain Secrets

@@ -19,5 +19,5 @@
   value: 10
 
 - type: replace
-  path: /spruce_array_grab?
+  path: /graft_array_grab?
   value: (( grab items ))

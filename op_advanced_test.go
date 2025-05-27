@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"testing"
@@ -126,7 +126,7 @@ func TestOperatorPrecedenceTable(t *testing.T) {
 			{`(( 2 + 3 > 4 ))`, true, "arithmetic before comparison (greater than)"},
 			{`(( 5 * 2 <= 10 ))`, true, "arithmetic before comparison (less equal)"},
 			
-			// Boolean precedence (|| is fallback in Spruce, not boolean OR)
+			// Boolean precedence (|| is fallback in Graft, not boolean OR)
 			{`(( true || false && false ))`, true, "&& before ||"},
 			{`(( false && true || true ))`, false, "&& before || (with false)"}, // fallback returns left value
 			

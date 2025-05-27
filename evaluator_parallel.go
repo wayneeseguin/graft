@@ -1,10 +1,10 @@
-package spruce
+package graft
 
 import (
 	"os"
 	"sync"
 	
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 )
 
 var (

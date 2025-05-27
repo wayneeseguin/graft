@@ -269,7 +269,7 @@ data_pipeline:
   
   # Stage 3: Process with other operators
   processed:
-    # Use the decoded data with other spruce operators
+    # Use the decoded data with other graft operators
     order_type: (( grab data_pipeline.decoded_data.type || "unknown" ))
     order_id: (( grab data_pipeline.decoded_data.id || "000000" ))
     

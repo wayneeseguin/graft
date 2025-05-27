@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 
 	"github.com/geofffranks/simpleyaml"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/starkandwayne/goutils/ansi"
 	"github.com/starkandwayne/goutils/tree"
 )
 
@@ -3120,6 +3121,9 @@ func shouldHaveDeps(actual interface{}, expected ...interface{}) string {
 }
 
 func TestOperators(t *testing.T) {
+	// Disable ANSI colors for testing
+	ansi.Color(false)
+	
 	cursor := func(s string) *tree.Cursor {
 		c, err := tree.ParseCursor(s)
 		So(err, ShouldBeNil)
@@ -3291,16 +3295,16 @@ func TestOperators(t *testing.T) {
 			})
 
 			Convey("handles environment variables as operands", func() {
-				os.Setenv("SPRUCE_FOO", "first test")
-				os.Setenv("_SPRUCE", "_sprucify!")
+				os.Setenv("GRAFT_FOO", "first test")
+				os.Setenv("_GRAFT", "_graftify!")
 				os.Setenv("ENOENT", "")
 				os.Setenv("http_proxy", "no://thank/you")
 				os.Setenv("variable.with.dots", "dots are ok")
 
-				opOk(`(( null $SPRUCE_FOO ))`, "null", env("SPRUCE"))
-				opOk(`(( null $_SPRUCE ))`, "null", env("_SPRUCE"))
-				opOk(`(( null $ENOENT || $SPRUCE_FOO ))`, "null",
-					or(env("ENOENT"), env("SPRUCE_FOO")))
+				opOk(`(( null $GRAFT_FOO ))`, "null", env("GRAFT"))
+				opOk(`(( null $_GRAFT ))`, "null", env("_GRAFT"))
+				opOk(`(( null $ENOENT || $GRAFT_FOO ))`, "null",
+					or(env("ENOENT"), env("GRAFT_FOO")))
 				opOk(`(( null $http_proxy))`, "null", env("http_proxy"))
 				opOk(`(( null $variable.with.dots ))`, "null", env("variable.with.dots"))
 			})
@@ -3473,7 +3477,7 @@ meta:
 		})
 
 		Convey("can read a file relative to a specified base path", func() {
-			os.Setenv("SPRUCE_FILE_BASE_PATH", filepath.Join(basedir, "assets/file_operator"))
+			os.Setenv("GRAFT_FILE_BASE_PATH", filepath.Join(basedir, "assets/file_operator"))
 			r, err := op.Run(ev, []*Expr{
 				str("test.txt"),
 			})
@@ -3486,7 +3490,7 @@ meta:
 
 		if _, err := os.Stat("/etc/hosts"); err == nil {
 			Convey("can read an absolute path", func() {
-				os.Setenv("SPRUCE_FILE_BASE_PATH", filepath.Join(basedir, "assets/file_operator"))
+				os.Setenv("GRAFT_FILE_BASE_PATH", filepath.Join(basedir, "assets/file_operator"))
 				r, err := op.Run(ev, []*Expr{
 					str("/etc/hosts"),
 				})

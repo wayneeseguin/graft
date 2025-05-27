@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"bufio"
@@ -12,9 +12,13 @@ import (
 	// Also https://github.com/go-yaml/yaml/pull/195
 	"github.com/geofffranks/simpleyaml"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/starkandwayne/goutils/ansi"
 )
 
 func TestDiff(t *testing.T) {
+	// Disable ANSI colors for testing
+	ansi.Color(false)
+	
 	YAML := func(s string) map[interface{}]interface{} {
 		y, err := simpleyaml.NewYaml([]byte(s))
 		So(err, ShouldBeNil)

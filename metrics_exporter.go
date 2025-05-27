@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"bytes"
@@ -27,7 +27,7 @@ func (e *MetricsExporter) ExportPrometheus(w io.Writer) error {
 	snapshot := e.registry.GetSnapshot()
 	
 	// Write header
-	fmt.Fprintf(w, "# Spruce metrics export\n")
+	fmt.Fprintf(w, "# Graft metrics export\n")
 	fmt.Fprintf(w, "# Timestamp: %s\n", snapshot.Timestamp.Format(time.RFC3339))
 	fmt.Fprintf(w, "# Uptime: %s\n\n", snapshot.Uptime)
 	
@@ -124,34 +124,34 @@ func (e *MetricsExporter) exportPrometheusFamily(w io.Writer, family *MetricFami
 // exportPrometheusResources exports resource metrics in Prometheus format
 func (e *MetricsExporter) exportPrometheusResources(w io.Writer, resources *ResourceSnapshot) {
 	// Process info
-	fmt.Fprintf(w, "# HELP spruce_process_info Spruce process information\n")
-	fmt.Fprintf(w, "# TYPE spruce_process_info gauge\n")
-	fmt.Fprintf(w, "spruce_process_info{cpus=\"%d\"} 1\n\n", resources.NumCPU)
+	fmt.Fprintf(w, "# HELP graft_process_info Graft process information\n")
+	fmt.Fprintf(w, "# TYPE graft_process_info gauge\n")
+	fmt.Fprintf(w, "graft_process_info{cpus=\"%d\"} 1\n\n", resources.NumCPU)
 	
 	// Memory metrics
-	fmt.Fprintf(w, "# HELP spruce_memory_bytes Memory usage by type\n")
-	fmt.Fprintf(w, "# TYPE spruce_memory_bytes gauge\n")
-	fmt.Fprintf(w, "spruce_memory_bytes{type=\"heap_alloc\"} %d\n", resources.MemStats.HeapAlloc)
-	fmt.Fprintf(w, "spruce_memory_bytes{type=\"heap_sys\"} %d\n", resources.MemStats.HeapSys)
-	fmt.Fprintf(w, "spruce_memory_bytes{type=\"heap_idle\"} %d\n", resources.MemStats.HeapIdle)
-	fmt.Fprintf(w, "spruce_memory_bytes{type=\"heap_inuse\"} %d\n", resources.MemStats.HeapInuse)
-	fmt.Fprintf(w, "spruce_memory_bytes{type=\"stack_sys\"} %d\n", resources.MemStats.StackSys)
-	fmt.Fprintf(w, "spruce_memory_bytes{type=\"sys\"} %d\n\n", resources.MemStats.Sys)
+	fmt.Fprintf(w, "# HELP graft_memory_bytes Memory usage by type\n")
+	fmt.Fprintf(w, "# TYPE graft_memory_bytes gauge\n")
+	fmt.Fprintf(w, "graft_memory_bytes{type=\"heap_alloc\"} %d\n", resources.MemStats.HeapAlloc)
+	fmt.Fprintf(w, "graft_memory_bytes{type=\"heap_sys\"} %d\n", resources.MemStats.HeapSys)
+	fmt.Fprintf(w, "graft_memory_bytes{type=\"heap_idle\"} %d\n", resources.MemStats.HeapIdle)
+	fmt.Fprintf(w, "graft_memory_bytes{type=\"heap_inuse\"} %d\n", resources.MemStats.HeapInuse)
+	fmt.Fprintf(w, "graft_memory_bytes{type=\"stack_sys\"} %d\n", resources.MemStats.StackSys)
+	fmt.Fprintf(w, "graft_memory_bytes{type=\"sys\"} %d\n\n", resources.MemStats.Sys)
 	
 	// GC metrics
-	fmt.Fprintf(w, "# HELP spruce_gc_total Total number of GC cycles\n")
-	fmt.Fprintf(w, "# TYPE spruce_gc_total counter\n")
-	fmt.Fprintf(w, "spruce_gc_total %d\n\n", resources.MemStats.NumGC)
+	fmt.Fprintf(w, "# HELP graft_gc_total Total number of GC cycles\n")
+	fmt.Fprintf(w, "# TYPE graft_gc_total counter\n")
+	fmt.Fprintf(w, "graft_gc_total %d\n\n", resources.MemStats.NumGC)
 	
-	fmt.Fprintf(w, "# HELP spruce_gc_pause_seconds GC pause durations\n")
-	fmt.Fprintf(w, "# TYPE spruce_gc_pause_seconds summary\n")
+	fmt.Fprintf(w, "# HELP graft_gc_pause_seconds GC pause durations\n")
+	fmt.Fprintf(w, "# TYPE graft_gc_pause_seconds summary\n")
 	if len(resources.RecentGCPauses) > 0 {
 		var sum float64
 		for _, pause := range resources.RecentGCPauses {
 			sum += pause.Seconds()
 		}
-		fmt.Fprintf(w, "spruce_gc_pause_seconds_sum %f\n", sum)
-		fmt.Fprintf(w, "spruce_gc_pause_seconds_count %d\n", len(resources.RecentGCPauses))
+		fmt.Fprintf(w, "graft_gc_pause_seconds_sum %f\n", sum)
+		fmt.Fprintf(w, "graft_gc_pause_seconds_count %d\n", len(resources.RecentGCPauses))
 	}
 	fmt.Fprintln(w)
 }
@@ -221,23 +221,23 @@ func (e *MetricsExporter) ExportText(w io.Writer) error {
 	snapshot := e.registry.GetSnapshot()
 	
 	// Header
-	fmt.Fprintf(w, "=== Spruce Performance Metrics ===\n")
+	fmt.Fprintf(w, "=== Graft Performance Metrics ===\n")
 	fmt.Fprintf(w, "Timestamp: %s\n", snapshot.Timestamp.Format("2006-01-02 15:04:05"))
 	fmt.Fprintf(w, "Uptime: %s\n\n", formatMetricsDuration(snapshot.Uptime))
 	
 	// Parsing metrics
 	fmt.Fprintf(w, "Parsing Performance:\n")
 	e.exportTextSection(w, []string{
-		"spruce_parse_operations_total",
-		"spruce_parse_duration_seconds",
-		"spruce_parse_errors_total",
+		"graft_parse_operations_total",
+		"graft_parse_duration_seconds",
+		"graft_parse_errors_total",
 	})
 	
 	// Evaluation metrics
 	fmt.Fprintf(w, "\nEvaluation Performance:\n")
 	e.exportTextSection(w, []string{
-		"spruce_eval_operations_total",
-		"spruce_eval_duration_seconds",
+		"graft_eval_operations_total",
+		"graft_eval_duration_seconds",
 	})
 	
 	// Cache metrics
@@ -251,9 +251,9 @@ func (e *MetricsExporter) ExportText(w io.Writer) error {
 	// Throughput
 	fmt.Fprintf(w, "\nThroughput:\n")
 	e.exportTextSection(w, []string{
-		"spruce_operations_per_second",
-		"spruce_documents_processed_total",
-		"spruce_bytes_processed_total",
+		"graft_operations_per_second",
+		"graft_documents_processed_total",
+		"graft_bytes_processed_total",
 	})
 	
 	return nil

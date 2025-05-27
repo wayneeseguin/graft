@@ -1,10 +1,10 @@
-# Generating Spruce with Spruce
+# Generating graft with graft
 
-Sometimes you need to generate Spruce templates dynamically. This guide covers techniques for meta-programming with Spruce.
+Sometimes you need to generate graft templates dynamically. This guide covers techniques for meta-programming with graft.
 
 ## The defer Operator
 
-The `(( defer ))` operator postpones operator evaluation to a subsequent `spruce merge` run.
+The `(( defer ))` operator postpones operator evaluation to a subsequent `graft merge` run.
 
 ### Basic Example
 
@@ -18,7 +18,7 @@ config:
     endpoint: "https://api.example.com"
 ```
 
-Running `spruce merge template.yml` produces:
+Running `graft merge template.yml` produces:
 
 ```yaml
 api_endpoint: (( grab config.api.endpoint ))
@@ -65,7 +65,7 @@ meta:
   domain: example.com
 ```
 
-Running `spruce merge --skip-eval base.yml` preserves all operators:
+Running `graft merge --skip-eval base.yml` preserves all operators:
 
 ```yaml
 name: (( grab meta.name ))
@@ -121,12 +121,12 @@ config:
 
 First merge captures environment variables:
 ```bash
-spruce merge stage1-template.yml > stage2-template.yml
+graft merge stage1-template.yml > stage2-template.yml
 ```
 
 Second merge evaluates deferred operators:
 ```bash
-spruce merge stage2-template.yml databases.yml > final.yml
+graft merge stage2-template.yml databases.yml > final.yml
 ```
 
 ### 3. Conditional Template Generation
@@ -291,10 +291,10 @@ Test generated templates:
 
 ```bash
 # Generate template
-spruce merge --skip-eval template-generator.yml > generated.yml
+graft merge --skip-eval template-generator.yml > generated.yml
 
 # Validate by attempting to merge
-spruce merge generated.yml test-data.yml
+graft merge generated.yml test-data.yml
 ```
 
 ### 4. Combine with Other Features
@@ -354,10 +354,10 @@ outputs:
 Usage:
 ```bash
 # Generate template
-spruce merge template-system.yml > k8s-template.yml
+graft merge template-system.yml > k8s-template.yml
 
 # Use template with actual values
-cat <<EOF | spruce merge k8s-template.yml -
+cat <<EOF | graft merge k8s-template.yml -
 app:
   name: myservice
   environment: production
@@ -373,20 +373,20 @@ EOF
 
 ```bash
 # See what will be deferred
-spruce merge template.yml | grep "(( defer"
+graft merge template.yml | grep "(( defer"
 ```
 
 ### Step Through Deferrals
 
 ```bash
 # Original
-spruce merge template.yml > step1.yml
+graft merge template.yml > step1.yml
 
 # Remove one defer
-spruce merge step1.yml > step2.yml
+graft merge step1.yml > step2.yml
 
 # Continue until fully evaluated
-spruce merge step2.yml > final.yml
+graft merge step2.yml > final.yml
 ```
 
 ## See Also

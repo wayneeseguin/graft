@@ -30,7 +30,7 @@ active: true
 ```
 is an array entry.
 
-Spruce provides operators to modify a given array:
+graft provides operators to modify a given array:
 - `(( append ))`
 - `(( prepend ))`
 - `(( insert ... ))`
@@ -53,11 +53,11 @@ list:
 To emphasize the new annotation an empty line was added. This is technically not needed, however it increases the readability.
 
 ## Operators that work the same for either type of array
-- `(( append ))` - The append operator tells Spruce to place the following content after the last existing entry.
+- `(( append ))` - The append operator tells graft to place the following content after the last existing entry.
 
-- `(( prepend ))` - The prepend operator tells Spruce to place the following content before the first existing entry.
+- `(( prepend ))` - The prepend operator tells graft to place the following content before the first existing entry.
 
-- `(( replace ))` - The replace operator tells Spruce to completely remove the existing array and replace it with the following entries.
+- `(( replace ))` - The replace operator tells graft to completely remove the existing array and replace it with the following entries.
 
 - `(( inline ))` - The inline operator might be a bit confusing at first glance. It takes the given entries and puts them on top of the existing ones based on their respective position in the array (index). The first one of the new entries is merged with the first one of the existing array and so on and so forth.
   The inline operator works with both types of arrays, however it is not _recommended_ to be used with arrays of maps, because this greatly reduces the maintainability. This is due to the fact that a change in the order of the existing list can create unexpected results.
@@ -75,19 +75,19 @@ jobs:
   ...
 ```
 
-This makes is possible to tell Spruce to do modifications based on the name and its position in the array. A modification can be the addition of new configuration fragments (called merging), or the addition of new array entries itself relative to an existing entry.
+This makes is possible to tell graft to do modifications based on the name and its position in the array. A modification can be the addition of new configuration fragments (called merging), or the addition of new array entries itself relative to an existing entry.
 
-- `(( merge ))` - The merge operator tells Spruce that the following array entries should be merged with the existing ones based on their name using `name` as the identifier key name. This is the Spruce default behavior for arrays if nothing is specified at all. The operator can therefore be omitted. Again, based on the given example:
+- `(( merge ))` - The merge operator tells graft that the following array entries should be merged with the existing ones based on their name using `name` as the identifier key name. This is the graft default behavior for arrays if nothing is specified at all. The operator can therefore be omitted. Again, based on the given example:
   ```yml
   list:
   - name: consul
     instances: 2
     resource_pool: special-pool
   ```
-  This will tell Spruce to look for an already existing array entry named `consul`. The existing array entry will then be extended with the provided configuration fragments. If they are already defined, the new values overrules the old one. New key/values will be simply added.
+  This will tell graft to look for an already existing array entry named `consul`. The existing array entry will then be extended with the provided configuration fragments. If they are already defined, the new values overrules the old one. New key/values will be simply added.
   If no array entry under that name can be found in the existing array, then the new array entry will simply be added to the current list at the end of the existing array.
 
-- `(( merge ... ))` - If you want to merge arrays that do not use `name` as the identifier key name, you have to specify the identifier key name explicitly. For example, you can use `(( merge on id ))` to tell Spruce to merge the new array entries using `id` as the identifier key name.
+- `(( merge ... ))` - If you want to merge arrays that do not use `name` as the identifier key name, you have to specify the identifier key name explicitly. For example, you can use `(( merge on id ))` to tell graft to merge the new array entries using `id` as the identifier key name.
   ```yml
   components:
   - (( merge on id ))
@@ -97,7 +97,7 @@ This makes is possible to tell Spruce to do modifications based on the name and 
     active: false
   ```
 
-- `(( insert ... ))` - The insert operator expects two or three arguments: You tell Spruce whether new entries should be inserted `before` or `after` the insertion point. Furthermore, you specify the insertion point itself by providing the identifier key name and the actual identifiable name.
+- `(( insert ... ))` - The insert operator expects two or three arguments: You tell graft whether new entries should be inserted `before` or `after` the insertion point. Furthermore, you specify the insertion point itself by providing the identifier key name and the actual identifiable name.
   The identifier key name can be omitted in which case `name` is used as the default. Based on the given example, if you specify `(( insert after name "consul" ))`, the following entries will be inserted after `consul` and before `doppler`. Since the identifier key name is `name` in our example, you can shorten it to: `(( insert after "consul" ))`.
   The insert operator will not work if either the insertion point cannot be found or one of the new entries is already part the existing array.
 
@@ -107,6 +107,6 @@ This makes is possible to tell Spruce to do modifications based on the name and 
 ## Operators that modify simple arrays (based on index)
 Without the possibility to reference an array entry by an identifier, you can only use the index of each array entry as a point of reference for operators that need a specified reference point.
 
-- `(( insert ... ))` - The insert operator supports using an index. The syntax is the same as with names. You can specify `(( insert after 0 ))` to tell Spruce to put the following entries after the first one. This means `(( insert before 0 ))` is equivalent to `(( prepend ))`.
+- `(( insert ... ))` - The insert operator supports using an index. The syntax is the same as with names. You can specify `(( insert after 0 ))` to tell graft to put the following entries after the first one. This means `(( insert before 0 ))` is equivalent to `(( prepend ))`.
 
 - `(( delete ... ))` - Analog to the insert operator, the delete operator also supports an index as an input argument. For example, `(( delete 0 ))` would remove the first array entry.

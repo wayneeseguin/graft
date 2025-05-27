@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 func TestCacheWarming(t *testing.T) {
 	Convey("Cache Warming System", t, func() {
 		
-		tempDir, err := ioutil.TempDir("", "spruce_warming_test")
+		tempDir, err := ioutil.TempDir("", "graft_warming_test")
 		So(err, ShouldBeNil)
 		defer os.RemoveAll(tempDir)
 		

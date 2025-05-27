@@ -251,7 +251,7 @@ Usage: `(( load PATH ))`
 
 The `(( load ))` operator parses a YAML or JSON file and inserts its structure into the current document. Unlike `file`, which treats content as a string, `load` parses the content as structured data.
 
-**Note:** Spruce operators in loaded files are NOT evaluated. Pre-process files separately if needed.
+**Note:** graft operators in loaded files are NOT evaluated. Pre-process files separately if needed.
 
 ### Examples:
 

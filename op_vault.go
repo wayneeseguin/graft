@@ -1,4 +1,4 @@
-package spruce
+package graft
 
 import (
 	"crypto/tls"
@@ -12,7 +12,7 @@ import (
 	"github.com/cloudfoundry-community/vaultkv"
 	"github.com/starkandwayne/goutils/ansi"
 
-	. "github.com/geofffranks/spruce/log"
+	. "github.com/wayneeseguin/graft/log"
 	"github.com/starkandwayne/goutils/tree"
 
 	// Use geofffranks forks to persist the fix in https://github.com/go-yaml/yaml/pull/133/commits
