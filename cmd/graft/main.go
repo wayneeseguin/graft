@@ -14,8 +14,9 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/starkandwayne/goutils/ansi"
 
-	. "github.com/wayneeseguin/graft"
-	. "github.com/wayneeseguin/graft/log"
+	"github.com/wayneeseguin/graft/pkg/graft"
+	"github.com/wayneeseguin/graft/pkg/graft/merger"
+	"github.com/wayneeseguin/graft/log"
 
 	"strings"
 
@@ -97,12 +98,12 @@ func main() {
 	getopts(&options)
 
 	if envFlag("DEBUG") || options.Debug {
-		DebugOn = true
+		log.DebugOn = true
 	}
 
 	if envFlag("TRACE") || options.Trace {
-		TraceOn = true
-		DebugOn = true
+		log.TraceOn = true
+		log.DebugOn = true
 	}
 
 	if options.JSON.Help || options.Merge.Help || options.Fan.Help {
@@ -122,16 +123,16 @@ func main() {
 	case "merge":
 		tree, err := cmdMergeEval(options.Merge)
 		if err != nil {
-			PrintfStdErr("%s\n", err.Error())
+			log.PrintfStdErr("%s\n", err.Error())
 			exit(2)
 			return
 		}
 
-		TRACE("Converting the following data back to YML:")
-		TRACE("%#v", tree)
+		log.TRACE("Converting the following data back to YML:")
+		log.TRACE("%#v", tree)
 		merged, err := yaml.Marshal(tree)
 		if err != nil {
-			PrintfStdErr("Unable to convert merged result back to YAML: %s\nData:\n%#v", err.Error(), tree)
+			log.PrintfStdErr("Unable to convert merged result back to YAML: %s\nData:\n%#v", err.Error(), tree)
 			exit(2)
 			return
 		}
@@ -141,17 +142,17 @@ func main() {
 	case "fan":
 		trees, err := cmdFanEval(options.Fan)
 		if err != nil {
-			PrintfStdErr("%s\n", err.Error())
+			log.PrintfStdErr("%s\n", err.Error())
 			exit(2)
 			return
 		}
 
 		for _, tree := range trees {
-			TRACE("Converting the following data back to YML:")
-			TRACE("%#v", tree)
+			log.TRACE("Converting the following data back to YML:")
+			log.TRACE("%#v", tree)
 			merged, err := yaml.Marshal(tree)
 			if err != nil {
-				PrintfStdErr("Unable to convert merged result back to YAML: %s\nData:\n%#v", err.Error(), tree)
+				log.PrintfStdErr("Unable to convert merged result back to YAML: %s\nData:\n%#v", err.Error(), tree)
 				exit(2)
 				return
 			}
@@ -160,13 +161,13 @@ func main() {
 		}
 
 	case "vaultinfo":
-		VaultRefs = map[string][]string{}
-		SkipVault = true
+		graft.VaultRefs = map[string][]string{}
+		graft.SkipVault = true
 		options.Merge.Files = options.VaultInfo.Files
 		options.Merge.EnableGoPatch = options.VaultInfo.EnableGoPatch
 		_, err := cmdMergeEval(options.Merge)
 		if err != nil {
-			PrintfStdErr("%s\n", err.Error())
+			log.PrintfStdErr("%s\n", err.Error())
 			exit(2)
 			return
 		}
@@ -175,7 +176,7 @@ func main() {
 	case "json":
 		jsons, err := cmdJSONEval(options.JSON)
 		if err != nil {
-			PrintfStdErr("%s\n", err)
+			log.PrintfStdErr("%s\n", err)
 			exit(2)
 			return
 		}
@@ -191,7 +192,7 @@ func main() {
 		}
 		output, differences, err := diffFiles(options.Diff.Files)
 		if err != nil {
-			PrintfStdErr("%s\n", err)
+			log.PrintfStdErr("%s\n", err)
 			exit(2)
 			return
 		}
@@ -232,7 +233,7 @@ func parseYAML(data []byte) (map[interface{}]interface{}, error) {
 	}
 
 	if empty_y, _ := simpleyaml.NewYaml([]byte{}); *y == *empty_y {
-		DEBUG("YAML doc is empty, creating empty hash/map")
+		log.DEBUG("YAML doc is empty, creating empty hash/map")
 		return make(map[interface{}]interface{}), nil
 	}
 
@@ -293,7 +294,7 @@ func splitLoadYamlFile(file string) ([]YamlFile, error) {
 func cmdMergeEval(options mergeOpts) (map[interface{}]interface{}, error) {
 	// Handle parser selection
 	if options.LegacyParser {
-		UseEnhancedParser = false
+		graft.UseEnhancedParser = false
 	}
 	
 	files := []YamlFile{}
@@ -338,7 +339,7 @@ func cmdMergeEval(options mergeOpts) (map[interface{}]interface{}, error) {
 func cmdFanEval(options mergeOpts) ([]map[interface{}]interface{}, error) {
 	// Handle parser selection
 	if options.LegacyParser {
-		UseEnhancedParser = false
+		graft.UseEnhancedParser = false
 	}
 	
 	stdinInfo, err := os.Stdin.Stat()
@@ -414,7 +415,7 @@ func cmdJSONEval(options jsonOpts) ([]string, error) {
 		options.Files = append(options.Files, "-")
 	}
 
-	output, err := JSONifyFiles(options.Files, options.Strict)
+	output, err := graft.JSONifyFiles(options.Files, options.Strict)
 	if err != nil {
 		return nil, err
 	}
@@ -439,7 +440,7 @@ func (refs byKey) Less(i, j int) bool { return refs[i].Key < refs[j].Key }
 
 func formatVaultRefs() string {
 	refs := yamlVaultRefs{}
-	for secret, srcs := range VaultRefs {
+	for secret, srcs := range graft.VaultRefs {
 		refs.Secrets = append(refs.Secrets, yamlVaultSecret{secret, srcs})
 	}
 
@@ -450,7 +451,7 @@ func formatVaultRefs() string {
 
 	output, err := yaml.Marshal(refs)
 	if err != nil {
-		panic(fmt.Sprintf("Could not marshal YAML for vault references: %+v", VaultRefs))
+		panic(fmt.Sprintf("Could not marshal YAML for vault references: %+v", graft.VaultRefs))
 	}
 
 	return string(output)
@@ -485,12 +486,12 @@ func readFile(file *YamlFile) ([]byte, error) {
 	return data, nil
 }
 
-func mergeAllDocs(files []YamlFile, options mergeOpts) (*Evaluator, error) {
-	m := &Merger{AppendByDefault: options.FallbackAppend}
+func mergeAllDocs(files []YamlFile, options mergeOpts) (*graft.Evaluator, error) {
+	m := &merger.Merger{AppendByDefault: options.FallbackAppend}
 	root := make(map[interface{}]interface{})
 
 	for _, file := range files {
-		DEBUG("Processing file '%s'", file.Path)
+		log.DEBUG("Processing file '%s'", file.Path)
 
 		data, err := readFile(&file)
 		if err != nil {
@@ -500,7 +501,7 @@ func mergeAllDocs(files []YamlFile, options mergeOpts) (*Evaluator, error) {
 		doc, err := parseYAML(data)
 		if err != nil {
 			if isArrayError(err) && options.EnableGoPatch {
-				DEBUG("Detected root of document as an array. Attempting go-patch parsing")
+				log.DEBUG("Detected root of document as an array. Attempting go-patch parsing")
 				ops, err := parseGoPatch(data)
 				if err != nil {
 					return nil, ansi.Errorf("@m{%s}: @R{%s}\n", file.Path, err.Error())
@@ -521,14 +522,14 @@ func mergeAllDocs(files []YamlFile, options mergeOpts) (*Evaluator, error) {
 			m.Merge(root, doc)
 		}
 		tmpYaml, _ := yaml.Marshal(root) // we don't care about errors for debugging
-		TRACE("Current data after processing '%s':\n%s", file.Path, tmpYaml)
+		log.TRACE("Current data after processing '%s':\n%s", file.Path, tmpYaml)
 	}
 
 	if m.Error() != nil {
 		return nil, m.Error()
 	}
 
-	ev := &Evaluator{Tree: root, SkipEval: options.SkipEval}
+	ev := &graft.Evaluator{Tree: root, SkipEval: options.SkipEval}
 	err := ev.Run(options.Prune, options.CherryPick)
 	return ev, err
 }

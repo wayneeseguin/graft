@@ -14,7 +14,7 @@ import (
 	"github.com/geofffranks/simpleyaml"
 	"github.com/geofffranks/yaml"
 
-	. "github.com/wayneeseguin/graft/log"
+	"github.com/wayneeseguin/graft/log"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

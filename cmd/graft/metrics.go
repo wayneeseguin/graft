@@ -5,8 +5,8 @@ import (
 	"os"
 	"strconv"
 
-	. "github.com/wayneeseguin/graft"
-	. "github.com/wayneeseguin/graft/log"
+	"github.com/wayneeseguin/graft/pkg/graft"
+	"github.com/wayneeseguin/graft/log"
 )
 
 // StartMetricsServer starts the metrics server if enabled
