@@ -1,0 +1,328 @@
+package spruce
+
+import (
+	"context"
+	"fmt"
+	"sync"
+	"time"
+
+	tree "github.com/starkandwayne/goutils/tree"
+)
+
+// ThreadSafeEvaluatorImpl implements ThreadSafeEvaluator interface
+type ThreadSafeEvaluatorImpl struct {
+	safeTree    ThreadSafeTree
+	originalEv  *Evaluator
+	mu          sync.RWMutex
+	listeners   []EvaluationListener
+	progress    *EvaluationProgress
+	progressMu  sync.RWMutex
+}
+
+// NewThreadSafeEvaluator creates a new thread-safe evaluator
+func NewThreadSafeEvaluator(tree ThreadSafeTree) *ThreadSafeEvaluatorImpl {
+	// Create a traditional evaluator for backward compatibility
+	var rawData map[interface{}]interface{}
+	if safeTree, ok := tree.(*SafeTree); ok {
+		rawData = safeTree.GetRawDataUnsafe()
+	} else {
+		rawData = make(map[interface{}]interface{})
+	}
+	
+	originalEv := &Evaluator{
+		Tree:     rawData,
+		SkipEval: false,
+		CheckOps: make([]*Opcall, 0),
+		Only:     []string{},
+	}
+	
+	// Initialize Deps separately to avoid type issues
+	if originalEv.Deps == nil {
+		originalEv.Deps = make(map[string][]tree.Cursor)
+	}
+	
+	return &ThreadSafeEvaluatorImpl{
+		safeTree:   tree,
+		originalEv: originalEv,
+		listeners:  make([]EvaluationListener, 0),
+		progress: &EvaluationProgress{
+			Total:      0,
+			Completed:  0,
+			Failed:     0,
+			InProgress: 0,
+			StartTime:  time.Now(),
+		},
+	}
+}
+
+// Evaluate performs thread-safe evaluation of the tree
+func (tse *ThreadSafeEvaluatorImpl) Evaluate(ctx context.Context) error {
+	tse.mu.Lock()
+	defer tse.mu.Unlock()
+	
+	// Update the original evaluator's tree with current safe tree data
+	if safeTree, ok := tse.safeTree.(*SafeTree); ok {
+		tse.originalEv.Tree = safeTree.GetRawData()
+	}
+	
+	// Track progress
+	tse.updateProgress(func(p *EvaluationProgress) {
+		p.StartTime = time.Now()
+		p.InProgress = 1
+	})
+	
+	// Notify listeners
+	tse.notifyProgress()
+	
+	// Perform evaluation using the original evaluator
+	err := tse.originalEv.Run([]string{}, []string{})
+	
+	// Update progress based on result
+	tse.updateProgress(func(p *EvaluationProgress) {
+		p.InProgress = 0
+		if err != nil {
+			p.Failed = 1
+		} else {
+			p.Completed = 1
+		}
+	})
+	
+	// Sync changes back to safe tree
+	if err == nil {
+		if err := tse.syncBackToSafeTree(); err != nil {
+			return fmt.Errorf("failed to sync evaluation results: %v", err)
+		}
+	}
+	
+	// Final progress notification
+	tse.notifyProgress()
+	
+	return err
+}
+
+// EvaluateSubtree evaluates a specific subtree
+func (tse *ThreadSafeEvaluatorImpl) EvaluateSubtree(ctx context.Context, path ...string) error {
+	tse.mu.Lock()
+	defer tse.mu.Unlock()
+	
+	// For now, this is a simplified implementation
+	// In a full implementation, we'd want to evaluate only the specified subtree
+	return tse.Evaluate(ctx)
+}
+
+// ExecuteOperator executes a specific operator in a thread-safe manner
+func (tse *ThreadSafeEvaluatorImpl) ExecuteOperator(ctx context.Context, op Operator, args []interface{}) (interface{}, error) {
+	tse.mu.Lock()
+	defer tse.mu.Unlock()
+	
+	// Convert args to proper format
+	exprArgs := make([]*Expr, len(args))
+	for i, arg := range args {
+		exprArgs[i] = &Expr{
+			Type:    Literal,
+			Literal: arg,
+		}
+	}
+	
+	// Execute operator
+	response, err := op.Run(tse.originalEv, exprArgs)
+	if err != nil {
+		return nil, err
+	}
+	
+	return response.Value, nil
+}
+
+// Progress returns the current evaluation progress
+func (tse *ThreadSafeEvaluatorImpl) Progress() EvaluationProgress {
+	tse.progressMu.RLock()
+	defer tse.progressMu.RUnlock()
+	return *tse.progress
+}
+
+// Subscribe adds an evaluation listener
+func (tse *ThreadSafeEvaluatorImpl) Subscribe(listener EvaluationListener) func() {
+	tse.mu.Lock()
+	defer tse.mu.Unlock()
+	
+	tse.listeners = append(tse.listeners, listener)
+	
+	// Return unsubscribe function
+	return func() {
+		tse.mu.Lock()
+		defer tse.mu.Unlock()
+		
+		for i, l := range tse.listeners {
+			if l == listener {
+				tse.listeners = append(tse.listeners[:i], tse.listeners[i+1:]...)
+				break
+			}
+		}
+	}
+}
+
+// Helper methods
+
+func (tse *ThreadSafeEvaluatorImpl) updateProgress(fn func(p *EvaluationProgress)) {
+	tse.progressMu.Lock()
+	defer tse.progressMu.Unlock()
+	fn(tse.progress)
+}
+
+func (tse *ThreadSafeEvaluatorImpl) notifyProgress() {
+	progress := tse.Progress()
+	for _, listener := range tse.listeners {
+		listener.OnProgress(progress)
+	}
+}
+
+func (tse *ThreadSafeEvaluatorImpl) syncBackToSafeTree() error {
+	// Convert the evaluated tree back to our safe tree format
+	data := make(map[string]interface{})
+	
+	// Convert map[interface{}]interface{} to map[string]interface{}
+	for k, v := range tse.originalEv.Tree {
+		if keyStr, ok := k.(string); ok {
+			data[keyStr] = v
+		}
+	}
+	
+	return tse.safeTree.Replace(data)
+}
+
+// ThreadSafeOperatorAdapter wraps existing operators for thread-safe execution
+type ThreadSafeOperatorAdapter struct {
+	operator Operator
+	mu       sync.RWMutex
+}
+
+// NewThreadSafeOperatorAdapter creates a thread-safe operator adapter
+func NewThreadSafeOperatorAdapter(op Operator) *ThreadSafeOperatorAdapter {
+	return &ThreadSafeOperatorAdapter{operator: op}
+}
+
+// Setup safely executes operator setup
+func (toa *ThreadSafeOperatorAdapter) Setup() error {
+	toa.mu.Lock()
+	defer toa.mu.Unlock()
+	return toa.operator.Setup()
+}
+
+// Run safely executes the operator
+func (toa *ThreadSafeOperatorAdapter) Run(ev *Evaluator, args []*Expr) (*Response, error) {
+	// Determine if this is a read or write operation
+	if toa.isReadOnlyOperator() {
+		toa.mu.RLock()
+		defer toa.mu.RUnlock()
+	} else {
+		toa.mu.Lock()
+		defer toa.mu.Unlock()
+	}
+	
+	return toa.operator.Run(ev, args)
+}
+
+// Dependencies safely gets operator dependencies
+func (toa *ThreadSafeOperatorAdapter) Dependencies(ev *Evaluator, args []*Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+	toa.mu.RLock()
+	defer toa.mu.RUnlock()
+	return toa.operator.Dependencies(ev, args, locs, auto)
+}
+
+// Phase returns the operator phase
+func (toa *ThreadSafeOperatorAdapter) Phase() OperatorPhase {
+	return toa.operator.Phase()
+}
+
+// isReadOnlyOperator determines if an operator only reads data
+func (toa *ThreadSafeOperatorAdapter) isReadOnlyOperator() bool {
+	// List of operators that only read data
+	readOnlyOps := map[string]bool{
+		"grab":   true,
+		"empty":  true,
+		"length": true,
+		"keys":   true,
+		"calc":   false, // May modify intermediate values
+		"concat": true,
+		"vault":  true,
+	}
+	
+	// This is a simplification - in practice, we'd need a better way 
+	// to identify operator types
+	return readOnlyOps[fmt.Sprintf("%T", toa.operator)]
+}
+
+// MigrationHelper provides utilities for migrating to thread-safe evaluators
+type MigrationHelper struct {
+	safeTree ThreadSafeTree
+	tsEval   *ThreadSafeEvaluatorImpl
+}
+
+// NewMigrationHelper creates a helper for migrating existing code
+func NewMigrationHelper(data map[interface{}]interface{}) *MigrationHelper {
+	safeTree := NewSafeTree(data)
+	tsEval := NewThreadSafeEvaluator(safeTree)
+	
+	return &MigrationHelper{
+		safeTree: safeTree,
+		tsEval:   tsEval,
+	}
+}
+
+// WrapEvaluator wraps an existing evaluator with thread safety
+func (mh *MigrationHelper) WrapEvaluator(originalEv *Evaluator) *ThreadSafeEvaluatorImpl {
+	// Update safe tree with original evaluator's data
+	data := make(map[string]interface{})
+	for k, v := range originalEv.Tree {
+		if keyStr, ok := k.(string); ok {
+			data[keyStr] = v
+		}
+	}
+	mh.safeTree.Replace(data)
+	
+	// Copy other evaluator properties
+	mh.tsEval.originalEv.Deps = originalEv.Deps
+	mh.tsEval.originalEv.SkipEval = originalEv.SkipEval
+	mh.tsEval.originalEv.CheckOps = originalEv.CheckOps
+	mh.tsEval.originalEv.Only = originalEv.Only
+	
+	return mh.tsEval
+}
+
+// GetThreadSafeTree returns the underlying thread-safe tree
+func (mh *MigrationHelper) GetThreadSafeTree() ThreadSafeTree {
+	return mh.safeTree
+}
+
+// GetCompatibleEvaluator returns an evaluator compatible with existing code
+func (mh *MigrationHelper) GetCompatibleEvaluator() *Evaluator {
+	return mh.tsEval.originalEv
+}
+
+// SimpleEvaluationListener provides a basic implementation of EvaluationListener
+type SimpleEvaluationListener struct {
+	OnOperatorStartFunc    func(path []string, operator string)
+	OnOperatorCompleteFunc func(path []string, operator string, result interface{}, err error)
+	OnProgressFunc         func(progress EvaluationProgress)
+}
+
+// OnOperatorStart is called when an operator starts
+func (sel *SimpleEvaluationListener) OnOperatorStart(path []string, operator string) {
+	if sel.OnOperatorStartFunc != nil {
+		sel.OnOperatorStartFunc(path, operator)
+	}
+}
+
+// OnOperatorComplete is called when an operator completes
+func (sel *SimpleEvaluationListener) OnOperatorComplete(path []string, operator string, result interface{}, err error) {
+	if sel.OnOperatorCompleteFunc != nil {
+		sel.OnOperatorCompleteFunc(path, operator, result, err)
+	}
+}
+
+// OnProgress is called when evaluation progress changes
+func (sel *SimpleEvaluationListener) OnProgress(progress EvaluationProgress) {
+	if sel.OnProgressFunc != nil {
+		sel.OnProgressFunc(progress)
+	}
+}

@@ -2,434 +2,368 @@ package spruce
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 )
 
-// DependencyGraph represents dependencies between expressions
+// NodeStatus represents the execution status of a node
+type NodeStatus string
+
+const (
+	StatusPending   NodeStatus = "pending"
+	StatusReady     NodeStatus = "ready"
+	StatusRunning   NodeStatus = "running"
+	StatusCompleted NodeStatus = "completed"
+	StatusFailed    NodeStatus = "failed"
+	StatusSkipped   NodeStatus = "skipped"
+)
+
+// ExecutionStage represents a stage of parallel execution
+type ExecutionStage struct {
+	Operations  []*DependencyNode
+	CanParallel bool
+}
+
+// DependencyGraph represents a graph of dependencies between nodes
 type DependencyGraph struct {
-	mu    sync.RWMutex
-	nodes map[string]*DependencyNode
-	edges map[string]map[string]bool // from -> to -> exists
+	nodes     map[string]*DependencyNode
+	mu        sync.RWMutex
+	sorted    []string
+	evaluated map[string]bool
 }
 
 // DependencyNode represents a node in the dependency graph
 type DependencyNode struct {
 	ID           string
-	Expression   interface{}
-	OperatorType string
 	Path         []string
+	Dependencies []string
+	Dependents   []string
+	Value        interface{}
+	Expression   string
 	Cost         float64
-	Dependencies map[string]bool
-	Dependents   map[string]bool
-	Status       ExecutionStatus
-	Result       interface{}
-	Error        error
-	mu           sync.RWMutex
+	OperatorType string
+	Status       NodeStatus
+	Ready        bool
+	InProgress   bool
+	Completed    bool
 }
-
-// ExecutionStatus represents the execution state of a node
-type ExecutionStatus int
-
-const (
-	StatusPending ExecutionStatus = iota
-	StatusReady
-	StatusExecuting
-	StatusCompleted
-	StatusFailed
-	StatusSkipped
-)
 
 // NewDependencyGraph creates a new dependency graph
 func NewDependencyGraph() *DependencyGraph {
 	return &DependencyGraph{
-		nodes: make(map[string]*DependencyNode),
-		edges: make(map[string]map[string]bool),
+		nodes:     make(map[string]*DependencyNode),
+		evaluated: make(map[string]bool),
 	}
+}
+
+// Clear clears the dependency graph
+func (dg *DependencyGraph) Clear() {
+	dg.mu.Lock()
+	defer dg.mu.Unlock()
+	
+	dg.nodes = make(map[string]*DependencyNode)
+	dg.sorted = nil
+	dg.evaluated = make(map[string]bool)
 }
 
 // AddNode adds a node to the graph
-func (g *DependencyGraph) AddNode(id string, expr interface{}, opType string, path []string) *DependencyNode {
-	g.mu.Lock()
-	defer g.mu.Unlock()
+func (dg *DependencyGraph) AddNode(path string, node *DependencyNode) {
+	dg.mu.Lock()
+	defer dg.mu.Unlock()
 	
-	if node, exists := g.nodes[id]; exists {
-		return node
-	}
-	
-	node := &DependencyNode{
-		ID:           id,
-		Expression:   expr,
-		OperatorType: opType,
-		Path:         path,
-		Dependencies: make(map[string]bool),
-		Dependents:   make(map[string]bool),
-		Status:       StatusPending,
-	}
-	
-	g.nodes[id] = node
-	g.edges[id] = make(map[string]bool)
-	
-	return node
+	dg.nodes[path] = node
 }
 
-// AddDependency adds a dependency edge from -> to
-func (g *DependencyGraph) AddDependency(fromID, toID string) error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
+// GetNode retrieves a node from the graph
+func (dg *DependencyGraph) GetNode(path string) (*DependencyNode, bool) {
+	dg.mu.RLock()
+	defer dg.mu.RUnlock()
 	
-	fromNode, fromExists := g.nodes[fromID]
-	toNode, toExists := g.nodes[toID]
-	
-	if !fromExists {
-		return fmt.Errorf("node %s not found", fromID)
-	}
-	if !toExists {
-		return fmt.Errorf("node %s not found", toID)
-	}
-	
-	// Check for circular dependency
-	if g.wouldCreateCycle(fromID, toID) {
-		return fmt.Errorf("circular dependency detected: %s -> %s", fromID, toID)
-	}
-	
-	// Add edge
-	if g.edges[fromID] == nil {
-		g.edges[fromID] = make(map[string]bool)
-	}
-	g.edges[fromID][toID] = true
-	
-	// Update node references
-	fromNode.Dependents[toID] = true
-	toNode.Dependencies[fromID] = true
-	
-	return nil
+	node, ok := dg.nodes[path]
+	return node, ok
 }
 
-// wouldCreateCycle checks if adding an edge would create a cycle
-func (g *DependencyGraph) wouldCreateCycle(from, to string) bool {
-	// Check if there's already a path from 'to' to 'from'
-	visited := make(map[string]bool)
-	return g.hasPath(to, from, visited)
+// GetNodes returns all nodes in the graph
+func (dg *DependencyGraph) GetNodes() map[string]*DependencyNode {
+	dg.mu.RLock()
+	defer dg.mu.RUnlock()
+	
+	// Return a copy to prevent concurrent modification
+	nodes := make(map[string]*DependencyNode)
+	for k, v := range dg.nodes {
+		nodes[k] = v
+	}
+	return nodes
 }
 
-// hasPath checks if there's a path from start to end
-func (g *DependencyGraph) hasPath(start, end string, visited map[string]bool) bool {
-	if start == end {
-		return true
+// AddDependency adds a dependency between two nodes
+func (dg *DependencyGraph) AddDependency(from, to string) {
+	dg.mu.Lock()
+	defer dg.mu.Unlock()
+	
+	if fromNode, ok := dg.nodes[from]; ok {
+		fromNode.Dependencies = append(fromNode.Dependencies, to)
 	}
 	
-	if visited[start] {
-		return false
+	if toNode, ok := dg.nodes[to]; ok {
+		toNode.Dependents = append(toNode.Dependents, from)
 	}
-	visited[start] = true
-	
-	if edges, ok := g.edges[start]; ok {
-		for next := range edges {
-			if g.hasPath(next, end, visited) {
-				return true
-			}
-		}
-	}
-	
-	return false
 }
 
-// TopologicalSort returns nodes in topological order
-func (g *DependencyGraph) TopologicalSort() ([]*DependencyNode, error) {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
+// GetReadyNodes returns nodes that are ready to be processed
+func (dg *DependencyGraph) GetReadyNodes() []*DependencyNode {
+	dg.mu.RLock()
+	defer dg.mu.RUnlock()
 	
-	// Count incoming edges
-	inDegree := make(map[string]int)
-	for id := range g.nodes {
-		inDegree[id] = 0
-	}
-	
-	for _, edges := range g.edges {
-		for to := range edges {
-			inDegree[to]++
-		}
-	}
-	
-	// Find nodes with no dependencies
-	queue := make([]string, 0)
-	for id, degree := range inDegree {
-		if degree == 0 {
-			queue = append(queue, id)
-		}
-	}
-	
-	// Process nodes
-	var sorted []*DependencyNode
-	processed := 0
-	
-	for len(queue) > 0 {
-		// Pop from queue
-		current := queue[0]
-		queue = queue[1:]
-		
-		node := g.nodes[current]
-		sorted = append(sorted, node)
-		processed++
-		
-		// Update degrees of dependent nodes
-		if edges, ok := g.edges[current]; ok {
-			for dependent := range edges {
-				inDegree[dependent]--
-				if inDegree[dependent] == 0 {
-					queue = append(queue, dependent)
+	var ready []*DependencyNode
+	for _, node := range dg.nodes {
+		if node.Ready && !node.InProgress && !node.Completed {
+			// Check if all dependencies are completed
+			allDepsCompleted := true
+			for _, dep := range node.Dependencies {
+				if depNode, ok := dg.nodes[dep]; ok {
+					if !depNode.Completed {
+						allDepsCompleted = false
+						break
+					}
 				}
 			}
-		}
-	}
-	
-	if processed != len(g.nodes) {
-		return nil, fmt.Errorf("circular dependency detected: processed %d of %d nodes", processed, len(g.nodes))
-	}
-	
-	return sorted, nil
-}
-
-// GetExecutionStages returns nodes grouped by execution stages
-func (g *DependencyGraph) GetExecutionStages() ([]ExecutionStage, error) {
-	sorted, err := g.TopologicalSort()
-	if err != nil {
-		return nil, err
-	}
-	
-	stages := make([]ExecutionStage, 0)
-	nodeStage := make(map[string]int)
-	
-	for _, node := range sorted {
-		maxDepStage := -1
-		
-		// Find maximum stage of dependencies
-		for depID := range node.Dependencies {
-			if stage, ok := nodeStage[depID]; ok && stage > maxDepStage {
-				maxDepStage = stage
-			}
-		}
-		
-		// Assign to next stage
-		stageIndex := maxDepStage + 1
-		nodeStage[node.ID] = stageIndex
-		
-		// Ensure we have enough stages
-		for len(stages) <= stageIndex {
-			stages = append(stages, ExecutionStage{
-				Operations:  make([]*DependencyNode, 0),
-				CanParallel: true,
-			})
-		}
-		
-		stages[stageIndex].Operations = append(stages[stageIndex].Operations, node)
-	}
-	
-	return stages, nil
-}
-
-// GetNode returns a node by ID
-func (g *DependencyGraph) GetNode(id string) (*DependencyNode, bool) {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-	
-	node, exists := g.nodes[id]
-	return node, exists
-}
-
-// GetDependencies returns direct dependencies of a node
-func (g *DependencyGraph) GetDependencies(id string) []*DependencyNode {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-	
-	node, exists := g.nodes[id]
-	if !exists {
-		return nil
-	}
-	
-	deps := make([]*DependencyNode, 0, len(node.Dependencies))
-	for depID := range node.Dependencies {
-		if dep, ok := g.nodes[depID]; ok {
-			deps = append(deps, dep)
-		}
-	}
-	
-	return deps
-}
-
-// GetDependents returns nodes that depend on this node
-func (g *DependencyGraph) GetDependents(id string) []*DependencyNode {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-	
-	node, exists := g.nodes[id]
-	if !exists {
-		return nil
-	}
-	
-	deps := make([]*DependencyNode, 0, len(node.Dependents))
-	for depID := range node.Dependents {
-		if dep, ok := g.nodes[depID]; ok {
-			deps = append(deps, dep)
-		}
-	}
-	
-	return deps
-}
-
-// MarkCompleted marks a node as completed with result
-func (g *DependencyGraph) MarkCompleted(id string, result interface{}) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	
-	if node, exists := g.nodes[id]; exists {
-		node.mu.Lock()
-		node.Status = StatusCompleted
-		node.Result = result
-		node.mu.Unlock()
-	}
-}
-
-// MarkFailed marks a node as failed with error
-func (g *DependencyGraph) MarkFailed(id string, err error) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	
-	if node, exists := g.nodes[id]; exists {
-		node.mu.Lock()
-		node.Status = StatusFailed
-		node.Error = err
-		node.mu.Unlock()
-	}
-}
-
-// CanExecute checks if a node is ready to execute
-func (g *DependencyGraph) CanExecute(id string) bool {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-	
-	node, exists := g.nodes[id]
-	if !exists || node.Status != StatusPending {
-		return false
-	}
-	
-	// Check if all dependencies are completed
-	for depID := range node.Dependencies {
-		if dep, ok := g.nodes[depID]; ok {
-			dep.mu.RLock()
-			status := dep.Status
-			dep.mu.RUnlock()
 			
-			if status != StatusCompleted && status != StatusSkipped {
-				return false
+			if allDepsCompleted {
+				ready = append(ready, node)
 			}
-		}
-	}
-	
-	return true
-}
-
-// GetReadyNodes returns all nodes ready for execution
-func (g *DependencyGraph) GetReadyNodes() []*DependencyNode {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-	
-	ready := make([]*DependencyNode, 0)
-	
-	for id, node := range g.nodes {
-		if g.CanExecute(id) {
-			ready = append(ready, node)
 		}
 	}
 	
 	return ready
 }
 
+// MarkInProgress marks a node as being processed
+func (dg *DependencyGraph) MarkInProgress(path string) {
+	dg.mu.Lock()
+	defer dg.mu.Unlock()
+	
+	if node, ok := dg.nodes[path]; ok {
+		node.InProgress = true
+	}
+}
+
+// MarkCompleted marks a node as completed
+func (dg *DependencyGraph) MarkCompleted(path string) {
+	dg.mu.Lock()
+	defer dg.mu.Unlock()
+	
+	if node, ok := dg.nodes[path]; ok {
+		node.InProgress = false
+		node.Completed = true
+		
+		// Update dependents to be ready if all their dependencies are met
+		for _, dependent := range node.Dependents {
+			if depNode, ok := dg.nodes[dependent]; ok {
+				allDepsCompleted := true
+				for _, dep := range depNode.Dependencies {
+					if d, exists := dg.nodes[dep]; exists && !d.Completed {
+						allDepsCompleted = false
+						break
+					}
+				}
+				if allDepsCompleted {
+					depNode.Ready = true
+				}
+			}
+		}
+	}
+}
+
+// TopologicalSort performs a topological sort on the graph
+func (dg *DependencyGraph) TopologicalSort() ([]string, error) {
+	dg.mu.Lock()
+	defer dg.mu.Unlock()
+	
+	if dg.sorted != nil {
+		return dg.sorted, nil
+	}
+	
+	visited := make(map[string]bool)
+	visiting := make(map[string]bool)
+	sorted := make([]string, 0, len(dg.nodes))
+	
+	var visit func(string) error
+	visit = func(path string) error {
+		if visiting[path] {
+			return fmt.Errorf("circular dependency detected at %s", path)
+		}
+		
+		if visited[path] {
+			return nil
+		}
+		
+		visiting[path] = true
+		
+		if node, ok := dg.nodes[path]; ok {
+			for _, dep := range node.Dependencies {
+				if err := visit(dep); err != nil {
+					return err
+				}
+			}
+		}
+		
+		visiting[path] = false
+		visited[path] = true
+		sorted = append(sorted, path)
+		
+		return nil
+	}
+	
+	for path := range dg.nodes {
+		if err := visit(path); err != nil {
+			return nil, err
+		}
+	}
+	
+	dg.sorted = sorted
+	return sorted, nil
+}
+
+// GetDependencyWaves returns nodes grouped by execution waves
+func (dg *DependencyGraph) GetDependencyWaves() ([][]string, error) {
+	// First do topological sort to detect cycles
+	if _, err := dg.TopologicalSort(); err != nil {
+		return nil, err
+	}
+	
+	dg.mu.RLock()
+	defer dg.mu.RUnlock()
+	
+	waves := [][]string{}
+	processed := make(map[string]bool)
+	
+	for len(processed) < len(dg.nodes) {
+		wave := []string{}
+		
+		// Find all nodes that can be processed in this wave
+		for path, node := range dg.nodes {
+			if processed[path] {
+				continue
+			}
+			
+			// Check if all dependencies have been processed
+			canProcess := true
+			for _, dep := range node.Dependencies {
+				if !processed[dep] {
+					canProcess = false
+					break
+				}
+			}
+			
+			if canProcess {
+				wave = append(wave, path)
+			}
+		}
+		
+		if len(wave) == 0 {
+			// This shouldn't happen after topological sort
+			return nil, fmt.Errorf("unable to make progress in dependency resolution")
+		}
+		
+		// Mark wave nodes as processed
+		for _, path := range wave {
+			processed[path] = true
+		}
+		
+		waves = append(waves, wave)
+	}
+	
+	return waves, nil
+}
+
+// HasCycles checks if the graph has cycles
+func (dg *DependencyGraph) HasCycles() bool {
+	_, err := dg.TopologicalSort()
+	return err != nil
+}
+
 // Size returns the number of nodes in the graph
-func (g *DependencyGraph) Size() int {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-	return len(g.nodes)
+func (dg *DependencyGraph) Size() int {
+	dg.mu.RLock()
+	defer dg.mu.RUnlock()
+	return len(dg.nodes)
 }
 
-// Clear removes all nodes and edges
-func (g *DependencyGraph) Clear() {
-	g.mu.Lock()
-	defer g.mu.Unlock()
+// GetDependents returns all dependents for a given node
+func (dg *DependencyGraph) GetDependents(nodeID string) []string {
+	dg.mu.RLock()
+	defer dg.mu.RUnlock()
 	
-	g.nodes = make(map[string]*DependencyNode)
-	g.edges = make(map[string]map[string]bool)
+	if node, ok := dg.nodes[nodeID]; ok {
+		return node.Dependents
+	}
+	return nil
 }
 
-// Visualize returns a string representation of the graph
-func (g *DependencyGraph) Visualize() string {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
+// GetStatistics returns statistics about the graph
+func (dg *DependencyGraph) GetStatistics() map[string]int {
+	dg.mu.RLock()
+	defer dg.mu.RUnlock()
 	
-	var sb strings.Builder
-	sb.WriteString("Dependency Graph:\n")
+	stats := map[string]int{
+		"total_nodes":      len(dg.nodes),
+		"ready_nodes":      0,
+		"in_progress":      0,
+		"completed":        0,
+		"total_edges":      0,
+		"max_dependencies": 0,
+		"max_dependents":   0,
+	}
 	
-	// Sort nodes for consistent output
-	sorted, _ := g.TopologicalSort()
-	
-	for _, node := range sorted {
-		sb.WriteString(fmt.Sprintf("  %s [%s] (status: %v)\n", 
-			node.ID, node.OperatorType, node.Status))
-		
-		if len(node.Dependencies) > 0 {
-			sb.WriteString("    Dependencies: ")
-			first := true
-			for depID := range node.Dependencies {
-				if !first {
-					sb.WriteString(", ")
-				}
-				sb.WriteString(depID)
-				first = false
-			}
-			sb.WriteString("\n")
+	for _, node := range dg.nodes {
+		if node.Ready && !node.InProgress && !node.Completed {
+			stats["ready_nodes"]++
+		}
+		if node.InProgress {
+			stats["in_progress"]++
+		}
+		if node.Completed {
+			stats["completed"]++
 		}
 		
-		if len(node.Dependents) > 0 {
-			sb.WriteString("    Dependents: ")
-			first := true
-			for depID := range node.Dependents {
-				if !first {
-					sb.WriteString(", ")
-				}
-				sb.WriteString(depID)
-				first = false
-			}
-			sb.WriteString("\n")
+		stats["total_edges"] += len(node.Dependencies)
+		
+		if len(node.Dependencies) > stats["max_dependencies"] {
+			stats["max_dependencies"] = len(node.Dependencies)
+		}
+		if len(node.Dependents) > stats["max_dependents"] {
+			stats["max_dependents"] = len(node.Dependents)
 		}
 	}
 	
-	return sb.String()
+	return stats
 }
 
-// ExecutionStage represents a group of operations that can run in parallel
-type ExecutionStage struct {
-	Operations    []*DependencyNode
-	CanParallel   bool
-	EstimatedTime float64
-}
-
-// String returns execution status as string
-func (s ExecutionStatus) String() string {
-	switch s {
-	case StatusPending:
-		return "pending"
-	case StatusReady:
-		return "ready"
-	case StatusExecuting:
-		return "executing"
-	case StatusCompleted:
-		return "completed"
-	case StatusFailed:
-		return "failed"
-	case StatusSkipped:
-		return "skipped"
-	default:
-		return "unknown"
+// GetExecutionStages returns operations grouped by execution stages
+func (dg *DependencyGraph) GetExecutionStages() ([]ExecutionStage, error) {
+	waves, err := dg.GetDependencyWaves()
+	if err != nil {
+		return nil, err
 	}
+	
+	dg.mu.RLock()
+	defer dg.mu.RUnlock()
+	
+	stages := make([]ExecutionStage, len(waves))
+	for i, wave := range waves {
+		stage := ExecutionStage{
+			Operations:  make([]*DependencyNode, len(wave)),
+			CanParallel: true, // All operations in a wave can run in parallel
+		}
+		
+		for j, path := range wave {
+			if node, ok := dg.nodes[path]; ok {
+				stage.Operations[j] = node
+			}
+		}
+		
+		stages[i] = stage
+	}
+	
+	return stages, nil
 }

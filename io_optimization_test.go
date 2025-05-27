@@ -12,7 +12,7 @@ import (
 
 // TestHTTPClientPool tests the HTTP client pool functionality
 func TestHTTPClientPool(t *testing.T) {
-	t.Skip("Temporarily skipping HTTPClientPool test - investigate timeout issue")
+	// t.Skip("Temporarily skipping HTTPClientPool test - investigate timeout issue")
 	t.Run("BasicPooling", func(t *testing.T) {
 		config := HTTPClientPoolConfig{
 			MaxClients:      5,
@@ -62,7 +62,7 @@ func TestHTTPClientPool(t *testing.T) {
 		defer pool.Close()
 		
 		var wg sync.WaitGroup
-		clientsUsed := make(chan *http.Client, 100)
+		clientsUsed := make(chan *http.Client, 200) // 20 goroutines × 10 iterations
 		
 		// Use pool from multiple goroutines
 		for i := 0; i < 20; i++ {

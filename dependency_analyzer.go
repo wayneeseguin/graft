@@ -107,7 +107,19 @@ func (da *DependencyAnalyzer) analyzeExpression(expr string, path []string) erro
 	opType := da.extractOperatorType(expr)
 	
 	// Add node to graph
-	node := da.graph.AddNode(nodeID, expr, opType, path)
+	node := &DependencyNode{
+		ID:           nodeID,
+		Path:         path,
+		OperatorType: opType,
+		Value:        expr,
+		Expression:   expr,
+		Dependencies: []string{},
+		Dependents:   []string{},
+		Cost:         da.costEstimator.EstimateOperatorCost(opType, expr),
+		Status:       StatusPending,
+		Ready:        false,
+	}
+	da.graph.AddNode(nodeID, node)
 	
 	// Extract dependencies
 	deps := da.extractDependencies(expr, opType)
@@ -119,18 +131,24 @@ func (da *DependencyAnalyzer) analyzeExpression(expr string, path []string) erro
 		// Ensure dependency node exists
 		if _, exists := da.graph.GetNode(depID); !exists {
 			// Create placeholder node for external reference
-			da.graph.AddNode(depID, nil, "reference", strings.Split(depID, "."))
+			depNode := &DependencyNode{
+				ID:           depID,
+				Path:         strings.Split(depID, "."),
+				OperatorType: "reference",
+				Value:        nil,
+				Expression:   "",
+				Dependencies: []string{},
+				Dependents:   []string{},
+				Cost:         1.0, // Low cost for references
+				Status:       StatusPending,
+				Ready:        false,
+			}
+			da.graph.AddNode(depID, depNode)
 		}
 		
 		// Add dependency edge
-		if err := da.graph.AddDependency(depID, nodeID); err != nil {
-			// Log circular dependency but continue
-			fmt.Printf("Warning: %v\n", err)
-		}
+		da.graph.AddDependency(depID, nodeID)
 	}
-	
-	// Set initial cost estimate
-	node.Cost = da.costEstimator.EstimateOperatorCost(opType, expr)
 	
 	return nil
 }
@@ -257,10 +275,11 @@ func (da *DependencyAnalyzer) resolvePathToID(refPath string, currentPath []stri
 
 // estimateCosts estimates costs for all nodes
 func (da *DependencyAnalyzer) estimateCosts() {
-	nodes, _ := da.graph.TopologicalSort()
+	nodeIDs, _ := da.graph.TopologicalSort()
+	allNodes := da.graph.GetNodes()
 	
-	for _, node := range nodes {
-		if node.Cost == 0 {
+	for _, nodeID := range nodeIDs {
+		if node, ok := allNodes[nodeID]; ok && node.Cost == 0 {
 			node.Cost = da.costEstimator.EstimateNodeCost(node)
 		}
 	}
@@ -268,22 +287,29 @@ func (da *DependencyAnalyzer) estimateCosts() {
 
 // GetCriticalPath returns the critical path through the graph
 func (da *DependencyAnalyzer) GetCriticalPath() ([]*DependencyNode, float64) {
-	sorted, err := da.graph.TopologicalSort()
+	sortedIDs, err := da.graph.TopologicalSort()
 	if err != nil {
 		return nil, 0
 	}
+	
+	allNodes := da.graph.GetNodes()
 	
 	// Calculate longest path to each node
 	longestPath := make(map[string]float64)
 	predecessor := make(map[string]*DependencyNode)
 	
-	for _, node := range sorted {
+	for _, nodeID := range sortedIDs {
+		node, ok := allNodes[nodeID]
+		if !ok {
+			continue
+		}
+		
 		maxCost := float64(0)
 		var maxPred *DependencyNode
 		
 		// Find maximum cost path from dependencies
-		for depID := range node.Dependencies {
-			if dep, ok := da.graph.GetNode(depID); ok {
+		for _, depID := range node.Dependencies {
+			if dep, ok := allNodes[depID]; ok {
 				cost := longestPath[depID] + dep.Cost
 				if cost > maxCost {
 					maxCost = cost
@@ -292,30 +318,48 @@ func (da *DependencyAnalyzer) GetCriticalPath() ([]*DependencyNode, float64) {
 			}
 		}
 		
-		longestPath[node.ID] = maxCost + node.Cost
+		longestPath[nodeID] = maxCost + node.Cost
 		if maxPred != nil {
-			predecessor[node.ID] = maxPred
+			predecessor[nodeID] = maxPred
 		}
 	}
 	
 	// Find node with maximum path cost
-	var endNode *DependencyNode
+	var endNodeID string
 	maxTotalCost := float64(0)
 	
-	for _, node := range sorted {
-		if cost := longestPath[node.ID]; cost > maxTotalCost {
+	for _, nodeID := range sortedIDs {
+		if cost := longestPath[nodeID]; cost > maxTotalCost {
 			maxTotalCost = cost
-			endNode = node
+			endNodeID = nodeID
 		}
 	}
 	
 	// Reconstruct critical path
 	var criticalPath []*DependencyNode
-	current := endNode
+	currentID := endNodeID
 	
-	for current != nil {
-		criticalPath = append([]*DependencyNode{current}, criticalPath...)
-		current = predecessor[current.ID]
+	for currentID != "" {
+		if current, ok := allNodes[currentID]; ok {
+			criticalPath = append([]*DependencyNode{current}, criticalPath...)
+			if pred, exists := predecessor[currentID]; exists {
+				// Find the ID for the predecessor
+				for id, node := range allNodes {
+					if node == pred {
+						currentID = id
+						break
+					}
+				}
+				// If we couldn't find the ID, break
+				if currentID == "" || allNodes[currentID] != pred {
+					break
+				}
+			} else {
+				break
+			}
+		} else {
+			break
+		}
 	}
 	
 	return criticalPath, maxTotalCost

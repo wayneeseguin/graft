@@ -160,11 +160,11 @@ func (cm *CancellationManager) CancelDependents(nodeID string, graph *Dependency
 	dependents := graph.GetDependents(nodeID)
 	cancelled := 0
 	
-	for _, dep := range dependents {
-		if cm.Cancel(dep.ID) {
+	for _, depID := range dependents {
+		if cm.Cancel(depID) {
 			cancelled++
 			// Recursively cancel dependents
-			cancelled += cm.CancelDependents(dep.ID, graph)
+			cancelled += cm.CancelDependents(depID, graph)
 		}
 	}
 	
@@ -175,9 +175,9 @@ func (cm *CancellationManager) CancelDependents(nodeID string, graph *Dependency
 func (et *EarlyTerminator) AnalyzeNecessity(outputPaths []string) {
 	if !et.config.Enabled {
 		// Mark all as necessary if disabled
-		nodes, _ := et.graph.TopologicalSort()
-		for _, node := range nodes {
-			et.necessityTracker.MarkNecessary(node.ID)
+		nodeIDs, _ := et.graph.TopologicalSort()
+		for _, nodeID := range nodeIDs {
+			et.necessityTracker.MarkNecessary(nodeID)
 		}
 		return
 	}
@@ -197,16 +197,19 @@ func (et *EarlyTerminator) AnalyzeNecessity(outputPaths []string) {
 // propagateNecessity propagates necessity through the graph
 func (et *EarlyTerminator) propagateNecessity() {
 	// Get nodes in reverse topological order
-	sorted, _ := et.graph.TopologicalSort()
+	sortedIDs, _ := et.graph.TopologicalSort()
+	allNodes := et.graph.GetNodes()
 	
 	// Process from outputs backward
-	for i := len(sorted) - 1; i >= 0; i-- {
-		node := sorted[i]
+	for i := len(sortedIDs) - 1; i >= 0; i-- {
+		nodeID := sortedIDs[i]
 		
-		if et.necessityTracker.IsNecessary(node.ID) {
+		if et.necessityTracker.IsNecessary(nodeID) {
 			// Mark all dependencies as necessary
-			for depID := range node.Dependencies {
-				et.necessityTracker.MarkNecessary(depID)
+			if node, ok := allNodes[nodeID]; ok {
+				for _, depID := range node.Dependencies {
+					et.necessityTracker.MarkNecessary(depID)
+				}
 			}
 		}
 	}
@@ -214,18 +217,21 @@ func (et *EarlyTerminator) propagateNecessity() {
 
 // markUnnecessaryNodes marks nodes that can be skipped
 func (et *EarlyTerminator) markUnnecessaryNodes() {
-	nodes, _ := et.graph.TopologicalSort()
-	totalNodes := len(nodes)
+	nodeIDs, _ := et.graph.TopologicalSort()
+	allNodes := et.graph.GetNodes()
+	totalNodes := len(nodeIDs)
 	skippable := 0
 	
-	for _, node := range nodes {
-		if !et.necessityTracker.IsNecessary(node.ID) {
+	for _, nodeID := range nodeIDs {
+		if !et.necessityTracker.IsNecessary(nodeID) {
 			// Check if we're within skip limit
 			skipPercentage := float64(skippable) / float64(totalNodes)
 			if skipPercentage < et.config.MaxSkipPercentage {
-				node.Status = StatusSkipped
-				skippable++
-				atomic.AddInt64(&et.metrics.OperationsSkipped, 1)
+				if node, ok := allNodes[nodeID]; ok {
+					node.Status = StatusSkipped
+					skippable++
+					atomic.AddInt64(&et.metrics.OperationsSkipped, 1)
+				}
 			}
 		}
 	}
@@ -266,8 +272,8 @@ func (et *EarlyTerminator) ShouldEvaluate(nodeID string) bool {
 func (et *EarlyTerminator) hasNecessaryDependents(nodeID string) bool {
 	dependents := et.graph.GetDependents(nodeID)
 	
-	for _, dep := range dependents {
-		if et.necessityTracker.IsNecessary(dep.ID) {
+	for _, depID := range dependents {
+		if et.necessityTracker.IsNecessary(depID) {
 			return true
 		}
 	}
@@ -309,14 +315,18 @@ func (et *EarlyTerminator) checkDependentNecessity(nodeID string, result interfa
 	
 	if et.isSkippableResult(result) {
 		dependents := et.graph.GetDependents(nodeID)
-		for _, dep := range dependents {
-			if et.canSkipDependent(dep, result) {
-				dep.Status = StatusSkipped
-				atomic.AddInt64(&et.metrics.OperationsSkipped, 1)
-				
-				// Cancel if already running
-				if et.canceller.Cancel(dep.ID) {
-					atomic.AddInt64(&et.metrics.CancellationsSent, 1)
+		allNodes := et.graph.GetNodes()
+		
+		for _, depID := range dependents {
+			if dep, ok := allNodes[depID]; ok {
+				if et.canSkipDependent(dep, result) {
+					dep.Status = StatusSkipped
+					atomic.AddInt64(&et.metrics.OperationsSkipped, 1)
+					
+					// Cancel if already running
+					if et.canceller.Cancel(depID) {
+						atomic.AddInt64(&et.metrics.CancellationsSent, 1)
+					}
 				}
 			}
 		}

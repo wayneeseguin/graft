@@ -197,13 +197,13 @@ func (ob *OperationBatcher) extractTarget(op *DependencyNode) string {
 	switch op.OperatorType {
 	case "vault":
 		// Extract vault path prefix
-		if _, ok := op.Expression.(string); ok {
+		if op.Expression != "" {
 			// Simple extraction - could be enhanced
 			return "vault"
 		}
 	case "file":
 		// Extract file directory
-		if _, ok := op.Expression.(string); ok {
+		if op.Expression != "" {
 			return "file"
 		}
 	case "awsparam", "awssecret":

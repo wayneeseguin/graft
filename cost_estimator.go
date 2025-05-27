@@ -303,13 +303,14 @@ func (ce *CostEstimator) OptimizeCosts(graph *DependencyGraph) []CostOptimizatio
 	optimizations := make([]CostOptimization, 0)
 	
 	// Analyze all nodes
-	nodes, _ := graph.TopologicalSort()
+	nodeIDs, _ := graph.TopologicalSort()
+	allNodes := graph.GetNodes()
 	
 	// Find expensive operations
-	for _, node := range nodes {
-		if node.Cost > 10 { // Expensive threshold
+	for _, nodeID := range nodeIDs {
+		if node, ok := allNodes[nodeID]; ok && node.Cost > 10 { // Expensive threshold
 			opt := CostOptimization{
-				NodeID:      node.ID,
+				NodeID:      nodeID,
 				CurrentCost: node.Cost,
 				Suggestion:  ce.getSuggestion(node),
 			}

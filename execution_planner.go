@@ -184,10 +184,13 @@ func (ep *ExecutionPlanner) groupForParallel(ops []*DependencyNode) []ParallelGr
 // calculateTotalCost calculates total cost without optimization
 func (ep *ExecutionPlanner) calculateTotalCost(graph *DependencyGraph) float64 {
 	totalCost := float64(0)
-	nodes, _ := graph.TopologicalSort()
+	nodeIDs, _ := graph.TopologicalSort()
+	allNodes := graph.GetNodes()
 	
-	for _, node := range nodes {
-		totalCost += node.Cost
+	for _, nodeID := range nodeIDs {
+		if node, ok := allNodes[nodeID]; ok {
+			totalCost += node.Cost
+		}
 	}
 	
 	return totalCost
