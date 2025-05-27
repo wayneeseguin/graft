@@ -1,12 +1,11 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
 // ThreadSafeTree defines the interface for a thread-safe tree implementation
@@ -16,17 +15,17 @@ type ThreadSafeTree interface {
 	FindAll(path ...string) ([]interface{}, error)
 	Exists(path ...string) bool
 	Copy() ThreadSafeTree
-	
+
 	// Write operations (synchronized)
 	Set(value interface{}, path ...string) error
 	Delete(path ...string) error
 	Replace(data map[string]interface{}) error
 	Merge(other ThreadSafeTree) error
-	
+
 	// Atomic operations
 	CompareAndSwap(oldValue, newValue interface{}, path ...string) bool
 	Update(fn func(current interface{}) interface{}, path ...string) error
-	
+
 	// Bulk operations
 	Transaction(fn func(tx TreeTransaction) error) error
 }
@@ -45,10 +44,10 @@ type ThreadSafeEvaluator interface {
 	// Evaluation operations
 	Evaluate(ctx context.Context) error
 	EvaluateSubtree(ctx context.Context, path ...string) error
-	
+
 	// Operator execution
-	ExecuteOperator(ctx context.Context, op Operator, args []interface{}) (interface{}, error)
-	
+	ExecuteOperator(ctx context.Context, op graft.Operator, args []interface{}) (interface{}, error)
+
 	// Progress monitoring
 	Progress() EvaluationProgress
 	Subscribe(listener EvaluationListener) func()
@@ -75,10 +74,10 @@ type ConcurrencyControl interface {
 	// Resource acquisition
 	Acquire(ctx context.Context, resource string) error
 	Release(resource string)
-	
+
 	// Rate limiting
 	Wait(ctx context.Context) error
-	
+
 	// Deadlock detection
 	CheckDeadlock() error
 }
@@ -102,17 +101,17 @@ type LockManager interface {
 
 // ThreadSafeOperator wraps an operator for thread-safe execution
 type ThreadSafeOperator struct {
-	operator Operator
+	operator graft.Operator
 	mu       sync.RWMutex
 }
 
 // NewThreadSafeOperator creates a thread-safe wrapper for an operator
-func NewThreadSafeOperator(op Operator) *ThreadSafeOperator {
+func NewThreadSafeOperator(op graft.Operator) *ThreadSafeOperator {
 	return &ThreadSafeOperator{operator: op}
 }
 
 // Run safely executes the operator
-func (tso *ThreadSafeOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
+func (tso *ThreadSafeOperator) Run(ev *graft.Evaluator, args []*graft.Expr) (*graft.Response, error) {
 	// Most operators are read-only, use RLock by default
 	if tso.isWriteOperator() {
 		tso.mu.Lock()
@@ -121,18 +120,18 @@ func (tso *ThreadSafeOperator) Run(ev *Evaluator, args []*Expr) (*Response, erro
 		tso.mu.RLock()
 		defer tso.mu.RUnlock()
 	}
-	
+
 	return tso.operator.Run(ev, args)
 }
 
 // isWriteOperator determines if the operator modifies state
 func (tso *ThreadSafeOperator) isWriteOperator() bool {
 	// These operators modify the tree structure
-	writeOperators := map[OperatorPhase]bool{
-		MergePhase:  true,
-		EvalPhase:   true, // Some eval operators modify state
+	writeOperators := map[graft.OperatorPhase]bool{
+		graft.MergePhase: true,
+		graft.EvalPhase:  true, // Some eval operators modify state
 	}
-	
+
 	return writeOperators[tso.operator.Phase()]
 }
 
@@ -150,10 +149,10 @@ func NewThreadSafeOperatorRegistry() *ThreadSafeOperatorRegistry {
 }
 
 // Register adds an operator to the registry
-func (or *ThreadSafeOperatorRegistry) Register(name string, op Operator) {
+func (or *ThreadSafeOperatorRegistry) Register(name string, op graft.Operator) {
 	or.mu.Lock()
 	defer or.mu.Unlock()
-	
+
 	or.operators[name] = NewThreadSafeOperator(op)
 }
 
@@ -161,7 +160,7 @@ func (or *ThreadSafeOperatorRegistry) Register(name string, op Operator) {
 func (or *ThreadSafeOperatorRegistry) Get(name string) (*ThreadSafeOperator, bool) {
 	or.mu.RLock()
 	defer or.mu.RUnlock()
-	
+
 	op, ok := or.operators[name]
 	return op, ok
 }

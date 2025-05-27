@@ -98,7 +98,7 @@ func parseArgs(src string) ([]*Expr, error) {
 		} else if f, err := strconv.ParseFloat(part, 64); err == nil {
 			// Float
 			args = append(args, &Expr{Type: Literal, Literal: f})
-		} else if strings.HasPrefix(part, "\"") && strings.HasSuffix(part, "\"") {
+		} else if strings.HasPrefix(part, "\"") && strings.HasSuffix(part, "\"") && len(part) >= 2 {
 			// Quoted string
 			args = append(args, &Expr{Type: Literal, Literal: part[1:len(part)-1]})
 		} else {

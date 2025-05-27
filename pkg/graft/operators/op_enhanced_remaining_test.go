@@ -1,5 +1,10 @@
 package operators
 
+import (
+	"testing"
+
+	"github.com/geofffranks/yaml"
+)
 
 func TestEnhancedRemainingOperators(t *testing.T) {
 	Convey("Enhanced Remaining Operators", t, func() {
@@ -11,7 +16,7 @@ func TestEnhancedRemainingOperators(t *testing.T) {
 				DisableEnhancedParser()
 			}
 		}()
-		
+
 		// Debug: check if null operator exists
 		nullOp := OperatorFor("null")
 		if _, isNull := nullOp.(NullOperator); isNull {
@@ -37,13 +42,13 @@ has_admins: (( negate (empty data.admins) ))
 				ev := &Evaluator{Tree: data}
 				err = ev.RunPhase(EvalPhase)
 				So(err, ShouldBeNil)
-				
+
 				// Debug output
 				t.Logf("has_users result: %#v", ev.Tree["has_users"])
 				t.Logf("has_admins result: %#v", ev.Tree["has_admins"])
-				
-				So(ev.Tree["has_users"], ShouldEqual, false)  // users is empty, negate makes it false
-				So(ev.Tree["has_admins"], ShouldEqual, true)  // admins is not empty, negate makes it true
+
+				So(ev.Tree["has_users"], ShouldEqual, false) // users is empty, negate makes it false
+				So(ev.Tree["has_admins"], ShouldEqual, true) // admins is not empty, negate makes it true
 			})
 
 			Convey("should handle various truthy/falsy values", func() {
@@ -51,7 +56,7 @@ has_admins: (( negate (empty data.admins) ))
 				op := OperatorFor("negate")
 				_, isNull := op.(NullOperator)
 				So(isNull, ShouldBeFalse)
-				
+
 				input := `
 values:
   empty_string: ""
@@ -77,7 +82,7 @@ results:
 				ev := &Evaluator{Tree: data}
 				err = ev.RunPhase(EvalPhase)
 				So(err, ShouldBeNil)
-				
+
 				// Debug output
 				var r1 interface{}
 				switch results := ev.Tree["results"].(type) {
@@ -87,7 +92,7 @@ results:
 					r1 = results["r1"]
 				}
 				t.Logf("r1 result: %#v", r1)
-				
+
 				// Handle both map types
 				var results map[string]interface{}
 				switch r := ev.Tree["results"].(type) {
@@ -99,14 +104,14 @@ results:
 				case map[string]interface{}:
 					results = r
 				}
-				
-				So(results["r1"], ShouldEqual, true)   // empty string is falsy
-				So(results["r2"], ShouldEqual, true)   // 0 is falsy
-				So(results["r3"], ShouldEqual, true)   // false is falsy
-				So(results["r4"], ShouldEqual, true)   // null is falsy
-				So(results["r5"], ShouldEqual, false)  // non-empty string is truthy
-				So(results["r6"], ShouldEqual, false)  // non-zero number is truthy
-				So(results["r7"], ShouldEqual, false)  // true is truthy
+
+				So(results["r1"], ShouldEqual, true)  // empty string is falsy
+				So(results["r2"], ShouldEqual, true)  // 0 is falsy
+				So(results["r3"], ShouldEqual, true)  // false is falsy
+				So(results["r4"], ShouldEqual, true)  // null is falsy
+				So(results["r5"], ShouldEqual, false) // non-empty string is truthy
+				So(results["r6"], ShouldEqual, false) // non-zero number is truthy
+				So(results["r7"], ShouldEqual, false) // true is truthy
 			})
 		})
 
@@ -129,7 +134,7 @@ empty_str: (( empty (grab meta.types.str_type) ))
 				ev := &Evaluator{Tree: data}
 				err = ev.RunPhase(EvalPhase)
 				So(err, ShouldBeNil)
-				
+
 				// Handle potential type variations
 				switch l := ev.Tree["empty_list"].(type) {
 				case []interface{}:
@@ -140,7 +145,7 @@ empty_str: (( empty (grab meta.types.str_type) ))
 				default:
 					t.Fatalf("unexpected type for empty_list: %T", l)
 				}
-				
+
 				// Handle both map types
 				switch m := ev.Tree["empty_map"].(type) {
 				case map[interface{}]interface{}:
@@ -153,7 +158,7 @@ empty_str: (( empty (grab meta.types.str_type) ))
 				default:
 					t.Fatalf("unexpected type for empty_map: %T", m)
 				}
-				
+
 				So(ev.Tree["empty_str"], ShouldEqual, "")
 			})
 
@@ -177,7 +182,7 @@ checks:
 				ev := &Evaluator{Tree: data}
 				err = ev.RunPhase(EvalPhase)
 				So(err, ShouldBeNil)
-				
+
 				// Handle both map types
 				var checks map[string]interface{}
 				switch c := ev.Tree["checks"].(type) {
@@ -189,11 +194,11 @@ checks:
 				case map[string]interface{}:
 					checks = c
 				}
-				
-				So(checks["c1"], ShouldEqual, true)   // empty list
-				So(checks["c2"], ShouldEqual, false)  // non-empty list
-				So(checks["c3"], ShouldEqual, true)   // empty map
-				So(checks["c4"], ShouldEqual, false)  // non-empty map
+
+				So(checks["c1"], ShouldEqual, true)  // empty list
+				So(checks["c2"], ShouldEqual, false) // non-empty list
+				So(checks["c3"], ShouldEqual, true)  // empty map
+				So(checks["c4"], ShouldEqual, false) // non-empty map
 			})
 		})
 
@@ -214,7 +219,7 @@ checks:
 				ev := &Evaluator{Tree: data}
 				err = ev.RunPhase(EvalPhase)
 				So(err, ShouldBeNil)
-				
+
 				// Handle both map types
 				var checks map[string]interface{}
 				switch c := ev.Tree["checks"].(type) {
@@ -226,7 +231,7 @@ checks:
 				case map[string]interface{}:
 					checks = c
 				}
-				
+
 				So(checks["c1"], ShouldEqual, true)
 				So(checks["c2"], ShouldEqual, false)
 			})
@@ -281,11 +286,11 @@ deferred: (( defer grab meta.key ))
 				So(err, ShouldBeNil)
 
 				ev := &Evaluator{Tree: data}
-				
+
 				// Run EvalPhase (defer runs in EvalPhase)
 				err = ev.RunPhase(EvalPhase)
 				So(err, ShouldBeNil)
-				
+
 				// The defer operator should output the deferred expression as a string
 				So(ev.Tree["deferred"], ShouldEqual, "(( grab meta.key ))")
 			})
@@ -312,10 +317,10 @@ double: (( concat base_number base_number ))  # should be "55"
 				ev := &Evaluator{Tree: data}
 				err = ev.RunPhase(EvalPhase)
 				So(err, ShouldBeNil)
-				
+
 				So(ev.Tree["app_info"], ShouldEqual, "myapp-1.2.3-prod")
-				So(ev.Tree["is_empty_count"], ShouldEqual, true)  // 0 is considered empty
-				So(ev.Tree["has_env"], ShouldEqual, true)  // "prod" is not empty, negated = true
+				So(ev.Tree["is_empty_count"], ShouldEqual, true) // 0 is considered empty
+				So(ev.Tree["has_env"], ShouldEqual, true)        // "prod" is not empty, negated = true
 				So(ev.Tree["double"], ShouldEqual, "55")
 			})
 		})

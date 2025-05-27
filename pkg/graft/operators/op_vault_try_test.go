@@ -1,5 +1,14 @@
 package operators
 
+import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"testing"
+
+	"github.com/geofffranks/simpleyaml"
+)
 
 func TestVaultTryOperator(t *testing.T) {
 	YAML := func(s string) map[interface{}]interface{} {
@@ -15,7 +24,7 @@ func TestVaultTryOperator(t *testing.T) {
 	Convey("vault-try operator", t, func() {
 		// Reset vault client
 		kv = nil
-		
+
 		// Create mock vault server
 		mock := httptest.NewServer(
 			http.HandlerFunc(

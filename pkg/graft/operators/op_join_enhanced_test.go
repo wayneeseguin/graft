@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"os"
+	"testing"
+
+	"github.com/geofffranks/yaml"
+)
 
 func TestEnhancedJoinOperator(t *testing.T) {
 	Convey("Enhanced Join Operator", t, func() {
@@ -174,7 +180,7 @@ result: (( join "," items ))
 			default:
 				t.Errorf("Expected map, got %T", items[1])
 			}
-			
+
 			ev := &Evaluator{Tree: data}
 			err = ev.RunPhase(EvalPhase)
 			So(err, ShouldNotBeNil)

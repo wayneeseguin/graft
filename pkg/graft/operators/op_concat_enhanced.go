@@ -1,5 +1,12 @@
 package operators
 
+import (
+	"fmt"
+	"strings"
+
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // ConcatOperatorEnhanced is an enhanced version that handles nested operator calls
 type ConcatOperatorEnhanced struct{}
@@ -18,7 +25,7 @@ func (ConcatOperatorEnhanced) Phase() OperatorPhase {
 func (ConcatOperatorEnhanced) Dependencies(ev *Evaluator, args []*Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
 	// Include dependencies from nested operator calls
 	deps := auto
-	
+
 	for _, arg := range args {
 		if arg.Type == OperatorCall {
 			// Get dependencies from nested operator
@@ -29,7 +36,7 @@ func (ConcatOperatorEnhanced) Dependencies(ev *Evaluator, args []*Expr, locs []*
 			}
 		}
 	}
-	
+
 	return deps
 }
 

@@ -112,6 +112,31 @@ type Opcall struct {
 	args      []*Expr
 }
 
+// Args returns the arguments for this operator call
+func (op *Opcall) Args() []*Expr {
+	return op.args
+}
+
+// Canonical returns the canonical cursor for this operator call
+func (op *Opcall) Canonical() *tree.Cursor {
+	return op.canonical
+}
+
+// Operator returns the operator for this call
+func (op *Opcall) Operator() Operator {
+	return op.op
+}
+
+// Where returns the cursor location for this operator call
+func (op *Opcall) Where() *tree.Cursor {
+	return op.where
+}
+
+// Src returns the source string for this operator call
+func (op *Opcall) Src() string {
+	return op.src
+}
+
 // Dependencies returns the dependencies for this operator call
 func (op *Opcall) Dependencies(ev *Evaluator, locs []*tree.Cursor) []*tree.Cursor {
 	l := []*tree.Cursor{}

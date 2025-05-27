@@ -1,5 +1,12 @@
 package operators
 
+import (
+	"fmt"
+	"io/ioutil"
+	"path/filepath"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // FileOperatorEnhanced is an enhanced version that supports nested expressions
 type FileOperatorEnhanced struct{}
@@ -35,14 +42,14 @@ func (FileOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, error) 
 			DEBUG("error was: %s", err)
 			return nil, err
 		}
-		
+
 		if val == nil {
 			return nil, fmt.Errorf("file operator argument resolved to nil")
 		}
-		
+
 		filename = fmt.Sprintf("%v", val)
 		DEBUG("using filename '%s'", filename)
-		
+
 	} else if len(args) == 2 {
 		// Handle base path + filename
 		basePath, err := ResolveOperatorArgument(ev, args[0])
@@ -51,21 +58,21 @@ func (FileOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, error) 
 			DEBUG("error was: %s", err)
 			return nil, err
 		}
-		
+
 		fileName, err := ResolveOperatorArgument(ev, args[1])
 		if err != nil {
 			DEBUG("failed to resolve filename expression")
 			DEBUG("error was: %s", err)
 			return nil, err
 		}
-		
+
 		if basePath == nil || fileName == nil {
 			return nil, fmt.Errorf("file operator arguments cannot be nil")
 		}
-		
+
 		filename = filepath.Join(fmt.Sprintf("%v", basePath), fmt.Sprintf("%v", fileName))
 		DEBUG("using combined path '%s'", filename)
-		
+
 	} else {
 		return nil, fmt.Errorf("file operator requires one or two string arguments")
 	}

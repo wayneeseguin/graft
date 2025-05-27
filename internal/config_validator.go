@@ -1,9 +1,6 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"fmt"
 	"reflect"
 	"strings"

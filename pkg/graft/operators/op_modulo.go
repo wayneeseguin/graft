@@ -1,5 +1,10 @@
 package operators
 
+import (
+	"fmt"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // ModuloOperator implements the % operator
 type ModuloOperator struct{}

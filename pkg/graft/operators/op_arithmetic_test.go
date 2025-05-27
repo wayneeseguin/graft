@@ -1,5 +1,10 @@
 package operators
 
+import (
+	"testing"
+
+	"github.com/geofffranks/yaml"
+)
 
 func TestArithmeticOperators(t *testing.T) {
 	Convey("Arithmetic Operators", t, func() {

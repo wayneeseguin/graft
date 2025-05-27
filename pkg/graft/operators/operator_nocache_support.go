@@ -8,11 +8,11 @@ func ShouldSkipCache(ev *Evaluator) bool {
 	// Check if the current operation has nocache modifier
 	// The evaluator would need to provide access to the current expression
 	// For now, we'll implement a simple version that checks the call stack
-	
+
 	// For now, we'll use a simple implementation
 	// In practice, the evaluator would need to track the current expression being evaluated
 	// This would require changes to the Evaluator struct
-	
+
 	return false
 }
 
@@ -31,8 +31,9 @@ func WithNoCacheCheck(result *Response, skipCache bool) *Response {
 
 // IsNoCacheResponse checks if a response should skip caching
 func IsNoCacheResponse(result *Response, expr *Expr) bool {
-	if expr != nil && expr.IsNoCache() {
-		return true
-	}
+	// TODO: Phase 2 - implement IsNoCache on Expr
+	// if expr != nil && expr.IsNoCache() {
+	// 	return true
+	// }
 	return false
 }

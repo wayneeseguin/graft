@@ -9,12 +9,12 @@ import (
 
 // SlowOperationDetector detects and reports slow operations
 type SlowOperationDetector struct {
-	mu              sync.RWMutex
-	thresholds      map[string]time.Duration
+	mu               sync.RWMutex
+	thresholds       map[string]time.Duration
 	defaultThreshold time.Duration
-	handlers        []SlowOperationHandler
-	enabled         bool
-	history         *SlowOperationHistory
+	handlers         []SlowOperationHandler
+	enabled          bool
+	history          *SlowOperationHistory
 }
 
 // SlowOperationHandler handles slow operation events
@@ -70,7 +70,7 @@ func (sod *SlowOperationDetector) SetThreshold(operation string, threshold time.
 func (sod *SlowOperationDetector) GetThreshold(operation string) time.Duration {
 	sod.mu.RLock()
 	defer sod.mu.RUnlock()
-	
+
 	if threshold, exists := sod.thresholds[operation]; exists {
 		return threshold
 	}
@@ -99,10 +99,10 @@ func (sod *SlowOperationDetector) Check(timer *Timer) {
 		return
 	}
 	sod.mu.RUnlock()
-	
+
 	duration := timer.Duration()
 	threshold := sod.GetThreshold(timer.Name())
-	
+
 	if duration > threshold {
 		slowOp := &SlowOperation{
 			Name:      timer.Name(),
@@ -112,15 +112,15 @@ func (sod *SlowOperationDetector) Check(timer *Timer) {
 			End:       timer.end,
 			Metadata:  timer.copyMetadata(),
 		}
-		
+
 		// Add to history
 		sod.history.Add(slowOp)
-		
+
 		// Call handlers
 		sod.mu.RLock()
 		handlers := append([]SlowOperationHandler{}, sod.handlers...)
 		sod.mu.RUnlock()
-		
+
 		for _, handler := range handlers {
 			handler(slowOp)
 		}
@@ -141,7 +141,7 @@ func (sod *SlowOperationDetector) ClearHistory() {
 func (soh *SlowOperationHistory) Add(op *SlowOperation) {
 	soh.mu.Lock()
 	defer soh.mu.Unlock()
-	
+
 	soh.operations = append(soh.operations, op)
 	if len(soh.operations) > soh.maxSize {
 		// Remove oldest
@@ -153,16 +153,16 @@ func (soh *SlowOperationHistory) Add(op *SlowOperation) {
 func (soh *SlowOperationHistory) GetRecent(limit int) []*SlowOperation {
 	soh.mu.RLock()
 	defer soh.mu.RUnlock()
-	
+
 	if limit <= 0 || limit > len(soh.operations) {
 		limit = len(soh.operations)
 	}
-	
+
 	start := len(soh.operations) - limit
 	if start < 0 {
 		start = 0
 	}
-	
+
 	result := make([]*SlowOperation, limit)
 	copy(result, soh.operations[start:])
 	return result
@@ -179,14 +179,14 @@ func (soh *SlowOperationHistory) Clear() {
 func (soh *SlowOperationHistory) GetStats() *SlowOperationStats {
 	soh.mu.RLock()
 	defer soh.mu.RUnlock()
-	
+
 	stats := &SlowOperationStats{
 		ByOperation: make(map[string]*SlowOpTypeStats),
 	}
-	
+
 	for _, op := range soh.operations {
 		stats.Total++
-		
+
 		typeStats, exists := stats.ByOperation[op.Name]
 		if !exists {
 			typeStats = &SlowOpTypeStats{
@@ -196,7 +196,7 @@ func (soh *SlowOperationHistory) GetStats() *SlowOperationStats {
 			}
 			stats.ByOperation[op.Name] = typeStats
 		}
-		
+
 		typeStats.Count++
 		typeStats.TotalTime += op.Duration
 		if op.Duration < typeStats.MinTime {
@@ -206,21 +206,21 @@ func (soh *SlowOperationHistory) GetStats() *SlowOperationStats {
 			typeStats.MaxTime = op.Duration
 		}
 	}
-	
+
 	// Calculate averages
 	for _, typeStats := range stats.ByOperation {
 		if typeStats.Count > 0 {
 			typeStats.AvgTime = typeStats.TotalTime / time.Duration(typeStats.Count)
 		}
 	}
-	
+
 	return stats
 }
 
 // SlowOperationStats contains statistics about slow operations
 type SlowOperationStats struct {
-	Total       int                          `json:"total"`
-	ByOperation map[string]*SlowOpTypeStats  `json:"by_operation"`
+	Total       int                         `json:"total"`
+	ByOperation map[string]*SlowOpTypeStats `json:"by_operation"`
 }
 
 // SlowOpTypeStats contains stats for a specific operation type
@@ -241,7 +241,7 @@ func defaultSlowOperationLogger(op *SlowOperation) {
 	if err, ok := op.Metadata["error"]; ok {
 		extra = fmt.Sprintf(" (error: %v)", err)
 	}
-	
+
 	log.Printf("[SLOW] Operation '%s' took %v (threshold: %v)%s",
 		op.Name, op.Duration, op.Threshold, extra)
 }
@@ -257,9 +257,9 @@ func InitializeSlowOpDetector(config *PerformanceConfig) {
 		if config != nil && config.Performance.Monitoring.SlowOperationThresholdMs > 0 {
 			threshold = time.Duration(config.Performance.Monitoring.SlowOperationThresholdMs) * time.Millisecond
 		}
-		
+
 		slowOpDetector = NewSlowOperationDetector(threshold)
-		
+
 		// Set specific thresholds
 		slowOpDetector.SetThreshold("parse", 50*time.Millisecond)
 		slowOpDetector.SetThreshold("eval", 100*time.Millisecond)
@@ -267,7 +267,7 @@ func InitializeSlowOpDetector(config *PerformanceConfig) {
 		slowOpDetector.SetThreshold("file", 200*time.Millisecond)
 		slowOpDetector.SetThreshold("awsparam", 1*time.Second)
 		slowOpDetector.SetThreshold("awssecret", 1*time.Second)
-		
+
 		// Add metrics handler
 		if MetricsEnabled() {
 			slowOpDetector.AddHandler(func(op *SlowOperation) {
@@ -276,13 +276,13 @@ func InitializeSlowOpDetector(config *PerformanceConfig) {
 					"operation": op.Name,
 					"slow":      "true",
 				}
-				
+
 				// Register slow operation metric if not exists
 				metricName := "graft_slow_operations_total"
 				if _, exists := mc.CustomMetrics[metricName]; !exists {
 					mc.RegisterCustomMetric(metricName, "Total number of slow operations", MetricTypeCounter)
 				}
-				
+
 				if family, ok := mc.CustomMetrics[metricName]; ok {
 					family.GetOrCreate(labels).(*Counter).Inc()
 				}
@@ -305,7 +305,7 @@ func ReportSlowOperation(name string, duration time.Duration, metadata map[strin
 	if detector == nil || !detector.enabled {
 		return
 	}
-	
+
 	threshold := detector.GetThreshold(name)
 	if duration > threshold {
 		slowOp := &SlowOperation{
@@ -316,9 +316,9 @@ func ReportSlowOperation(name string, duration time.Duration, metadata map[strin
 			End:       time.Now(),
 			Metadata:  metadata,
 		}
-		
+
 		detector.history.Add(slowOp)
-		
+
 		for _, handler := range detector.handlers {
 			handler(slowOp)
 		}

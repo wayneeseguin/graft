@@ -1,5 +1,13 @@
 package operators
 
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // FileOperator ...
 type FileOperator struct{}
@@ -17,7 +25,7 @@ func (FileOperator) Phase() OperatorPhase {
 // Dependencies ...
 func (FileOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
 	deps := auto
-	
+
 	for _, arg := range args {
 		if arg.Type == OperatorCall {
 			// Get dependencies from nested operator
@@ -30,7 +38,7 @@ func (FileOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, 
 			deps = append(deps, arg.Reference)
 		}
 	}
-	
+
 	return deps
 }
 
@@ -69,7 +77,7 @@ func (FileOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		DEBUG("  arg[0]: %v cannot be converted to string", val)
 		return nil, ansi.Errorf("@R{tried to read file} @c{%v}@R{, which cannot be converted to string}", val)
 	}
-	
+
 	DEBUG("  resolved argument to filename: %s", fname)
 
 	if !filepath.IsAbs(fname) {

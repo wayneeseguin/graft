@@ -1,5 +1,10 @@
 package operators
 
+import (
+	"fmt"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // NegateOperatorEnhanced is an enhanced version that supports nested expressions
 type NegateOperatorEnhanced struct{}

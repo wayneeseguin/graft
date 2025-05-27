@@ -1,5 +1,12 @@
 package operators
 
+import (
+	"fmt"
+	"strings"
+
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // JoinOperatorEnhanced is an enhanced version that supports nested expressions
 type JoinOperatorEnhanced struct{}

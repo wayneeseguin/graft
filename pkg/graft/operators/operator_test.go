@@ -1,5 +1,24 @@
 package operators
 
+import (
+	"context"
+	"fmt"
+	"os"
+	"path/filepath"
+	"reflect"
+	"sort"
+	"testing"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
+	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	"github.com/geofffranks/simpleyaml"
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 type mockedSSM struct {
 	ssmiface.SSMAPI
@@ -3101,7 +3120,7 @@ func shouldHaveDeps(actual interface{}, expected ...interface{}) string {
 func TestOperators(t *testing.T) {
 	// Disable ANSI colors for testing
 	ansi.Color(false)
-	
+
 	cursor := func(s string) *tree.Cursor {
 		c, err := tree.ParseCursor(s)
 		So(err, ShouldBeNil)
@@ -3162,16 +3181,16 @@ func TestOperators(t *testing.T) {
 		oldUseEnhanced := UseEnhancedParser
 		UseEnhancedParser = false
 		defer func() { UseEnhancedParser = oldUseEnhanced }()
-		
+
 		// Also need to temporarily remove the null operator from registry
 		oldNullOp := OpRegistry["null"]
 		delete(OpRegistry, "null")
-		defer func() { 
+		defer func() {
 			if oldNullOp != nil {
 				OpRegistry["null"] = oldNullOp
 			}
 		}()
-		
+
 		Convey("parses op calls in their entirety", func() {
 			phase := EvalPhase
 

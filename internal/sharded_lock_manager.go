@@ -5,6 +5,7 @@ import (
 	"hash/fnv"
 	"sync"
 	"time"
+
 	"github.com/starkandwayne/goutils/tree"
 )
 
@@ -23,7 +24,7 @@ func NewShardedLockManager(numShards int) *ShardedLockManager {
 	if numShards <= 0 {
 		numShards = 32 // Default number of shards
 	}
-	
+
 	shards := make([]shard, numShards)
 	return &ShardedLockManager{
 		shards:    shards,
@@ -35,7 +36,7 @@ func NewShardedLockManager(numShards int) *ShardedLockManager {
 func (slm *ShardedLockManager) Lock(path []string, exclusive bool) func() {
 	shardIndex := slm.getShardIndex(path)
 	shard := &slm.shards[shardIndex]
-	
+
 	if exclusive {
 		shard.mu.Lock()
 		return shard.mu.Unlock
@@ -49,10 +50,10 @@ func (slm *ShardedLockManager) Lock(path []string, exclusive bool) func() {
 func (slm *ShardedLockManager) TryLock(path []string, exclusive bool, timeout time.Duration) (func(), error) {
 	shardIndex := slm.getShardIndex(path)
 	shard := &slm.shards[shardIndex]
-	
+
 	done := make(chan struct{}, 1)
 	var unlock func()
-	
+
 	go func() {
 		if exclusive {
 			shard.mu.Lock()
@@ -63,7 +64,7 @@ func (slm *ShardedLockManager) TryLock(path []string, exclusive bool, timeout ti
 		}
 		done <- struct{}{}
 	}()
-	
+
 	select {
 	case <-done:
 		return unlock, nil
@@ -76,7 +77,7 @@ func (slm *ShardedLockManager) TryLock(path []string, exclusive bool, timeout ti
 func (slm *ShardedLockManager) IsLocked(path []string) bool {
 	shardIndex := slm.getShardIndex(path)
 	shard := &slm.shards[shardIndex]
-	
+
 	// Try to acquire and immediately release a read lock
 	// If this blocks, the shard is likely write-locked
 	done := make(chan bool, 1)
@@ -85,7 +86,7 @@ func (slm *ShardedLockManager) IsLocked(path []string) bool {
 		shard.mu.RUnlock()
 		done <- false
 	}()
-	
+
 	select {
 	case result := <-done:
 		return result
@@ -99,13 +100,13 @@ func (slm *ShardedLockManager) getShardIndex(path []string) uint32 {
 	if len(path) == 0 {
 		return 0
 	}
-	
+
 	h := fnv.New32a()
 	for _, segment := range path {
 		h.Write([]byte(segment))
 		h.Write([]byte("."))
 	}
-	
+
 	return h.Sum32() % slm.numShards
 }
 
@@ -131,7 +132,7 @@ func NewShardedSafeTree(data map[interface{}]interface{}, numShards int) *Sharde
 	if data == nil {
 		data = make(map[interface{}]interface{})
 	}
-	
+
 	return &ShardedSafeTree{
 		data:        data,
 		lockManager: NewShardedLockManager(numShards),
@@ -142,16 +143,16 @@ func NewShardedSafeTree(data map[interface{}]interface{}, numShards int) *Sharde
 func (sst *ShardedSafeTree) Find(path ...string) (interface{}, error) {
 	sst.rootLock.RLock()
 	defer sst.rootLock.RUnlock()
-	
+
 	if len(path) == 0 {
 		return nil, fmt.Errorf("empty path")
 	}
-	
+
 	fullPath := path[0]
 	for i := 1; i < len(path); i++ {
 		fullPath += "." + path[i]
 	}
-	
+
 	return tree.Find(sst.data, fullPath)
 }
 
@@ -159,21 +160,21 @@ func (sst *ShardedSafeTree) Find(path ...string) (interface{}, error) {
 func (sst *ShardedSafeTree) FindAll(path ...string) ([]interface{}, error) {
 	sst.rootLock.RLock()
 	defer sst.rootLock.RUnlock()
-	
+
 	if len(path) == 0 {
 		return nil, fmt.Errorf("empty path")
 	}
-	
+
 	fullPath := path[0]
 	for i := 1; i < len(path); i++ {
 		fullPath += "." + path[i]
 	}
-	
+
 	val, err := tree.Find(sst.data, fullPath)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return []interface{}{val}, nil
 }
 
@@ -187,7 +188,7 @@ func (sst *ShardedSafeTree) Exists(path ...string) bool {
 func (sst *ShardedSafeTree) Copy() ThreadSafeTree {
 	sst.rootLock.RLock()
 	defer sst.rootLock.RUnlock()
-	
+
 	copied := deepCopyTree(sst.data)
 	return NewShardedSafeTree(copied.(map[interface{}]interface{}), int(sst.lockManager.numShards))
 }
@@ -197,22 +198,22 @@ func (sst *ShardedSafeTree) Set(value interface{}, path ...string) error {
 	// Use root lock for write operations to prevent concurrent map modifications
 	sst.rootLock.Lock()
 	defer sst.rootLock.Unlock()
-	
+
 	if len(path) == 0 {
 		return fmt.Errorf("empty path")
 	}
-	
+
 	return sst.setInternal(value, path...)
 }
 
 // setInternal performs the actual set operation (caller must hold lock)
 func (sst *ShardedSafeTree) setInternal(value interface{}, path ...string) error {
 	current := sst.data
-	
+
 	// Navigate to the parent of the final key
 	for i := 0; i < len(path)-1; i++ {
 		key := path[i]
-		
+
 		if next, ok := current[key]; ok {
 			if nextMap, ok := next.(map[interface{}]interface{}); ok {
 				current = nextMap
@@ -229,11 +230,11 @@ func (sst *ShardedSafeTree) setInternal(value interface{}, path ...string) error
 			current = newMap
 		}
 	}
-	
+
 	// Set the final value
 	finalKey := path[len(path)-1]
 	current[finalKey] = value
-	
+
 	return nil
 }
 
@@ -241,22 +242,22 @@ func (sst *ShardedSafeTree) setInternal(value interface{}, path ...string) error
 func (sst *ShardedSafeTree) Delete(path ...string) error {
 	sst.rootLock.Lock()
 	defer sst.rootLock.Unlock()
-	
+
 	if len(path) == 0 {
 		return fmt.Errorf("empty path")
 	}
-	
+
 	return sst.deleteInternal(path...)
 }
 
 // deleteInternal performs the actual delete operation (caller must hold lock)
 func (sst *ShardedSafeTree) deleteInternal(path ...string) error {
 	current := sst.data
-	
+
 	// Navigate to the parent of the final key
 	for i := 0; i < len(path)-1; i++ {
 		key := path[i]
-		
+
 		if next, ok := current[key]; ok {
 			if nextMap, ok := next.(map[interface{}]interface{}); ok {
 				current = nextMap
@@ -267,11 +268,11 @@ func (sst *ShardedSafeTree) deleteInternal(path ...string) error {
 			return fmt.Errorf("path not found: %v", path)
 		}
 	}
-	
+
 	// Delete the final key
 	finalKey := path[len(path)-1]
 	delete(current, finalKey)
-	
+
 	return nil
 }
 
@@ -279,16 +280,16 @@ func (sst *ShardedSafeTree) deleteInternal(path ...string) error {
 func (sst *ShardedSafeTree) Replace(data map[string]interface{}) error {
 	sst.rootLock.Lock()
 	defer sst.rootLock.Unlock()
-	
+
 	// Convert string keys to interface{} keys
 	converted := make(map[interface{}]interface{})
 	for k, v := range data {
 		converted[k] = v
 	}
-	
+
 	// Deep merge the new data
 	sst.data = deepMerge(sst.data, converted)
-	
+
 	return nil
 }
 
@@ -298,14 +299,14 @@ func (sst *ShardedSafeTree) Merge(other ThreadSafeTree) error {
 		// Lock both trees
 		sst.rootLock.Lock()
 		defer sst.rootLock.Unlock()
-		
+
 		otherSharded.rootLock.RLock()
 		defer otherSharded.rootLock.RUnlock()
-		
+
 		sst.data = deepMerge(sst.data, otherSharded.data)
 		return nil
 	}
-	
+
 	return fmt.Errorf("cannot merge incompatible tree types")
 }
 
@@ -313,7 +314,7 @@ func (sst *ShardedSafeTree) Merge(other ThreadSafeTree) error {
 func (sst *ShardedSafeTree) CompareAndSwap(oldValue, newValue interface{}, path ...string) bool {
 	sst.rootLock.Lock()
 	defer sst.rootLock.Unlock()
-	
+
 	// Get current value
 	current := sst.data
 	for i := 0; i < len(path)-1; i++ {
@@ -328,10 +329,10 @@ func (sst *ShardedSafeTree) CompareAndSwap(oldValue, newValue interface{}, path 
 			return false // Path doesn't exist
 		}
 	}
-	
+
 	finalKey := path[len(path)-1]
 	currentValue, exists := current[finalKey]
-	
+
 	// Compare values
 	if !exists && oldValue != nil {
 		return false
@@ -339,7 +340,7 @@ func (sst *ShardedSafeTree) CompareAndSwap(oldValue, newValue interface{}, path 
 	if exists && !deepEqual(currentValue, oldValue) {
 		return false
 	}
-	
+
 	// Swap the value
 	current[finalKey] = newValue
 	return true
@@ -349,16 +350,16 @@ func (sst *ShardedSafeTree) CompareAndSwap(oldValue, newValue interface{}, path 
 func (sst *ShardedSafeTree) Update(fn func(current interface{}) interface{}, path ...string) error {
 	unlock := sst.lockManager.Lock(path, true) // Write lock
 	defer unlock()
-	
+
 	// Get current value
 	fullPath := path[0]
 	for i := 1; i < len(path); i++ {
 		fullPath += "." + path[i]
 	}
-	
+
 	currentValue, _ := tree.Find(sst.data, fullPath)
 	newValue := fn(currentValue)
-	
+
 	return sst.setInternal(newValue, path...)
 }
 
@@ -372,25 +373,25 @@ func (sst *ShardedSafeTree) Transaction(fn func(tx TreeTransaction) error) error
 		shard.mu.Lock()
 		unlocks[i] = shard.mu.Unlock
 	}
-	
+
 	defer func() {
 		for _, unlock := range unlocks {
 			unlock()
 		}
 	}()
-	
+
 	tx := &shardedTreeTransaction{
 		tree:    sst,
 		changes: make(map[string]interface{}),
 		deletes: make(map[string]bool),
 	}
-	
+
 	// Execute transaction function
 	err := fn(tx)
 	if err != nil {
 		return err
 	}
-	
+
 	// Commit the transaction
 	return tx.commitInternal()
 }
@@ -407,25 +408,25 @@ type shardedTreeTransaction struct {
 func (tx *shardedTreeTransaction) Get(path ...string) (interface{}, error) {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	pathStr := joinPath(path)
-	
+
 	// Check if we have a pending change
 	if value, ok := tx.changes[pathStr]; ok {
 		return value, nil
 	}
-	
+
 	// Check if it's deleted
 	if tx.deletes[pathStr] {
 		return nil, fmt.Errorf("path deleted in transaction: %v", path)
 	}
-	
+
 	// Get from tree (lock already held by transaction)
 	fullPath := path[0]
 	for i := 1; i < len(path); i++ {
 		fullPath += "." + path[i]
 	}
-	
+
 	return tree.Find(tx.tree.data, fullPath)
 }
 
@@ -433,11 +434,11 @@ func (tx *shardedTreeTransaction) Get(path ...string) (interface{}, error) {
 func (tx *shardedTreeTransaction) Set(value interface{}, path ...string) error {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	pathStr := joinPath(path)
 	tx.changes[pathStr] = value
 	delete(tx.deletes, pathStr) // Remove from deletes if present
-	
+
 	return nil
 }
 
@@ -445,11 +446,11 @@ func (tx *shardedTreeTransaction) Set(value interface{}, path ...string) error {
 func (tx *shardedTreeTransaction) Delete(path ...string) error {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	pathStr := joinPath(path)
 	tx.deletes[pathStr] = true
 	delete(tx.changes, pathStr) // Remove from changes if present
-	
+
 	return nil
 }
 
@@ -457,10 +458,10 @@ func (tx *shardedTreeTransaction) Delete(path ...string) error {
 func (tx *shardedTreeTransaction) Rollback() error {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	tx.changes = make(map[string]interface{})
 	tx.deletes = make(map[string]bool)
-	
+
 	return nil
 }
 
@@ -475,7 +476,7 @@ func (tx *shardedTreeTransaction) Commit() error {
 func (tx *shardedTreeTransaction) commitInternal() error {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	// Apply all changes
 	for pathStr, value := range tx.changes {
 		path := splitPath(pathStr)
@@ -483,7 +484,7 @@ func (tx *shardedTreeTransaction) commitInternal() error {
 			return err
 		}
 	}
-	
+
 	// Apply all deletes
 	for pathStr := range tx.deletes {
 		path := splitPath(pathStr)
@@ -491,6 +492,6 @@ func (tx *shardedTreeTransaction) commitInternal() error {
 			// Ignore delete errors for non-existent paths
 		}
 	}
-	
+
 	return nil
 }

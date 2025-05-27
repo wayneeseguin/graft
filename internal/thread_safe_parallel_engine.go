@@ -1,9 +1,6 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"context"
 	"fmt"
 	"runtime"
@@ -55,9 +52,9 @@ func NewParallelExecutionEngine(tree ThreadSafeTree, numWorkers int) *ParallelEx
 	if numWorkers <= 0 {
 		numWorkers = runtime.NumCPU()
 	}
-	
+
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	return &ParallelExecutionEngine{
 		tree:        tree,
 		numWorkers:  numWorkers,
@@ -109,23 +106,23 @@ func (pee *ParallelExecutionEngine) GetResult() (*ExecutionResult, bool) {
 // worker is the main worker loop
 func (pee *ParallelExecutionEngine) worker(id int) {
 	defer pee.wg.Done()
-	
+
 	for {
 		select {
 		case task, ok := <-pee.taskQueue:
 			if !ok {
 				return // Queue closed
 			}
-			
+
 			result := pee.executeTask(task)
-			
+
 			select {
 			case pee.resultQueue <- result:
 				// Result sent
 			case <-pee.ctx.Done():
 				return
 			}
-			
+
 		case <-pee.ctx.Done():
 			return
 		}
@@ -138,9 +135,9 @@ func (pee *ParallelExecutionEngine) executeTask(task *ExecutionTask) *ExecutionR
 	result := &ExecutionResult{
 		TaskID: task.ID,
 	}
-	
+
 	atomic.AddInt64(&pee.metrics.tasksExecuted, 1)
-	
+
 	// Execute based on operator type
 	switch task.Operator {
 	case "set":
@@ -150,7 +147,7 @@ func (pee *ParallelExecutionEngine) executeTask(task *ExecutionTask) *ExecutionR
 		} else {
 			result.Error = fmt.Errorf("invalid arguments for set operation")
 		}
-		
+
 	case "get":
 		if len(task.Path) > 0 {
 			value, err := pee.tree.Find(task.Path...)
@@ -159,7 +156,7 @@ func (pee *ParallelExecutionEngine) executeTask(task *ExecutionTask) *ExecutionR
 		} else {
 			result.Error = fmt.Errorf("invalid path for get operation")
 		}
-		
+
 	case "delete":
 		if len(task.Path) > 0 {
 			err := pee.tree.Delete(task.Path...)
@@ -167,7 +164,7 @@ func (pee *ParallelExecutionEngine) executeTask(task *ExecutionTask) *ExecutionR
 		} else {
 			result.Error = fmt.Errorf("invalid path for delete operation")
 		}
-		
+
 	case "update":
 		if len(task.Path) > 0 && len(task.Args) > 0 {
 			updateFn, ok := task.Args[0].(func(interface{}) interface{})
@@ -180,20 +177,20 @@ func (pee *ParallelExecutionEngine) executeTask(task *ExecutionTask) *ExecutionR
 		} else {
 			result.Error = fmt.Errorf("invalid arguments for update operation")
 		}
-		
+
 	default:
 		result.Error = fmt.Errorf("unknown operator: %s", task.Operator)
 	}
-	
+
 	result.Duration = time.Since(start)
 	atomic.AddInt64(&pee.metrics.totalDuration, result.Duration.Nanoseconds())
-	
+
 	if result.Error == nil {
 		atomic.AddInt64(&pee.metrics.tasksSucceeded, 1)
 	} else {
 		atomic.AddInt64(&pee.metrics.tasksFailed, 1)
 	}
-	
+
 	return result
 }
 
@@ -219,7 +216,7 @@ type ThreadSafeParallelEvaluator struct {
 func NewThreadSafeParallelEvaluator(tree ThreadSafeTree, numWorkers int) *ThreadSafeParallelEvaluator {
 	engine := NewParallelExecutionEngine(tree, numWorkers)
 	engine.Start()
-	
+
 	return &ThreadSafeParallelEvaluator{
 		engine: engine,
 		tree:   tree,
@@ -230,12 +227,12 @@ func NewThreadSafeParallelEvaluator(tree ThreadSafeTree, numWorkers int) *Thread
 func (pe *ThreadSafeParallelEvaluator) EvaluateParallel(operations []Operation) ([]OperationResult, error) {
 	results := make([]OperationResult, len(operations))
 	resultMap := make(map[string]int)
-	
+
 	// Submit all operations
 	for i, op := range operations {
 		taskID := fmt.Sprintf("task-%d-%d", atomic.AddInt64(&pe.taskIDGen, 1), i)
 		resultMap[taskID] = i
-		
+
 		task := &ExecutionTask{
 			ID:       taskID,
 			Path:     op.Path,
@@ -243,29 +240,29 @@ func (pe *ThreadSafeParallelEvaluator) EvaluateParallel(operations []Operation) 
 			Args:     op.Args,
 			Priority: op.Priority,
 		}
-		
+
 		if err := pe.engine.Submit(task); err != nil {
 			return nil, fmt.Errorf("failed to submit task %s: %v", taskID, err)
 		}
 	}
-	
+
 	// Collect results
 	collected := 0
 	timeout := time.NewTimer(time.Second * 10)
 	defer timeout.Stop()
-	
+
 	for collected < len(operations) {
 		select {
 		case <-timeout.C:
 			return nil, fmt.Errorf("timeout waiting for results")
-			
+
 		default:
 			result, ok := pe.engine.GetResult()
 			if !ok {
 				time.Sleep(time.Millisecond)
 				continue
 			}
-			
+
 			if idx, exists := resultMap[result.TaskID]; exists {
 				results[idx] = OperationResult{
 					Operation: operations[idx],
@@ -277,7 +274,7 @@ func (pe *ThreadSafeParallelEvaluator) EvaluateParallel(operations []Operation) 
 			}
 		}
 	}
-	
+
 	return results, nil
 }
 
@@ -321,25 +318,25 @@ func (pbp *ParallelBatchProcessor) ProcessBatch(operations []Operation) ([]Opera
 	if len(operations) <= pbp.batchSize {
 		return pbp.evaluator.EvaluateParallel(operations)
 	}
-	
+
 	// Process in batches
 	allResults := make([]OperationResult, 0, len(operations))
-	
+
 	for i := 0; i < len(operations); i += pbp.batchSize {
 		end := i + pbp.batchSize
 		if end > len(operations) {
 			end = len(operations)
 		}
-		
+
 		batch := operations[i:end]
 		results, err := pbp.evaluator.EvaluateParallel(batch)
 		if err != nil {
 			return nil, fmt.Errorf("batch %d failed: %v", i/pbp.batchSize, err)
 		}
-		
+
 		allResults = append(allResults, results...)
 	}
-	
+
 	return allResults, nil
 }
 
@@ -357,13 +354,13 @@ type COWParallelExecutor struct {
 // NewCOWParallelExecutor creates a new COW parallel executor
 func NewCOWParallelExecutor(tree ThreadSafeTree, numExecutors int) *COWParallelExecutor {
 	executors := make([]*ThreadSafeParallelEvaluator, numExecutors)
-	
+
 	for i := 0; i < numExecutors; i++ {
 		// Each executor gets its own COW snapshot
 		snapshot := tree.Copy()
 		executors[i] = NewThreadSafeParallelEvaluator(snapshot, 1)
 	}
-	
+
 	return &COWParallelExecutor{
 		baseTree:  tree,
 		executors: executors,
@@ -375,35 +372,35 @@ func (cpe *COWParallelExecutor) ExecuteIsolated(operations [][]Operation) ([][]O
 	if len(operations) > len(cpe.executors) {
 		return nil, fmt.Errorf("too many operation groups: %d > %d executors", len(operations), len(cpe.executors))
 	}
-	
+
 	results := make([][]OperationResult, len(operations))
 	errChan := make(chan error, len(operations))
-	
+
 	var wg sync.WaitGroup
-	
+
 	for i, ops := range operations {
 		wg.Add(1)
 		go func(idx int, operations []Operation) {
 			defer wg.Done()
-			
+
 			res, err := cpe.executors[idx].EvaluateParallel(operations)
 			if err != nil {
 				errChan <- err
 				return
 			}
-			
+
 			results[idx] = res
 		}(i, ops)
 	}
-	
+
 	wg.Wait()
 	close(errChan)
-	
+
 	// Check for errors
 	for err := range errChan {
 		return nil, err
 	}
-	
+
 	return results, nil
 }
 

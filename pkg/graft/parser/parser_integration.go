@@ -1,15 +1,12 @@
 package parser
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"fmt"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
-	"github.com/wayneeseguin/graft/log"
+	"github.com/wayneeseguin/graft/pkg/graft"
 	"github.com/starkandwayne/goutils/tree"
 )
 
@@ -70,7 +67,7 @@ func ParseOpcallEnhanced(phase OperatorPhase, src string) (*Opcall, error) {
 				
 				// Check if it's a valid operator
 				op := OperatorFor(opname)
-				if _, ok := op.(NullOperator); ok && argStr == "" {
+				if _, ok := op.(*NullOperator); ok && argStr == "" {
 					// Not a real operator with no arguments - might be BOSH variable
 					return nil, nil
 				}
@@ -94,11 +91,7 @@ func ParseOpcallEnhanced(phase OperatorPhase, src string) (*Opcall, error) {
 					return nil, err
 				}
 				
-				return &Opcall{
-					op:   op,
-					args: args,
-					src:  src,
-				}, nil
+				return graft.NewOpcall(op, args, src), nil
 			}
 		}
 	}
@@ -139,7 +132,7 @@ func ParseOpcallEnhanced(phase OperatorPhase, src string) (*Opcall, error) {
 		}
 		
 		op := OperatorFor(opname)
-		if _, ok := op.(NullOperator); ok {
+		if _, ok := op.(*NullOperator); ok {
 			// Unknown operator
 			DEBUG("ParseOpcallEnhanced: unknown operator '%s'", opname)
 			return nil, nil
@@ -152,11 +145,7 @@ func ParseOpcallEnhanced(phase OperatorPhase, src string) (*Opcall, error) {
 		}
 		
 		DEBUG("ParseOpcallEnhanced: returning operator '%s' with %d args", opname, len(args))
-		return &Opcall{
-			op:   op,
-			args: args,
-			src:  src,
-		}, nil
+		return graft.NewOpcall(op, args, src), nil
 	}
 	
 	// If it's just a simple reference and looks like a BOSH varname, ignore it
@@ -173,17 +162,13 @@ func ParseOpcallEnhanced(phase OperatorPhase, src string) (*Opcall, error) {
 	// This includes LogicalOr expressions and direct literals
 	
 	// Create an expression wrapper operator that just evaluates the expression
-	return &Opcall{
-		op:   &ExpressionWrapperOperator{expr: expr},
-		args: []*Expr{}, // No arguments, the expression is self-contained
-		src:  src,
-	}, nil
+	return graft.NewOpcall(&ExpressionWrapperOperator{expr: expr}, []*graft.Expr{}, src), nil
 }
 
 // ParseArgumentsEnhanced parses operator arguments using the enhanced parser
-func ParseArgumentsEnhanced(phase OperatorPhase, src string) ([]*Expr, error) {
+func ParseArgumentsEnhanced(phase OperatorPhase, src string) ([]*graft.Expr, error) {
 	if src == "" {
-		return []*Expr{}, nil
+		return []*graft.Expr{}, nil
 	}
 	
 	// Create operator registry with all known operators
@@ -203,10 +188,10 @@ func ParseArgumentsEnhanced(phase OperatorPhase, src string) ([]*Expr, error) {
 	}
 	
 	// Process expressions similar to the original argify
-	var final []*Expr
+	var final []*graft.Expr
 	for _, e := range args {
 		// Try to reduce the expression
-		reduced, err := e.Reduce()
+		reduced, err := ReduceExpr(e)
 		if err != nil {
 			if warning, isWarning := err.(WarningError); isWarning {
 				warning.Warn()
@@ -287,7 +272,7 @@ func createOperatorRegistry() *OperatorRegistry {
 }
 
 // argifyEnhanced is the enhanced version of argify using the new parser
-func argifyEnhanced(phase OperatorPhase, src string) ([]*Expr, error) {
+func argifyEnhanced(phase OperatorPhase, src string) ([]*graft.Expr, error) {
 	return ParseArgumentsEnhanced(phase, src)
 }
 
@@ -307,22 +292,22 @@ func IntegrateEnhancedParser() {
 // ExpressionWrapperOperator wraps a parsed expression for evaluation
 // This allows us to evaluate expressions that aren't traditional operator calls
 type ExpressionWrapperOperator struct {
-	expr *Expr
+	expr *graft.Expr
 }
 
 func (op *ExpressionWrapperOperator) Setup() error {
 	return nil
 }
 
-func (op *ExpressionWrapperOperator) Phase() OperatorPhase {
-	return EvalPhase
+func (op *ExpressionWrapperOperator) Phase() graft.OperatorPhase {
+	return graft.EvalPhase
 }
 
-func (op *ExpressionWrapperOperator) Dependencies(ev *Evaluator, args []*Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+func (op *ExpressionWrapperOperator) Dependencies(ev *graft.Evaluator, args []*graft.Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
 	// Extract dependencies from the wrapped expression
 	deps := make([]*tree.Cursor, 0)
-	var extractDeps func(e *Expr)
-	extractDeps = func(e *Expr) {
+	var extractDeps func(e *graft.Expr)
+	extractDeps = func(e *graft.Expr) {
 		if e == nil {
 			return
 		}
@@ -344,7 +329,7 @@ func (op *ExpressionWrapperOperator) Dependencies(ev *Evaluator, args []*Expr, l
 	return append(auto, deps...)
 }
 
-func (op *ExpressionWrapperOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
+func (op *ExpressionWrapperOperator) Run(ev *Evaluator, args []*graft.Expr) (*Response, error) {
 	// Simply evaluate the wrapped expression
 	return EvaluateExpr(op.expr, ev)
 }
@@ -354,8 +339,8 @@ func parseOpcallLegacyArgs(op Operator, argStr string, src string, phase Operato
 	// Use a simplified version of the legacy argify function
 	// The legacy argify builds a LogicalOr expression when it sees ||
 	
-	var final []*Expr
-	var left, opExpr *Expr
+	var final []*graft.Expr
+	var left, opExpr *graft.Expr
 	
 	// Split by whitespace, handling quoted strings
 	tokens := splitLegacyArgs(argStr)
@@ -367,7 +352,7 @@ func parseOpcallLegacyArgs(op Operator, argStr string, src string, phase Operato
 		}
 	}
 	
-	push := func(e *Expr) {
+	push := func(e *graft.Expr) {
 		if left == nil {
 			left = e
 			return
@@ -394,7 +379,7 @@ func parseOpcallLegacyArgs(op Operator, argStr string, src string, phase Operato
 			continue
 		}
 		
-		var expr *Expr
+		var expr *graft.Expr
 		
 		// Check for quoted string
 		if strings.HasPrefix(token, `"`) && strings.HasSuffix(token, `"`) && len(token) >= 2 {
@@ -442,11 +427,7 @@ func parseOpcallLegacyArgs(op Operator, argStr string, src string, phase Operato
 		return nil, fmt.Errorf("syntax error near: %s", argStr)
 	}
 	
-	return &Opcall{
-		op:   op,
-		args: final,
-		src:  src,
-	}, nil
+	return graft.NewOpcall(op, final, src), nil
 }
 
 // splitLegacyArgs splits arguments respecting quoted strings

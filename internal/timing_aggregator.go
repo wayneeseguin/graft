@@ -18,14 +18,14 @@ type TimingAggregator struct {
 
 // OperationStats tracks statistics for an operation type
 type OperationStats struct {
-	Name         string
-	Count        int64
-	TotalTime    time.Duration
-	MinTime      time.Duration
-	MaxTime      time.Duration
-	samples      []time.Duration
-	lastUpdated  time.Time
-	mu           sync.RWMutex
+	Name        string
+	Count       int64
+	TotalTime   time.Duration
+	MinTime     time.Duration
+	MaxTime     time.Duration
+	samples     []time.Duration
+	lastUpdated time.Time
+	mu          sync.RWMutex
 }
 
 // NewTimingAggregator creates a new timing aggregator
@@ -51,7 +51,7 @@ func (ta *TimingAggregator) Record(name string, duration time.Duration) {
 		ta.operations[name] = stats
 	}
 	ta.mu.Unlock()
-	
+
 	stats.record(duration, ta.maxSamples)
 }
 
@@ -59,18 +59,18 @@ func (ta *TimingAggregator) Record(name string, duration time.Duration) {
 func (os *OperationStats) record(duration time.Duration, maxSamples int) {
 	os.mu.Lock()
 	defer os.mu.Unlock()
-	
+
 	os.Count++
 	os.TotalTime += duration
 	os.lastUpdated = time.Now()
-	
+
 	if duration < os.MinTime {
 		os.MinTime = duration
 	}
 	if duration > os.MaxTime {
 		os.MaxTime = duration
 	}
-	
+
 	os.samples = append(os.samples, duration)
 	if len(os.samples) > maxSamples {
 		// Keep only recent samples
@@ -82,11 +82,11 @@ func (os *OperationStats) record(duration time.Duration, maxSamples int) {
 func (os *OperationStats) GetStats() TimingStatistics {
 	os.mu.RLock()
 	defer os.mu.RUnlock()
-	
+
 	if os.Count == 0 {
 		return TimingStatistics{Name: os.Name}
 	}
-	
+
 	stats := TimingStatistics{
 		Name:      os.Name,
 		Count:     os.Count,
@@ -95,7 +95,7 @@ func (os *OperationStats) GetStats() TimingStatistics {
 		MaxTime:   os.MaxTime,
 		MeanTime:  os.TotalTime / time.Duration(os.Count),
 	}
-	
+
 	// Calculate percentiles if we have samples
 	if len(os.samples) > 0 {
 		sorted := make([]time.Duration, len(os.samples))
@@ -103,12 +103,12 @@ func (os *OperationStats) GetStats() TimingStatistics {
 		sort.Slice(sorted, func(i, j int) bool {
 			return sorted[i] < sorted[j]
 		})
-		
+
 		stats.P50 = percentileDuration(sorted, 0.50)
 		stats.P90 = percentileDuration(sorted, 0.90)
 		stats.P95 = percentileDuration(sorted, 0.95)
 		stats.P99 = percentileDuration(sorted, 0.99)
-		
+
 		// Calculate standard deviation
 		var sumSquares float64
 		meanNanos := float64(stats.MeanTime.Nanoseconds())
@@ -119,7 +119,7 @@ func (os *OperationStats) GetStats() TimingStatistics {
 		varianceNanos := sumSquares / float64(len(os.samples))
 		stats.StdDev = time.Duration(math.Sqrt(varianceNanos))
 	}
-	
+
 	return stats
 }
 
@@ -127,17 +127,17 @@ func (os *OperationStats) GetStats() TimingStatistics {
 func (ta *TimingAggregator) GetAllStats() []TimingStatistics {
 	ta.mu.RLock()
 	defer ta.mu.RUnlock()
-	
+
 	stats := make([]TimingStatistics, 0, len(ta.operations))
 	for _, op := range ta.operations {
 		stats = append(stats, op.GetStats())
 	}
-	
+
 	// Sort by total time descending
 	sort.Slice(stats, func(i, j int) bool {
 		return stats[i].TotalTime > stats[j].TotalTime
 	})
-	
+
 	return stats
 }
 
@@ -145,7 +145,7 @@ func (ta *TimingAggregator) GetAllStats() []TimingStatistics {
 func (ta *TimingAggregator) GetStats(name string) (TimingStatistics, bool) {
 	ta.mu.RLock()
 	defer ta.mu.RUnlock()
-	
+
 	if stats, exists := ta.operations[name]; exists {
 		return stats.GetStats(), true
 	}
@@ -166,10 +166,10 @@ func (ta *TimingAggregator) Clean() {
 	if ta.window <= 0 {
 		return // No cleaning if window is not set
 	}
-	
+
 	ta.mu.Lock()
 	defer ta.mu.Unlock()
-	
+
 	cutoff := time.Now().Add(-ta.window)
 	for name, stats := range ta.operations {
 		stats.mu.RLock()
@@ -218,33 +218,33 @@ func percentileDuration(sorted []time.Duration, p float64) time.Duration {
 	if len(sorted) == 0 {
 		return 0
 	}
-	
+
 	index := int(float64(len(sorted)-1) * p)
 	return sorted[index]
 }
 
 // TimingSummary provides a summary of all timings
 type TimingSummary struct {
-	TotalOperations int64                `json:"total_operations"`
-	TotalTime       time.Duration        `json:"total_time"`
-	Operations      []TimingStatistics   `json:"operations"`
+	TotalOperations int64                         `json:"total_operations"`
+	TotalTime       time.Duration                 `json:"total_time"`
+	Operations      []TimingStatistics            `json:"operations"`
 	ByCategory      map[string][]TimingStatistics `json:"by_category"`
 }
 
 // GetSummary returns a comprehensive timing summary
 func (ta *TimingAggregator) GetSummary() *TimingSummary {
 	allStats := ta.GetAllStats()
-	
+
 	summary := &TimingSummary{
 		Operations: allStats,
 		ByCategory: make(map[string][]TimingStatistics),
 	}
-	
+
 	// Calculate totals and categorize
 	for _, stats := range allStats {
 		summary.TotalOperations += stats.Count
 		summary.TotalTime += stats.TotalTime
-		
+
 		// Categorize by prefix
 		category := "other"
 		if len(stats.Name) > 0 {
@@ -255,10 +255,10 @@ func (ta *TimingAggregator) GetSummary() *TimingSummary {
 				}
 			}
 		}
-		
+
 		summary.ByCategory[category] = append(summary.ByCategory[category], stats)
 	}
-	
+
 	return summary
 }
 

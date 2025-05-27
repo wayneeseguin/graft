@@ -1,5 +1,15 @@
 package operators
 
+import (
+	"fmt"
+	"math"
+	"reflect"
+	"strings"
+
+	"github.com/Knetic/govaluate"
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // CalcOperatorEnhanced is an enhanced version that supports nested expressions
 type CalcOperatorEnhanced struct{}
@@ -22,7 +32,7 @@ func (CalcOperatorEnhanced) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.
 	// Check dependencies in all arguments
 	for _, arg := range args {
 		deps = append(deps, arg.Dependencies(ev, nil)...)
-		
+
 		// Also check for references in literal strings
 		if arg.Type == Literal && arg.Literal != nil {
 			if str, ok := arg.Literal.(string); ok {

@@ -1,12 +1,18 @@
 package operators
 
+import (
+	"os"
+	"testing"
+
+	"github.com/geofffranks/yaml"
+)
 
 func TestEnhancedBase64Operators(t *testing.T) {
 	Convey("Enhanced Base64 Operators", t, func() {
 		// Enable debug temporarily
 		oldDebug := DebugOn
 		// DebugOn = true  // Disable for cleaner output
-		
+
 		// Enable enhanced parser for these tests
 		oldUseEnhanced := UseEnhancedParser
 		EnableEnhancedParser() // This will set UseEnhancedParser and register all enhanced operators
@@ -21,7 +27,7 @@ func TestEnhancedBase64Operators(t *testing.T) {
 			Convey("should support nested concat expressions", func() {
 				// Verify enhanced parser is enabled
 				So(UseEnhancedParser, ShouldBeTrue)
-				
+
 				input := `
 user: alice
 pass: secret123

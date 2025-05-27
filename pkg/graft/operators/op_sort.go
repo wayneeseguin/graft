@@ -1,5 +1,13 @@
 package operators
 
+import (
+	"fmt"
+	"reflect"
+	"sort"
+	"strings"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 var pathsToSort = map[string]string{}
 
@@ -43,8 +51,9 @@ func init() {
 func addToSortListIfNecessary(operator string, path string) {
 	if opcall, err := ParseOpcall(MergePhase, operator); err == nil {
 		var byKey string
-		if len(opcall.args) == 2 {
-			byKey = opcall.args[1].String()
+		args := opcall.Args()
+		if len(args) == 2 {
+			byKey = args[1].String()
 		}
 
 		DEBUG("adding sort by '%s' of path '%s' to the list of paths to sort", byKey, path)
@@ -102,14 +111,19 @@ func sortList(path string, list []interface{}, key string) error {
 		switch kind {
 		case reflect.Map.String():
 			if key == "" {
-				key = getDefaultIdentifierKey()
+				key = "name" // default identifier key
 			}
 
-			if err := canKeyMergeArray("list", list, path, key); err != nil {
-				return tree.TypeMismatchError{
-					Path:   []string{path},
-					Wanted: fmt.Sprintf("a list with map entries each containing %s", key),
-					Got:    fmt.Sprintf("a list with map entries, where some do not contain %s", key),
+			// Check if all maps have the key
+			for _, item := range list {
+				if m, ok := item.(map[interface{}]interface{}); ok {
+					if _, hasKey := m[key]; !hasKey {
+						return tree.TypeMismatchError{
+							Path:   []string{path},
+							Wanted: fmt.Sprintf("a list with map entries each containing %s", key),
+							Got:    fmt.Sprintf("a list with map entries, where some do not contain %s", key),
+						}
+					}
 				}
 			}
 

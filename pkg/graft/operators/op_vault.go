@@ -1,5 +1,19 @@
 package operators
 
+import (
+	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"net/http"
+	"net/url"
+	"os"
+	"strings"
+
+	"github.com/cloudfoundry-community/vaultkv"
+	"github.com/geofffranks/yaml"
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 var kv *vaultkv.KV = nil
 
@@ -115,7 +129,7 @@ func initializeVaultClient() error {
 			},
 		},
 	}
-	if DebugOn {
+	if DebugOn() {
 		client.Trace = os.Stderr
 	}
 
@@ -145,7 +159,7 @@ func (o VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 	// Use the new argument processor
 	processor := newVaultArgProcessor(args)
-	
+
 	// Build the vault path from all arguments
 	key, err := processor.buildVaultPath(ev)
 	if err != nil {
@@ -163,14 +177,14 @@ func (o VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		}
 		return nil, err
 	}
-	
+
 	// Track vault references
 	if refs, found := VaultRefs[key]; !found {
 		VaultRefs[key] = []string{ev.Here.String()}
 	} else {
 		VaultRefs[key] = append(refs, ev.Here.String())
 	}
-	
+
 	// Perform the vault lookup
 	secret, err := o.performVaultLookup(key)
 	if err != nil {
@@ -189,7 +203,7 @@ func (o VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		// No default or not a "not found" error
 		return nil, err
 	}
-	
+
 	// Success!
 	return &Response{
 		Type:  Replace,

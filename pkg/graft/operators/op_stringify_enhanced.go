@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"fmt"
+
+	"github.com/geofffranks/yaml"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // StringifyOperatorEnhanced is an enhanced version that supports nested expressions
 type StringifyOperatorEnhanced struct{}
@@ -53,7 +59,7 @@ func (StringifyOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, er
 			Type:  Replace,
 			Value: v,
 		}, nil
-		
+
 	case int, int64, float64, bool:
 		DEBUG("converting scalar to string: %v", v)
 		return &Response{

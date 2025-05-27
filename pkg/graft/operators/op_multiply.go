@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"fmt"
+	"strings"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // MultiplyOperator implements the * operator
 type MultiplyOperator struct{}

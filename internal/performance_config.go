@@ -1,9 +1,6 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -34,7 +32,7 @@ type CacheConfiguration struct {
 	OperatorCacheSize   int                       `yaml:"operator_cache_size" env:"GRAFT_OPERATOR_CACHE_SIZE" default:"50000"`
 	TokenCacheSize      int                       `yaml:"token_cache_size" env:"GRAFT_TOKEN_CACHE_SIZE" default:"20000"`
 	TTLSeconds          int                       `yaml:"ttl_seconds" env:"GRAFT_CACHE_TTL" default:"3600"`
-	Hierarchical        HierarchicalCacheSettings   `yaml:"hierarchical"`
+	Hierarchical        HierarchicalCacheSettings `yaml:"hierarchical"`
 	Warming             CacheWarmingConfiguration `yaml:"warming"`
 }
 
@@ -56,32 +54,32 @@ type CacheWarmingConfiguration struct {
 
 // ConcurrencyConfiguration holds concurrency-related settings
 type ConcurrencyConfiguration struct {
-	MaxWorkers            int                     `yaml:"max_workers" env:"GRAFT_MAX_WORKERS" default:"100"`
-	QueueSize             int                     `yaml:"queue_size" env:"GRAFT_QUEUE_SIZE" default:"1000"`
-	WorkerIdleTimeoutSecs int                     `yaml:"worker_idle_timeout_seconds" env:"GRAFT_WORKER_IDLE_TIMEOUT" default:"60"`
-	RateLimit             RateLimitConfiguration  `yaml:"rate_limit"`
+	MaxWorkers            int                    `yaml:"max_workers" env:"GRAFT_MAX_WORKERS" default:"100"`
+	QueueSize             int                    `yaml:"queue_size" env:"GRAFT_QUEUE_SIZE" default:"1000"`
+	WorkerIdleTimeoutSecs int                    `yaml:"worker_idle_timeout_seconds" env:"GRAFT_WORKER_IDLE_TIMEOUT" default:"60"`
+	RateLimit             RateLimitConfiguration `yaml:"rate_limit"`
 }
 
 // RateLimitConfiguration for rate limiting settings
 type RateLimitConfiguration struct {
-	Enabled            bool `yaml:"enabled" env:"GRAFT_RATE_LIMIT_ENABLED" default:"true"`
-	RequestsPerSecond  int  `yaml:"requests_per_second" env:"GRAFT_RPS" default:"1000"`
-	BurstSize          int  `yaml:"burst_size" env:"GRAFT_BURST_SIZE" default:"100"`
+	Enabled           bool `yaml:"enabled" env:"GRAFT_RATE_LIMIT_ENABLED" default:"true"`
+	RequestsPerSecond int  `yaml:"requests_per_second" env:"GRAFT_RPS" default:"1000"`
+	BurstSize         int  `yaml:"burst_size" env:"GRAFT_BURST_SIZE" default:"100"`
 }
 
 // MemoryConfiguration holds memory-related settings
 type MemoryConfiguration struct {
-	MaxHeapMB       int                      `yaml:"max_heap_mb" env:"GRAFT_MAX_HEAP_MB" default:"4096"`
-	GCPercent       int                      `yaml:"gc_percent" env:"GOGC" default:"100"`
-	PoolSizes       PoolConfiguration        `yaml:"pool_sizes"`
-	StringInterning StringInterningConfig    `yaml:"string_interning"`
+	MaxHeapMB       int                   `yaml:"max_heap_mb" env:"GRAFT_MAX_HEAP_MB" default:"4096"`
+	GCPercent       int                   `yaml:"gc_percent" env:"GOGC" default:"100"`
+	PoolSizes       PoolConfiguration     `yaml:"pool_sizes"`
+	StringInterning StringInterningConfig `yaml:"string_interning"`
 }
 
 // PoolConfiguration for object pool settings
 type PoolConfiguration struct {
-	BufferPool     int `yaml:"buffer_pool" env:"GRAFT_BUFFER_POOL_SIZE" default:"1000"`
+	BufferPool      int `yaml:"buffer_pool" env:"GRAFT_BUFFER_POOL_SIZE" default:"1000"`
 	StringSlicePool int `yaml:"string_slice_pool" env:"GRAFT_STRING_SLICE_POOL_SIZE" default:"5000"`
-	TokenPool      int `yaml:"token_pool" env:"GRAFT_TOKEN_POOL_SIZE" default:"10000"`
+	TokenPool       int `yaml:"token_pool" env:"GRAFT_TOKEN_POOL_SIZE" default:"10000"`
 }
 
 // StringInterningConfig for string interning settings
@@ -92,8 +90,8 @@ type StringInterningConfig struct {
 
 // ParsingConfiguration holds parsing-related settings
 type ParsingConfiguration struct {
-	Memoization     MemoizationConfig     `yaml:"memoization"`
-	LazyEvaluation  LazyEvaluationConfig  `yaml:"lazy_evaluation"`
+	Memoization    MemoizationConfig    `yaml:"memoization"`
+	LazyEvaluation LazyEvaluationConfig `yaml:"lazy_evaluation"`
 }
 
 // MemoizationConfig for parser memoization settings
@@ -111,10 +109,10 @@ type LazyEvaluationConfig struct {
 
 // IOConfiguration holds I/O-related settings
 type IOConfiguration struct {
-	ConnectionPoolSize    int                `yaml:"connection_pool_size" env:"GRAFT_CONN_POOL_SIZE" default:"50"`
-	RequestTimeoutSeconds int                `yaml:"request_timeout_seconds" env:"GRAFT_REQUEST_TIMEOUT" default:"30"`
-	RetryAttempts         int                `yaml:"retry_attempts" env:"GRAFT_RETRY_ATTEMPTS" default:"3"`
-	RetryBackoffSeconds   int                `yaml:"retry_backoff_seconds" env:"GRAFT_RETRY_BACKOFF" default:"1"`
+	ConnectionPoolSize    int                 `yaml:"connection_pool_size" env:"GRAFT_CONN_POOL_SIZE" default:"50"`
+	RequestTimeoutSeconds int                 `yaml:"request_timeout_seconds" env:"GRAFT_REQUEST_TIMEOUT" default:"30"`
+	RetryAttempts         int                 `yaml:"retry_attempts" env:"GRAFT_RETRY_ATTEMPTS" default:"3"`
+	RetryBackoffSeconds   int                 `yaml:"retry_backoff_seconds" env:"GRAFT_RETRY_BACKOFF" default:"1"`
 	Deduplication         DeduplicationConfig `yaml:"deduplication"`
 }
 
@@ -127,25 +125,25 @@ type DeduplicationConfig struct {
 
 // MonitoringConfiguration holds monitoring-related settings
 type MonitoringConfiguration struct {
-	MetricsEnabled             bool `yaml:"metrics_enabled" env:"GRAFT_METRICS_ENABLED" default:"true"`
-	MetricsIntervalSeconds     int  `yaml:"metrics_interval_seconds" env:"GRAFT_METRICS_INTERVAL" default:"60"`
-	PerformanceTracking        bool `yaml:"performance_tracking" env:"GRAFT_PERF_TRACKING" default:"true"`
-	SlowOperationThresholdMs   int  `yaml:"slow_operation_threshold_ms" env:"GRAFT_SLOW_OP_THRESHOLD" default:"100"`
+	MetricsEnabled           bool `yaml:"metrics_enabled" env:"GRAFT_METRICS_ENABLED" default:"true"`
+	MetricsIntervalSeconds   int  `yaml:"metrics_interval_seconds" env:"GRAFT_METRICS_INTERVAL" default:"60"`
+	PerformanceTracking      bool `yaml:"performance_tracking" env:"GRAFT_PERF_TRACKING" default:"true"`
+	SlowOperationThresholdMs int  `yaml:"slow_operation_threshold_ms" env:"GRAFT_SLOW_OP_THRESHOLD" default:"100"`
 }
 
 // AutoTuningConfiguration holds auto-tuning settings
 type AutoTuningConfiguration struct {
-	Enabled                  bool    `yaml:"enabled" env:"GRAFT_AUTO_TUNING_ENABLED" default:"false"`
-	AnalysisIntervalSeconds  int     `yaml:"analysis_interval_seconds" env:"GRAFT_ANALYSIS_INTERVAL" default:"300"`
-	AdjustmentThreshold      float64 `yaml:"adjustment_threshold" env:"GRAFT_ADJUSTMENT_THRESHOLD" default:"0.1"`
-	MaxAdjustmentsPerHour    int     `yaml:"max_adjustments_per_hour" env:"GRAFT_MAX_ADJUSTMENTS" default:"6"`
+	Enabled                 bool    `yaml:"enabled" env:"GRAFT_AUTO_TUNING_ENABLED" default:"false"`
+	AnalysisIntervalSeconds int     `yaml:"analysis_interval_seconds" env:"GRAFT_ANALYSIS_INTERVAL" default:"300"`
+	AdjustmentThreshold     float64 `yaml:"adjustment_threshold" env:"GRAFT_ADJUSTMENT_THRESHOLD" default:"0.1"`
+	MaxAdjustmentsPerHour   int     `yaml:"max_adjustments_per_hour" env:"GRAFT_MAX_ADJUSTMENTS" default:"6"`
 }
 
 // ConfigLoader manages configuration loading and environment variable overrides
 type ConfigLoader struct {
-	mu            sync.RWMutex
-	config        *PerformanceConfig
-	configPath    string
+	mu             sync.RWMutex
+	config         *PerformanceConfig
+	configPath     string
 	changeHandlers []func(*PerformanceConfig)
 }
 
@@ -381,11 +379,11 @@ func ConfigFromYAML(yamlStr string) (*PerformanceConfig, error) {
 	config := &PerformanceConfig{}
 	loader := NewConfigLoader("")
 	loader.applyDefaults(config)
-	
+
 	if err := yaml.Unmarshal([]byte(yamlStr), config); err != nil {
 		return nil, err
 	}
-	
+
 	return config, nil
 }
 

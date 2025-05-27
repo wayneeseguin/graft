@@ -1,5 +1,10 @@
 package operators
 
+import (
+	"fmt"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // ParamOperator ...
 type ParamOperator struct{}
@@ -25,16 +30,16 @@ func (ParamOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	if len(args) != 1 {
 		return nil, fmt.Errorf("param operator requires exactly one argument")
 	}
-	
+
 	// Evaluate the argument to get the parameter name
 	v, err := args[0].Evaluate(ev.Tree)
 	if err != nil {
 		return nil, fmt.Errorf("failed to evaluate param argument: %s", err)
 	}
-	
+
 	// Convert the value to string for the parameter name
 	paramName := fmt.Sprintf("%v", v)
-	
+
 	// The param operator always returns an error - it's meant to fail if not replaced
 	// Return the parameter name as the error message to maintain backward compatibility
 	return nil, fmt.Errorf("%s", paramName)

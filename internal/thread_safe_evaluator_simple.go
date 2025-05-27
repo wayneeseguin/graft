@@ -1,9 +1,6 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"context"
 	"fmt"
 	"sync"
@@ -26,10 +23,10 @@ func NewThreadSafeEvaluatorSimple(tree ThreadSafeTree) *ThreadSafeEvaluatorSimpl
 func (tse *ThreadSafeEvaluatorSimple) Evaluate(ctx context.Context) error {
 	tse.mu.Lock()
 	defer tse.mu.Unlock()
-	
+
 	// For now, this is a placeholder that demonstrates thread safety
 	// In Phase 4-5, we'll implement the full evaluation logic
-	
+
 	// Simulate some evaluation work
 	return nil
 }
@@ -85,7 +82,7 @@ func (mh *MigrationHelperSimple) UpdateFromEvaluator(ev *Evaluator) error {
 			data[keyStr] = v
 		}
 	}
-	
+
 	return mh.safeTree.Replace(data)
 }
 
@@ -93,16 +90,16 @@ func (mh *MigrationHelperSimple) UpdateFromEvaluator(ev *Evaluator) error {
 func (mh *MigrationHelperSimple) ExportToEvaluator() (*Evaluator, error) {
 	if safeTree, ok := mh.safeTree.(*SafeTree); ok {
 		rawData := safeTree.GetRawData()
-		
+
 		ev := &Evaluator{
 			Tree:     rawData,
 			SkipEval: false,
 			CheckOps: make([]*Opcall, 0),
 			Only:     []string{},
 		}
-		
+
 		return ev, nil
 	}
-	
+
 	return nil, fmt.Errorf("unsupported tree type for export")
 }

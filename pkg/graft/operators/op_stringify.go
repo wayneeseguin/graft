@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"fmt"
+
+	"github.com/geofffranks/yaml"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // StringifyOperator ...
 type StringifyOperator struct{}
@@ -17,7 +23,7 @@ func (StringifyOperator) Phase() OperatorPhase {
 // Dependencies ...
 func (StringifyOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
 	deps := auto
-	
+
 	for _, arg := range args {
 		if arg.Type == OperatorCall {
 			// Get dependencies from nested operator
@@ -30,14 +36,14 @@ func (StringifyOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cur
 			deps = append(deps, arg.Reference)
 		}
 	}
-	
+
 	return deps
 }
 
 // Run ...
 func (StringifyOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
-	log.DEBUG("running (( stringify ... )) operation at $.%s", ev.Here)
-	defer log.DEBUG("done with (( stringify ... )) operation at $%s\n", ev.Here)
+	DEBUG("running (( stringify ... )) operation at $.%s", ev.Here)
+	defer DEBUG("done with (( stringify ... )) operation at $%s\n", ev.Here)
 
 	if len(args) != 1 {
 		return nil, fmt.Errorf("stringify operator requires exactly one reference argument")
@@ -46,31 +52,31 @@ func (StringifyOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	// Use ResolveOperatorArgument to support nested expressions
 	resolved, err := ResolveOperatorArgument(ev, args[0])
 	if err != nil {
-		log.DEBUG(" resolution failed\n error: %s", err)
+		DEBUG(" resolution failed\n error: %s", err)
 		return nil, err
 	}
 
 	var val interface{}
-	
+
 	// Special case for nil values
 	if resolved == nil {
-		log.DEBUG(" found nil value")
+		DEBUG(" found nil value")
 		val = nil
 	} else if str, ok := resolved.(string); ok {
 		// Check if it's already a string (literal case)
-		log.DEBUG(" found literal string '%s'", str)
+		DEBUG(" found literal string '%s'", str)
 		val = str
 	} else {
 		// For non-strings, marshal to YAML
-		log.DEBUG("  resolved to a value (could be a map, a list or a scalar)")
+		DEBUG("  resolved to a value (could be a map, a list or a scalar)")
 		data, err := yaml.Marshal(resolved)
 		if err != nil {
-			log.DEBUG("   marshaling failed\n   error: %s", err)
+			DEBUG("   marshaling failed\n   error: %s", err)
 			return nil, fmt.Errorf("Unable to marshal value: %s", err)
 		}
 		val = string(data)
 	}
-	log.DEBUG("")
+	DEBUG("")
 
 	return &Response{
 		Type:  Replace,

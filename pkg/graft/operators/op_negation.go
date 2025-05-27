@@ -1,5 +1,10 @@
 package operators
 
+import (
+	"fmt"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // NegationOperator implements logical negation (!)
 type NegationOperator struct{}

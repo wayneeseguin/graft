@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"os"
+	"testing"
+
+	"github.com/geofffranks/yaml"
+)
 
 func TestEnhancedGrabOperator(t *testing.T) {
 	Convey("Enhanced Grab Operator", t, func() {
@@ -54,7 +60,7 @@ result: (( grab (grab meta.key) ))
 			ev := &Evaluator{Tree: data}
 			err = ev.RunPhase(EvalPhase)
 			So(err, ShouldBeNil)
-			
+
 			result := ev.Tree["result"].([]interface{})
 			So(len(result), ShouldEqual, 3)
 			So(result[0], ShouldEqual, "web")
@@ -161,7 +167,7 @@ result: (( grab data.list1 data.list2 ))
 			ev := &Evaluator{Tree: data}
 			err = ev.RunPhase(EvalPhase)
 			So(err, ShouldBeNil)
-			
+
 			result := ev.Tree["result"].([]interface{})
 			So(len(result), ShouldEqual, 4)
 			So(result[0], ShouldEqual, "a")

@@ -218,7 +218,7 @@ func TestMain(t *testing.T) {
 		}
 		var stderr string
 		//Edit log stderr function
-		PrintfStdErr = func(format string, args ...interface{}) {
+		log.PrintfStdErr = func(format string, args ...interface{}) {
 			stderr += fmt.Sprintf(format, args...)
 		}
 
@@ -2362,57 +2362,57 @@ func TestDebug(t *testing.T) {
 	Convey("debug flags:", t, func() {
 		Convey("-D enables debugging", func() {
 			os.Args = []string{"graft", "-D"}
-			DebugOn = false
+			log.DebugOn = false
 			main()
-			So(DebugOn, ShouldBeTrue)
+			So(log.DebugOn, ShouldBeTrue)
 		})
 		Convey("--debug enables debugging", func() {
 			os.Args = []string{"graft", "--debug"}
-			DebugOn = false
+			log.DebugOn = false
 			main()
-			So(DebugOn, ShouldBeTrue)
+			So(log.DebugOn, ShouldBeTrue)
 		})
 		Convey("DEBUG=\"tRuE\" enables debugging", func() {
 			os.Setenv("DEBUG", "tRuE")
 			os.Args = []string{"graft"}
-			DebugOn = false
+			log.DebugOn = false
 			main()
-			So(DebugOn, ShouldBeTrue)
+			So(log.DebugOn, ShouldBeTrue)
 		})
 		Convey("DEBUG=1 enables debugging", func() {
 			os.Setenv("DEBUG", "1")
 			os.Args = []string{"graft"}
-			DebugOn = false
+			log.DebugOn = false
 			main()
-			So(DebugOn, ShouldBeTrue)
+			So(log.DebugOn, ShouldBeTrue)
 		})
 		Convey("DEBUG=randomval enables debugging", func() {
 			os.Setenv("DEBUG", "randomval")
 			os.Args = []string{"graft"}
-			DebugOn = false
+			log.DebugOn = false
 			main()
-			So(DebugOn, ShouldBeTrue)
+			So(log.DebugOn, ShouldBeTrue)
 		})
 		Convey("DEBUG=\"fAlSe\" disables debugging", func() {
 			os.Setenv("DEBUG", "fAlSe")
 			os.Args = []string{"graft"}
-			DebugOn = false
+			log.DebugOn = false
 			main()
-			So(DebugOn, ShouldBeFalse)
+			So(log.DebugOn, ShouldBeFalse)
 		})
 		Convey("DEBUG=0 disables debugging", func() {
 			os.Setenv("DEBUG", "0")
 			os.Args = []string{"graft"}
-			DebugOn = false
+			log.DebugOn = false
 			main()
-			So(DebugOn, ShouldBeFalse)
+			So(log.DebugOn, ShouldBeFalse)
 		})
 		Convey("DEBUG=\"\" disables debugging", func() {
 			os.Setenv("DEBUG", "")
 			os.Args = []string{"graft"}
-			DebugOn = false
+			log.DebugOn = false
 			main()
-			So(DebugOn, ShouldBeFalse)
+			So(log.DebugOn, ShouldBeFalse)
 		})
 	})
 }
@@ -2424,7 +2424,7 @@ func TestFan(t *testing.T) {
 	}
 	var stderr string
 	//Edit log stderr function
-	PrintfStdErr = func(format string, args ...interface{}) {
+log.PrintfStdErr = func(format string, args ...interface{}) {
 		stderr += fmt.Sprintf(format, args...)
 	}
 
@@ -2559,7 +2559,7 @@ func TestExamples(t *testing.T) {
 		stdout = fmt.Sprintf(format, args...)
 	}
 	var stderr string
-	PrintfStdErr = func(format string, args ...interface{}) {
+log.PrintfStdErr = func(format string, args ...interface{}) {
 		stderr += fmt.Sprintf(format, args...)
 	}
 

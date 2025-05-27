@@ -1,86 +1,85 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"fmt"
 	"hash/fnv"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/wayneeseguin/graft/pkg/graft/parser"
 )
 
 // CacheKeyGenerator generates optimized cache keys for various cache types
 type CacheKeyGenerator struct {
-	algorithm string
-	compression bool
+	algorithm          string
+	compression        bool
 	collisionDetection bool
-	collisions map[string]string
-	mu sync.RWMutex
+	collisions         map[string]string
+	mu                 sync.RWMutex
 }
 
 // CacheKeyConfig configures cache key generation
 type CacheKeyConfig struct {
-	Algorithm string // "xxhash", "fnv", "sha256"
-	Compression bool
+	Algorithm          string // "xxhash", "fnv", "sha256"
+	Compression        bool
 	CollisionDetection bool
 }
 
 // Default cache key generator
 var DefaultKeyGenerator = NewCacheKeyGenerator(CacheKeyConfig{
-	Algorithm: "fnv", // Using fnv as it's built-in and fast
-	Compression: true,
+	Algorithm:          "fnv", // Using fnv as it's built-in and fast
+	Compression:        true,
 	CollisionDetection: true,
 })
 
 // NewCacheKeyGenerator creates a new cache key generator
 func NewCacheKeyGenerator(config CacheKeyConfig) *CacheKeyGenerator {
 	return &CacheKeyGenerator{
-		algorithm: config.Algorithm,
-		compression: config.Compression,
+		algorithm:          config.Algorithm,
+		compression:        config.Compression,
 		collisionDetection: config.CollisionDetection,
-		collisions: make(map[string]string),
+		collisions:         make(map[string]string),
 	}
 }
 
 // GenerateExpressionKey generates an optimized key for expression caching
-func (g *CacheKeyGenerator) GenerateExpressionKey(input string, registry *OperatorRegistry) string {
+func (g *CacheKeyGenerator) GenerateExpressionKey(input string, registry *parser.OperatorRegistry) string {
 	// Build key components
 	var keyParts []string
-	
+
 	// Add input (with compression if enabled)
 	if g.compression {
 		keyParts = append(keyParts, g.compressInput(input))
 	} else {
 		keyParts = append(keyParts, input)
 	}
-	
+
 	// Add registry signature for cache invalidation when operators change
 	if registry != nil {
 		keyParts = append(keyParts, g.registrySignature(registry))
 	}
-	
+
 	// Generate base key
 	baseKey := strings.Join(keyParts, "|")
-	
+
 	// Generate hash
 	hash := g.hashString(baseKey)
-	
+
 	// Check for collisions if enabled
 	if g.collisionDetection {
 		return g.checkCollision(hash, baseKey)
 	}
-	
+
 	return hash
 }
 
 // GenerateOperatorKey generates a key for operator result caching
 func (g *CacheKeyGenerator) GenerateOperatorKey(opName string, args []string, context string) string {
 	var keyParts []string
-	
+
 	keyParts = append(keyParts, "op", opName)
-	
+
 	if g.compression {
 		// Compress argument list
 		argsStr := strings.Join(args, ",")
@@ -88,18 +87,18 @@ func (g *CacheKeyGenerator) GenerateOperatorKey(opName string, args []string, co
 	} else {
 		keyParts = append(keyParts, args...)
 	}
-	
+
 	if context != "" {
 		keyParts = append(keyParts, "ctx", context)
 	}
-	
+
 	baseKey := strings.Join(keyParts, "|")
 	hash := g.hashString(baseKey)
-	
+
 	if g.collisionDetection {
 		return g.checkCollision(hash, baseKey)
 	}
-	
+
 	return hash
 }
 
@@ -108,35 +107,35 @@ func (g *CacheKeyGenerator) GenerateTokenKey(input string) string {
 	if g.compression {
 		input = g.compressInput(input)
 	}
-	
+
 	hash := g.hashString("tok|" + input)
-	
+
 	if g.collisionDetection {
 		return g.checkCollision(hash, "tok|"+input)
 	}
-	
+
 	return hash
 }
 
 // GeneratePartialResultKey generates a key for partial result caching
 func (g *CacheKeyGenerator) GeneratePartialResultKey(path string, exprType string, content string) string {
 	var keyParts []string
-	
+
 	keyParts = append(keyParts, "partial", path, exprType)
-	
+
 	if g.compression {
 		keyParts = append(keyParts, g.compressInput(content))
 	} else {
 		keyParts = append(keyParts, content)
 	}
-	
+
 	baseKey := strings.Join(keyParts, "|")
 	hash := g.hashString(baseKey)
-	
+
 	if g.collisionDetection {
 		return g.checkCollision(hash, baseKey)
 	}
-	
+
 	return hash
 }
 
@@ -180,7 +179,7 @@ func simpleHash(s string) uint64 {
 func (g *CacheKeyGenerator) compressInput(input string) string {
 	// Simple compression strategies
 	compressed := input
-	
+
 	// Replace common patterns
 	compressed = strings.ReplaceAll(compressed, "meta.", "m.")
 	compressed = strings.ReplaceAll(compressed, "environments.", "e.")
@@ -188,30 +187,27 @@ func (g *CacheKeyGenerator) compressInput(input string) string {
 	compressed = strings.ReplaceAll(compressed, "production", "prod")
 	compressed = strings.ReplaceAll(compressed, "development", "dev")
 	compressed = strings.ReplaceAll(compressed, "database", "db")
-	
+
 	// Remove redundant whitespace
 	compressed = strings.TrimSpace(compressed)
 	compressed = strings.ReplaceAll(compressed, "  ", " ")
-	
+
 	return compressed
 }
 
 // registrySignature generates a signature for the operator registry
-func (g *CacheKeyGenerator) registrySignature(registry *OperatorRegistry) string {
+func (g *CacheKeyGenerator) registrySignature(registry *parser.OperatorRegistry) string {
 	if registry == nil {
 		return "noreg"
 	}
-	
+
 	// Simple registry signature based on operator count and some names
 	// In practice, this could be more sophisticated
-	signature := fmt.Sprintf("reg_%d", len(registry.operators))
-	
+	signature := fmt.Sprintf("reg_%d", registry.Count())
+
 	// Add some operator names for better cache invalidation (sorted for determinism)
-	var names []string
-	for name := range registry.operators {
-		names = append(names, name)
-	}
-	
+	names := registry.Names()
+
 	// Sort names for deterministic signature
 	if len(names) > 1 {
 		// Simple bubble sort for small lists
@@ -223,7 +219,7 @@ func (g *CacheKeyGenerator) registrySignature(registry *OperatorRegistry) string
 			}
 		}
 	}
-	
+
 	// Include first 3 names for performance
 	count := 0
 	for _, name := range names {
@@ -232,7 +228,7 @@ func (g *CacheKeyGenerator) registrySignature(registry *OperatorRegistry) string
 			count++
 		}
 	}
-	
+
 	return g.hashString(signature)[:8] // Use first 8 chars of hash
 }
 
@@ -240,13 +236,13 @@ func (g *CacheKeyGenerator) registrySignature(registry *OperatorRegistry) string
 func (g *CacheKeyGenerator) checkCollision(hash, original string) string {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	
+
 	if existing, found := g.collisions[hash]; found {
 		if existing != original {
 			// Collision detected, append suffix
 			collisionCount := 1
 			newHash := hash + "_" + strconv.Itoa(collisionCount)
-			
+
 			for {
 				if _, exists := g.collisions[newHash]; !exists {
 					g.collisions[newHash] = original
@@ -259,7 +255,7 @@ func (g *CacheKeyGenerator) checkCollision(hash, original string) string {
 	} else {
 		g.collisions[hash] = original
 	}
-	
+
 	return hash
 }
 
@@ -267,20 +263,20 @@ func (g *CacheKeyGenerator) checkCollision(hash, original string) string {
 func (g *CacheKeyGenerator) GetCollisionStats() map[string]interface{} {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
-	
+
 	collisionCount := 0
 	for key := range g.collisions {
 		if strings.Contains(key, "_") {
 			collisionCount++
 		}
 	}
-	
+
 	return map[string]interface{}{
-		"total_keys": len(g.collisions),
-		"collisions": collisionCount,
+		"total_keys":     len(g.collisions),
+		"collisions":     collisionCount,
 		"collision_rate": float64(collisionCount) / float64(len(g.collisions)),
-		"algorithm": g.algorithm,
-		"compression": g.compression,
+		"algorithm":      g.algorithm,
+		"compression":    g.compression,
 	}
 }
 

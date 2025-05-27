@@ -1,5 +1,10 @@
 package operators
 
+import (
+	"fmt"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // DivideOperator implements the / operator
 type DivideOperator struct{}

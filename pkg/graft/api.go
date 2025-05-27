@@ -153,3 +153,58 @@ func addToPruneListIfNecessary(paths ...string) {
 		keysToPrune = append(keysToPrune, path)
 	}
 }
+
+// NewOpcall creates a new Opcall (Phase 1 helper)
+func NewOpcall(op Operator, args []*Expr, src string) *Opcall {
+	return &Opcall{
+		op:   op,
+		args: args,
+		src:  src,
+	}
+}
+
+// TRACE is a helper function for trace logging
+func TRACE(format string, args ...interface{}) {
+	// TODO: Implement proper trace logging
+	DEBUG(format, args...)
+}
+
+// DefaultKeyGenerator generates unique keys for static IPs
+func DefaultKeyGenerator() func() (string, error) {
+	var counter int
+	return func() (string, error) {
+		counter++
+		return fmt.Sprintf("key-%d", counter), nil
+	}
+}
+
+// Merge merges two data structures (simplified for Phase 1)
+func Merge(dst, src interface{}) error {
+	// TODO: Implement proper merge logic
+	// For Phase 1, just do a simple type assertion and copy
+	dstMap, ok := dst.(map[interface{}]interface{})
+	if !ok {
+		return fmt.Errorf("dst must be a map")
+	}
+	srcMap, ok := src.(map[interface{}]interface{})
+	if !ok {
+		return fmt.Errorf("src must be a map")
+	}
+	for k, v := range srcMap {
+		dstMap[k] = v
+	}
+	return nil
+}
+
+// DebugOn returns true if debug mode is enabled
+func DebugOn() bool {
+	// TODO: Implement proper debug flag checking
+	return false
+}
+
+// ParseOpcallEnhanced parses an operator call using the enhanced parser
+func ParseOpcallEnhanced(phase OperatorPhase, src string, ev *Evaluator) (*Opcall, error) {
+	// TODO: Implement enhanced parsing
+	// For Phase 1, just delegate to regular parsing
+	return ParseOpcall(phase, src)
+}

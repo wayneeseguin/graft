@@ -31,28 +31,28 @@ type WorkerPool struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	wg        sync.WaitGroup
-	
+
 	// Metrics
 	tasksProcessed atomic.Uint64
 	tasksQueued    atomic.Uint64
 	errors         atomic.Uint64
-	
+
 	// Rate limiting
 	rateLimiter RateLimiter
 }
 
 // WorkerPoolConfig holds configuration for creating a worker pool
 type WorkerPoolConfig struct {
-	Name        string
-	Workers     int
-	QueueSize   int
-	RateLimit   int // requests per second, 0 for unlimited
+	Name      string
+	Workers   int
+	QueueSize int
+	RateLimit int // requests per second, 0 for unlimited
 }
 
 // NewWorkerPool creates a new worker pool with the given configuration
 func NewWorkerPool(config WorkerPoolConfig) *WorkerPool {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	wp := &WorkerPool{
 		name:      config.Name,
 		workers:   config.Workers,
@@ -61,11 +61,11 @@ func NewWorkerPool(config WorkerPoolConfig) *WorkerPool {
 		ctx:       ctx,
 		cancel:    cancel,
 	}
-	
+
 	if config.RateLimit > 0 {
 		wp.rateLimiter = NewTokenBucketRateLimiter(config.RateLimit)
 	}
-	
+
 	wp.start()
 	return wp
 }
@@ -81,30 +81,30 @@ func (wp *WorkerPool) start() {
 // worker is the main worker loop
 func (wp *WorkerPool) worker(id int) {
 	defer wp.wg.Done()
-	
+
 	for {
 		select {
 		case task, ok := <-wp.taskQueue:
 			if !ok {
 				return // Channel closed, worker should exit
 			}
-			
+
 			// Apply rate limiting if configured
 			if wp.rateLimiter != nil {
 				wp.rateLimiter.Wait(wp.ctx)
 			}
-			
+
 			// Execute the task
 			startTime := time.Now()
 			value, err := task.Execute(wp.ctx)
 			duration := time.Since(startTime)
-			
+
 			// Update metrics
 			wp.tasksProcessed.Add(1)
 			if err != nil {
 				wp.errors.Add(1)
 			}
-			
+
 			// Send result
 			select {
 			case wp.results <- TaskResult{
@@ -116,7 +116,7 @@ func (wp *WorkerPool) worker(id int) {
 			case <-wp.ctx.Done():
 				return
 			}
-			
+
 		case <-wp.ctx.Done():
 			return
 		}
@@ -139,17 +139,17 @@ func (wp *WorkerPool) Submit(task Task) error {
 // SubmitAndWait submits a task and waits for its result
 func (wp *WorkerPool) SubmitAndWait(task Task) (interface{}, error) {
 	resultChan := make(chan TaskResult, 1)
-	
+
 	// Create a wrapper task that sends result to our channel
 	wrappedTask := &channelTask{
 		task:       task,
 		resultChan: resultChan,
 	}
-	
+
 	if err := wp.Submit(wrappedTask); err != nil {
 		return nil, err
 	}
-	
+
 	select {
 	case result := <-resultChan:
 		return result.Value, result.Err
@@ -208,13 +208,13 @@ func (ct *channelTask) Execute(ctx context.Context) (interface{}, error) {
 		Value: value,
 		Err:   err,
 	}
-	
+
 	select {
 	case ct.resultChan <- result:
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
-	
+
 	return value, err
 }
 
@@ -242,15 +242,15 @@ func NewTokenBucketRateLimiter(ratePerSecond int) *TokenBucketRateLimiter {
 		bucket:     make(chan struct{}, ratePerSecond),
 		refillStop: make(chan struct{}),
 	}
-	
+
 	// Fill bucket initially
 	for i := 0; i < ratePerSecond; i++ {
 		rl.bucket <- struct{}{}
 	}
-	
+
 	// Start refill goroutine
 	go rl.refill()
-	
+
 	return rl
 }
 
@@ -258,7 +258,7 @@ func NewTokenBucketRateLimiter(ratePerSecond int) *TokenBucketRateLimiter {
 func (rl *TokenBucketRateLimiter) refill() {
 	ticker := time.NewTicker(time.Second / time.Duration(rl.rate))
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:

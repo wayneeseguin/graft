@@ -24,20 +24,20 @@ type MonitoringServer struct {
 
 // MonitoringConfig configures the monitoring server
 type MonitoringConfig struct {
-	Enabled       bool
-	ListenAddr    string
-	ReadTimeout   time.Duration
-	WriteTimeout  time.Duration
+	Enabled         bool
+	ListenAddr      string
+	ReadTimeout     time.Duration
+	WriteTimeout    time.Duration
 	EnableDashboard bool
 }
 
 // DefaultMonitoringConfig returns default monitoring configuration
 func DefaultMonitoringConfig() *MonitoringConfig {
 	return &MonitoringConfig{
-		Enabled:       true,
-		ListenAddr:    ":8080",
-		ReadTimeout:   10 * time.Second,
-		WriteTimeout:  10 * time.Second,
+		Enabled:         true,
+		ListenAddr:      ":8080",
+		ReadTimeout:     10 * time.Second,
+		WriteTimeout:    10 * time.Second,
 		EnableDashboard: true,
 	}
 }
@@ -47,7 +47,7 @@ func NewMonitoringServer(config *MonitoringConfig) *MonitoringServer {
 	if config == nil {
 		config = DefaultMonitoringConfig()
 	}
-	
+
 	return &MonitoringServer{
 		config:         config,
 		metricsReg:     GetMetricsRegistry(),
@@ -63,40 +63,40 @@ func (ms *MonitoringServer) Start() error {
 	if !ms.config.Enabled {
 		return nil
 	}
-	
+
 	mux := http.NewServeMux()
-	
+
 	// Metrics endpoints
 	mux.HandleFunc("/metrics", ms.handleMetrics)
 	mux.HandleFunc("/metrics/json", ms.handleMetricsJSON)
-	
+
 	// Analytics endpoints
 	mux.HandleFunc("/analytics/cache", ms.handleCacheAnalytics)
 	mux.HandleFunc("/analytics/timing", ms.handleTimingAnalytics)
 	mux.HandleFunc("/analytics/slow-ops", ms.handleSlowOps)
-	
+
 	// Health endpoint
 	mux.HandleFunc("/health", ms.handleHealth)
-	
+
 	// Dashboard
 	if ms.config.EnableDashboard {
 		mux.HandleFunc("/", ms.handleDashboard)
 		mux.HandleFunc("/api/metrics/stream", ms.handleMetricsStream)
 	}
-	
+
 	ms.server = &http.Server{
 		Addr:         ms.config.ListenAddr,
 		Handler:      mux,
 		ReadTimeout:  ms.config.ReadTimeout,
 		WriteTimeout: ms.config.WriteTimeout,
 	}
-	
+
 	go func() {
 		if err := ms.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("Monitoring server error: %v\n", err)
 		}
 	}()
-	
+
 	return nil
 }
 
@@ -105,17 +105,17 @@ func (ms *MonitoringServer) Stop() error {
 	if ms.server == nil {
 		return nil
 	}
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	return ms.server.Shutdown(ctx)
 }
 
 // handleMetrics handles Prometheus metrics endpoint
 func (ms *MonitoringServer) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4")
-	
+
 	exporter := NewMetricsExporter(ms.metricsReg)
 	if err := exporter.ExportPrometheus(w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -125,7 +125,7 @@ func (ms *MonitoringServer) handleMetrics(w http.ResponseWriter, r *http.Request
 // handleMetricsJSON handles JSON metrics endpoint
 func (ms *MonitoringServer) handleMetricsJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	exporter := NewMetricsExporter(ms.metricsReg)
 	if err := exporter.ExportJSON(w); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -135,19 +135,19 @@ func (ms *MonitoringServer) handleMetricsJSON(w http.ResponseWriter, r *http.Req
 // handleCacheAnalytics handles cache analytics endpoint
 func (ms *MonitoringServer) handleCacheAnalytics(w http.ResponseWriter, r *http.Request) {
 	format := r.URL.Query().Get("format")
-	
+
 	reporter := NewCacheReporter(ms.cacheAnalytics)
-	
+
 	switch format {
 	case "json":
 		w.Header().Set("Content-Type", "application/json")
 		report := ms.cacheAnalytics.GenerateReport()
 		json.NewEncoder(w).Encode(report)
-		
+
 	case "metrics":
 		w.Header().Set("Content-Type", "text/plain")
 		reporter.GenerateMetricsReport(w)
-		
+
 	default:
 		w.Header().Set("Content-Type", "text/plain")
 		reporter.GenerateTextReport(w)
@@ -157,7 +157,7 @@ func (ms *MonitoringServer) handleCacheAnalytics(w http.ResponseWriter, r *http.
 // handleTimingAnalytics handles timing analytics endpoint
 func (ms *MonitoringServer) handleTimingAnalytics(w http.ResponseWriter, r *http.Request) {
 	format := r.URL.Query().Get("format")
-	
+
 	if format == "json" {
 		w.Header().Set("Content-Type", "application/json")
 		summary := ms.timingAgg.GetSummary()
@@ -165,7 +165,7 @@ func (ms *MonitoringServer) handleTimingAnalytics(w http.ResponseWriter, r *http
 	} else {
 		w.Header().Set("Content-Type", "text/plain")
 		stats := ms.timingAgg.GetAllStats()
-		
+
 		fmt.Fprintf(w, "=== Operation Timing Statistics ===\n\n")
 		for _, stat := range stats {
 			fmt.Fprintf(w, "%s\n", stat.String())
@@ -179,10 +179,10 @@ func (ms *MonitoringServer) handleSlowOps(w http.ResponseWriter, r *http.Request
 	if l := r.URL.Query().Get("limit"); l != "" {
 		fmt.Sscanf(l, "%d", &limit)
 	}
-	
+
 	history := ms.slowOpDetector.GetHistory(limit)
 	stats := ms.slowOpDetector.history.GetStats()
-	
+
 	format := r.URL.Query().Get("format")
 	if format == "json" {
 		w.Header().Set("Content-Type", "application/json")
@@ -195,12 +195,12 @@ func (ms *MonitoringServer) handleSlowOps(w http.ResponseWriter, r *http.Request
 		w.Header().Set("Content-Type", "text/plain")
 		fmt.Fprintf(w, "=== Slow Operations ===\n")
 		fmt.Fprintf(w, "Total: %d\n\n", stats.Total)
-		
+
 		for op, typeStats := range stats.ByOperation {
 			fmt.Fprintf(w, "%s: %d occurrences, avg: %v, max: %v\n",
 				op, typeStats.Count, typeStats.AvgTime, typeStats.MaxTime)
 		}
-		
+
 		if len(history) > 0 {
 			fmt.Fprintf(w, "\nRecent Slow Operations:\n")
 			for i, op := range history {
@@ -222,7 +222,7 @@ func (ms *MonitoringServer) handleHealth(w http.ResponseWriter, r *http.Request)
 		"uptime":    time.Since(ms.metricsReg.startTime),
 		"version":   "1.0.0",
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(health)
 }
@@ -230,7 +230,7 @@ func (ms *MonitoringServer) handleHealth(w http.ResponseWriter, r *http.Request)
 // handleDashboard handles the dashboard page
 func (ms *MonitoringServer) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	
+
 	tmpl := `<!DOCTYPE html>
 <html>
 <head>
@@ -368,7 +368,7 @@ func (ms *MonitoringServer) handleDashboard(w http.ResponseWriter, r *http.Reque
     </script>
 </body>
 </html>`
-	
+
 	t, _ := template.New("dashboard").Parse(tmpl)
 	t.Execute(w, nil)
 }
@@ -379,16 +379,16 @@ func (ms *MonitoringServer) handleMetricsStream(w http.ResponseWriter, r *http.R
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	
+
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
 		return
 	}
-	
+
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -396,7 +396,7 @@ func (ms *MonitoringServer) handleMetricsStream(w http.ResponseWriter, r *http.R
 			data, _ := json.Marshal(snapshot)
 			fmt.Fprintf(w, "data: %s\n\n", data)
 			flusher.Flush()
-			
+
 		case <-r.Context().Done():
 			return
 		}

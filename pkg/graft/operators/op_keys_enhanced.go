@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"fmt"
+	"sort"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // KeysOperatorEnhanced is an enhanced version that supports nested expressions
 type KeysOperatorEnhanced struct{}
@@ -42,20 +48,20 @@ func (KeysOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, error) 
 
 	// Extract keys based on the type
 	var keys []interface{}
-	
+
 	switch v := val.(type) {
 	case map[interface{}]interface{}:
 		DEBUG("extracting keys from map[interface{}]interface{}")
 		for key := range v {
 			keys = append(keys, fmt.Sprintf("%v", key))
 		}
-		
+
 	case map[string]interface{}:
 		DEBUG("extracting keys from map[string]interface{}")
 		for key := range v {
 			keys = append(keys, key)
 		}
-		
+
 	default:
 		DEBUG("argument is not a map: %T", v)
 		return nil, fmt.Errorf("keys operator only works on maps, got %T", v)
@@ -67,13 +73,13 @@ func (KeysOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, error) 
 		stringKeys[i] = fmt.Sprintf("%v", k)
 	}
 	sort.Strings(stringKeys)
-	
+
 	// Convert back to interface slice
 	result := make([]interface{}, len(stringKeys))
 	for i, k := range stringKeys {
 		result[i] = k
 	}
-	
+
 	DEBUG("extracted %d keys", len(result))
 
 	return &Response{

@@ -1,5 +1,12 @@
 package operators
 
+import (
+	"fmt"
+	"math/rand"
+	"time"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // ShuffleOperator ...
 type ShuffleOperator struct{}

@@ -1,9 +1,7 @@
 package parser
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -52,8 +50,8 @@ func NewParserMemoizationCache(maxSize int, ttl time.Duration) *ParserMemoizatio
 
 // CacheKey generates a cache key for an expression input
 func (c *ParserMemoizationCache) CacheKey(input string, operatorRegistry *OperatorRegistry) string {
-	// Use optimized key generation
-	return DefaultKeyGenerator.GenerateExpressionKey(input, operatorRegistry)
+	// Phase 1: Simple key generation
+	return fmt.Sprintf("expr:%s", input)
 }
 
 // GetExpression retrieves a cached expression
@@ -292,7 +290,7 @@ func (pt *PatternTracker) RecordPattern(input string) {
 	defer pt.mu.Unlock()
 	
 	// Normalize pattern (remove specific values, keep structure)
-	pattern := pt.normalizePattern(input)
+	pattern := pt.NormalizePattern(input)
 	
 	if existing, found := pt.patterns[pattern]; found {
 		existing.Frequency++
@@ -306,8 +304,8 @@ func (pt *PatternTracker) RecordPattern(input string) {
 	}
 }
 
-// normalizePattern creates a normalized pattern for caching
-func (pt *PatternTracker) normalizePattern(input string) string {
+// NormalizePattern creates a normalized pattern for caching
+func (pt *PatternTracker) NormalizePattern(input string) string {
 	// Simple pattern normalization: replace quoted strings and numbers with placeholders
 	normalized := input
 	

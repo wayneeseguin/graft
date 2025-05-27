@@ -1,9 +1,6 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"fmt"
 	"regexp"
 	"strings"
@@ -47,16 +44,16 @@ func NewPathExtractor() *PathExtractor {
 // AnalyzeDocument analyzes a document and builds dependency graph
 func (da *DependencyAnalyzer) AnalyzeDocument(doc interface{}) (*DependencyGraph, error) {
 	da.graph.Clear()
-	
+
 	// Walk the document tree
 	err := da.walkDocument(doc, []string{})
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Estimate costs for all nodes
 	da.estimateCosts()
-	
+
 	return da.graph, nil
 }
 
@@ -71,7 +68,7 @@ func (da *DependencyAnalyzer) walkDocument(node interface{}, path []string) erro
 				return err
 			}
 		}
-		
+
 	case map[string]interface{}:
 		for key, value := range v {
 			newPath := append(path, key)
@@ -79,7 +76,7 @@ func (da *DependencyAnalyzer) walkDocument(node interface{}, path []string) erro
 				return err
 			}
 		}
-		
+
 	case []interface{}:
 		for i, value := range v {
 			newPath := append(path, fmt.Sprintf("[%d]", i))
@@ -87,14 +84,14 @@ func (da *DependencyAnalyzer) walkDocument(node interface{}, path []string) erro
 				return err
 			}
 		}
-		
+
 	case string:
 		// Check if it's an operator expression
 		if da.isOperatorExpression(v) {
 			return da.analyzeExpression(v, path)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -108,7 +105,7 @@ func (da *DependencyAnalyzer) isOperatorExpression(s string) bool {
 func (da *DependencyAnalyzer) analyzeExpression(expr string, path []string) error {
 	nodeID := strings.Join(path, ".")
 	opType := da.extractOperatorType(expr)
-	
+
 	// Add node to graph
 	node := &DependencyNode{
 		ID:           nodeID,
@@ -123,14 +120,14 @@ func (da *DependencyAnalyzer) analyzeExpression(expr string, path []string) erro
 		Ready:        false,
 	}
 	da.graph.AddNode(nodeID, node)
-	
+
 	// Extract dependencies
 	deps := da.extractDependencies(expr, opType)
-	
+
 	// Add dependency edges
 	for _, dep := range deps {
 		depID := da.resolvePathToID(dep, path)
-		
+
 		// Ensure dependency node exists
 		if _, exists := da.graph.GetNode(depID); !exists {
 			// Create placeholder node for external reference
@@ -148,11 +145,11 @@ func (da *DependencyAnalyzer) analyzeExpression(expr string, path []string) erro
 			}
 			da.graph.AddNode(depID, depNode)
 		}
-		
+
 		// Add dependency edge
 		da.graph.AddDependency(depID, nodeID)
 	}
-	
+
 	return nil
 }
 
@@ -162,7 +159,7 @@ func (da *DependencyAnalyzer) extractOperatorType(expr string) string {
 	expr = strings.TrimPrefix(expr, "((")
 	expr = strings.TrimSuffix(expr, "))")
 	expr = strings.TrimSpace(expr)
-	
+
 	parts := strings.Fields(expr)
 	if len(parts) > 0 {
 		return parts[0]
@@ -173,7 +170,7 @@ func (da *DependencyAnalyzer) extractOperatorType(expr string) string {
 // extractDependencies extracts path dependencies from expression
 func (da *DependencyAnalyzer) extractDependencies(expr string, opType string) []string {
 	var deps []string
-	
+
 	switch opType {
 	case "grab":
 		// Extract direct path reference
@@ -181,7 +178,7 @@ func (da *DependencyAnalyzer) extractDependencies(expr string, opType string) []
 		if len(matches) > 1 {
 			deps = append(deps, matches[1])
 		}
-		
+
 	case "concat":
 		// Extract all path references in concat
 		matches := da.pathExtractor.pathPattern.FindAllString(expr, -1)
@@ -191,11 +188,11 @@ func (da *DependencyAnalyzer) extractDependencies(expr string, opType string) []
 				deps = append(deps, match)
 			}
 		}
-		
+
 	case "static_ips", "ips":
 		// Extract network and job references
 		deps = da.extractStaticIPDeps(expr)
-		
+
 	default:
 		// Generic path extraction
 		matches := da.pathExtractor.pathPattern.FindAllString(expr, -1)
@@ -206,7 +203,7 @@ func (da *DependencyAnalyzer) extractDependencies(expr string, opType string) []
 			}
 		}
 	}
-	
+
 	// Remove duplicates
 	seen := make(map[string]bool)
 	unique := make([]string, 0, len(deps))
@@ -216,7 +213,7 @@ func (da *DependencyAnalyzer) extractDependencies(expr string, opType string) []
 			unique = append(unique, dep)
 		}
 	}
-	
+
 	return unique
 }
 
@@ -227,26 +224,26 @@ func (da *DependencyAnalyzer) looksLikePath(s string) bool {
 		"true": true, "false": true, "nil": true, "null": true,
 		"or": true, "and": true, "not": true,
 	}
-	
+
 	if keywords[s] {
 		return false
 	}
-	
+
 	// Check if it contains dots (path separator)
-	return strings.Contains(s, ".") || 
+	return strings.Contains(s, ".") ||
 		(len(s) > 2 && !strings.HasPrefix(s, "\"") && !strings.HasSuffix(s, "\""))
 }
 
 // extractStaticIPDeps extracts dependencies for static_ips operator
 func (da *DependencyAnalyzer) extractStaticIPDeps(expr string) []string {
 	deps := []string{"networks", "jobs"}
-	
+
 	// Look for specific job references
 	if strings.Contains(expr, "jobs.") {
 		matches := regexp.MustCompile(`jobs\.[a-zA-Z0-9_]+`).FindAllString(expr, -1)
 		deps = append(deps, matches...)
 	}
-	
+
 	return deps
 }
 
@@ -256,11 +253,11 @@ func (da *DependencyAnalyzer) resolvePathToID(refPath string, currentPath []stri
 	if !strings.HasPrefix(refPath, ".") {
 		return refPath
 	}
-	
+
 	// Handle relative paths
 	parts := strings.Split(refPath, ".")
 	basePath := currentPath
-	
+
 	for _, part := range parts {
 		if part == "" || part == "." {
 			continue
@@ -272,7 +269,7 @@ func (da *DependencyAnalyzer) resolvePathToID(refPath string, currentPath []stri
 			basePath = append(basePath, part)
 		}
 	}
-	
+
 	return strings.Join(basePath, ".")
 }
 
@@ -280,7 +277,7 @@ func (da *DependencyAnalyzer) resolvePathToID(refPath string, currentPath []stri
 func (da *DependencyAnalyzer) estimateCosts() {
 	nodeIDs, _ := da.graph.TopologicalSort()
 	allNodes := da.graph.GetNodes()
-	
+
 	for _, nodeID := range nodeIDs {
 		if node, ok := allNodes[nodeID]; ok && node.Cost == 0 {
 			node.Cost = da.costEstimator.EstimateNodeCost(node)
@@ -294,22 +291,22 @@ func (da *DependencyAnalyzer) GetCriticalPath() ([]*DependencyNode, float64) {
 	if err != nil {
 		return nil, 0
 	}
-	
+
 	allNodes := da.graph.GetNodes()
-	
+
 	// Calculate longest path to each node
 	longestPath := make(map[string]float64)
 	predecessor := make(map[string]*DependencyNode)
-	
+
 	for _, nodeID := range sortedIDs {
 		node, ok := allNodes[nodeID]
 		if !ok {
 			continue
 		}
-		
+
 		maxCost := float64(0)
 		var maxPred *DependencyNode
-		
+
 		// Find maximum cost path from dependencies
 		for _, depID := range node.Dependencies {
 			if dep, ok := allNodes[depID]; ok {
@@ -320,28 +317,28 @@ func (da *DependencyAnalyzer) GetCriticalPath() ([]*DependencyNode, float64) {
 				}
 			}
 		}
-		
+
 		longestPath[nodeID] = maxCost + node.Cost
 		if maxPred != nil {
 			predecessor[nodeID] = maxPred
 		}
 	}
-	
+
 	// Find node with maximum path cost
 	var endNodeID string
 	maxTotalCost := float64(0)
-	
+
 	for _, nodeID := range sortedIDs {
 		if cost := longestPath[nodeID]; cost > maxTotalCost {
 			maxTotalCost = cost
 			endNodeID = nodeID
 		}
 	}
-	
+
 	// Reconstruct critical path
 	var criticalPath []*DependencyNode
 	currentID := endNodeID
-	
+
 	for currentID != "" {
 		if current, ok := allNodes[currentID]; ok {
 			criticalPath = append([]*DependencyNode{current}, criticalPath...)
@@ -364,27 +361,27 @@ func (da *DependencyAnalyzer) GetCriticalPath() ([]*DependencyNode, float64) {
 			break
 		}
 	}
-	
+
 	return criticalPath, maxTotalCost
 }
 
 // OptimizeExecution analyzes the graph and suggests optimizations
 func (da *DependencyAnalyzer) OptimizeExecution() *ExecutionPlan {
 	stages, _ := da.graph.GetExecutionStages()
-	
+
 	plan := &ExecutionPlan{
 		Stages:      make([]PlannedStage, 0, len(stages)),
 		TotalCost:   0,
 		Parallelism: 0,
 	}
-	
+
 	for _, stage := range stages {
 		plannedStage := PlannedStage{
 			Operations:    stage.Operations,
 			CanParallel:   stage.CanParallel,
 			EstimatedTime: 0,
 		}
-		
+
 		// Calculate stage time (max of parallel operations)
 		maxTime := float64(0)
 		for _, op := range stage.Operations {
@@ -392,17 +389,17 @@ func (da *DependencyAnalyzer) OptimizeExecution() *ExecutionPlan {
 				maxTime = op.Cost
 			}
 		}
-		
+
 		plannedStage.EstimatedTime = maxTime
 		plan.TotalCost += maxTime
-		
+
 		if len(stage.Operations) > plan.Parallelism {
 			plan.Parallelism = len(stage.Operations)
 		}
-		
+
 		plan.Stages = append(plan.Stages, plannedStage)
 	}
-	
+
 	return plan
 }
 

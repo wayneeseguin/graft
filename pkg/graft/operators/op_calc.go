@@ -1,5 +1,17 @@
 package operators
 
+import (
+	"fmt"
+	"math"
+	"reflect"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/Knetic/govaluate"
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // CalcOperator is invoked with (( calc <expression> ))
 type CalcOperator struct{}

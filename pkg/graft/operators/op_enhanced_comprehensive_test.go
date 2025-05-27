@@ -1,5 +1,14 @@
 package operators
 
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/geofffranks/yaml"
+)
 
 func TestEnhancedOperatorsComprehensive(t *testing.T) {
 	Convey("Enhanced Operators Comprehensive Test", t, func() {
@@ -17,10 +26,10 @@ func TestEnhancedOperatorsComprehensive(t *testing.T) {
 			tmpDir, err := ioutil.TempDir("", "graft-test")
 			So(err, ShouldBeNil)
 			defer os.RemoveAll(tmpDir)
-			
+
 			err = ioutil.WriteFile(filepath.Join(tmpDir, "test.txt"), []byte("Hello from file!"), 0644)
 			So(err, ShouldBeNil)
-			
+
 			input := fmt.Sprintf(`
 dir: "%s"
 filename: "test.txt"
@@ -52,7 +61,7 @@ result: (( keys (grab data.config) ))
 			ev := &Evaluator{Tree: data}
 			err = ev.RunPhase(EvalPhase)
 			So(err, ShouldBeNil)
-			
+
 			keys := ev.Tree["result"].([]interface{})
 			So(len(keys), ShouldEqual, 3)
 			// Keys should be sorted
@@ -78,7 +87,7 @@ result: (( stringify (grab data.users) ))
 			ev := &Evaluator{Tree: data}
 			err = ev.RunPhase(EvalPhase)
 			So(err, ShouldBeNil)
-			
+
 			result := ev.Tree["result"].(string)
 			So(result, ShouldContainSubstring, "- name: alice")
 			So(result, ShouldContainSubstring, "role: admin")
@@ -91,10 +100,10 @@ result: (( stringify (grab data.users) ))
 			tmpDir, err := ioutil.TempDir("", "graft-test")
 			So(err, ShouldBeNil)
 			defer os.RemoveAll(tmpDir)
-			
+
 			err = ioutil.WriteFile(filepath.Join(tmpDir, "users.yml"), []byte("alice,bob,charlie"), 0644)
 			So(err, ShouldBeNil)
-			
+
 			input := fmt.Sprintf(`
 config:
   dir: "%s"
@@ -109,7 +118,7 @@ users_encoded: (( base64 users_raw ))
 			ev := &Evaluator{Tree: data}
 			err = ev.RunPhase(EvalPhase)
 			So(err, ShouldBeNil)
-			
+
 			So(ev.Tree["users_raw"], ShouldEqual, "alice,bob,charlie")
 			So(ev.Tree["users_encoded"], ShouldEqual, "YWxpY2UsYm9iLGNoYXJsaWU=") // base64("alice,bob,charlie")
 		})
@@ -117,7 +126,7 @@ users_encoded: (( base64 users_raw ))
 		Convey("environment variables in nested expressions", func() {
 			os.Setenv("TEST_CONFIG_KEY", "database")
 			defer os.Unsetenv("TEST_CONFIG_KEY")
-			
+
 			input := `
 configs:
   database:
@@ -137,7 +146,7 @@ host_info: (( stringify keys_list ))
 			ev := &Evaluator{Tree: data}
 			err = ev.RunPhase(EvalPhase)
 			So(err, ShouldBeNil)
-			
+
 			// Handle both map types
 			var host, port interface{}
 			switch s := ev.Tree["selected"].(type) {
@@ -152,7 +161,7 @@ host_info: (( stringify keys_list ))
 			}
 			So(host, ShouldEqual, "db.example.com")
 			So(port, ShouldEqual, 5432)
-			
+
 			hostInfo := ev.Tree["host_info"].(string)
 			So(hostInfo, ShouldContainSubstring, "host")
 			So(hostInfo, ShouldContainSubstring, "port")

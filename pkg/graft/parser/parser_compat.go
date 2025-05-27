@@ -30,7 +30,7 @@ func ParseOpcallCompat(phase graft.OperatorPhase, src string) (*graft.Opcall, er
 			return ParseOpcall(phase, src)
 		}
 		if result != nil {
-			log.DEBUG("Enhanced parser succeeded for '%s' - operator: %T", src, result.op)
+			log.DEBUG("Enhanced parser succeeded for '%s'", src)
 			return result, nil
 		}
 		// If enhanced parser returned nil, fall back to original parser
@@ -79,24 +79,24 @@ func shouldUseEnhancedParser(src string) bool {
 
 // WrapOperatorForNestedCalls wraps an operator to handle nested operator call expressions
 // This allows existing operators to work with the enhanced parser without modification
-func WrapOperatorForNestedCalls(op Operator) Operator {
+func WrapOperatorForNestedCalls(op graft.Operator) graft.Operator {
 	return &NestedCallWrapper{wrapped: op}
 }
 
 // NestedCallWrapper wraps an operator to evaluate nested calls in arguments
 type NestedCallWrapper struct {
-	wrapped Operator
+	wrapped graft.Operator
 }
 
 func (w *NestedCallWrapper) Setup() error {
 	return w.wrapped.Setup()
 }
 
-func (w *NestedCallWrapper) Phase() OperatorPhase {
+func (w *NestedCallWrapper) Phase() graft.OperatorPhase {
 	return w.wrapped.Phase()
 }
 
-func (w *NestedCallWrapper) Dependencies(ev *Evaluator, args []*Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+func (w *NestedCallWrapper) Dependencies(ev *graft.Evaluator, args []*graft.Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
 	// For dependencies, we need to extract dependencies from nested calls too
 	deps := w.wrapped.Dependencies(ev, args, locs, auto)
 	
@@ -105,7 +105,7 @@ func (w *NestedCallWrapper) Dependencies(ev *Evaluator, args []*Expr, locs []*tr
 		if arg.Type == OperatorCall {
 			// Get the nested operator
 			nestedOp := OperatorFor(arg.Op())
-			if _, ok := nestedOp.(NullOperator); !ok {
+			if _, ok := nestedOp.(*NullOperator); !ok {
 				nestedDeps := nestedOp.Dependencies(ev, arg.Args(), locs, auto)
 				deps = append(deps, nestedDeps...)
 			}
@@ -115,20 +115,20 @@ func (w *NestedCallWrapper) Dependencies(ev *Evaluator, args []*Expr, locs []*tr
 	return deps
 }
 
-func (w *NestedCallWrapper) Run(ev *Evaluator, args []*Expr) (*Response, error) {
+func (w *NestedCallWrapper) Run(ev *graft.Evaluator, args []*graft.Expr) (*graft.Response, error) {
 	// Pre-process arguments to evaluate nested operator calls
-	processedArgs := make([]*Expr, len(args))
+	processedArgs := make([]*graft.Expr, len(args))
 	
 	for i, arg := range args {
-		if arg.Type == OperatorCall {
+		if arg.Type == graft.OperatorCall {
 			// Evaluate the nested operator call
 			resp, err := evaluateOperatorCall(arg, ev)
 			if err != nil {
 				return nil, fmt.Errorf("failed to evaluate nested operator call: %v", err)
 			}
 			// Replace with the result
-			processedArgs[i] = &Expr{
-				Type:    Literal,
+			processedArgs[i] = &graft.Expr{
+				Type:    graft.Literal,
 				Literal: resp.Value,
 			}
 		} else {

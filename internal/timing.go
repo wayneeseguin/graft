@@ -1,9 +1,6 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"context"
 	"fmt"
 	"sync"
@@ -39,12 +36,12 @@ func (t *Timer) Stop() time.Duration {
 	if atomic.CompareAndSwapInt32(&t.completed, 0, 1) {
 		t.end = time.Now()
 		t.duration = t.end.Sub(t.start)
-		
+
 		// Record metric if enabled
 		if MetricsEnabled() {
 			t.recordMetric()
 		}
-		
+
 		// Check for slow operation
 		if slowOpDetector != nil {
 			slowOpDetector.Check(t)
@@ -66,11 +63,11 @@ func (t *Timer) StopWithError(err error) (time.Duration, error) {
 func (t *Timer) Child(name string) *Timer {
 	child := NewTimer(name)
 	child.parent = t
-	
+
 	t.mu.Lock()
 	t.children = append(t.children, child)
 	t.mu.Unlock()
-	
+
 	return child
 }
 
@@ -131,7 +128,7 @@ func (t *Timer) GetTree() *TimingTree {
 func (t *Timer) copyMetadata() map[string]interface{} {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	
+
 	copy := make(map[string]interface{})
 	for k, v := range t.metadata {
 		copy[k] = v
@@ -143,7 +140,7 @@ func (t *Timer) copyMetadata() map[string]interface{} {
 func (t *Timer) getChildTrees() []*TimingTree {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	
+
 	trees := make([]*TimingTree, len(t.children))
 	for i, child := range t.children {
 		trees[i] = child.GetTree()
@@ -154,10 +151,10 @@ func (t *Timer) getChildTrees() []*TimingTree {
 // recordMetric records timing metric
 func (t *Timer) recordMetric() {
 	mc := GetMetricsCollector()
-	
+
 	// Determine metric type from name
 	labels := make(map[string]string)
-	
+
 	switch {
 	case t.name == "parse":
 		mc.ParseDuration.GetOrCreate(labels).(*Histogram).ObserveDuration(t.start)
@@ -218,7 +215,7 @@ func NewTimingContext() *TimingContext {
 func (tc *TimingContext) Start(name string) *Timer {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
-	
+
 	timer := NewTimer(name)
 	if tc.current != nil {
 		timer.parent = tc.current
@@ -226,7 +223,7 @@ func (tc *TimingContext) Start(name string) *Timer {
 		tc.current.children = append(tc.current.children, timer)
 		tc.current.mu.Unlock()
 	}
-	
+
 	tc.timers[name] = timer
 	tc.current = timer
 	return timer
@@ -236,11 +233,11 @@ func (tc *TimingContext) Start(name string) *Timer {
 func (tc *TimingContext) Stop() time.Duration {
 	tc.mu.Lock()
 	defer tc.mu.Unlock()
-	
+
 	if tc.current == nil {
 		return 0
 	}
-	
+
 	duration := tc.current.Stop()
 	tc.current = tc.current.parent
 	return duration
@@ -257,7 +254,7 @@ func (tc *TimingContext) GetTimer(name string) *Timer {
 func (tc *TimingContext) GetRoot() *Timer {
 	tc.mu.RLock()
 	defer tc.mu.RUnlock()
-	
+
 	// Find timer with no parent
 	for _, timer := range tc.timers {
 		if timer.parent == nil {

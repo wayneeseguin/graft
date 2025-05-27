@@ -1,9 +1,6 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"strings"
 	"time"
 )
@@ -32,17 +29,17 @@ func NewCostEstimator() *CostEstimator {
 func defaultOperatorCosts() map[string]float64 {
 	return map[string]float64{
 		// Simple operators
-		"grab":     0.1,
-		"param":    0.1,
-		"static":   0.1,
-		"literal":  0.05,
-		
+		"grab":    0.1,
+		"param":   0.1,
+		"static":  0.1,
+		"literal": 0.05,
+
 		// String operators
-		"concat":   0.2,
-		"join":     0.3,
-		"split":    0.2,
-		"replace":  0.3,
-		
+		"concat":  0.2,
+		"join":    0.3,
+		"split":   0.2,
+		"replace": 0.3,
+
 		// Math operators
 		"calc":     0.5,
 		"add":      0.1,
@@ -50,36 +47,36 @@ func defaultOperatorCosts() map[string]float64 {
 		"multiply": 0.1,
 		"divide":   0.1,
 		"modulo":   0.1,
-		
+
 		// Complex operators
-		"static_ips":     2.0,
-		"ips":           2.0,
-		"cartesian":     3.0,
-		"inject":        1.0,
-		"defer":         0.5,
-		"prune":         0.3,
-		
+		"static_ips": 2.0,
+		"ips":        2.0,
+		"cartesian":  3.0,
+		"inject":     1.0,
+		"defer":      0.5,
+		"prune":      0.3,
+
 		// External operators
-		"vault":         10.0,
-		"file":          5.0,
-		"awsparam":      15.0,
-		"awssecret":     15.0,
-		"env":           0.2,
-		"envdefault":    0.2,
-		
+		"vault":      10.0,
+		"file":       5.0,
+		"awsparam":   15.0,
+		"awssecret":  15.0,
+		"env":        0.2,
+		"envdefault": 0.2,
+
 		// Default
-		"unknown":       1.0,
+		"unknown": 1.0,
 	}
 }
 
 // defaultExternalCosts returns default costs for external systems
 func defaultExternalCosts() map[string]float64 {
 	return map[string]float64{
-		"vault":    50.0,  // 50ms average
-		"file":     10.0,  // 10ms for file I/O
-		"aws":      100.0, // 100ms for AWS calls
-		"network":  30.0,  // 30ms for network calls
-		"disk":     5.0,   // 5ms for disk cache
+		"vault":   50.0,  // 50ms average
+		"file":    10.0,  // 10ms for file I/O
+		"aws":     100.0, // 100ms for AWS calls
+		"network": 30.0,  // 30ms for network calls
+		"disk":    5.0,   // 5ms for disk cache
 	}
 }
 
@@ -89,16 +86,16 @@ func (ce *CostEstimator) EstimateOperatorCost(opType string, expr string) float6
 	if !exists {
 		baseCost = ce.operatorCosts["unknown"]
 	}
-	
+
 	// Adjust for expression complexity
 	complexity := ce.estimateComplexity(expr)
 	cost := baseCost * complexity
-	
+
 	// Add external cost if applicable
 	if ce.isExternalOperator(opType) {
 		cost += ce.externalCosts[ce.getExternalSystem(opType)]
 	}
-	
+
 	return cost
 }
 
@@ -107,14 +104,14 @@ func (ce *CostEstimator) EstimateNodeCost(node *DependencyNode) float64 {
 	if node.Cost > 0 {
 		return node.Cost
 	}
-	
+
 	// Use actual metrics if available
 	if ce.metricsEnabled {
 		if avgTime := ce.getAverageExecutionTime(node.OperatorType); avgTime > 0 {
 			return avgTime
 		}
 	}
-	
+
 	// Fall back to estimates
 	return ce.EstimateOperatorCost(node.OperatorType, "")
 }
@@ -122,7 +119,7 @@ func (ce *CostEstimator) EstimateNodeCost(node *DependencyNode) float64 {
 // estimateComplexity estimates expression complexity multiplier
 func (ce *CostEstimator) estimateComplexity(expr string) float64 {
 	complexity := 1.0
-	
+
 	// Adjust for expression length
 	if len(expr) > 100 {
 		complexity *= 1.2
@@ -130,18 +127,18 @@ func (ce *CostEstimator) estimateComplexity(expr string) float64 {
 	if len(expr) > 500 {
 		complexity *= 1.5
 	}
-	
+
 	// Adjust for nested expressions
 	openCount := strings.Count(expr, "((")
 	if openCount > 1 {
 		complexity *= 1.0 + float64(openCount-1)*0.2
 	}
-	
+
 	// Adjust for list operations
 	if strings.Contains(expr, "[") && strings.Contains(expr, "]") {
 		complexity *= 1.3
 	}
-	
+
 	return complexity
 }
 
@@ -175,19 +172,19 @@ func (ce *CostEstimator) getAverageExecutionTime(opType string) float64 {
 	if !ce.metricsEnabled {
 		return 0
 	}
-	
+
 	// Get timing aggregator
 	aggregator := GetTimingAggregator()
 	if aggregator == nil {
 		return 0
 	}
-	
+
 	// Look up operator timing stats
 	stats, exists := aggregator.GetStats("operator_" + opType)
 	if !exists || stats.Count == 0 {
 		return 0
 	}
-	
+
 	// Return mean time in cost units (1 unit = 1ms)
 	return float64(stats.MeanTime.Milliseconds())
 }
@@ -197,27 +194,27 @@ func (ce *CostEstimator) EstimateBatchCost(operations []*DependencyNode) float64
 	if len(operations) == 0 {
 		return 0
 	}
-	
+
 	// Group by operator type
 	groups := make(map[string][]*DependencyNode)
 	for _, op := range operations {
 		groups[op.OperatorType] = append(groups[op.OperatorType], op)
 	}
-	
+
 	totalCost := float64(0)
-	
+
 	for opType, ops := range groups {
 		if ce.canBatch(opType) {
 			// Batched cost: base + incremental per operation
 			baseCost := ce.operatorCosts[opType]
 			batchCost := baseCost + float64(len(ops)-1)*baseCost*0.1
-			
+
 			if ce.isExternalOperator(opType) {
 				// External calls benefit more from batching
 				extCost := ce.externalCosts[ce.getExternalSystem(opType)]
 				batchCost = extCost + float64(len(ops)-1)*extCost*0.05
 			}
-			
+
 			totalCost += batchCost
 		} else {
 			// Non-batchable: sum individual costs
@@ -226,7 +223,7 @@ func (ce *CostEstimator) EstimateBatchCost(operations []*DependencyNode) float64
 			}
 		}
 	}
-	
+
 	return totalCost
 }
 
@@ -240,7 +237,7 @@ func (ce *CostEstimator) canBatch(opType string) bool {
 		"grab":       false, // Usually can't batch grabs
 		"static_ips": false, // Complex operator
 	}
-	
+
 	supported, exists := batchable[opType]
 	return exists && supported
 }
@@ -250,7 +247,7 @@ func (ce *CostEstimator) EstimateParallelCost(operations []*DependencyNode) floa
 	if len(operations) == 0 {
 		return 0
 	}
-	
+
 	// Parallel cost is the maximum cost of any operation
 	maxCost := float64(0)
 	for _, op := range operations {
@@ -258,7 +255,7 @@ func (ce *CostEstimator) EstimateParallelCost(operations []*DependencyNode) floa
 			maxCost = op.Cost
 		}
 	}
-	
+
 	// Apply parallel bonus for coordination overhead
 	return maxCost * ce.parallelBonus
 }
@@ -268,7 +265,7 @@ func (ce *CostEstimator) UpdateCosts(opType string, actualTime time.Duration) {
 	// Exponential moving average
 	alpha := 0.2
 	actualCost := float64(actualTime.Milliseconds())
-	
+
 	if currentCost, exists := ce.operatorCosts[opType]; exists {
 		ce.operatorCosts[opType] = currentCost*(1-alpha) + actualCost*alpha
 	} else {
@@ -280,16 +277,16 @@ func (ce *CostEstimator) UpdateCosts(opType string, actualTime time.Duration) {
 func (ce *CostEstimator) GetCostBreakdown(node *DependencyNode) CostBreakdown {
 	baseCost := ce.operatorCosts[node.OperatorType]
 	externalCost := float64(0)
-	
+
 	if ce.isExternalOperator(node.OperatorType) {
 		externalCost = ce.externalCosts[ce.getExternalSystem(node.OperatorType)]
 	}
-	
+
 	return CostBreakdown{
-		BaseCost:     baseCost,
-		ExternalCost: externalCost,
+		BaseCost:      baseCost,
+		ExternalCost:  externalCost,
 		CacheMissCost: baseCost * ce.cacheMissWeight,
-		TotalCost:    node.Cost,
+		TotalCost:     node.Cost,
 	}
 }
 
@@ -304,11 +301,11 @@ type CostBreakdown struct {
 // OptimizeCosts suggests cost optimizations
 func (ce *CostEstimator) OptimizeCosts(graph *DependencyGraph) []CostOptimization {
 	optimizations := make([]CostOptimization, 0)
-	
+
 	// Analyze all nodes
 	nodeIDs, _ := graph.TopologicalSort()
 	allNodes := graph.GetNodes()
-	
+
 	// Find expensive operations
 	for _, nodeID := range nodeIDs {
 		if node, ok := allNodes[nodeID]; ok && node.Cost > 10 { // Expensive threshold
@@ -317,7 +314,7 @@ func (ce *CostEstimator) OptimizeCosts(graph *DependencyGraph) []CostOptimizatio
 				CurrentCost: node.Cost,
 				Suggestion:  ce.getSuggestion(node),
 			}
-			
+
 			// Estimate savings
 			if ce.canCache(node.OperatorType) {
 				opt.PotentialSavings = node.Cost * 0.9 // 90% savings with cache
@@ -326,11 +323,11 @@ func (ce *CostEstimator) OptimizeCosts(graph *DependencyGraph) []CostOptimizatio
 				opt.PotentialSavings = node.Cost * 0.7 // 70% savings with batching
 				opt.Type = "batching"
 			}
-			
+
 			optimizations = append(optimizations, opt)
 		}
 	}
-	
+
 	return optimizations
 }
 

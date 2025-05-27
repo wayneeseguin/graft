@@ -12,14 +12,14 @@ import (
 
 // HTTPClientPool manages a pool of HTTP clients for efficient connection reuse
 type HTTPClientPool struct {
-	clients   chan *http.Client
-	factory   func() *http.Client
-	maxSize   int
-	created   atomic.Int32
-	hits      atomic.Uint64
-	misses    atomic.Uint64
-	mu        sync.RWMutex
-	closed    bool
+	clients chan *http.Client
+	factory func() *http.Client
+	maxSize int
+	created atomic.Int32
+	hits    atomic.Uint64
+	misses  atomic.Uint64
+	mu      sync.RWMutex
+	closed  bool
 }
 
 // HTTPClientPoolConfig holds configuration for HTTP client pool
@@ -37,12 +37,12 @@ func NewHTTPClientPool(config HTTPClientPoolConfig) *HTTPClientPool {
 	if config.MaxClients <= 0 {
 		config.MaxClients = 10
 	}
-	
+
 	pool := &HTTPClientPool{
 		clients: make(chan *http.Client, config.MaxClients),
 		maxSize: config.MaxClients,
 	}
-	
+
 	// Client factory function
 	pool.factory = func() *http.Client {
 		transport := &http.Transport{
@@ -51,33 +51,33 @@ func NewHTTPClientPool(config HTTPClientPoolConfig) *HTTPClientPool {
 			IdleConnTimeout:     config.IdleTimeout,
 			DisableKeepAlives:   false,
 		}
-		
+
 		if config.ConnectTimeout > 0 {
 			transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 				d := &net.Dialer{Timeout: config.ConnectTimeout}
 				return d.DialContext(ctx, network, addr)
 			}
 		}
-		
+
 		client := &http.Client{
 			Transport: transport,
 			Timeout:   config.RequestTimeout,
 		}
-		
+
 		return client
 	}
-	
+
 	// Pre-populate pool with initial clients
 	initialClients := config.MaxClients / 2
 	if initialClients < 1 {
 		initialClients = 1
 	}
-	
+
 	for i := 0; i < initialClients; i++ {
 		pool.clients <- pool.factory()
 		pool.created.Add(1)
 	}
-	
+
 	return pool
 }
 
@@ -90,7 +90,7 @@ func (pool *HTTPClientPool) Get() *http.Client {
 		return pool.factory() // Return new client if pool is closed
 	}
 	pool.mu.RUnlock()
-	
+
 	select {
 	case client := <-pool.clients:
 		pool.hits.Add(1)
@@ -102,11 +102,11 @@ func (pool *HTTPClientPool) Get() *http.Client {
 			pool.misses.Add(1)
 			return pool.factory()
 		}
-		
+
 		// Wait for a client to become available with timeout
 		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 		defer cancel()
-		
+
 		select {
 		case client := <-pool.clients:
 			pool.hits.Add(1)
@@ -123,14 +123,14 @@ func (pool *HTTPClientPool) Put(client *http.Client) {
 	if client == nil {
 		return
 	}
-	
+
 	pool.mu.RLock()
 	if pool.closed {
 		pool.mu.RUnlock()
 		return
 	}
 	pool.mu.RUnlock()
-	
+
 	select {
 	case pool.clients <- client:
 		// Successfully returned to pool
@@ -149,7 +149,7 @@ func (pool *HTTPClientPool) Close() {
 	}
 	pool.closed = true
 	pool.mu.Unlock()
-	
+
 	// Drain the pool
 	close(pool.clients)
 	for client := range pool.clients {
@@ -162,12 +162,12 @@ func (pool *HTTPClientPool) Close() {
 // Metrics returns pool usage metrics
 func (pool *HTTPClientPool) Metrics() HTTPClientPoolMetrics {
 	return HTTPClientPoolMetrics{
-		MaxSize:    pool.maxSize,
-		Created:    int(pool.created.Load()),
-		Available:  len(pool.clients),
-		Hits:       pool.hits.Load(),
-		Misses:     pool.misses.Load(),
-		HitRate:    pool.calculateHitRate(),
+		MaxSize:   pool.maxSize,
+		Created:   int(pool.created.Load()),
+		Available: len(pool.clients),
+		Hits:      pool.hits.Load(),
+		Misses:    pool.misses.Load(),
+		HitRate:   pool.calculateHitRate(),
 	}
 }
 
@@ -176,11 +176,11 @@ func (pool *HTTPClientPool) calculateHitRate() float64 {
 	hits := pool.hits.Load()
 	misses := pool.misses.Load()
 	total := hits + misses
-	
+
 	if total == 0 {
 		return 0.0
 	}
-	
+
 	return float64(hits) / float64(total) * 100.0
 }
 
@@ -237,10 +237,10 @@ func (vcw *VaultClientWrapper) GetLastUsed() time.Time {
 
 // VaultClientPoolConfig holds configuration for Vault client pool
 type VaultClientPoolConfig struct {
-	MaxClients    int
-	IdleTimeout   time.Duration
-	MaxIdleTime   time.Duration
-	ReuseClients  bool
+	MaxClients   int
+	IdleTimeout  time.Duration
+	MaxIdleTime  time.Duration
+	ReuseClients bool
 }
 
 // NewVaultClientPool creates a new Vault client pool
@@ -248,29 +248,29 @@ func NewVaultClientPool(config VaultClientPoolConfig, factory func() (interface{
 	if config.MaxClients <= 0 {
 		config.MaxClients = 5
 	}
-	
+
 	pool := &VaultClientPool{
 		clients: make(chan *VaultClientWrapper, config.MaxClients),
 		config:  config,
 		maxSize: config.MaxClients,
 	}
-	
+
 	// Wrapper factory
 	pool.factory = func() (*VaultClientWrapper, error) {
 		client, err := factory()
 		if err != nil {
 			return nil, err
 		}
-		
+
 		wrapper := &VaultClientWrapper{
 			Client:    client,
 			CreatedAt: time.Now(),
 		}
 		wrapper.LastUsed.Store(time.Now())
-		
+
 		return wrapper, nil
 	}
-	
+
 	return pool
 }
 
@@ -287,7 +287,7 @@ func (pool *VaultClientPool) Get() (interface{}, error) {
 		return wrapper.Client, nil
 	}
 	pool.mu.RUnlock()
-	
+
 	// Try to get from pool first
 	select {
 	case wrapper := <-pool.clients:
@@ -297,7 +297,7 @@ func (pool *VaultClientPool) Get() (interface{}, error) {
 			pool.created.Add(-1)
 			return pool.createNewClient()
 		}
-		
+
 		wrapper.UpdateLastUsed()
 		pool.hits.Add(1)
 		return wrapper.Client, nil
@@ -319,11 +319,11 @@ func (pool *VaultClientPool) createNewClient() (interface{}, error) {
 		pool.misses.Add(1)
 		return wrapper.Client, nil
 	}
-	
+
 	// Pool is at capacity, wait for a client with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 	defer cancel()
-	
+
 	select {
 	case wrapper := <-pool.clients:
 		wrapper.UpdateLastUsed()
@@ -346,20 +346,20 @@ func (pool *VaultClientPool) Put(client interface{}) {
 	if client == nil || !pool.config.ReuseClients {
 		return
 	}
-	
+
 	pool.mu.RLock()
 	if pool.closed {
 		pool.mu.RUnlock()
 		return
 	}
 	pool.mu.RUnlock()
-	
+
 	wrapper := &VaultClientWrapper{
 		Client:    client,
 		CreatedAt: time.Now(),
 	}
 	wrapper.LastUsed.Store(time.Now())
-	
+
 	select {
 	case pool.clients <- wrapper:
 		// Successfully returned to pool
@@ -378,7 +378,7 @@ func (pool *VaultClientPool) Close() {
 	}
 	pool.closed = true
 	pool.mu.Unlock()
-	
+
 	// Drain the pool
 	close(pool.clients)
 	for range pool.clients {
@@ -403,11 +403,11 @@ func (pool *VaultClientPool) calculateHitRate() float64 {
 	hits := pool.hits.Load()
 	misses := pool.misses.Load()
 	total := hits + misses
-	
+
 	if total == 0 {
 		return 0.0
 	}
-	
+
 	return float64(hits) / float64(total) * 100.0
 }
 
@@ -431,10 +431,10 @@ func (m VaultClientPoolMetrics) String() string {
 var (
 	// HTTPClientPool for general HTTP operations
 	DefaultHTTPPool *HTTPClientPool
-	
-	// VaultClientPool for Vault operations  
+
+	// VaultClientPool for Vault operations
 	DefaultVaultPool *VaultClientPool
-	
+
 	poolInitOnce sync.Once
 )
 
@@ -450,7 +450,7 @@ func InitializePools() {
 			MaxIdleConns:    100,
 			MaxConnsPerHost: 10,
 		})
-		
+
 		// Note: Vault pool will be initialized when first vault client is created
 		// since it requires vault configuration
 	})
@@ -474,14 +474,14 @@ func PutHTTPClient(client *http.Client) {
 // GetConnectionPoolMetrics returns metrics for all connection pools
 func GetConnectionPoolMetrics() map[string]interface{} {
 	metrics := make(map[string]interface{})
-	
+
 	if DefaultHTTPPool != nil {
 		metrics["http"] = DefaultHTTPPool.Metrics()
 	}
-	
+
 	if DefaultVaultPool != nil {
 		metrics["vault"] = DefaultVaultPool.Metrics()
 	}
-	
+
 	return metrics
 }

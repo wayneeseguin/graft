@@ -1,5 +1,12 @@
 package operators
 
+import (
+	"encoding/base64"
+	"fmt"
+
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // Base64Operator ...
 type Base64Operator struct{}
@@ -17,7 +24,7 @@ func (Base64Operator) Phase() OperatorPhase {
 // Dependencies ...
 func (Base64Operator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
 	deps := auto
-	
+
 	for _, arg := range args {
 		if arg.Type == OperatorCall {
 			// Get dependencies from nested operator
@@ -30,7 +37,7 @@ func (Base64Operator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor
 			deps = append(deps, arg.Reference)
 		}
 	}
-	
+
 	return deps
 }
 
@@ -57,7 +64,7 @@ func (Base64Operator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		DEBUG("  arg[0]: %v is not a string scalar", val)
 		return nil, ansi.Errorf("@R{tried to base64 encode} @c{%v}@R{, which is not a string scalar}", val)
 	}
-	
+
 	DEBUG("  resolved argument to string: %s", contents)
 
 	encoded := base64.StdEncoding.EncodeToString([]byte(contents))

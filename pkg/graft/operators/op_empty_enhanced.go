@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"fmt"
+	"strings"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // EmptyOperatorEnhanced is an enhanced version that supports nested expressions
 type EmptyOperatorEnhanced struct{}
@@ -39,7 +45,7 @@ func (EmptyOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, error)
 	// If the argument resolved to a string, it might be a type name
 	if typeStr, ok := val.(string); ok {
 		DEBUG("argument resolved to string: %s", typeStr)
-		
+
 		// Check if it's a type name
 		switch strings.ToLower(typeStr) {
 		case "hash", "map":
@@ -76,7 +82,7 @@ func (EmptyOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, error)
 	// If the argument resolved to something else, check if it's empty
 	DEBUG("checking if resolved value is empty")
 	isEmpty := false
-	
+
 	switch v := val.(type) {
 	case nil:
 		isEmpty = true

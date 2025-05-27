@@ -1,15 +1,14 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/wayneeseguin/graft/pkg/graft/parser"
 )
 
 // CacheWarming implements intelligent cache preloading based on usage patterns
@@ -45,38 +44,38 @@ type CacheWarmingStats struct {
 
 // UsageAnalytics tracks expression usage patterns for cache warming
 type UsageAnalytics struct {
-	patterns     map[string]*ExpressionUsage
-	mu           sync.RWMutex
-	storagePath  string
-	maxPatterns  int
+	patterns    map[string]*ExpressionUsage
+	mu          sync.RWMutex
+	storagePath string
+	maxPatterns int
 }
 
 // ExpressionUsage tracks usage statistics for an expression
 type ExpressionUsage struct {
-	Expression    string    `json:"expression"`
-	Frequency     int64     `json:"frequency"`
-	LastUsed      time.Time `json:"last_used"`
-	AverageTime   float64   `json:"average_time"`
-	TotalTime     float64   `json:"total_time"`
-	Pattern       string    `json:"pattern"`
-	OperatorType  string    `json:"operator_type"`
+	Expression   string    `json:"expression"`
+	Frequency    int64     `json:"frequency"`
+	LastUsed     time.Time `json:"last_used"`
+	AverageTime  float64   `json:"average_time"`
+	TotalTime    float64   `json:"total_time"`
+	Pattern      string    `json:"pattern"`
+	OperatorType string    `json:"operator_type"`
 }
 
 // NewCacheWarming creates a new cache warming system
 func NewCacheWarming(cache *HierarchicalCache, config CacheWarmingConfig) *CacheWarming {
 	analytics := NewUsageAnalytics(1000, "/tmp/graft_usage.json")
-	
+
 	cw := &CacheWarming{
 		analytics: analytics,
 		cache:     cache,
 		config:    config,
 	}
-	
+
 	// Start periodic warming if enabled
 	if config.Enabled && config.WarmingInterval > 0 {
 		go cw.periodicWarming()
 	}
-	
+
 	return cw
 }
 
@@ -94,7 +93,7 @@ func (cw *CacheWarming) WarmCache() error {
 	if !cw.config.Enabled {
 		return nil
 	}
-	
+
 	cw.mu.Lock()
 	if cw.isWarming {
 		cw.mu.Unlock()
@@ -102,30 +101,30 @@ func (cw *CacheWarming) WarmCache() error {
 	}
 	cw.isWarming = true
 	cw.mu.Unlock()
-	
+
 	defer func() {
 		cw.mu.Lock()
 		cw.isWarming = false
 		cw.mu.Unlock()
 	}()
-	
+
 	start := time.Now()
-	
+
 	// Load usage patterns
 	if err := cw.analytics.LoadFromDisk(); err != nil {
 		return fmt.Errorf("failed to load usage patterns: %v", err)
 	}
-	
+
 	// Get expressions to warm based on strategy
 	expressionsToWarm := cw.getExpressionsToWarm()
-	
+
 	// Warm expressions
 	warmed, failed := cw.warmExpressions(expressionsToWarm)
-	
+
 	// Update stats
 	duration := time.Since(start)
 	cw.updateWarmingStats(duration, int64(len(expressionsToWarm)), warmed, failed)
-	
+
 	return nil
 }
 
@@ -134,14 +133,14 @@ func (cw *CacheWarming) WarmStartup() error {
 	if !cw.config.Enabled {
 		return nil
 	}
-	
+
 	// Use a timeout to avoid blocking startup too long
 	done := make(chan error, 1)
-	
+
 	go func() {
 		done <- cw.WarmCache()
 	}()
-	
+
 	select {
 	case err := <-done:
 		return err
@@ -155,16 +154,16 @@ func (cw *CacheWarming) RecordUsage(expression string, duration time.Duration, o
 	if !cw.config.Enabled {
 		return
 	}
-	
+
 	cw.analytics.RecordUsage(expression, duration, operatorType)
 }
 
 // getExpressionsToWarm determines which expressions to warm based on strategy
 func (cw *CacheWarming) getExpressionsToWarm() []string {
 	patterns := cw.analytics.GetTopPatterns(cw.config.TopN)
-	
+
 	var expressions []string
-	
+
 	switch cw.config.Strategy {
 	case "frequency":
 		expressions = cw.getFrequencyBasedExpressions(patterns)
@@ -175,34 +174,34 @@ func (cw *CacheWarming) getExpressionsToWarm() []string {
 	default:
 		expressions = cw.getFrequencyBasedExpressions(patterns)
 	}
-	
+
 	return expressions
 }
 
 // getFrequencyBasedExpressions selects expressions based on usage frequency
 func (cw *CacheWarming) getFrequencyBasedExpressions(patterns []*ExpressionUsage) []string {
 	var expressions []string
-	
+
 	for _, pattern := range patterns {
 		if pattern.Frequency >= cw.config.MinFrequency {
 			expressions = append(expressions, pattern.Expression)
 		}
 	}
-	
+
 	return expressions
 }
 
 // getPatternBasedExpressions selects expressions based on common patterns
 func (cw *CacheWarming) getPatternBasedExpressions(patterns []*ExpressionUsage) []string {
 	patternGroups := make(map[string][]*ExpressionUsage)
-	
+
 	// Group by pattern
 	for _, pattern := range patterns {
 		patternGroups[pattern.Pattern] = append(patternGroups[pattern.Pattern], pattern)
 	}
-	
+
 	var expressions []string
-	
+
 	// Select representative expressions from each pattern group
 	for _, group := range patternGroups {
 		if len(group) > 0 {
@@ -213,7 +212,7 @@ func (cw *CacheWarming) getPatternBasedExpressions(patterns []*ExpressionUsage) 
 			expressions = append(expressions, group[0].Expression)
 		}
 	}
-	
+
 	return expressions
 }
 
@@ -221,36 +220,36 @@ func (cw *CacheWarming) getPatternBasedExpressions(patterns []*ExpressionUsage) 
 func (cw *CacheWarming) getHybridExpressions(patterns []*ExpressionUsage) []string {
 	frequencyBased := cw.getFrequencyBasedExpressions(patterns)
 	patternBased := cw.getPatternBasedExpressions(patterns)
-	
+
 	// Combine and deduplicate
 	expressionSet := make(map[string]bool)
 	var expressions []string
-	
+
 	for _, expr := range frequencyBased {
 		if !expressionSet[expr] {
 			expressionSet[expr] = true
 			expressions = append(expressions, expr)
 		}
 	}
-	
+
 	for _, expr := range patternBased {
 		if !expressionSet[expr] {
 			expressionSet[expr] = true
 			expressions = append(expressions, expr)
 		}
 	}
-	
+
 	return expressions
 }
 
 // warmExpressions preloads expressions into the cache
 func (cw *CacheWarming) warmExpressions(expressions []string) (int64, int64) {
 	var warmed, failed int64
-	registry := NewOperatorRegistry()
-	
+	registry := parser.NewOperatorRegistry()
+
 	for _, expression := range expressions {
 		// Parse and cache the expression
-		if expr, err := ParseExpression(expression, registry); err == nil {
+		if expr, err := parser.ParseExpression(expression, registry); err == nil {
 			// Store in cache with a generated key
 			key := FastExpressionKey(expression)
 			cw.cache.Set(key, expr)
@@ -258,13 +257,13 @@ func (cw *CacheWarming) warmExpressions(expressions []string) (int64, int64) {
 		} else {
 			failed++
 		}
-		
+
 		// Respect startup timeout
 		if time.Since(cw.warmingStats.LastWarmingTime) > cw.config.StartupTimeout {
 			break
 		}
 	}
-	
+
 	return warmed, failed
 }
 
@@ -272,7 +271,7 @@ func (cw *CacheWarming) warmExpressions(expressions []string) (int64, int64) {
 func (cw *CacheWarming) periodicWarming() {
 	ticker := time.NewTicker(cw.config.WarmingInterval)
 	defer ticker.Stop()
-	
+
 	for range ticker.C {
 		cw.WarmCache()
 	}
@@ -282,7 +281,7 @@ func (cw *CacheWarming) periodicWarming() {
 func (cw *CacheWarming) updateWarmingStats(duration time.Duration, total, warmed, failed int64) {
 	cw.warmingStats.mu.Lock()
 	defer cw.warmingStats.mu.Unlock()
-	
+
 	cw.warmingStats.LastWarmingTime = time.Now()
 	cw.warmingStats.WarmingDuration = duration
 	cw.warmingStats.ExpressionsWarmed = total
@@ -294,7 +293,7 @@ func (cw *CacheWarming) updateWarmingStats(duration time.Duration, total, warmed
 func (cw *CacheWarming) GetWarmingStats() CacheWarmingStats {
 	cw.warmingStats.mu.RLock()
 	defer cw.warmingStats.mu.RUnlock()
-	
+
 	// Return a copy without the mutex
 	return CacheWarmingStats{
 		LastWarmingTime:   cw.warmingStats.LastWarmingTime,
@@ -311,9 +310,9 @@ func (cw *CacheWarming) GetWarmingStats() CacheWarmingStats {
 func (ua *UsageAnalytics) RecordUsage(expression string, duration time.Duration, operatorType string) {
 	ua.mu.Lock()
 	defer ua.mu.Unlock()
-	
+
 	pattern := ua.normalizePattern(expression)
-	
+
 	if usage, exists := ua.patterns[expression]; exists {
 		usage.Frequency++
 		usage.LastUsed = time.Now()
@@ -324,7 +323,7 @@ func (ua *UsageAnalytics) RecordUsage(expression string, duration time.Duration,
 		if len(ua.patterns) >= ua.maxPatterns {
 			ua.evictOldestPattern()
 		}
-		
+
 		ua.patterns[expression] = &ExpressionUsage{
 			Expression:   expression,
 			Frequency:    1,
@@ -341,41 +340,43 @@ func (ua *UsageAnalytics) RecordUsage(expression string, duration time.Duration,
 func (ua *UsageAnalytics) GetTopPatterns(limit int) []*ExpressionUsage {
 	ua.mu.RLock()
 	defer ua.mu.RUnlock()
-	
+
 	patterns := make([]*ExpressionUsage, 0, len(ua.patterns))
 	for _, pattern := range ua.patterns {
 		patterns = append(patterns, pattern)
 	}
-	
+
 	// Sort by frequency (descending)
 	sort.Slice(patterns, func(i, j int) bool {
 		return patterns[i].Frequency > patterns[j].Frequency
 	})
-	
+
 	if limit > 0 && limit < len(patterns) {
 		patterns = patterns[:limit]
 	}
-	
+
 	return patterns
 }
 
 // normalizePattern creates a normalized pattern from an expression
 func (ua *UsageAnalytics) normalizePattern(expression string) string {
-	return GlobalPatternTracker.normalizePattern(expression)
+	// For now, just return the expression as-is
+	// TODO: Implement pattern normalization
+	return expression
 }
 
 // evictOldestPattern removes the least recently used pattern
 func (ua *UsageAnalytics) evictOldestPattern() {
 	var oldestKey string
 	var oldestTime time.Time
-	
+
 	for key, usage := range ua.patterns {
 		if oldestKey == "" || usage.LastUsed.Before(oldestTime) {
 			oldestKey = key
 			oldestTime = usage.LastUsed
 		}
 	}
-	
+
 	if oldestKey != "" {
 		delete(ua.patterns, oldestKey)
 	}
@@ -386,21 +387,21 @@ func (ua *UsageAnalytics) LoadFromDisk() error {
 	if ua.storagePath == "" {
 		return nil
 	}
-	
+
 	data, err := ioutil.ReadFile(ua.storagePath)
 	if err != nil {
 		return nil // File doesn't exist, start fresh
 	}
-	
+
 	var patterns map[string]*ExpressionUsage
 	if err := json.Unmarshal(data, &patterns); err != nil {
 		return fmt.Errorf("failed to parse usage patterns: %v", err)
 	}
-	
+
 	ua.mu.Lock()
 	defer ua.mu.Unlock()
 	ua.patterns = patterns
-	
+
 	return nil
 }
 
@@ -409,15 +410,15 @@ func (ua *UsageAnalytics) SaveToDisk() error {
 	if ua.storagePath == "" {
 		return nil
 	}
-	
+
 	ua.mu.RLock()
 	defer ua.mu.RUnlock()
-	
+
 	data, err := json.Marshal(ua.patterns)
 	if err != nil {
 		return fmt.Errorf("failed to marshal usage patterns: %v", err)
 	}
-	
+
 	return ioutil.WriteFile(ua.storagePath, data, 0644)
 }
 

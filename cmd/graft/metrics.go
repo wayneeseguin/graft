@@ -5,13 +5,13 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/wayneeseguin/graft/pkg/graft"
+	"github.com/wayneeseguin/graft/internal"
 	"github.com/wayneeseguin/graft/log"
 )
 
 // StartMetricsServer starts the metrics server if enabled
-func StartMetricsServer() *MetricsServer {
-	features := GetFeatures()
+func StartMetricsServer() *internal.MetricsServer {
+	features := internal.GetFeatures()
 	
 	if !features.EnableMetrics {
 		return nil
@@ -24,11 +24,11 @@ func StartMetricsServer() *MetricsServer {
 		}
 	}
 	
-	metrics := GetParallelMetrics()
-	server := NewMetricsServer(metrics, port)
+	metrics := internal.GetParallelMetrics()
+	server := internal.NewMetricsServer(metrics, port)
 	
 	if err := server.Start(); err != nil {
-		DEBUG("Failed to start metrics server: %v", err)
+		log.DEBUG("Failed to start metrics server: %v", err)
 		return nil
 	}
 	
@@ -42,13 +42,13 @@ func StartMetricsServer() *MetricsServer {
 
 // PrintMetricsSummary prints a summary of execution metrics
 func PrintMetricsSummary() {
-	features := GetFeatures()
+	features := internal.GetFeatures()
 	
 	if !features.EnableMetrics {
 		return
 	}
 	
-	metrics := GetParallelMetrics()
+	metrics := internal.GetParallelMetrics()
 	snapshot := metrics.GetSnapshot()
 	
 	if snapshot.OpsTotal == 0 {

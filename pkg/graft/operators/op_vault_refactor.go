@@ -1,5 +1,9 @@
 package operators
 
+import (
+	"fmt"
+	"strings"
+)
 
 // vaultArgProcessor handles argument processing for vault operator with LogicalOr support
 type vaultArgProcessor struct {
@@ -16,7 +20,7 @@ func newVaultArgProcessor(args []*Expr) *vaultArgProcessor {
 		hasDefault:   false,
 		defaultIndex: -1,
 	}
-	
+
 	// Copy args and extract any LogicalOr
 	for i, arg := range args {
 		if arg.Type == LogicalOr {
@@ -29,7 +33,7 @@ func newVaultArgProcessor(args []*Expr) *vaultArgProcessor {
 			processor.args[i] = arg
 		}
 	}
-	
+
 	return processor
 }
 
@@ -44,11 +48,11 @@ func (p *vaultArgProcessor) resolveToString(ev *Evaluator, expr *Expr) (string, 
 		}
 		return "", err
 	}
-	
+
 	if value == nil {
 		return "", fmt.Errorf("cannot use nil as vault path component")
 	}
-	
+
 	// Convert resolved value to string with vault-specific error messages
 	switch v := value.(type) {
 	case string:
@@ -73,23 +77,23 @@ func (p *vaultArgProcessor) resolveToString(ev *Evaluator, expr *Expr) (string, 
 // buildVaultPath resolves all arguments and concatenates them into a vault path
 func (p *vaultArgProcessor) buildVaultPath(ev *Evaluator) (string, error) {
 	parts := make([]string, 0, len(p.args))
-	
+
 	for i, arg := range p.args {
 		DEBUG("  processing arg[%d] for concatenation", i)
-		
+
 		part, err := p.resolveToString(ev, arg)
 		if err != nil {
 			DEBUG("    failed to resolve arg[%d]: %s", i, err)
 			return "", err
 		}
-		
+
 		DEBUG("    resolved to: '%s'", part)
 		parts = append(parts, part)
 	}
-	
+
 	path := strings.Join(parts, "")
 	DEBUG("  final concatenated path: '%s'", path)
-	
+
 	return path, nil
 }
 
@@ -98,14 +102,14 @@ func (p *vaultArgProcessor) evaluateDefault(ev *Evaluator) (interface{}, error) 
 	if !p.hasDefault || p.defaultExpr == nil {
 		return nil, fmt.Errorf("no default value available")
 	}
-	
+
 	DEBUG("  evaluating default expression")
 	// Use ResolveOperatorArgument to support nested expressions in defaults
 	value, err := ResolveOperatorArgument(ev, p.defaultExpr)
 	if err != nil {
 		return nil, fmt.Errorf("unable to evaluate default value: %s", err)
 	}
-	
+
 	return value, nil
 }
 
@@ -126,7 +130,7 @@ func isVaultNotFound(err error) bool {
 		return false
 	}
 	errMsg := err.Error()
-	return strings.Contains(errMsg, "not found") || 
-	       strings.Contains(errMsg, "404") ||
-	       strings.Contains(errMsg, "secret not found")
+	return strings.Contains(errMsg, "not found") ||
+		strings.Contains(errMsg, "404") ||
+		strings.Contains(errMsg, "secret not found")
 }

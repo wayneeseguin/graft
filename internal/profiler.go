@@ -16,25 +16,25 @@ import (
 
 // Profiler manages performance profiling
 type Profiler struct {
-	mu              sync.RWMutex
-	cpuProfile      *os.File
-	heapProfile     *os.File
-	traceFile       *os.File
-	profileDir      string
-	enabled         bool
-	pprofServer     *http.Server
-	customProfiles  map[string]*rpprof.Profile
+	mu             sync.RWMutex
+	cpuProfile     *os.File
+	heapProfile    *os.File
+	traceFile      *os.File
+	profileDir     string
+	enabled        bool
+	pprofServer    *http.Server
+	customProfiles map[string]*rpprof.Profile
 }
 
 // ProfilerConfig configures the profiler
 type ProfilerConfig struct {
-	Enabled        bool
-	ProfileDir     string
-	EnableCPU      bool
-	EnableHeap     bool
-	EnableTrace    bool
-	PProfAddr      string
-	SampleRate     int
+	Enabled     bool
+	ProfileDir  string
+	EnableCPU   bool
+	EnableHeap  bool
+	EnableTrace bool
+	PProfAddr   string
+	SampleRate  int
 }
 
 // DefaultProfilerConfig returns default profiler configuration
@@ -55,26 +55,26 @@ func NewProfiler(config *ProfilerConfig) *Profiler {
 	if config == nil {
 		config = DefaultProfilerConfig()
 	}
-	
+
 	p := &Profiler{
 		profileDir:     config.ProfileDir,
 		enabled:        config.Enabled,
 		customProfiles: make(map[string]*rpprof.Profile),
 	}
-	
+
 	if config.Enabled {
 		// Create profile directory
 		os.MkdirAll(config.ProfileDir, 0755)
-		
+
 		// Set sample rate
 		runtime.SetCPUProfileRate(config.SampleRate)
-		
+
 		// Start pprof server if configured
 		if config.PProfAddr != "" {
 			p.startPProfServer(config.PProfAddr)
 		}
 	}
-	
+
 	return p
 }
 
@@ -82,22 +82,22 @@ func NewProfiler(config *ProfilerConfig) *Profiler {
 func (p *Profiler) startPProfServer(addr string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/debug/pprof/", http.HandlerFunc(pprof.Index))
 	mux.HandleFunc("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
 	mux.HandleFunc("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
 	mux.HandleFunc("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
 	mux.HandleFunc("/debug/pprof/trace", http.HandlerFunc(pprof.Trace))
-	
+
 	// Add custom profiles
 	mux.HandleFunc("/debug/pprof/custom", p.handleCustomProfiles)
-	
+
 	p.pprofServer = &http.Server{
 		Addr:    addr,
 		Handler: mux,
 	}
-	
+
 	go func() {
 		if err := p.pprofServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			fmt.Printf("pprof server error: %v\n", err)
@@ -109,16 +109,16 @@ func (p *Profiler) startPProfServer(addr string) {
 func (p *Profiler) handleCustomProfiles(w http.ResponseWriter, r *http.Request) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	
+
 	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprintf(w, "<html><head><title>Custom Profiles</title></head><body>\n")
 	fmt.Fprintf(w, "<h1>Custom Profiles</h1>\n")
 	fmt.Fprintf(w, "<ul>\n")
-	
+
 	for name := range p.customProfiles {
 		fmt.Fprintf(w, `<li><a href="/debug/pprof/%s">%s</a></li>`+"\n", name, name)
 	}
-	
+
 	fmt.Fprintf(w, "</ul>\n</body></html>")
 }
 
@@ -126,26 +126,26 @@ func (p *Profiler) handleCustomProfiles(w http.ResponseWriter, r *http.Request) 
 func (p *Profiler) StartCPUProfile() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	if !p.enabled {
 		return fmt.Errorf("profiler is not enabled")
 	}
-	
+
 	if p.cpuProfile != nil {
 		return fmt.Errorf("CPU profiling already started")
 	}
-	
+
 	filename := filepath.Join(p.profileDir, fmt.Sprintf("cpu_%s.prof", timestamp()))
 	f, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create CPU profile: %v", err)
 	}
-	
+
 	if err := rpprof.StartCPUProfile(f); err != nil {
 		f.Close()
 		return fmt.Errorf("failed to start CPU profile: %v", err)
 	}
-	
+
 	p.cpuProfile = f
 	return nil
 }
@@ -154,15 +154,15 @@ func (p *Profiler) StartCPUProfile() error {
 func (p *Profiler) StopCPUProfile() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	if p.cpuProfile == nil {
 		return fmt.Errorf("CPU profiling not started")
 	}
-	
+
 	rpprof.StopCPUProfile()
 	err := p.cpuProfile.Close()
 	p.cpuProfile = nil
-	
+
 	return err
 }
 
@@ -170,25 +170,25 @@ func (p *Profiler) StopCPUProfile() error {
 func (p *Profiler) WriteHeapProfile() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	if !p.enabled {
 		return fmt.Errorf("profiler is not enabled")
 	}
-	
+
 	filename := filepath.Join(p.profileDir, fmt.Sprintf("heap_%s.prof", timestamp()))
 	f, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create heap profile: %v", err)
 	}
 	defer f.Close()
-	
+
 	// Force GC before heap profile for accuracy
 	runtime.GC()
-	
+
 	if err := rpprof.WriteHeapProfile(f); err != nil {
 		return fmt.Errorf("failed to write heap profile: %v", err)
 	}
-	
+
 	return nil
 }
 
@@ -196,13 +196,13 @@ func (p *Profiler) WriteHeapProfile() error {
 func (p *Profiler) WriteAllProfiles() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	if !p.enabled {
 		return fmt.Errorf("profiler is not enabled")
 	}
-	
+
 	timestamp := timestamp()
-	
+
 	// Standard profiles
 	profiles := []struct {
 		name string
@@ -214,25 +214,25 @@ func (p *Profiler) WriteAllProfiles() error {
 		{"block", rpprof.Lookup("block")},
 		{"mutex", rpprof.Lookup("mutex")},
 	}
-	
+
 	for _, profile := range profiles {
 		if profile.prof == nil {
 			continue
 		}
-		
+
 		filename := filepath.Join(p.profileDir, fmt.Sprintf("%s_%s.prof", profile.name, timestamp))
 		f, err := os.Create(filename)
 		if err != nil {
 			return fmt.Errorf("failed to create %s profile: %v", profile.name, err)
 		}
-		
+
 		err = profile.prof.WriteTo(f, 0)
 		f.Close()
 		if err != nil {
 			return fmt.Errorf("failed to write %s profile: %v", profile.name, err)
 		}
 	}
-	
+
 	// Custom profiles
 	for name, profile := range p.customProfiles {
 		filename := filepath.Join(p.profileDir, fmt.Sprintf("%s_%s.prof", name, timestamp))
@@ -240,14 +240,14 @@ func (p *Profiler) WriteAllProfiles() error {
 		if err != nil {
 			return fmt.Errorf("failed to create %s profile: %v", name, err)
 		}
-		
+
 		err = profile.WriteTo(f, 0)
 		f.Close()
 		if err != nil {
 			return fmt.Errorf("failed to write %s profile: %v", name, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -255,26 +255,26 @@ func (p *Profiler) WriteAllProfiles() error {
 func (p *Profiler) StartTrace() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	if !p.enabled {
 		return fmt.Errorf("profiler is not enabled")
 	}
-	
+
 	if p.traceFile != nil {
 		return fmt.Errorf("tracing already started")
 	}
-	
+
 	filename := filepath.Join(p.profileDir, fmt.Sprintf("trace_%s.out", timestamp()))
 	f, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create trace file: %v", err)
 	}
-	
+
 	if err := trace.Start(f); err != nil {
 		f.Close()
 		return fmt.Errorf("failed to start trace: %v", err)
 	}
-	
+
 	p.traceFile = f
 	return nil
 }
@@ -283,15 +283,15 @@ func (p *Profiler) StartTrace() error {
 func (p *Profiler) StopTrace() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	if p.traceFile == nil {
 		return fmt.Errorf("tracing not started")
 	}
-	
+
 	trace.Stop()
 	err := p.traceFile.Close()
 	p.traceFile = nil
-	
+
 	return err
 }
 
@@ -299,9 +299,9 @@ func (p *Profiler) StopTrace() error {
 func (p *Profiler) RegisterCustomProfile(name string, profile *rpprof.Profile) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	p.customProfiles[name] = profile
-	
+
 	// Register with default mux if pprof server is running
 	if p.pprofServer != nil {
 		http.HandleFunc("/debug/pprof/"+name, func(w http.ResponseWriter, r *http.Request) {
@@ -345,21 +345,21 @@ func (p *Profiler) SetEnabled(enabled bool) {
 func (p *Profiler) Stop() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	
+
 	// Stop CPU profiling if active
 	if p.cpuProfile != nil {
 		rpprof.StopCPUProfile()
 		p.cpuProfile.Close()
 		p.cpuProfile = nil
 	}
-	
+
 	// Stop tracing if active
 	if p.traceFile != nil {
 		trace.Stop()
 		p.traceFile.Close()
 		p.traceFile = nil
 	}
-	
+
 	// Stop pprof server
 	if p.pprofServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -367,7 +367,7 @@ func (p *Profiler) Stop() error {
 		p.pprofServer.Shutdown(ctx)
 		p.pprofServer = nil
 	}
-	
+
 	return nil
 }
 
@@ -428,24 +428,24 @@ func ProfileCPU(name string, fn func() error) error {
 	if !profiler.IsEnabled() {
 		return fn()
 	}
-	
+
 	if err := profiler.StartCPUProfile(); err != nil {
 		return err
 	}
 	defer profiler.StopCPUProfile()
-	
+
 	return fn()
 }
 
 // ProfileHeap runs a function and captures heap profile after
 func ProfileHeap(name string, fn func() error) error {
 	profiler := GetProfiler()
-	
+
 	err := fn()
-	
+
 	if profiler.IsEnabled() {
 		profiler.WriteHeapProfile()
 	}
-	
+
 	return err
 }

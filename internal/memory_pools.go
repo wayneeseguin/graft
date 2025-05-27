@@ -1,11 +1,10 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"bytes"
 	"sync"
+
+	"github.com/wayneeseguin/graft/pkg/graft/parser"
 )
 
 // BufferPool provides a pool of reusable bytes.Buffer instances
@@ -66,30 +65,26 @@ type TokenPool struct {
 var tokenPool = &TokenPool{
 	pool: sync.Pool{
 		New: func() interface{} {
-			return &Token{}
+			return &parser.Token{}
 		},
 	},
 }
 
 // GetToken retrieves a token from the pool
-func GetToken() *Token {
-	token := tokenPool.pool.Get().(*Token)
-	token.Reset()
+func GetToken() *parser.Token {
+	token := tokenPool.pool.Get().(*parser.Token)
+	// Reset the token
+	token.Type = 0
+	token.Value = ""
+	token.Pos = 0
+	token.Line = 0
+	token.Col = 0
 	return token
 }
 
 // PutToken returns a token to the pool
-func PutToken(token *Token) {
+func PutToken(token *parser.Token) {
 	tokenPool.pool.Put(token)
-}
-
-// Reset clears a token for reuse
-func (t *Token) Reset() {
-	t.Type = 0
-	t.Value = ""
-	t.Pos = 0
-	t.Line = 0
-	t.Col = 0
 }
 
 // TODO: ASTNodePool - implement when we create a proper AST structure
@@ -121,16 +116,16 @@ func (si *StringInterner) Intern(s string) string {
 		return interned
 	}
 	si.mu.RUnlock()
-	
+
 	// Slow path: intern the string
 	si.mu.Lock()
 	defer si.mu.Unlock()
-	
+
 	// Double-check in case another goroutine interned it
 	if interned, ok := si.intern[s]; ok {
 		return interned
 	}
-	
+
 	si.intern[s] = s
 	return s
 }
@@ -145,19 +140,19 @@ func PreInternCommonStrings() {
 		"ips", "cartesian-product", "shuffle", "awsparam", "awssecret",
 		"vault-try", "ternary", "negate", "base64-decode",
 	}
-	
+
 	// Common literals
 	literals := []string{
 		"true", "false", "null", "nil", "",
 		"name", "type", "value", "key", "path",
 		"0", "1", "-1",
 	}
-	
+
 	// Boolean operators
 	boolOps := []string{
 		"and", "or", "not", "&&", "||", "!",
 	}
-	
+
 	// Intern all common strings
 	for _, s := range operators {
 		InternString(s)

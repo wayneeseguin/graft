@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"fmt"
+
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // CartesianProductOperator ...
 type CartesianProductOperator struct{}

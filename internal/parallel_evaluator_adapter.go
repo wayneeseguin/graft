@@ -1,9 +1,6 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"fmt"
 	"os"
 	"regexp"
@@ -12,16 +9,18 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
+
 	"github.com/wayneeseguin/graft/log"
+	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
 // ParallelEvaluatorConfig controls parallel execution behavior
 type ParallelEvaluatorConfig struct {
-	Enabled        bool
-	MaxWorkers     int
+	Enabled           bool
+	MaxWorkers        int
 	MinOpsForParallel int
-	Strategy       string // "aggressive", "conservative", "adaptive"
-	SafeOperators  map[string]bool
+	Strategy          string // "aggressive", "conservative", "adaptive"
+	SafeOperators     map[string]bool
 }
 
 // DefaultParallelConfig returns default configuration
@@ -39,21 +38,21 @@ func DefaultParallelConfig() *ParallelEvaluatorConfig {
 		MinOpsForParallel: 10, // Don't parallelize small workloads
 		Strategy:          "conservative",
 		SafeOperators: map[string]bool{
-			"grab":     true,
-			"concat":   true,
-			"base64":   true,
+			"grab":              true,
+			"concat":            true,
+			"base64":            true,
 			"cartesian-product": true,
-			"keys":     true,
-			"empty":    true,
-			"join":     true,
-			"sort":     true,
-			"stringify": true,
-			"base64-decode": true,
-			"load":     true, // File reads can be parallel
-			"vault":    true, // External calls benefit from parallelism
-			"awsparam": true,
-			"awssecret": true,
-			"file":     true,
+			"keys":              true,
+			"empty":             true,
+			"join":              true,
+			"sort":              true,
+			"stringify":         true,
+			"base64-decode":     true,
+			"load":              true, // File reads can be parallel
+			"vault":             true, // External calls benefit from parallelism
+			"awsparam":          true,
+			"awssecret":         true,
+			"file":              true,
 		},
 	}
 }
@@ -64,11 +63,11 @@ type ParallelEvaluatorAdapter struct {
 	config    *ParallelEvaluatorConfig
 	tree      ThreadSafeTree
 	engine    *ParallelExecutionEngine
-	
+
 	// Metrics
-	totalOps     atomic.Int64
-	parallelOps  atomic.Int64
-	speedup      atomic.Value // float64
+	totalOps    atomic.Int64
+	parallelOps atomic.Int64
+	speedup     atomic.Value // float64
 }
 
 // NewParallelEvaluatorAdapter creates a new adapter
@@ -79,7 +78,7 @@ func NewParallelEvaluatorAdapter(ev *Evaluator, config *ParallelEvaluatorConfig)
 
 	// Create thread-safe tree wrapper
 	tree := NewSafeTree(ev.Tree)
-	
+
 	// Create execution engine
 	engine := NewParallelExecutionEngine(tree, config.MaxWorkers)
 	engine.Start()
@@ -90,62 +89,62 @@ func NewParallelEvaluatorAdapter(ev *Evaluator, config *ParallelEvaluatorConfig)
 		tree:      tree,
 		engine:    engine,
 	}
-	
+
 	adapter.speedup.Store(1.0)
-	
+
 	return adapter
 }
 
 // RunOps executes operations, using parallel execution when beneficial
 func (pa *ParallelEvaluatorAdapter) RunOps(ops []*Opcall) error {
 	metrics := GetParallelMetrics()
-	
+
 	if !pa.config.Enabled || len(ops) < pa.config.MinOpsForParallel {
-		DEBUG("Parallel execution disabled or too few ops (%d < %d), using sequential execution", 
+		log.DEBUG("Parallel execution disabled or too few ops (%d < %d), using sequential execution",
 			len(ops), pa.config.MinOpsForParallel)
-		
+
 		// Execute sequentially with metrics
 		start := time.Now()
 		err := pa.evaluator.RunOps(ops)
 		duration := time.Since(start)
-		
+
 		for range ops {
 			metrics.RecordOperation(false, duration/time.Duration(len(ops)), err)
 		}
-		
+
 		return err
 	}
 
 	// Analyze operations for parallelizability
 	groups := pa.analyzeOperations(ops)
-	
+
 	if len(groups.parallel) == 0 {
-		DEBUG("No parallelizable operations found, using sequential execution")
-		
+		log.DEBUG("No parallelizable operations found, using sequential execution")
+
 		start := time.Now()
 		err := pa.evaluator.RunOps(ops)
 		duration := time.Since(start)
-		
+
 		for range ops {
 			metrics.RecordOperation(false, duration/time.Duration(len(ops)), err)
 		}
-		
+
 		return err
 	}
 
-	DEBUG("Running %d operations: %d in parallel, %d sequential", 
+	log.DEBUG("Running %d operations: %d in parallel, %d sequential",
 		len(ops), len(groups.parallel), len(groups.sequential))
 
 	start := time.Now()
-	
+
 	// Execute operations in order
 	for _, group := range groups.executionOrder {
 		groupStart := time.Now()
 		var groupErr error
-		
+
 		if group.canParallel && len(group.ops) > 1 {
 			groupErr = pa.runParallelGroup(group.ops)
-			
+
 			// Record parallel operations
 			groupDuration := time.Since(groupStart)
 			for range group.ops {
@@ -156,27 +155,27 @@ func (pa *ParallelEvaluatorAdapter) RunOps(ops []*Opcall) error {
 				opStart := time.Now()
 				err := pa.evaluator.RunOp(op)
 				opDuration := time.Since(opStart)
-				
+
 				metrics.RecordOperation(false, opDuration, err)
-				
+
 				if err != nil {
 					groupErr = err
 				}
 			}
 		}
-		
+
 		if groupErr != nil {
 			return groupErr
 		}
 	}
 
 	elapsed := time.Since(start)
-	
+
 	// Calculate speedup
 	if groups.estimatedSequentialTime > 0 {
 		speedup := float64(groups.estimatedSequentialTime) / float64(elapsed)
 		pa.speedup.Store(speedup)
-		DEBUG("Parallel execution completed in %v (%.2fx speedup)", elapsed, speedup)
+		log.DEBUG("Parallel execution completed in %v (%.2fx speedup)", elapsed, speedup)
 	}
 
 	return nil
@@ -184,9 +183,9 @@ func (pa *ParallelEvaluatorAdapter) RunOps(ops []*Opcall) error {
 
 // operationGroups represents analyzed operation groups
 type operationGroups struct {
-	parallel               []*Opcall
-	sequential             []*Opcall
-	executionOrder         []operationGroup
+	parallel                []*Opcall
+	sequential              []*Opcall
+	executionOrder          []operationGroup
 	estimatedSequentialTime time.Duration
 }
 
@@ -206,11 +205,11 @@ func (pa *ParallelEvaluatorAdapter) analyzeOperations(ops []*Opcall) operationGr
 	// Build dependency map from evaluator
 	deps := make(map[string][]string)
 	opsByPath := make(map[string]*Opcall)
-	
+
 	for _, op := range ops {
-		path := op.where.String()
+		path := op.Where().String()
 		opsByPath[path] = op
-		
+
 		// Extract dependencies from evaluator's Deps map
 		if cursors, ok := pa.evaluator.Deps[path]; ok {
 			depPaths := make([]string, len(cursors))
@@ -223,20 +222,20 @@ func (pa *ParallelEvaluatorAdapter) analyzeOperations(ops []*Opcall) operationGr
 
 	// Group operations by execution waves
 	processed := make(map[string]bool)
-	
+
 	for len(processed) < len(ops) {
 		group := operationGroup{
 			ops:         make([]*Opcall, 0),
 			canParallel: true,
 		}
-		
+
 		// Find operations that can execute in this wave
 		for _, op := range ops {
-			path := op.where.String()
+			path := op.Where().String()
 			if processed[path] {
 				continue
 			}
-			
+
 			// Check if all dependencies are satisfied
 			canExecute := true
 			for _, dep := range deps[path] {
@@ -245,31 +244,31 @@ func (pa *ParallelEvaluatorAdapter) analyzeOperations(ops []*Opcall) operationGr
 					break
 				}
 			}
-			
+
 			if canExecute {
 				group.ops = append(group.ops, op)
-				
+
 				// Check if operator is safe for parallel execution
 				if !pa.isOperatorSafe(op) {
 					group.canParallel = false
 				}
 			}
 		}
-		
+
 		// Mark operations as processed
 		for _, op := range group.ops {
-			processed[op.where.String()] = true
+			processed[op.Where().String()] = true
 		}
-		
+
 		// Add to appropriate category
 		if group.canParallel && len(group.ops) > 1 {
 			groups.parallel = append(groups.parallel, group.ops...)
 		} else {
 			groups.sequential = append(groups.sequential, group.ops...)
 		}
-		
+
 		groups.executionOrder = append(groups.executionOrder, group)
-		
+
 		// Estimate sequential time (rough approximation)
 		for range group.ops {
 			// Simple estimation based on operation
@@ -287,17 +286,17 @@ func (pa *ParallelEvaluatorAdapter) isOperatorSafe(op *Opcall) bool {
 	if opType == "" {
 		return false // Unknown operator, be conservative
 	}
-	
+
 	// Check configuration whitelist
 	if safe, ok := pa.config.SafeOperators[opType]; ok {
 		return safe
 	}
-	
+
 	// Conservative strategy: only whitelist is safe
 	if pa.config.Strategy == "conservative" {
 		return false
 	}
-	
+
 	// Aggressive strategy: assume safe unless proven otherwise
 	if pa.config.Strategy == "aggressive" {
 		// Still exclude known unsafe operations
@@ -307,36 +306,36 @@ func (pa *ParallelEvaluatorAdapter) isOperatorSafe(op *Opcall) bool {
 		}
 		return true
 	}
-	
+
 	// Adaptive strategy: analyze operator behavior
 	// TODO: Implement adaptive analysis based on metrics
-	
+
 	return false
 }
 
 // getOperatorType returns the type name of an operator
 func (pa *ParallelEvaluatorAdapter) getOperatorType(op *Opcall) string {
-	if op.op == nil {
+	if op.Operator() == nil {
 		return ""
 	}
-	
+
 	// Check the operator registry to find the type
-	for name, registeredOp := range OpRegistry {
-		if registeredOp == op.op {
+	for name, registeredOp := range graft.OpRegistry {
+		if registeredOp == op.Operator() {
 			return name
 		}
 	}
-	
+
 	// Fallback: try to extract from source string
-	if op.src != "" {
+	if op.Src() != "" {
 		// Extract operator name from (( op args )) format
 		re := regexp.MustCompile(`\(\(\s*(\w+)`)
-		matches := re.FindStringSubmatch(op.src)
+		matches := re.FindStringSubmatch(op.Src())
 		if len(matches) > 1 {
 			return matches[1]
 		}
 	}
-	
+
 	return ""
 }
 
@@ -344,35 +343,35 @@ func (pa *ParallelEvaluatorAdapter) getOperatorType(op *Opcall) string {
 func (pa *ParallelEvaluatorAdapter) runParallelGroup(ops []*Opcall) error {
 	pa.totalOps.Add(int64(len(ops)))
 	pa.parallelOps.Add(int64(len(ops)))
-	
+
 	metrics := GetParallelMetrics()
-	
+
 	// Track concurrency
 	metrics.RecordConcurrency(int32(len(ops)))
 	defer metrics.RecordConcurrency(-int32(len(ops)))
-	
+
 	// Convert Opcalls to Operations for parallel engine
 	operations := make([]Operation, len(ops))
 	for i, op := range ops {
 		operations[i] = pa.opcallToOperation(op)
 	}
-	
+
 	// Create evaluator for this batch
 	evaluator := NewThreadSafeParallelEvaluator(pa.tree, pa.config.MaxWorkers)
 	defer evaluator.Stop()
-	
+
 	// Execute in parallel
 	results, err := evaluator.EvaluateParallel(operations)
 	if err != nil {
 		return fmt.Errorf("parallel execution failed: %v", err)
 	}
-	
+
 	// Process results
 	var errors []error
 	for i, result := range results {
 		if result.Error != nil {
-			errors = append(errors, fmt.Errorf("operation at %s failed: %v", 
-				ops[i].where.String(), result.Error))
+			errors = append(errors, fmt.Errorf("operation at %s failed: %v",
+				ops[i].Where().String(), result.Error))
 		} else {
 			// Apply the result back to the original tree
 			if err := pa.applyResult(ops[i], result.Value); err != nil {
@@ -380,11 +379,11 @@ func (pa *ParallelEvaluatorAdapter) runParallelGroup(ops []*Opcall) error {
 			}
 		}
 	}
-	
+
 	if len(errors) > 0 {
-		return MultiError{Errors: errors}
+		return graft.MultiError{Errors: errors}
 	}
-	
+
 	return nil
 }
 
@@ -392,7 +391,7 @@ func (pa *ParallelEvaluatorAdapter) runParallelGroup(ops []*Opcall) error {
 func (pa *ParallelEvaluatorAdapter) opcallToOperation(op *Opcall) Operation {
 	return Operation{
 		Type:     "opcall",
-		Path:     strings.Split(op.where.String(), "."),
+		Path:     strings.Split(op.Where().String(), "."),
 		Args:     []interface{}{op},
 		Priority: 1, // TODO: Implement priority based on operator type
 	}
@@ -409,14 +408,14 @@ func (pa *ParallelEvaluatorAdapter) applyResult(op *Opcall, result interface{}) 
 func (pa *ParallelEvaluatorAdapter) GetMetrics() map[string]interface{} {
 	total := pa.totalOps.Load()
 	parallel := pa.parallelOps.Load()
-	
+
 	return map[string]interface{}{
-		"total_operations":     total,
-		"parallel_operations":  parallel,
+		"total_operations":      total,
+		"parallel_operations":   parallel,
 		"sequential_operations": total - parallel,
-		"parallel_percentage":  float64(parallel) / float64(total) * 100,
-		"speedup_factor":       pa.speedup.Load(),
-		"engine_metrics":       pa.engine.GetMetrics(),
+		"parallel_percentage":   float64(parallel) / float64(total) * 100,
+		"speedup_factor":        pa.speedup.Load(),
+		"engine_metrics":        pa.engine.GetMetrics(),
 	}
 }
 

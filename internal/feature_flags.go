@@ -1,9 +1,6 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"fmt"
 	"os"
 	"strconv"
@@ -13,28 +10,28 @@ import (
 // FeatureFlags controls experimental features
 type FeatureFlags struct {
 	mu sync.RWMutex
-	
+
 	// Parallel execution features
-	ParallelExecution       bool
-	ParallelMaxWorkers      int
-	ParallelMinOps          int
-	ParallelStrategy        string
-	ParallelAutoTune        bool
-	
+	ParallelExecution  bool
+	ParallelMaxWorkers int
+	ParallelMinOps     int
+	ParallelStrategy   string
+	ParallelAutoTune   bool
+
 	// Monitoring features
-	EnableMetrics           bool
-	EnableTracing           bool
-	MetricsPort             int
-	
+	EnableMetrics bool
+	EnableTracing bool
+	MetricsPort   int
+
 	// Safety features
-	StrictMode              bool
-	ValidateOperators       bool
-	EnableRaceDetection     bool
-	
+	StrictMode          bool
+	ValidateOperators   bool
+	EnableRaceDetection bool
+
 	// Performance features
-	EnableCaching           bool
-	EnableBatching          bool
-	CacheSize               int
+	EnableCaching  bool
+	EnableBatching bool
+	CacheSize      int
 }
 
 var (
@@ -59,26 +56,26 @@ func loadFeatureFlags() *FeatureFlags {
 		ParallelMinOps:     getEnvInt("GRAFT_PARALLEL_MIN_OPS", 10),
 		ParallelStrategy:   getEnvString("GRAFT_PARALLEL_STRATEGY", "conservative"),
 		ParallelAutoTune:   getEnvBool("GRAFT_PARALLEL_AUTO_TUNE", false),
-		
+
 		// Monitoring defaults
-		EnableMetrics:      getEnvBool("GRAFT_METRICS", false),
-		EnableTracing:      getEnvBool("GRAFT_TRACING", false),
-		MetricsPort:        getEnvInt("GRAFT_METRICS_PORT", 9090),
-		
+		EnableMetrics: getEnvBool("GRAFT_METRICS", false),
+		EnableTracing: getEnvBool("GRAFT_TRACING", false),
+		MetricsPort:   getEnvInt("GRAFT_METRICS_PORT", 9090),
+
 		// Safety defaults
-		StrictMode:         getEnvBool("GRAFT_STRICT", false),
-		ValidateOperators:  getEnvBool("GRAFT_VALIDATE_OPS", true),
+		StrictMode:          getEnvBool("GRAFT_STRICT", false),
+		ValidateOperators:   getEnvBool("GRAFT_VALIDATE_OPS", true),
 		EnableRaceDetection: getEnvBool("GRAFT_RACE_DETECTION", false),
-		
+
 		// Performance defaults
-		EnableCaching:      getEnvBool("GRAFT_CACHE", true),
-		EnableBatching:     getEnvBool("GRAFT_BATCH", true),
-		CacheSize:          getEnvInt("GRAFT_CACHE_SIZE", 1000),
+		EnableCaching:  getEnvBool("GRAFT_CACHE", true),
+		EnableBatching: getEnvBool("GRAFT_BATCH", true),
+		CacheSize:      getEnvInt("GRAFT_CACHE_SIZE", 1000),
 	}
-	
+
 	// Validate settings
 	flags.validate()
-	
+
 	return flags
 }
 
@@ -91,12 +88,12 @@ func (f *FeatureFlags) validate() {
 	default:
 		f.ParallelStrategy = "conservative"
 	}
-	
+
 	// Auto-tune requires metrics
 	if f.ParallelAutoTune && !f.EnableMetrics {
 		f.EnableMetrics = true
 	}
-	
+
 	// Race detection implies strict mode
 	if f.EnableRaceDetection {
 		f.StrictMode = true
@@ -121,7 +118,7 @@ func (f *FeatureFlags) SetParallelEnabled(enabled bool) {
 func (f *FeatureFlags) GetParallelConfig() *ParallelEvaluatorConfig {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	
+
 	return &ParallelEvaluatorConfig{
 		Enabled:           f.ParallelExecution,
 		MaxWorkers:        f.ParallelMaxWorkers,
@@ -135,7 +132,7 @@ func (f *FeatureFlags) GetParallelConfig() *ParallelEvaluatorConfig {
 func (f *FeatureFlags) Update(updates map[string]interface{}) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	
+
 	for key, value := range updates {
 		switch key {
 		case "parallel_execution":
@@ -160,7 +157,7 @@ func (f *FeatureFlags) Update(updates map[string]interface{}) {
 			}
 		}
 	}
-	
+
 	f.validate()
 }
 
@@ -168,7 +165,7 @@ func (f *FeatureFlags) Update(updates map[string]interface{}) {
 func (f *FeatureFlags) String() string {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	
+
 	return fmt.Sprintf(
 		"FeatureFlags{Parallel:%v Workers:%d MinOps:%d Strategy:%s Metrics:%v Strict:%v}",
 		f.ParallelExecution,

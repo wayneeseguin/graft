@@ -1,4 +1,4 @@
-package graft
+package merger
 
 import (
 	"fmt"

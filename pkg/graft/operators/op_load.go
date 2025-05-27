@@ -1,5 +1,17 @@
 package operators
 
+import (
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
+
+	"github.com/geofffranks/simpleyaml"
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // LoadOperator is invoked with (( load <location> ))
 type LoadOperator struct{}
@@ -21,8 +33,8 @@ func (LoadOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto
 
 // Run ...
 func (LoadOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
-	log.DEBUG("running (( load ... )) operation at $.%s", ev.Here)
-	defer log.DEBUG("done with (( load ... )) operation at $%s\n", ev.Here)
+	DEBUG("running (( load ... )) operation at $.%s", ev.Here)
+	defer DEBUG("done with (( load ... )) operation at $%s\n", ev.Here)
 
 	if len(args) != 1 {
 		return nil, fmt.Errorf("load operator requires exactly one literal string or reference argument")
@@ -31,36 +43,36 @@ func (LoadOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	// Use ResolveOperatorArgument to support nested expressions
 	val, err := ResolveOperatorArgument(ev, args[0])
 	if err != nil {
-		log.DEBUG("  arg[0]: failed to resolve expression to a concrete value")
-		log.DEBUG("     [0]: error was: %s", err)
+		DEBUG("  arg[0]: failed to resolve expression to a concrete value")
+		DEBUG("     [0]: error was: %s", err)
 		return nil, err
 	}
 
 	if val == nil {
-		log.DEBUG("  arg[0]: resolved to nil")
+		DEBUG("  arg[0]: resolved to nil")
 		return nil, fmt.Errorf("load operator argument cannot be nil")
 	}
 
 	var location string
 	switch v := val.(type) {
 	case string:
-		log.DEBUG("  arg[0]: using string value '%v'", v)
+		DEBUG("  arg[0]: using string value '%v'", v)
 		location = v
 
 	case int, int64, float64, bool:
-		log.DEBUG("  arg[0]: converting %T to string", v)
+		DEBUG("  arg[0]: converting %T to string", v)
 		location = fmt.Sprintf("%v", v)
 
 	case map[interface{}]interface{}, map[string]interface{}:
-		log.DEBUG("  arg[0]: %v is not a string scalar", v)
+		DEBUG("  arg[0]: %v is not a string scalar", v)
 		return nil, ansi.Errorf("@R{load operator argument is a map; only string scalars are supported}")
 
 	case []interface{}:
-		log.DEBUG("  arg[0]: %v is not a string scalar", v)
+		DEBUG("  arg[0]: %v is not a string scalar", v)
 		return nil, ansi.Errorf("@R{load operator argument is a list; only string scalars are supported}")
 
 	default:
-		log.DEBUG("  arg[0]: using value of type %T as string", val)
+		DEBUG("  arg[0]: using value of type %T as string", val)
 		location = fmt.Sprintf("%v", val)
 	}
 

@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"fmt"
+
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // ParamOperatorEnhanced is an enhanced version that supports nested expressions
 type ParamOperatorEnhanced struct{}
@@ -31,9 +37,9 @@ func (ParamOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, error)
 	// For param operator, we need to be careful about evaluation
 	// since it runs in ParamPhase, nested operators might not be available
 	// We'll try to resolve but fall back to string representation if needed
-	
+
 	var paramName string
-	
+
 	// First, try to resolve as a nested expression
 	val, err := ResolveOperatorArgument(ev, args[0])
 	if err == nil && val != nil {

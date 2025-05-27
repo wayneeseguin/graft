@@ -1,5 +1,6 @@
 package operators
 
+import "testing"
 
 func TestEnhancedCalcOperator(t *testing.T) {
 	Convey("Enhanced Calc Operator", t, func() {
@@ -21,14 +22,14 @@ func TestEnhancedCalcOperator(t *testing.T) {
 			// The enhanced calc operator should handle nested expressions
 			// Let's test it directly without relying on ParseOpcall
 			calcOp := CalcOperatorEnhanced{}
-			
+
 			// Create a nested concat expression
 			concatArgs := []*Expr{
 				{Type: Literal, Literal: "numbers.a + "},
 				{Type: Literal, Literal: "numbers.b"},
 			}
 			concatExpr := NewOperatorCall("concat", concatArgs)
-			
+
 			// Call calc with the nested expression
 			args := []*Expr{concatExpr}
 			resp, err := calcOp.Run(ev, args)

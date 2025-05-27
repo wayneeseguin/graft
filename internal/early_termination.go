@@ -1,9 +1,6 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"context"
 	"sync"
 	"sync/atomic"
@@ -11,20 +8,20 @@ import (
 
 // EarlyTerminator manages early termination and conditional evaluation
 type EarlyTerminator struct {
-	graph           *DependencyGraph
+	graph            *DependencyGraph
 	necessityTracker *NecessityTracker
-	canceller       *CancellationManager
-	config          *EarlyTermConfig
-	metrics         *EarlyTermMetrics
+	canceller        *CancellationManager
+	config           *EarlyTermConfig
+	metrics          *EarlyTermMetrics
 }
 
 // EarlyTermConfig configures early termination behavior
 type EarlyTermConfig struct {
-	Enabled              bool
-	AggressiveMode       bool
-	TrackUnusedPaths     bool
-	PropagationDelay     int // microseconds
-	MaxSkipPercentage    float64
+	Enabled           bool
+	AggressiveMode    bool
+	TrackUnusedPaths  bool
+	PropagationDelay  int // microseconds
+	MaxSkipPercentage float64
 }
 
 // DefaultEarlyTermConfig returns default configuration
@@ -40,11 +37,11 @@ func DefaultEarlyTermConfig() *EarlyTermConfig {
 
 // EarlyTermMetrics tracks early termination metrics
 type EarlyTermMetrics struct {
-	OperationsSkipped    int64
-	OperationsEvaluated  int64
-	PathsMarkedUnused    int64
-	CancellationsSent    int64
-	TimeSaved            int64 // microseconds
+	OperationsSkipped   int64
+	OperationsEvaluated int64
+	PathsMarkedUnused   int64
+	CancellationsSent   int64
+	TimeSaved           int64 // microseconds
 }
 
 // NewEarlyTerminator creates a new early terminator
@@ -52,7 +49,7 @@ func NewEarlyTerminator(graph *DependencyGraph, config *EarlyTermConfig) *EarlyT
 	if config == nil {
 		config = DefaultEarlyTermConfig()
 	}
-	
+
 	return &EarlyTerminator{
 		graph:            graph,
 		necessityTracker: NewNecessityTracker(),
@@ -109,14 +106,14 @@ func (nt *NecessityTracker) IsUsed(nodeID string) bool {
 func (nt *NecessityTracker) GetUnusedNodes() []string {
 	nt.mu.RLock()
 	defer nt.mu.RUnlock()
-	
+
 	unused := make([]string, 0)
 	for nodeID := range nt.necessary {
 		if !nt.used[nodeID] {
 			unused = append(unused, nodeID)
 		}
 	}
-	
+
 	return unused
 }
 
@@ -137,10 +134,10 @@ func NewCancellationManager() *CancellationManager {
 func (cm *CancellationManager) CreateContext(ctx context.Context, nodeID string) context.Context {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
-	
+
 	nodeCtx, cancel := context.WithCancel(ctx)
 	cm.contexts[nodeID] = cancel
-	
+
 	return nodeCtx
 }
 
@@ -148,13 +145,13 @@ func (cm *CancellationManager) CreateContext(ctx context.Context, nodeID string)
 func (cm *CancellationManager) Cancel(nodeID string) bool {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
-	
+
 	if cancel, exists := cm.contexts[nodeID]; exists {
 		cancel()
 		delete(cm.contexts, nodeID)
 		return true
 	}
-	
+
 	return false
 }
 
@@ -162,7 +159,7 @@ func (cm *CancellationManager) Cancel(nodeID string) bool {
 func (cm *CancellationManager) CancelDependents(nodeID string, graph *DependencyGraph) int {
 	dependents := graph.GetDependents(nodeID)
 	cancelled := 0
-	
+
 	for _, depID := range dependents {
 		if cm.Cancel(depID) {
 			cancelled++
@@ -170,7 +167,7 @@ func (cm *CancellationManager) CancelDependents(nodeID string, graph *Dependency
 			cancelled += cm.CancelDependents(depID, graph)
 		}
 	}
-	
+
 	return cancelled
 }
 
@@ -184,15 +181,15 @@ func (et *EarlyTerminator) AnalyzeNecessity(outputPaths []string) {
 		}
 		return
 	}
-	
+
 	// Mark output paths as necessary
 	for _, path := range outputPaths {
 		et.necessityTracker.MarkNecessary(path)
 	}
-	
+
 	// Propagate necessity through dependencies
 	et.propagateNecessity()
-	
+
 	// Mark unnecessary nodes for skipping
 	et.markUnnecessaryNodes()
 }
@@ -202,11 +199,11 @@ func (et *EarlyTerminator) propagateNecessity() {
 	// Get nodes in reverse topological order
 	sortedIDs, _ := et.graph.TopologicalSort()
 	allNodes := et.graph.GetNodes()
-	
+
 	// Process from outputs backward
 	for i := len(sortedIDs) - 1; i >= 0; i-- {
 		nodeID := sortedIDs[i]
-		
+
 		if et.necessityTracker.IsNecessary(nodeID) {
 			// Mark all dependencies as necessary
 			if node, ok := allNodes[nodeID]; ok {
@@ -224,7 +221,7 @@ func (et *EarlyTerminator) markUnnecessaryNodes() {
 	allNodes := et.graph.GetNodes()
 	totalNodes := len(nodeIDs)
 	skippable := 0
-	
+
 	for _, nodeID := range nodeIDs {
 		if !et.necessityTracker.IsNecessary(nodeID) {
 			// Check if we're within skip limit
@@ -245,42 +242,42 @@ func (et *EarlyTerminator) ShouldEvaluate(nodeID string) bool {
 	if !et.config.Enabled {
 		return true
 	}
-	
+
 	node, exists := et.graph.GetNode(nodeID)
 	if !exists {
 		return true
 	}
-	
+
 	// Check if already marked for skipping
 	if node.Status == StatusSkipped {
 		return false
 	}
-	
+
 	// Check if necessary
 	if !et.necessityTracker.IsNecessary(nodeID) {
 		node.Status = StatusSkipped
 		atomic.AddInt64(&et.metrics.OperationsSkipped, 1)
 		return false
 	}
-	
+
 	// In aggressive mode, check if any dependent will use the result
 	if et.config.AggressiveMode {
 		return et.hasNecessaryDependents(nodeID)
 	}
-	
+
 	return true
 }
 
 // hasNecessaryDependents checks if any dependent is necessary
 func (et *EarlyTerminator) hasNecessaryDependents(nodeID string) bool {
 	dependents := et.graph.GetDependents(nodeID)
-	
+
 	for _, depID := range dependents {
 		if et.necessityTracker.IsNecessary(depID) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -289,22 +286,22 @@ func (et *EarlyTerminator) OnNodeCompleted(nodeID string, result interface{}, er
 	if !et.config.Enabled {
 		return
 	}
-	
+
 	atomic.AddInt64(&et.metrics.OperationsEvaluated, 1)
-	
+
 	// If node failed, cancel dependents
 	if err != nil {
 		cancelled := et.canceller.CancelDependents(nodeID, et.graph)
 		atomic.AddInt64(&et.metrics.CancellationsSent, int64(cancelled))
 		return
 	}
-	
+
 	// Check if result is actually used
 	if et.config.TrackUnusedPaths {
 		// This would be called when result is accessed
 		et.necessityTracker.MarkUsed(nodeID)
 	}
-	
+
 	// In aggressive mode, check if we can skip dependents
 	if et.config.AggressiveMode {
 		et.checkDependentNecessity(nodeID, result)
@@ -315,17 +312,17 @@ func (et *EarlyTerminator) OnNodeCompleted(nodeID string, result interface{}, er
 func (et *EarlyTerminator) checkDependentNecessity(nodeID string, result interface{}) {
 	// Check if result indicates dependents can be skipped
 	// For example, if result is nil or empty
-	
+
 	if et.isSkippableResult(result) {
 		dependents := et.graph.GetDependents(nodeID)
 		allNodes := et.graph.GetNodes()
-		
+
 		for _, depID := range dependents {
 			if dep, ok := allNodes[depID]; ok {
 				if et.canSkipDependent(dep, result) {
 					dep.Status = StatusSkipped
 					atomic.AddInt64(&et.metrics.OperationsSkipped, 1)
-					
+
 					// Cancel if already running
 					if et.canceller.Cancel(depID) {
 						atomic.AddInt64(&et.metrics.CancellationsSent, 1)
@@ -378,7 +375,7 @@ func (et *EarlyTerminator) CreateNodeContext(ctx context.Context, nodeID string)
 	if !et.config.Enabled {
 		return ctx
 	}
-	
+
 	return et.canceller.CreateContext(ctx, nodeID)
 }
 
@@ -389,7 +386,7 @@ func (et *EarlyTerminator) GetMetrics() EarlyTermMetrics {
 		OperationsEvaluated: atomic.LoadInt64(&et.metrics.OperationsEvaluated),
 		PathsMarkedUnused:   atomic.LoadInt64(&et.metrics.PathsMarkedUnused),
 		CancellationsSent:   atomic.LoadInt64(&et.metrics.CancellationsSent),
-		TimeSaved:          atomic.LoadInt64(&et.metrics.TimeSaved),
+		TimeSaved:           atomic.LoadInt64(&et.metrics.TimeSaved),
 	}
 }
 
@@ -435,11 +432,11 @@ func (ce *ConditionalEvaluator) ShouldEvaluate(nodeID string, dependencies map[s
 	ce.mu.RLock()
 	condition, exists := ce.conditions[nodeID]
 	ce.mu.RUnlock()
-	
+
 	if !exists {
 		return true // No condition means always evaluate
 	}
-	
+
 	return condition(dependencies)
 }
 
@@ -452,7 +449,7 @@ func OnlyIfNotEmpty(depName string) EvalCondition {
 		if !exists {
 			return false
 		}
-		
+
 		switch v := val.(type) {
 		case string:
 			return v != ""
@@ -473,11 +470,11 @@ func OnlyIfTrue(depName string) EvalCondition {
 		if !exists {
 			return false
 		}
-		
+
 		if boolVal, ok := val.(bool); ok {
 			return boolVal
 		}
-		
+
 		return false
 	}
 }

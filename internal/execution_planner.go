@@ -20,13 +20,13 @@ type ExecutionPlanner struct {
 
 // ExecutionConfig configures execution planning
 type ExecutionConfig struct {
-	EnableBatching      bool
-	EnableParallel      bool
-	EnableEarlyTerm     bool
-	MaxParallelOps      int
-	PlanningTimeout     time.Duration
-	ExecutionTimeout    time.Duration
-	CostThreshold       float64
+	EnableBatching   bool
+	EnableParallel   bool
+	EnableEarlyTerm  bool
+	MaxParallelOps   int
+	PlanningTimeout  time.Duration
+	ExecutionTimeout time.Duration
+	CostThreshold    float64
 }
 
 // DefaultExecutionConfig returns default execution configuration
@@ -58,7 +58,7 @@ func NewExecutionPlanner(config *ExecutionConfig) *ExecutionPlanner {
 	if config == nil {
 		config = DefaultExecutionConfig()
 	}
-	
+
 	return &ExecutionPlanner{
 		analyzer:      NewDependencyAnalyzer(),
 		costEstimator: NewCostEstimator(),
@@ -74,23 +74,23 @@ func (ep *ExecutionPlanner) PlanExecution(ctx context.Context, doc interface{}) 
 	defer func() {
 		ep.metrics.PlanningTime = time.Since(planStart)
 	}()
-	
+
 	// Create planning context with timeout
 	planCtx, cancel := context.WithTimeout(ctx, ep.config.PlanningTimeout)
 	defer cancel()
-	
+
 	// Analyze dependencies
 	graph, err := ep.analyzer.AnalyzeDocument(doc)
 	if err != nil {
 		return nil, fmt.Errorf("dependency analysis failed: %v", err)
 	}
-	
+
 	// Get execution stages
 	stages, err := graph.GetExecutionStages()
 	if err != nil {
 		return nil, fmt.Errorf("stage generation failed: %v", err)
 	}
-	
+
 	// Create optimized plan
 	plan := &OptimizedExecutionPlan{
 		Graph:         graph,
@@ -98,7 +98,7 @@ func (ep *ExecutionPlanner) PlanExecution(ctx context.Context, doc interface{}) 
 		OriginalCost:  ep.calculateTotalCost(graph),
 		OptimizedCost: 0,
 	}
-	
+
 	// Optimize each stage
 	for i, stage := range stages {
 		select {
@@ -110,10 +110,10 @@ func (ep *ExecutionPlanner) PlanExecution(ctx context.Context, doc interface{}) 
 			plan.OptimizedCost += optStage.EstimatedCost
 		}
 	}
-	
+
 	// Calculate metrics
 	ep.updateMetrics(plan)
-	
+
 	return plan, nil
 }
 
@@ -126,12 +126,12 @@ func (ep *ExecutionPlanner) optimizeStage(stage ExecutionStage, stageNum int) Op
 		Batches:       make([]OperationBatch, 0),
 		EstimatedCost: 0,
 	}
-	
+
 	// Group operations for batching
 	if ep.config.EnableBatching {
 		batches := ep.batcher.CreateBatches(stage.Operations)
 		optStage.Batches = batches
-		
+
 		// Calculate batched cost
 		for _, batch := range batches {
 			batchCost := ep.costEstimator.EstimateBatchCost(batch.Operations)
@@ -143,13 +143,13 @@ func (ep *ExecutionPlanner) optimizeStage(stage ExecutionStage, stageNum int) Op
 			optStage.EstimatedCost += op.Cost
 		}
 	}
-	
+
 	// Apply parallel execution bonus
 	if optStage.CanParallel && len(stage.Operations) > 1 {
 		optStage.EstimatedCost = ep.costEstimator.EstimateParallelCost(stage.Operations)
 		optStage.ParallelGroups = ep.groupForParallel(stage.Operations)
 	}
-	
+
 	return optStage
 }
 
@@ -161,23 +161,23 @@ func (ep *ExecutionPlanner) groupForParallel(ops []*DependencyNode) []ParallelGr
 	sort.Slice(sorted, func(i, j int) bool {
 		return sorted[i].Cost > sorted[j].Cost
 	})
-	
+
 	// Create groups respecting max parallel ops
 	groups := make([]ParallelGroup, 0)
-	
+
 	for i := 0; i < len(sorted); i += ep.config.MaxParallelOps {
 		end := i + ep.config.MaxParallelOps
 		if end > len(sorted) {
 			end = len(sorted)
 		}
-		
+
 		group := ParallelGroup{
 			Operations: sorted[i:end],
 			MaxCost:    sorted[i].Cost, // First is highest cost
 		}
 		groups = append(groups, group)
 	}
-	
+
 	return groups
 }
 
@@ -186,13 +186,13 @@ func (ep *ExecutionPlanner) calculateTotalCost(graph *DependencyGraph) float64 {
 	totalCost := float64(0)
 	nodeIDs, _ := graph.TopologicalSort()
 	allNodes := graph.GetNodes()
-	
+
 	for _, nodeID := range nodeIDs {
 		if node, ok := allNodes[nodeID]; ok {
 			totalCost += node.Cost
 		}
 	}
-	
+
 	return totalCost
 }
 
@@ -200,23 +200,23 @@ func (ep *ExecutionPlanner) calculateTotalCost(graph *DependencyGraph) float64 {
 func (ep *ExecutionPlanner) updateMetrics(plan *OptimizedExecutionPlan) {
 	ep.mu.Lock()
 	defer ep.mu.Unlock()
-	
+
 	ep.metrics.TotalOperations = plan.Graph.Size()
 	ep.metrics.ParallelStages = 0
 	ep.metrics.BatchedOperations = 0
-	
+
 	for _, stage := range plan.Stages {
 		if stage.CanParallel {
 			ep.metrics.ParallelStages++
 		}
-		
+
 		for _, batch := range stage.Batches {
 			if len(batch.Operations) > 1 {
 				ep.metrics.BatchedOperations += len(batch.Operations)
 			}
 		}
 	}
-	
+
 	if plan.OriginalCost > 0 {
 		ep.metrics.CostReduction = (plan.OriginalCost - plan.OptimizedCost) / plan.OriginalCost
 	}
@@ -228,18 +228,18 @@ func (ep *ExecutionPlanner) ExecutePlan(ctx context.Context, plan *OptimizedExec
 	defer func() {
 		ep.metrics.ExecutionTime = time.Since(execStart)
 	}()
-	
+
 	// Create execution context with timeout
 	execCtx, cancel := context.WithTimeout(ctx, ep.config.ExecutionTimeout)
 	defer cancel()
-	
+
 	// Execute stages in order
 	for _, stage := range plan.Stages {
 		if err := ep.executeStage(execCtx, stage, executor); err != nil {
 			return fmt.Errorf("stage %d execution failed: %v", stage.StageNumber, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -267,7 +267,7 @@ func (ep *ExecutionPlanner) executeStage(ctx context.Context, stage OptimizedSta
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -275,7 +275,7 @@ func (ep *ExecutionPlanner) executeStage(ctx context.Context, stage OptimizedSta
 func (ep *ExecutionPlanner) executeParallelGroup(ctx context.Context, group ParallelGroup, executor Executor) error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(group.Operations))
-	
+
 	for _, op := range group.Operations {
 		wg.Add(1)
 		go func(operation *DependencyNode) {
@@ -285,14 +285,14 @@ func (ep *ExecutionPlanner) executeParallelGroup(ctx context.Context, group Para
 			}
 		}(op)
 	}
-	
+
 	// Wait for completion
 	doneChan := make(chan struct{})
 	go func() {
 		wg.Wait()
 		close(doneChan)
 	}()
-	
+
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -344,35 +344,35 @@ type Executor interface {
 // Visualize returns a string representation of the plan
 func (plan *OptimizedExecutionPlan) Visualize() string {
 	var result string
-	
+
 	result += fmt.Sprintf("=== Optimized Execution Plan ===\n")
 	result += fmt.Sprintf("Original Cost: %.2f\n", plan.OriginalCost)
-	result += fmt.Sprintf("Optimized Cost: %.2f (%.1f%% reduction)\n", 
-		plan.OptimizedCost, 
+	result += fmt.Sprintf("Optimized Cost: %.2f (%.1f%% reduction)\n",
+		plan.OptimizedCost,
 		(plan.OriginalCost-plan.OptimizedCost)/plan.OriginalCost*100)
 	result += fmt.Sprintf("Stages: %d\n\n", len(plan.Stages))
-	
+
 	for _, stage := range plan.Stages {
 		result += fmt.Sprintf("Stage %d (Cost: %.2f):\n", stage.StageNumber, stage.EstimatedCost)
-		
+
 		if stage.CanParallel {
 			result += "  Parallel Execution:\n"
 			for i, group := range stage.ParallelGroups {
-				result += fmt.Sprintf("    Group %d (%d ops, max cost: %.2f)\n", 
+				result += fmt.Sprintf("    Group %d (%d ops, max cost: %.2f)\n",
 					i, len(group.Operations), group.MaxCost)
 			}
 		}
-		
+
 		if len(stage.Batches) > 0 {
 			result += "  Batches:\n"
 			for i, batch := range stage.Batches {
-				result += fmt.Sprintf("    Batch %d: %s (%d ops)\n", 
+				result += fmt.Sprintf("    Batch %d: %s (%d ops)\n",
 					i, batch.Type, len(batch.Operations))
 			}
 		}
-		
+
 		result += "\n"
 	}
-	
+
 	return result
 }

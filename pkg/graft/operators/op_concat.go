@@ -1,5 +1,12 @@
 package operators
 
+import (
+	"fmt"
+	"strings"
+
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // ConcatOperator ...
 type ConcatOperator struct{}
@@ -17,7 +24,7 @@ func (ConcatOperator) Phase() OperatorPhase {
 // Dependencies ...
 func (ConcatOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
 	deps := auto
-	
+
 	for _, arg := range args {
 		if arg.Type == OperatorCall {
 			// Get dependencies from nested operator
@@ -30,7 +37,7 @@ func (ConcatOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor
 			deps = append(deps, arg.Reference)
 		}
 	}
-	
+
 	return deps
 }
 
@@ -75,7 +82,7 @@ func (ConcatOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 			DEBUG("  arg[%d]: %v cannot be converted to string", i, val)
 			return nil, ansi.Errorf("@R{tried to concat} @c{%v}@R{, which cannot be converted to string}", val)
 		}
-		
+
 		DEBUG("  arg[%d]: appending '%s' to resultant string", i, str)
 		*l = append(*l, str)
 	}

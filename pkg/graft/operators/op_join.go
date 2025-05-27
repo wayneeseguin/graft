@@ -1,5 +1,12 @@
 package operators
 
+import (
+	"fmt"
+	"strings"
+
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // JoinOperator is invoked with (( join <separator> <lists/strings>... )) and
 // joins lists and strings into one string, separated by <separator>

@@ -1,5 +1,12 @@
 package operators
 
+import (
+	"encoding/base64"
+	"fmt"
+
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // Base64DecodeOperatorEnhanced is an enhanced version that supports nested expressions
 type Base64DecodeOperatorEnhanced struct{}

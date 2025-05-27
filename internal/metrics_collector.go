@@ -1,9 +1,6 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"fmt"
 	"time"
 )
@@ -11,43 +8,43 @@ import (
 // MetricsCollector collects metrics for Graft operations
 type MetricsCollector struct {
 	// Parsing metrics
-	ParseOperations  *MetricFamily
-	ParseDuration    *MetricFamily
-	ParseErrors      *MetricFamily
-	
+	ParseOperations *MetricFamily
+	ParseDuration   *MetricFamily
+	ParseErrors     *MetricFamily
+
 	// Evaluation metrics
 	EvalOperations   *MetricFamily
 	EvalDuration     *MetricFamily
 	OperatorCalls    *MetricFamily
 	OperatorDuration *MetricFamily
-	
+
 	// Cache metrics
-	CacheHits        *MetricFamily
-	CacheMisses      *MetricFamily
-	CacheEvictions   *MetricFamily
-	CacheSize        *MetricFamily
-	
+	CacheHits      *MetricFamily
+	CacheMisses    *MetricFamily
+	CacheEvictions *MetricFamily
+	CacheSize      *MetricFamily
+
 	// I/O metrics
-	ExternalCalls    *MetricFamily
-	ExternalDuration *MetricFamily
+	ExternalCalls     *MetricFamily
+	ExternalDuration  *MetricFamily
 	ConnectionsActive *MetricFamily
-	
+
 	// Resource metrics
-	HeapAlloc        *MetricFamily
-	HeapObjects      *MetricFamily
-	GCPauseTime      *MetricFamily
-	Goroutines       *MetricFamily
-	
+	HeapAlloc   *MetricFamily
+	HeapObjects *MetricFamily
+	GCPauseTime *MetricFamily
+	Goroutines  *MetricFamily
+
 	// Throughput metrics
-	DocumentsProcessed *MetricFamily
-	BytesProcessed     *MetricFamily
+	DocumentsProcessed  *MetricFamily
+	BytesProcessed      *MetricFamily
 	OperationsPerSecond *MetricFamily
-	
+
 	// Error metrics
-	ErrorsByType     *MetricFamily
-	
+	ErrorsByType *MetricFamily
+
 	// Custom metrics
-	CustomMetrics    map[string]*MetricFamily
+	CustomMetrics map[string]*MetricFamily
 }
 
 // NewMetricsCollector creates a new metrics collector
@@ -69,7 +66,7 @@ func NewMetricsCollector() *MetricsCollector {
 			"Total number of parse errors",
 			MetricTypeCounter,
 		),
-		
+
 		// Evaluation metrics
 		EvalOperations: NewMetricFamily(
 			"graft_eval_operations_total",
@@ -91,7 +88,7 @@ func NewMetricsCollector() *MetricsCollector {
 			"Operator execution duration in seconds",
 			MetricTypeHistogram,
 		),
-		
+
 		// Cache metrics
 		CacheHits: NewMetricFamily(
 			"graft_cache_hits_total",
@@ -113,7 +110,7 @@ func NewMetricsCollector() *MetricsCollector {
 			"Current cache size",
 			MetricTypeGauge,
 		),
-		
+
 		// I/O metrics
 		ExternalCalls: NewMetricFamily(
 			"graft_external_calls_total",
@@ -130,7 +127,7 @@ func NewMetricsCollector() *MetricsCollector {
 			"Number of active connections",
 			MetricTypeGauge,
 		),
-		
+
 		// Resource metrics
 		HeapAlloc: NewMetricFamily(
 			"graft_heap_alloc_bytes",
@@ -152,7 +149,7 @@ func NewMetricsCollector() *MetricsCollector {
 			"Number of goroutines",
 			MetricTypeGauge,
 		),
-		
+
 		// Throughput metrics
 		DocumentsProcessed: NewMetricFamily(
 			"graft_documents_processed_total",
@@ -169,14 +166,14 @@ func NewMetricsCollector() *MetricsCollector {
 			"Operations per second",
 			MetricTypeGauge,
 		),
-		
+
 		// Error metrics
 		ErrorsByType: NewMetricFamily(
 			"graft_errors_total",
 			"Total errors by type",
 			MetricTypeCounter,
 		),
-		
+
 		// Custom metrics
 		CustomMetrics: make(map[string]*MetricFamily),
 	}
@@ -185,10 +182,10 @@ func NewMetricsCollector() *MetricsCollector {
 // RecordParseOperation records a parse operation
 func (mc *MetricsCollector) RecordParseOperation(start time.Time, err error) {
 	duration := time.Since(start)
-	
+
 	mc.ParseOperations.GetOrCreate(nil).(*Counter).Inc()
 	mc.ParseDuration.GetOrCreate(nil).(*Histogram).Observe(duration.Seconds())
-	
+
 	if err != nil {
 		mc.ParseErrors.GetOrCreate(nil).(*Counter).Inc()
 		mc.RecordError("parse", err)
@@ -198,10 +195,10 @@ func (mc *MetricsCollector) RecordParseOperation(start time.Time, err error) {
 // RecordEvalOperation records an evaluation operation
 func (mc *MetricsCollector) RecordEvalOperation(start time.Time, err error) {
 	duration := time.Since(start)
-	
+
 	mc.EvalOperations.GetOrCreate(nil).(*Counter).Inc()
 	mc.EvalDuration.GetOrCreate(nil).(*Histogram).Observe(duration.Seconds())
-	
+
 	if err != nil {
 		mc.RecordError("eval", err)
 	}
@@ -210,11 +207,11 @@ func (mc *MetricsCollector) RecordEvalOperation(start time.Time, err error) {
 // RecordOperatorCall records an operator call
 func (mc *MetricsCollector) RecordOperatorCall(operator string, start time.Time, err error) {
 	duration := time.Since(start)
-	
+
 	labels := map[string]string{"operator": operator}
 	mc.OperatorCalls.GetOrCreate(labels).(*Counter).Inc()
 	mc.OperatorDuration.GetOrCreate(labels).(*Histogram).Observe(duration.Seconds())
-	
+
 	if err != nil {
 		mc.RecordError(fmt.Sprintf("operator_%s", operator), err)
 	}
@@ -247,11 +244,11 @@ func (mc *MetricsCollector) UpdateCacheSize(cacheType string, size int64) {
 // RecordExternalCall records an external system call
 func (mc *MetricsCollector) RecordExternalCall(system string, start time.Time, err error) {
 	duration := time.Since(start)
-	
+
 	labels := map[string]string{"system": system}
 	mc.ExternalCalls.GetOrCreate(labels).(*Counter).Inc()
 	mc.ExternalDuration.GetOrCreate(labels).(*Histogram).Observe(duration.Seconds())
-	
+
 	if err != nil {
 		mc.RecordError(fmt.Sprintf("external_%s", system), err)
 	}
@@ -325,12 +322,12 @@ func (mc *MetricsCollector) GetAllMetricFamilies() []*MetricFamily {
 		mc.OperationsPerSecond,
 		mc.ErrorsByType,
 	}
-	
+
 	// Add custom metrics
 	for _, family := range mc.CustomMetrics {
 		families = append(families, family)
 	}
-	
+
 	return families
 }
 
@@ -373,7 +370,7 @@ func RecordCacheMetrics(cacheType string, hit bool) {
 func TimeOperation(metricType string, labels map[string]string, fn func() error) error {
 	start := time.Now()
 	err := fn()
-	
+
 	mc := GetMetricsCollector()
 	switch metricType {
 	case "parse":
@@ -385,6 +382,6 @@ func TimeOperation(metricType string, labels map[string]string, fn func() error)
 			mc.RecordOperatorCall(operator, start, err)
 		}
 	}
-	
+
 	return err
 }

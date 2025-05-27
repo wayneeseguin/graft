@@ -448,7 +448,7 @@ func (api *TuningAPI) handleApplyProfile(w http.ResponseWriter, r *http.Request)
 	}
 
 	pm := GetProfileManager()
-	
+
 	api.mu.Lock()
 	err := pm.ApplyProfile(request.Profile, api.config)
 	api.mu.Unlock()

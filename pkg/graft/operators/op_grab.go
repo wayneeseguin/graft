@@ -3,9 +3,8 @@ package operators
 import (
 	"fmt"
 
-	"github.com/starkandwayne/goutils/ansi"
 	"github.com/starkandwayne/goutils/tree"
-	
+
 	"github.com/wayneeseguin/graft/log"
 	"github.com/wayneeseguin/graft/pkg/graft"
 )

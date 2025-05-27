@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"fmt"
+	"strings"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // EmptyOperator allows the user to emplace an empty array, hash, or string into
 // the YAML datastructure.

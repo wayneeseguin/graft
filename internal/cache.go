@@ -1,9 +1,6 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"fmt"
 	"hash/fnv"
 	"sync"
@@ -13,11 +10,11 @@ import (
 
 // CacheItem represents a single cached value
 type CacheItem struct {
-	Key        string
-	Value      interface{}
-	ExpiresAt  time.Time
-	CreatedAt  time.Time
-	HitCount   atomic.Uint64
+	Key       string
+	Value     interface{}
+	ExpiresAt time.Time
+	CreatedAt time.Time
+	HitCount  atomic.Uint64
 }
 
 // IsExpired checks if the cache item has expired
@@ -30,7 +27,7 @@ type ConcurrentCache struct {
 	shards    []*CacheShard
 	shardMask uint32
 	ttl       time.Duration
-	
+
 	// Global metrics
 	hits   atomic.Uint64
 	misses atomic.Uint64
@@ -57,31 +54,31 @@ func NewConcurrentCache(config CacheConfig) *ConcurrentCache {
 	if config.Shards == 0 {
 		config.Shards = 16 // Default to 16 shards
 	}
-	
+
 	// Ensure shards is a power of 2
 	shards := 1
 	for shards < config.Shards {
 		shards <<= 1
 	}
-	
+
 	shardCapacity := config.Capacity / shards
 	if shardCapacity < 1 {
 		shardCapacity = 1
 	}
-	
+
 	cache := &ConcurrentCache{
 		shards:    make([]*CacheShard, shards),
 		shardMask: uint32(shards - 1),
 		ttl:       config.TTL,
 	}
-	
+
 	for i := 0; i < shards; i++ {
 		cache.shards[i] = &CacheShard{
 			items:    make(map[string]*CacheItem),
 			capacity: shardCapacity,
 		}
 	}
-	
+
 	return cache
 }
 
@@ -95,7 +92,7 @@ func (c *ConcurrentCache) getShard(key string) *CacheShard {
 // Get retrieves a value from the cache
 func (c *ConcurrentCache) Get(key string) (interface{}, bool) {
 	shard := c.getShard(key)
-	
+
 	shard.mu.RLock()
 	item, found := shard.items[key]
 	if !found {
@@ -103,7 +100,7 @@ func (c *ConcurrentCache) Get(key string) (interface{}, bool) {
 		c.misses.Add(1)
 		return nil, false
 	}
-	
+
 	// Check expiration
 	if item.IsExpired() {
 		shard.mu.RUnlock()
@@ -111,23 +108,23 @@ func (c *ConcurrentCache) Get(key string) (interface{}, bool) {
 		shard.mu.Lock()
 		delete(shard.items, key)
 		shard.mu.Unlock()
-		
+
 		c.misses.Add(1)
 		c.evicts.Add(1)
 		return nil, false
 	}
-	
+
 	// Get the value while still holding the lock
 	value := item.Value
 	shard.mu.RUnlock()
-	
+
 	// Update metrics (atomic operations are safe without lock)
 	item.HitCount.Add(1)
 	c.hits.Add(1)
-	
+
 	// Note: We're not updating AccessTime to avoid write contention
 	// LRU eviction will still work based on insertion order
-	
+
 	return value, true
 }
 
@@ -139,25 +136,25 @@ func (c *ConcurrentCache) Set(key string, value interface{}) {
 // SetWithTTL adds or updates a value in the cache with a specific TTL
 func (c *ConcurrentCache) SetWithTTL(key string, value interface{}, ttl time.Duration) {
 	shard := c.getShard(key)
-	
+
 	item := &CacheItem{
-		Key:        key,
-		Value:      value,
-		CreatedAt:  time.Now(),
+		Key:       key,
+		Value:     value,
+		CreatedAt: time.Now(),
 	}
-	
+
 	if ttl > 0 {
 		item.ExpiresAt = time.Now().Add(ttl)
 	}
-	
+
 	shard.mu.Lock()
 	defer shard.mu.Unlock()
-	
+
 	// Check capacity and evict if necessary
 	if len(shard.items) >= shard.capacity {
 		c.evictLRU(shard)
 	}
-	
+
 	shard.items[key] = item
 	c.sets.Add(1)
 }
@@ -168,7 +165,7 @@ func (c *ConcurrentCache) evictLRU(shard *CacheShard) {
 	var lruKey string
 	var lruTime time.Time
 	var minHits uint64 = ^uint64(0) // Max uint64
-	
+
 	// Evict item with oldest creation time and fewest hits
 	for key, item := range shard.items {
 		hits := item.HitCount.Load()
@@ -178,7 +175,7 @@ func (c *ConcurrentCache) evictLRU(shard *CacheShard) {
 			minHits = hits
 		}
 	}
-	
+
 	if lruKey != "" {
 		delete(shard.items, lruKey)
 		c.evicts.Add(1)
@@ -188,14 +185,14 @@ func (c *ConcurrentCache) evictLRU(shard *CacheShard) {
 // Delete removes a value from the cache
 func (c *ConcurrentCache) Delete(key string) bool {
 	shard := c.getShard(key)
-	
+
 	shard.mu.Lock()
 	_, found := shard.items[key]
 	if found {
 		delete(shard.items, key)
 	}
 	shard.mu.Unlock()
-	
+
 	return found
 }
 
@@ -222,11 +219,11 @@ func (c *ConcurrentCache) Size() int {
 // Metrics returns current cache metrics
 func (c *ConcurrentCache) Metrics() CacheMetrics {
 	return CacheMetrics{
-		Hits:   c.hits.Load(),
-		Misses: c.misses.Load(),
-		Sets:   c.sets.Load(),
-		Evicts: c.evicts.Load(),
-		Size:   c.Size(),
+		Hits:    c.hits.Load(),
+		Misses:  c.misses.Load(),
+		Sets:    c.sets.Load(),
+		Evicts:  c.evicts.Load(),
+		Size:    c.Size(),
 		HitRate: c.calculateHitRate(),
 	}
 }
@@ -236,11 +233,11 @@ func (c *ConcurrentCache) calculateHitRate() float64 {
 	hits := c.hits.Load()
 	misses := c.misses.Load()
 	total := hits + misses
-	
+
 	if total == 0 {
 		return 0.0
 	}
-	
+
 	return float64(hits) / float64(total) * 100.0
 }
 
@@ -268,21 +265,21 @@ var (
 		Capacity: 10000,
 		TTL:      0, // No expiration
 	})
-	
+
 	// OperatorCache caches operator results
 	OperatorCache = NewConcurrentCache(CacheConfig{
 		Shards:   32,
 		Capacity: 50000,
 		TTL:      5 * time.Minute,
 	})
-	
+
 	// VaultCache caches vault lookups
 	VaultCache = NewConcurrentCache(CacheConfig{
 		Shards:   16,
 		Capacity: 5000,
 		TTL:      1 * time.Minute,
 	})
-	
+
 	// AWSCache caches AWS parameter/secret lookups
 	AWSCache = NewConcurrentCache(CacheConfig{
 		Shards:   16,

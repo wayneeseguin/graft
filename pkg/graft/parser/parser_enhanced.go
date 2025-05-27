@@ -1,14 +1,10 @@
 package parser
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
-	"github.com/wayneeseguin/graft/log"
 	"github.com/starkandwayne/goutils/tree"
 )
 
@@ -46,14 +42,19 @@ func (p *EnhancedParser) WithSource(source string) *EnhancedParser {
 
 // WithErrorRecovery configures error recovery behavior
 func (p *EnhancedParser) WithErrorRecovery(stopOnFirst bool, maxErrors int) *EnhancedParser {
-	p.errors.StopOnFirst = stopOnFirst
-	p.errors.MaxErrors = maxErrors
+	// Phase 1: Create new error context with desired settings
+	if stopOnFirst {
+		p.errors = NewErrorRecoveryContext(1)
+	} else {
+		p.errors = NewErrorRecoveryContext(maxErrors)
+	}
 	return p
 }
 
 // EnableErrorCollection enables collecting multiple errors
 func (p *EnhancedParser) EnableErrorCollection() *EnhancedParser {
-	p.errors.StopOnFirst = false
+	// Phase 1: Create new error context with multiple error support
+	p.errors = NewErrorRecoveryContext(10)
 	return p
 }
 
@@ -149,8 +150,7 @@ func (p *EnhancedParser) parseExpression(minPrecedence Precedence) (*Expr, error
 			
 			// Expect :
 			if !p.consume(TokenColon) {
-				return nil, p.syntaxError("expected ':' in ternary expression", p.tokenPosition(p.currentToken())).
-					WithContext("ternary operator requires '?' followed by ':'")
+				return nil, p.syntaxError("expected ':' in ternary expression", p.tokenPosition(p.currentToken()))
 			}
 			
 			// Parse the false expression
@@ -247,8 +247,8 @@ func (p *EnhancedParser) parseExpression(minPrecedence Precedence) (*Expr, error
 				continue
 			}
 			
-			opInfo := p.registry.Get(opName)
-			if opInfo == nil {
+			opInfo, ok := p.registry.Get(opName)
+			if !ok {
 				// Not a known operator, might be part of next expression
 				break
 			}
@@ -380,9 +380,7 @@ func (p *EnhancedParser) parsePrimary() (*Expr, error) {
 		
 	case TokenPlus, TokenMultiply, TokenDivide, TokenModulo:
 		// These should only appear as binary operators, not in primary position
-		return nil, p.syntaxError(fmt.Sprintf("unexpected operator '%s'", token.Value), p.tokenPosition(token)).
-			WithContext("operators must appear between operands")
-		
+		return nil, p.syntaxError(fmt.Sprintf("unexpected operator '%s'", token.Value), p.tokenPosition(token))
 	default:
 		return nil, p.syntaxError(fmt.Sprintf("unexpected token '%s'", token.Value), p.tokenPosition(token))
 	}
@@ -419,8 +417,8 @@ func (p *EnhancedParser) parseOperatorCall() (*Expr, error) {
 	opNameParts := strings.Split(opName, ":")
 	baseOpName := opNameParts[0]
 	
-	opInfo := p.registry.Get(baseOpName)
-	if opInfo == nil {
+	opInfo, ok := p.registry.Get(baseOpName)
+	if !ok {
 		return nil, p.syntaxError(fmt.Sprintf("unknown operator '%s'", baseOpName), p.tokenPosition(token))
 	}
 	
@@ -507,11 +505,11 @@ func (p *EnhancedParser) parseOperatorCall() (*Expr, error) {
 	// Validate argument count
 	if opInfo.MinArgs >= 0 && len(args) < opInfo.MinArgs {
 		return nil, p.syntaxError(fmt.Sprintf("operator '%s' requires at least %d arguments, got %d", baseOpName, opInfo.MinArgs, len(args)), 
-			p.tokenPosition(p.currentToken())).WithContext("not enough arguments")
+			p.tokenPosition(p.currentToken()))
 	}
 	if opInfo.MaxArgs >= 0 && len(args) > opInfo.MaxArgs {
 		return nil, p.syntaxError(fmt.Sprintf("operator '%s' accepts at most %d arguments, got %d", baseOpName, opInfo.MaxArgs, len(args)),
-			p.tokenPosition(p.currentToken())).WithContext("too many arguments")
+			p.tokenPosition(p.currentToken()))
 	}
 	
 	expr := NewOperatorCallWithPos(baseOpName, args, p.tokenPosition(token))
@@ -520,7 +518,7 @@ func (p *EnhancedParser) parseOperatorCall() (*Expr, error) {
 	modifiers := p.parseOperatorModifiers(opName)
 	if len(modifiers) > 0 {
 		for modifier, value := range modifiers {
-			expr.SetModifier(modifier, value)
+			SetModifierExpr(expr, fmt.Sprintf("%s:%s", modifier, value))
 		}
 	}
 	
@@ -660,11 +658,9 @@ func (p *EnhancedParser) peek() Token {
 // Error handling helpers
 
 // syntaxError creates a syntax error with position information
-func (p *EnhancedParser) syntaxError(msg string, pos Position) *ExprError {
+func (p *EnhancedParser) syntaxError(msg string, pos Position) error {
 	err := NewSyntaxError(msg, pos)
-	if p.source != "" {
-		err.WithSource(p.source)
-	}
+	// Phase 1: Return as error interface
 	return err
 }
 

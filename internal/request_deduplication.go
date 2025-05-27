@@ -28,7 +28,7 @@ type PendingRequest struct {
 func (pr *PendingRequest) AddWaiter() <-chan RequestResult {
 	pr.mu.Lock()
 	defer pr.mu.Unlock()
-	
+
 	waiter := make(chan RequestResult, 1)
 	pr.waiters = append(pr.waiters, waiter)
 	return waiter
@@ -38,20 +38,20 @@ func (pr *PendingRequest) AddWaiter() <-chan RequestResult {
 func (pr *PendingRequest) Complete(result RequestResult) {
 	pr.mu.Lock()
 	defer pr.mu.Unlock()
-	
+
 	if pr.completed {
 		return // Already completed
 	}
-	
+
 	pr.completed = true
-	
+
 	// Send result to primary channel
 	select {
 	case pr.resultChan <- result:
 	default:
 		// Channel might be closed or full
 	}
-	
+
 	// Send result to all waiters
 	for _, waiter := range pr.waiters {
 		select {
@@ -64,20 +64,20 @@ func (pr *PendingRequest) Complete(result RequestResult) {
 
 // RequestDeduplicator manages request deduplication to prevent duplicate work
 type RequestDeduplicator struct {
-	pending   map[string]*PendingRequest
-	mu        sync.RWMutex
-	timeout   time.Duration
-	
+	pending map[string]*PendingRequest
+	mu      sync.RWMutex
+	timeout time.Duration
+
 	// Metrics
-	hits      atomic.Uint64
-	misses    atomic.Uint64
-	timeouts  atomic.Uint64
-	errors    atomic.Uint64
+	hits     atomic.Uint64
+	misses   atomic.Uint64
+	timeouts atomic.Uint64
+	errors   atomic.Uint64
 }
 
 // RequestDeduplicatorConfig holds configuration for request deduplication
 type RequestDeduplicatorConfig struct {
-	Timeout        time.Duration
+	Timeout         time.Duration
 	CleanupInterval time.Duration
 }
 
@@ -89,15 +89,15 @@ func NewRequestDeduplicator(config RequestDeduplicatorConfig) *RequestDeduplicat
 	if config.CleanupInterval <= 0 {
 		config.CleanupInterval = 5 * time.Minute
 	}
-	
+
 	rd := &RequestDeduplicator{
 		pending: make(map[string]*PendingRequest),
 		timeout: config.Timeout,
 	}
-	
+
 	// Start cleanup goroutine
 	go rd.cleanupLoop(config.CleanupInterval)
-	
+
 	return rd
 }
 
@@ -113,22 +113,22 @@ func (rd *RequestDeduplicator) DeduplicateWithContext(ctx context.Context, key s
 	if pending, exists := rd.pending[key]; exists {
 		rd.mu.RUnlock()
 		rd.hits.Add(1)
-		
+
 		// Request is already in progress, add waiter
 		return pending.AddWaiter()
 	}
 	rd.mu.RUnlock()
-	
+
 	// Start new request
 	rd.mu.Lock()
-	
+
 	// Double-check in case another goroutine started it
 	if pending, exists := rd.pending[key]; exists {
 		rd.mu.Unlock()
 		rd.hits.Add(1)
 		return pending.AddWaiter()
 	}
-	
+
 	// Create new pending request
 	pending := &PendingRequest{
 		resultChan: make(chan RequestResult, 1),
@@ -137,9 +137,9 @@ func (rd *RequestDeduplicator) DeduplicateWithContext(ctx context.Context, key s
 	}
 	rd.pending[key] = pending
 	rd.mu.Unlock()
-	
+
 	rd.misses.Add(1)
-	
+
 	// Execute the request in a separate goroutine
 	go func() {
 		defer func() {
@@ -148,20 +148,20 @@ func (rd *RequestDeduplicator) DeduplicateWithContext(ctx context.Context, key s
 			delete(rd.pending, key)
 			rd.mu.Unlock()
 		}()
-		
+
 		// Create context with timeout
 		reqCtx, cancel := context.WithTimeout(ctx, rd.timeout)
 		defer cancel()
-		
+
 		// Channel to receive the result
 		resultChan := make(chan RequestResult, 1)
-		
+
 		// Execute the function in a separate goroutine
 		go func() {
 			value, err := fn()
 			resultChan <- RequestResult{Value: value, Err: err}
 		}()
-		
+
 		// Wait for result or timeout
 		select {
 		case result := <-resultChan:
@@ -176,7 +176,7 @@ func (rd *RequestDeduplicator) DeduplicateWithContext(ctx context.Context, key s
 			})
 		}
 	}()
-	
+
 	return pending.resultChan
 }
 
@@ -184,7 +184,7 @@ func (rd *RequestDeduplicator) DeduplicateWithContext(ctx context.Context, key s
 func (rd *RequestDeduplicator) cleanupLoop(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
-	
+
 	for range ticker.C {
 		rd.cleanup()
 	}
@@ -194,9 +194,9 @@ func (rd *RequestDeduplicator) cleanupLoop(interval time.Duration) {
 func (rd *RequestDeduplicator) cleanup() {
 	rd.mu.Lock()
 	defer rd.mu.Unlock()
-	
+
 	cutoff := time.Now().Add(-rd.timeout * 2) // Keep for 2x timeout duration
-	
+
 	for key, pending := range rd.pending {
 		if pending.started.Before(cutoff) {
 			delete(rd.pending, key)
@@ -209,14 +209,14 @@ func (rd *RequestDeduplicator) GetMetrics() RequestDeduplicationMetrics {
 	rd.mu.RLock()
 	pendingCount := len(rd.pending)
 	rd.mu.RUnlock()
-	
+
 	return RequestDeduplicationMetrics{
-		Hits:      rd.hits.Load(),
-		Misses:    rd.misses.Load(),
-		Timeouts:  rd.timeouts.Load(),
-		Errors:    rd.errors.Load(),
-		Pending:   pendingCount,
-		HitRate:   rd.calculateHitRate(),
+		Hits:     rd.hits.Load(),
+		Misses:   rd.misses.Load(),
+		Timeouts: rd.timeouts.Load(),
+		Errors:   rd.errors.Load(),
+		Pending:  pendingCount,
+		HitRate:  rd.calculateHitRate(),
 	}
 }
 
@@ -225,11 +225,11 @@ func (rd *RequestDeduplicator) calculateHitRate() float64 {
 	hits := rd.hits.Load()
 	misses := rd.misses.Load()
 	total := hits + misses
-	
+
 	if total == 0 {
 		return 0.0
 	}
-	
+
 	return float64(hits) / float64(total) * 100.0
 }
 
@@ -263,12 +263,12 @@ func NewKeyBuilder(prefix string) *KeyBuilder {
 func (kb *KeyBuilder) BuildKey(components ...string) string {
 	hasher := sha256.New()
 	hasher.Write([]byte(kb.prefix))
-	
+
 	for _, component := range components {
 		hasher.Write([]byte(":"))
 		hasher.Write([]byte(component))
 	}
-	
+
 	return fmt.Sprintf("%s:%x", kb.prefix, hasher.Sum(nil)[:8])
 }
 
@@ -286,7 +286,7 @@ var (
 	VaultDeduplicator *RequestDeduplicator
 	AWSDeduplicator   *RequestDeduplicator
 	FileDeduplicator  *RequestDeduplicator
-	
+
 	deduplicatorInitOnce sync.Once
 )
 
@@ -297,7 +297,7 @@ func InitializeDeduplicators() {
 			Timeout:         30 * time.Second,
 			CleanupInterval: 5 * time.Minute,
 		}
-		
+
 		VaultDeduplicator = NewRequestDeduplicator(config)
 		AWSDeduplicator = NewRequestDeduplicator(config)
 		FileDeduplicator = NewRequestDeduplicator(config)
@@ -309,7 +309,7 @@ func GetDeduplicationMetrics() map[string]RequestDeduplicationMetrics {
 	if VaultDeduplicator == nil {
 		InitializeDeduplicators()
 	}
-	
+
 	return map[string]RequestDeduplicationMetrics{
 		"vault": VaultDeduplicator.GetMetrics(),
 		"aws":   AWSDeduplicator.GetMetrics(),

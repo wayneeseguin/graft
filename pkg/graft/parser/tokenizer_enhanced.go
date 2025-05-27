@@ -1,9 +1,6 @@
 package parser
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"strings"
 )
 

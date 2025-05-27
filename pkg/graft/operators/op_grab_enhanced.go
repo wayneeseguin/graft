@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"fmt"
+
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // GrabOperatorEnhanced is an enhanced version that supports nested expressions
 type GrabOperatorEnhanced struct{}
@@ -50,7 +56,7 @@ func (GrabOperatorEnhanced) Run(ev *Evaluator, args []*Expr) (*Response, error) 
 			}
 			vals = append(vals, resolved)
 		} else if pathStr, ok := val.(string); ok && arg.Type != Literal {
-			// If the resolved value is a string from an expression (not a literal), 
+			// If the resolved value is a string from an expression (not a literal),
 			// it might be a reference path
 			cursor, err := tree.ParseCursor(pathStr)
 			if err == nil {

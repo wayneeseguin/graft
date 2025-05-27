@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
 	"github.com/starkandwayne/goutils/tree"
 )
 
@@ -30,22 +31,22 @@ func (st *SafeTree) Find(path ...string) (interface{}, error) {
 	st.mu.RLock()
 	lockWait := time.Since(lockStart)
 	defer st.mu.RUnlock()
-	
+
 	// Record metrics if enabled
 	if features := GetFeatures(); features.EnableMetrics {
 		GetParallelMetrics().RecordLockWait(lockWait)
 	}
-	
+
 	if len(path) == 0 {
 		return nil, fmt.Errorf("empty path")
 	}
-	
+
 	// Use the existing tree.Find function with proper path construction
 	fullPath := path[0]
 	for i := 1; i < len(path); i++ {
 		fullPath += "." + path[i]
 	}
-	
+
 	return tree.Find(st.data, fullPath)
 }
 
@@ -53,17 +54,17 @@ func (st *SafeTree) Find(path ...string) (interface{}, error) {
 func (st *SafeTree) FindAll(path ...string) ([]interface{}, error) {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
-	
+
 	if len(path) == 0 {
 		return nil, fmt.Errorf("empty path")
 	}
-	
+
 	// For now, implement as single Find - can be enhanced later
 	val, err := st.Find(path...)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return []interface{}{val}, nil
 }
 
@@ -77,7 +78,7 @@ func (st *SafeTree) Exists(path ...string) bool {
 func (st *SafeTree) Copy() ThreadSafeTree {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
-	
+
 	copied := deepCopyTree(st.data)
 	return NewSafeTree(copied.(map[interface{}]interface{}))
 }
@@ -86,22 +87,22 @@ func (st *SafeTree) Copy() ThreadSafeTree {
 func (st *SafeTree) Set(value interface{}, path ...string) error {
 	st.mu.Lock()
 	defer st.mu.Unlock()
-	
+
 	if len(path) == 0 {
 		return fmt.Errorf("empty path")
 	}
-	
+
 	return st.setInternal(value, path...)
 }
 
 // setInternal performs the actual set operation (caller must hold lock)
 func (st *SafeTree) setInternal(value interface{}, path ...string) error {
 	current := st.data
-	
+
 	// Navigate to the parent of the final key
 	for i := 0; i < len(path)-1; i++ {
 		key := path[i]
-		
+
 		if next, ok := current[key]; ok {
 			if nextMap, ok := next.(map[interface{}]interface{}); ok {
 				current = nextMap
@@ -118,11 +119,11 @@ func (st *SafeTree) setInternal(value interface{}, path ...string) error {
 			current = newMap
 		}
 	}
-	
+
 	// Set the final value
 	finalKey := path[len(path)-1]
 	current[finalKey] = value
-	
+
 	return nil
 }
 
@@ -130,22 +131,22 @@ func (st *SafeTree) setInternal(value interface{}, path ...string) error {
 func (st *SafeTree) Delete(path ...string) error {
 	st.mu.Lock()
 	defer st.mu.Unlock()
-	
+
 	if len(path) == 0 {
 		return fmt.Errorf("empty path")
 	}
-	
+
 	return st.deleteInternal(path...)
 }
 
 // deleteInternal performs the actual delete operation (caller must hold lock)
 func (st *SafeTree) deleteInternal(path ...string) error {
 	current := st.data
-	
+
 	// Navigate to the parent of the final key
 	for i := 0; i < len(path)-1; i++ {
 		key := path[i]
-		
+
 		if next, ok := current[key]; ok {
 			if nextMap, ok := next.(map[interface{}]interface{}); ok {
 				current = nextMap
@@ -156,11 +157,11 @@ func (st *SafeTree) deleteInternal(path ...string) error {
 			return fmt.Errorf("path not found: %v", path)
 		}
 	}
-	
+
 	// Delete the final key
 	finalKey := path[len(path)-1]
 	delete(current, finalKey)
-	
+
 	return nil
 }
 
@@ -168,16 +169,16 @@ func (st *SafeTree) deleteInternal(path ...string) error {
 func (st *SafeTree) Replace(data map[string]interface{}) error {
 	st.mu.Lock()
 	defer st.mu.Unlock()
-	
+
 	// Convert string keys to interface{} keys
 	converted := make(map[interface{}]interface{})
 	for k, v := range data {
 		converted[k] = v
 	}
-	
+
 	// Deep merge the new data
 	st.data = deepMerge(st.data, converted)
-	
+
 	return nil
 }
 
@@ -186,14 +187,14 @@ func (st *SafeTree) Merge(other ThreadSafeTree) error {
 	if otherSafe, ok := other.(*SafeTree); ok {
 		otherSafe.mu.RLock()
 		defer otherSafe.mu.RUnlock()
-		
+
 		st.mu.Lock()
 		defer st.mu.Unlock()
-		
+
 		st.data = deepMerge(st.data, otherSafe.data)
 		return nil
 	}
-	
+
 	return fmt.Errorf("cannot merge incompatible tree types")
 }
 
@@ -201,7 +202,7 @@ func (st *SafeTree) Merge(other ThreadSafeTree) error {
 func (st *SafeTree) CompareAndSwap(oldValue, newValue interface{}, path ...string) bool {
 	st.mu.Lock()
 	defer st.mu.Unlock()
-	
+
 	// Get current value
 	current := st.data
 	for i := 0; i < len(path)-1; i++ {
@@ -216,10 +217,10 @@ func (st *SafeTree) CompareAndSwap(oldValue, newValue interface{}, path ...strin
 			return false // Path doesn't exist
 		}
 	}
-	
+
 	finalKey := path[len(path)-1]
 	currentValue, exists := current[finalKey]
-	
+
 	// Compare values
 	if !exists && oldValue != nil {
 		return false
@@ -227,7 +228,7 @@ func (st *SafeTree) CompareAndSwap(oldValue, newValue interface{}, path ...strin
 	if exists && !deepEqual(currentValue, oldValue) {
 		return false
 	}
-	
+
 	// Swap the value
 	current[finalKey] = newValue
 	return true
@@ -237,16 +238,16 @@ func (st *SafeTree) CompareAndSwap(oldValue, newValue interface{}, path ...strin
 func (st *SafeTree) Update(fn func(current interface{}) interface{}, path ...string) error {
 	st.mu.Lock()
 	defer st.mu.Unlock()
-	
+
 	// Get current value
 	fullPath := path[0]
 	for i := 1; i < len(path); i++ {
 		fullPath += "." + path[i]
 	}
-	
+
 	currentValue, _ := tree.Find(st.data, fullPath)
 	newValue := fn(currentValue)
-	
+
 	return st.setInternal(newValue, path...)
 }
 
@@ -257,13 +258,13 @@ func (st *SafeTree) Transaction(fn func(tx TreeTransaction) error) error {
 		changes: make(map[string]interface{}),
 		deletes: make(map[string]bool),
 	}
-	
+
 	// Execute transaction function
 	err := fn(tx)
 	if err != nil {
 		return err
 	}
-	
+
 	// Commit the transaction
 	return tx.Commit()
 }
@@ -294,19 +295,19 @@ type safeTreeTransaction struct {
 func (tx *safeTreeTransaction) Get(path ...string) (interface{}, error) {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	pathStr := joinPath(path)
-	
+
 	// Check if we have a pending change
 	if value, ok := tx.changes[pathStr]; ok {
 		return value, nil
 	}
-	
+
 	// Check if it's deleted
 	if tx.deletes[pathStr] {
 		return nil, fmt.Errorf("path deleted in transaction: %v", path)
 	}
-	
+
 	// Get from tree
 	return tx.tree.Find(path...)
 }
@@ -315,11 +316,11 @@ func (tx *safeTreeTransaction) Get(path ...string) (interface{}, error) {
 func (tx *safeTreeTransaction) Set(value interface{}, path ...string) error {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	pathStr := joinPath(path)
 	tx.changes[pathStr] = value
 	delete(tx.deletes, pathStr) // Remove from deletes if present
-	
+
 	return nil
 }
 
@@ -327,11 +328,11 @@ func (tx *safeTreeTransaction) Set(value interface{}, path ...string) error {
 func (tx *safeTreeTransaction) Delete(path ...string) error {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	pathStr := joinPath(path)
 	tx.deletes[pathStr] = true
 	delete(tx.changes, pathStr) // Remove from changes if present
-	
+
 	return nil
 }
 
@@ -339,10 +340,10 @@ func (tx *safeTreeTransaction) Delete(path ...string) error {
 func (tx *safeTreeTransaction) Rollback() error {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	tx.changes = make(map[string]interface{})
 	tx.deletes = make(map[string]bool)
-	
+
 	return nil
 }
 
@@ -350,10 +351,10 @@ func (tx *safeTreeTransaction) Rollback() error {
 func (tx *safeTreeTransaction) Commit() error {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	tx.tree.mu.Lock()
 	defer tx.tree.mu.Unlock()
-	
+
 	// Apply all changes
 	for pathStr, value := range tx.changes {
 		path := splitPath(pathStr)
@@ -361,7 +362,7 @@ func (tx *safeTreeTransaction) Commit() error {
 			return err
 		}
 	}
-	
+
 	// Apply all deletes
 	for pathStr := range tx.deletes {
 		path := splitPath(pathStr)
@@ -369,7 +370,7 @@ func (tx *safeTreeTransaction) Commit() error {
 			// Ignore delete errors for non-existent paths
 		}
 	}
-	
+
 	return nil
 }
 
@@ -404,9 +405,9 @@ func deepMerge(dst, src map[interface{}]interface{}) map[interface{}]interface{}
 	if dst == nil {
 		return deepCopyTree(src).(map[interface{}]interface{})
 	}
-	
+
 	result := deepCopyTree(dst).(map[interface{}]interface{})
-	
+
 	for k, v := range src {
 		if dstVal, ok := result[k]; ok {
 			if dstMap, ok := dstVal.(map[interface{}]interface{}); ok {
@@ -418,7 +419,7 @@ func deepMerge(dst, src map[interface{}]interface{}) map[interface{}]interface{}
 		}
 		result[k] = deepCopyTree(v)
 	}
-	
+
 	return result
 }
 
@@ -430,7 +431,7 @@ func deepEqual(a, b interface{}) bool {
 	if a == nil || b == nil {
 		return false
 	}
-	
+
 	switch aVal := a.(type) {
 	case map[interface{}]interface{}:
 		if bVal, ok := b.(map[interface{}]interface{}); ok {
@@ -459,7 +460,7 @@ func deepEqual(a, b interface{}) bool {
 	default:
 		return a == b
 	}
-	
+
 	return false
 }
 

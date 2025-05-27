@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"fmt"
+	"strings"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // DeferOperator sheds the "defer" command off of (( defer args args args )) and
 // leaves (( args args args ))

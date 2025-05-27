@@ -216,19 +216,19 @@ func (cli *TuningCLI) applyProfile(args []string) error {
 // listProfiles lists available performance profiles
 func (cli *TuningCLI) listProfiles() error {
 	profiles := cli.profileMgr.ListProfiles()
-	
+
 	fmt.Println("Available performance profiles:")
 	fmt.Println()
-	
+
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "PROFILE\tDESCRIPTION")
 	fmt.Fprintln(w, "-------\t-----------")
-	
+
 	for _, name := range profiles {
 		desc := cli.profileMgr.GetProfileDescription(name)
 		fmt.Fprintf(w, "%s\t%s\n", name, desc)
 	}
-	
+
 	w.Flush()
 	return nil
 }

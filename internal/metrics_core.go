@@ -153,11 +153,11 @@ func NewHistogram(name string, labels map[string]string) *Histogram {
 func (h *Histogram) Observe(value float64) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
+
 	h.values = append(h.values, value)
 	h.sum += value
 	h.count++
-	
+
 	// Keep only last 10000 values to prevent unbounded growth
 	if len(h.values) > 10000 {
 		h.values = h.values[len(h.values)-10000:]
@@ -173,26 +173,26 @@ func (h *Histogram) ObserveDuration(start time.Time) {
 func (h *Histogram) GetStats() HistogramStats {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	
+
 	if h.count == 0 {
 		return HistogramStats{}
 	}
-	
+
 	// Calculate percentiles
 	sorted := make([]float64, len(h.values))
 	copy(sorted, h.values)
 	quickSort(sorted)
-	
+
 	return HistogramStats{
-		Count:  h.count,
-		Sum:    h.sum,
-		Min:    sorted[0],
-		Max:    sorted[len(sorted)-1],
-		Mean:   h.sum / float64(h.count),
-		P50:    percentile(sorted, 0.50),
-		P90:    percentile(sorted, 0.90),
-		P95:    percentile(sorted, 0.95),
-		P99:    percentile(sorted, 0.99),
+		Count: h.count,
+		Sum:   h.sum,
+		Min:   sorted[0],
+		Max:   sorted[len(sorted)-1],
+		Mean:  h.sum / float64(h.count),
+		P50:   percentile(sorted, 0.50),
+		P90:   percentile(sorted, 0.90),
+		P95:   percentile(sorted, 0.95),
+		P99:   percentile(sorted, 0.99),
 	}
 }
 
@@ -248,20 +248,20 @@ func NewSummary(name string, labels map[string]string, quantiles []float64) *Sum
 func (s *Summary) GetQuantiles() map[float64]float64 {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	if s.count == 0 {
 		return nil
 	}
-	
+
 	sorted := make([]float64, len(s.values))
 	copy(sorted, s.values)
 	quickSort(sorted)
-	
+
 	result := make(map[float64]float64)
 	for _, q := range s.quantiles {
 		result[q] = percentile(sorted, q)
 	}
-	
+
 	return result
 }
 
@@ -278,11 +278,11 @@ func (s *Summary) Value() interface{} {
 
 // MetricFamily groups related metrics
 type MetricFamily struct {
-	Name        string
-	Help        string
-	Type        MetricType
-	metrics     map[string]Metric
-	mu          sync.RWMutex
+	Name    string
+	Help    string
+	Type    MetricType
+	metrics map[string]Metric
+	mu      sync.RWMutex
 }
 
 // NewMetricFamily creates a new metric family
@@ -298,23 +298,23 @@ func NewMetricFamily(name, help string, metricType MetricType) *MetricFamily {
 // GetOrCreate gets or creates a metric with the given labels
 func (f *MetricFamily) GetOrCreate(labels map[string]string) Metric {
 	key := labelsToKey(labels)
-	
+
 	f.mu.RLock()
 	metric, exists := f.metrics[key]
 	f.mu.RUnlock()
-	
+
 	if exists {
 		return metric
 	}
-	
+
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	
+
 	// Double-check after acquiring write lock
 	if metric, exists := f.metrics[key]; exists {
 		return metric
 	}
-	
+
 	// Create new metric
 	switch f.Type {
 	case MetricTypeCounter:
@@ -328,7 +328,7 @@ func (f *MetricFamily) GetOrCreate(labels map[string]string) Metric {
 	default:
 		panic(fmt.Sprintf("unknown metric type: %s", f.Type))
 	}
-	
+
 	f.metrics[key] = metric
 	return metric
 }
@@ -337,7 +337,7 @@ func (f *MetricFamily) GetOrCreate(labels map[string]string) Metric {
 func (f *MetricFamily) GetAll() []Metric {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	
+
 	metrics := make([]Metric, 0, len(f.metrics))
 	for _, m := range f.metrics {
 		metrics = append(metrics, m)
@@ -349,7 +349,7 @@ func (f *MetricFamily) GetAll() []Metric {
 func (f *MetricFamily) Reset() {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	
+
 	for _, m := range f.metrics {
 		m.Reset()
 	}
@@ -361,14 +361,14 @@ func labelsToKey(labels map[string]string) string {
 	if len(labels) == 0 {
 		return ""
 	}
-	
+
 	// Sort label keys for consistent ordering
 	keys := make([]string, 0, len(labels))
 	for k := range labels {
 		keys = append(keys, k)
 	}
 	quickSortStrings(keys)
-	
+
 	// Build key
 	var key string
 	for i, k := range keys {
@@ -377,7 +377,7 @@ func labelsToKey(labels map[string]string) string {
 		}
 		key += fmt.Sprintf("%s=%s", k, labels[k])
 	}
-	
+
 	return key
 }
 
@@ -385,7 +385,7 @@ func percentile(sorted []float64, p float64) float64 {
 	if len(sorted) == 0 {
 		return 0
 	}
-	
+
 	index := int(float64(len(sorted)-1) * p)
 	return sorted[index]
 }
@@ -394,21 +394,21 @@ func quickSort(arr []float64) {
 	if len(arr) < 2 {
 		return
 	}
-	
+
 	left, right := 0, len(arr)-1
 	pivot := len(arr) / 2
-	
+
 	arr[pivot], arr[right] = arr[right], arr[pivot]
-	
+
 	for i := range arr {
 		if arr[i] < arr[right] {
 			arr[left], arr[i] = arr[i], arr[left]
 			left++
 		}
 	}
-	
+
 	arr[left], arr[right] = arr[right], arr[left]
-	
+
 	quickSort(arr[:left])
 	quickSort(arr[left+1:])
 }
@@ -417,21 +417,21 @@ func quickSortStrings(arr []string) {
 	if len(arr) < 2 {
 		return
 	}
-	
+
 	left, right := 0, len(arr)-1
 	pivot := len(arr) / 2
-	
+
 	arr[pivot], arr[right] = arr[right], arr[pivot]
-	
+
 	for i := range arr {
 		if arr[i] < arr[right] {
 			arr[left], arr[i] = arr[i], arr[left]
 			left++
 		}
 	}
-	
+
 	arr[left], arr[right] = arr[right], arr[left]
-	
+
 	quickSortStrings(arr[:left])
 	quickSortStrings(arr[left+1:])
 }

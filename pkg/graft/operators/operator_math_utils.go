@@ -1,5 +1,9 @@
 package operators
 
+import (
+	"fmt"
+	"math"
+)
 
 // toNumeric converts a value to a numeric type (int64 or float64)
 // Returns the numeric value and nil error if successful

@@ -13,10 +13,10 @@ import (
 
 // DiskCache provides persistent caching to disk
 type DiskCache struct {
-	config    DiskCacheConfig
-	entries   map[string]*CacheEntry
-	mu        sync.RWMutex
-	metrics   DiskCacheMetrics
+	config  DiskCacheConfig
+	entries map[string]*CacheEntry
+	mu      sync.RWMutex
+	metrics DiskCacheMetrics
 }
 
 // DiskCacheConfig configures the disk cache
@@ -30,16 +30,16 @@ type DiskCacheConfig struct {
 
 // DiskCacheMetrics tracks disk cache performance
 type DiskCacheMetrics struct {
-	Hits        int64
-	Misses      int64
-	Writes      int64
-	Reads       int64
-	Deletes     int64
-	Size        int64
-	DiskUsage   int64
-	LoadTime    time.Duration
-	SaveTime    time.Duration
-	mu          sync.RWMutex
+	Hits      int64
+	Misses    int64
+	Writes    int64
+	Reads     int64
+	Deletes   int64
+	Size      int64
+	DiskUsage int64
+	LoadTime  time.Duration
+	SaveTime  time.Duration
+	mu        sync.RWMutex
 }
 
 // NewDiskCache creates a new disk cache
@@ -54,26 +54,26 @@ func NewDiskCache(config DiskCacheConfig) (*DiskCache, error) {
 	if config.MaxSize == 0 {
 		config.MaxSize = 10000
 	}
-	
+
 	// Create storage directory if it doesn't exist
 	if config.Persistence {
 		if err := os.MkdirAll(config.StoragePath, 0755); err != nil {
 			return nil, fmt.Errorf("failed to create cache directory: %v", err)
 		}
 	}
-	
+
 	dc := &DiskCache{
 		config:  config,
 		entries: make(map[string]*CacheEntry),
 	}
-	
+
 	// Load existing cache if persistence is enabled
 	if config.Persistence {
 		if err := dc.LoadFromDisk(); err != nil {
 			return nil, fmt.Errorf("failed to load cache from disk: %v", err)
 		}
 	}
-	
+
 	return dc, nil
 }
 
@@ -81,13 +81,13 @@ func NewDiskCache(config DiskCacheConfig) (*DiskCache, error) {
 func (dc *DiskCache) Get(key string) (*CacheEntry, bool) {
 	dc.mu.RLock()
 	defer dc.mu.RUnlock()
-	
+
 	entry, found := dc.entries[key]
 	if !found {
 		dc.metrics.incrementMisses()
 		return nil, false
 	}
-	
+
 	// Check TTL
 	if time.Since(entry.Timestamp) > entry.TTL {
 		// Entry expired, remove it
@@ -96,15 +96,15 @@ func (dc *DiskCache) Get(key string) (*CacheEntry, bool) {
 		delete(dc.entries, key)
 		dc.mu.Unlock()
 		dc.mu.RLock()
-		
+
 		dc.metrics.incrementMisses()
 		return nil, false
 	}
-	
+
 	// Update access time and hit count
 	entry.LastAccessed = time.Now()
 	entry.HitCount++
-	
+
 	dc.metrics.incrementHits()
 	return entry, true
 }
@@ -113,16 +113,16 @@ func (dc *DiskCache) Get(key string) (*CacheEntry, bool) {
 func (dc *DiskCache) Set(key string, entry *CacheEntry) {
 	dc.mu.Lock()
 	defer dc.mu.Unlock()
-	
+
 	// Check if we need to evict entries
 	if len(dc.entries) >= dc.config.MaxSize {
 		dc.evictLRU()
 	}
-	
+
 	dc.entries[key] = entry
 	dc.metrics.incrementWrites()
 	dc.metrics.setSize(int64(len(dc.entries)))
-	
+
 	// Persist to disk if enabled
 	if dc.config.Persistence {
 		go dc.persistEntry(key, entry)
@@ -133,12 +133,12 @@ func (dc *DiskCache) Set(key string, entry *CacheEntry) {
 func (dc *DiskCache) Delete(key string) {
 	dc.mu.Lock()
 	defer dc.mu.Unlock()
-	
+
 	if _, found := dc.entries[key]; found {
 		delete(dc.entries, key)
 		dc.metrics.incrementDeletes()
 		dc.metrics.setSize(int64(len(dc.entries)))
-		
+
 		// Remove from disk if persistence is enabled
 		if dc.config.Persistence {
 			go dc.removeFromDisk(key)
@@ -150,10 +150,10 @@ func (dc *DiskCache) Delete(key string) {
 func (dc *DiskCache) Clear() {
 	dc.mu.Lock()
 	defer dc.mu.Unlock()
-	
+
 	dc.entries = make(map[string]*CacheEntry)
 	dc.metrics.setSize(0)
-	
+
 	// Clear disk storage if persistence is enabled
 	if dc.config.Persistence {
 		go dc.clearDisk()
@@ -164,17 +164,17 @@ func (dc *DiskCache) Clear() {
 func (dc *DiskCache) evictLRU() {
 	var oldestKey string
 	var oldestTime time.Time
-	
+
 	for key, entry := range dc.entries {
 		if oldestKey == "" || entry.LastAccessed.Before(oldestTime) {
 			oldestKey = key
 			oldestTime = entry.LastAccessed
 		}
 	}
-	
+
 	if oldestKey != "" {
 		delete(dc.entries, oldestKey)
-		
+
 		if dc.config.Persistence {
 			go dc.removeFromDisk(oldestKey)
 		}
@@ -186,12 +186,12 @@ func (dc *DiskCache) LoadFromDisk() error {
 	if !dc.config.Persistence {
 		return nil
 	}
-	
+
 	start := time.Now()
 	defer func() {
 		dc.metrics.setLoadTime(time.Since(start))
 	}()
-	
+
 	// Load index file
 	indexPath := filepath.Join(dc.config.StoragePath, dc.config.FilePrefix+"_index.json")
 	indexData, err := ioutil.ReadFile(indexPath)
@@ -201,12 +201,12 @@ func (dc *DiskCache) LoadFromDisk() error {
 		}
 		return fmt.Errorf("failed to read cache index: %v", err)
 	}
-	
+
 	var index map[string]string
 	if err := json.Unmarshal(indexData, &index); err != nil {
 		return fmt.Errorf("failed to parse cache index: %v", err)
 	}
-	
+
 	// Load individual cache files
 	for key, filename := range index {
 		entryPath := filepath.Join(dc.config.StoragePath, filename)
@@ -214,12 +214,12 @@ func (dc *DiskCache) LoadFromDisk() error {
 		if err != nil {
 			continue // Skip corrupted entries
 		}
-		
+
 		var entry CacheEntry
 		if err := json.Unmarshal(entryData, &entry); err != nil {
 			continue // Skip corrupted entries
 		}
-		
+
 		// Check if entry is still valid
 		if time.Since(entry.Timestamp) <= entry.TTL {
 			dc.entries[key] = &entry
@@ -228,10 +228,10 @@ func (dc *DiskCache) LoadFromDisk() error {
 			os.Remove(entryPath)
 		}
 	}
-	
+
 	dc.metrics.setSize(int64(len(dc.entries)))
 	dc.metrics.incrementReads()
-	
+
 	return nil
 }
 
@@ -240,45 +240,45 @@ func (dc *DiskCache) SaveToDisk() error {
 	if !dc.config.Persistence {
 		return nil
 	}
-	
+
 	start := time.Now()
 	defer func() {
 		dc.metrics.setSaveTime(time.Since(start))
 	}()
-	
+
 	dc.mu.RLock()
 	defer dc.mu.RUnlock()
-	
+
 	index := make(map[string]string)
-	
+
 	// Save each entry to its own file
 	for key, entry := range dc.entries {
 		filename := dc.generateFilename(key)
 		entryPath := filepath.Join(dc.config.StoragePath, filename)
-		
+
 		entryData, err := json.Marshal(entry)
 		if err != nil {
 			continue // Skip entries that can't be serialized
 		}
-		
+
 		if err := ioutil.WriteFile(entryPath, entryData, 0644); err != nil {
 			continue // Skip entries that can't be written
 		}
-		
+
 		index[key] = filename
 	}
-	
+
 	// Save index file
 	indexData, err := json.Marshal(index)
 	if err != nil {
 		return fmt.Errorf("failed to marshal cache index: %v", err)
 	}
-	
+
 	indexPath := filepath.Join(dc.config.StoragePath, dc.config.FilePrefix+"_index.json")
 	if err := ioutil.WriteFile(indexPath, indexData, 0644); err != nil {
 		return fmt.Errorf("failed to write cache index: %v", err)
 	}
-	
+
 	return nil
 }
 
@@ -286,12 +286,12 @@ func (dc *DiskCache) SaveToDisk() error {
 func (dc *DiskCache) persistEntry(key string, entry *CacheEntry) {
 	filename := dc.generateFilename(key)
 	entryPath := filepath.Join(dc.config.StoragePath, filename)
-	
+
 	entryData, err := json.Marshal(entry)
 	if err != nil {
 		return
 	}
-	
+
 	ioutil.WriteFile(entryPath, entryData, 0644)
 }
 
@@ -309,7 +309,7 @@ func (dc *DiskCache) clearDisk() {
 	if err != nil {
 		return
 	}
-	
+
 	for _, path := range matches {
 		os.Remove(path)
 	}
@@ -328,7 +328,7 @@ func (dc *DiskCache) generateFilename(key string) string {
 func (dc *DiskCache) GetMetrics() DiskCacheMetrics {
 	dc.metrics.mu.RLock()
 	defer dc.metrics.mu.RUnlock()
-	
+
 	// Return a copy without the mutex
 	return DiskCacheMetrics{
 		Hits:      dc.metrics.Hits,

@@ -1,5 +1,10 @@
 package operators
 
+import (
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/pkg/graft"
+)
 
 // NullOperator ...
 type NullOperator struct {
@@ -12,16 +17,16 @@ func (NullOperator) Setup() error {
 }
 
 // Phase ...
-func (NullOperator) Phase() OperatorPhase {
-	return EvalPhase
+func (NullOperator) Phase() graft.OperatorPhase {
+	return graft.EvalPhase
 }
 
 // Dependencies ...
-func (NullOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, _ []*tree.Cursor) []*tree.Cursor {
+func (NullOperator) Dependencies(_ *graft.Evaluator, _ []*graft.Expr, _ []*tree.Cursor, _ []*tree.Cursor) []*tree.Cursor {
 	return nil
 }
 
 // Run ...
-func (n NullOperator) Run(ev *Evaluator, _ []*Expr) (*Response, error) {
+func (n NullOperator) Run(ev *graft.Evaluator, _ []*graft.Expr) (*graft.Response, error) {
 	return nil, ansi.Errorf("@c{(( %s ))} @R{operator not defined}", n.Missing)
 }

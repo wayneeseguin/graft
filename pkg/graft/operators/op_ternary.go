@@ -1,5 +1,10 @@
 package operators
 
+import (
+	"fmt"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // TernaryOperator implements the ternary conditional operator (? :)
 type TernaryOperator struct{}

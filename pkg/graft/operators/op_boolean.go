@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"fmt"
+	"reflect"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // BooleanAndOperator implements logical AND (&&)
 type BooleanAndOperator struct{}

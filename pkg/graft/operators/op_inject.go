@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"fmt"
+
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // InjectOperator ...
 type InjectOperator struct{}
@@ -115,10 +121,14 @@ func (InjectOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 	default:
 		DEBUG("  merging found maps into a single map to be injected")
-		merged, err := Merge(vals...)
-		if err != nil {
-			DEBUG("  failed: %s\n", err)
-			return nil, err
+		// Merge all maps together
+		merged := make(map[interface{}]interface{})
+		for _, val := range vals {
+			err := Merge(merged, val)
+			if err != nil {
+				DEBUG("  failed: %s\n", err)
+				return nil, err
+			}
 		}
 		return &Response{
 			Type:  Inject,

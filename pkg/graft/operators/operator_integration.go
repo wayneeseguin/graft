@@ -1,5 +1,25 @@
 package operators
 
+import (
+	"fmt"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+
+	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/pkg/graft"
+	"github.com/wayneeseguin/graft/pkg/graft/parser"
+)
+
+// Type aliases for this file
+type Opcall = graft.Opcall
+type OperatorRegistry = parser.OperatorRegistry
+
+// ParseOpcall delegates to parser package
+func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
+	return parser.ParseOpcall(phase, src)
+}
 
 // ParseOpcallOriginal is the original ParseOpcall implementation
 // We keep this for reference and fallback
@@ -15,14 +35,14 @@ func IntegrateEnhancedParserCore() {
 // ParseOpcallIntegrated is the new integrated version that uses enhanced parser when appropriate
 func ParseOpcallIntegrated(phase OperatorPhase, src string) (*Opcall, error) {
 	// Check if we should use enhanced parser
-	if UseEnhancedParser || shouldUseEnhancedParserForExpression(src) {
+	if UseEnhancedParser() || shouldUseEnhancedParserForExpression(src) {
 		DEBUG("Using enhanced parser for: %s", src)
 		result, err := parseOpcallWithEnhancedParser(phase, src)
 		if err != nil {
 			// Check if this is a parse error that should be reported
 			// Don't fall back for syntax errors in expressions
 			if strings.Contains(err.Error(), "expected") || strings.Contains(err.Error(), "ternary") ||
-			   strings.Contains(err.Error(), "argument") || strings.Contains(err.Error(), "position") {
+				strings.Contains(err.Error(), "argument") || strings.Contains(err.Error(), "position") {
 				return nil, err
 			}
 			// Fall back to original parser for other errors
@@ -44,35 +64,35 @@ func shouldUseEnhancedParserForExpression(src string) bool {
 	if strings.Contains(src, " (") && strings.Contains(src, ")") {
 		return true
 	}
-	
+
 	// Check for arithmetic operators
 	if strings.ContainsAny(src, "+-*/") {
 		// But not for negative numbers or dates
 		if !regexp.MustCompile(`^\(\(\s*-?\d+`).MatchString(src) &&
-		   !strings.Contains(src, "T") { // ISO dates
+			!strings.Contains(src, "T") { // ISO dates
 			return true
 		}
 	}
-	
+
 	// Check for complex logical expressions
 	if strings.Count(src, "||") > 1 {
 		return true
 	}
-	
+
 	return false
 }
 
 // parseOpcallWithEnhancedParser uses the new parser infrastructure
 func parseOpcallWithEnhancedParser(phase OperatorPhase, src string) (*Opcall, error) {
 	// Use ParseOpcallEnhanced which has the special pattern handling
-	return ParseOpcallEnhanced(phase, src)
+	return ParseOpcallEnhanced(phase, src, nil)
 }
 
 // parseOpcallWithOriginalParser is the original implementation
 func parseOpcallWithOriginalParser(phase OperatorPhase, src string) (*Opcall, error) {
 	// This is a copy of the original ParseOpcall implementation
 	// We duplicate it here to avoid circular dependencies
-	
+
 	split := func(src string) []string {
 		list := make([]string, 0, 0)
 
@@ -247,7 +267,7 @@ func parseOpcallWithOriginalParser(phase OperatorPhase, src string) (*Opcall, er
 
 		for _, e := range final {
 			TRACE("expr: pushing expression `%v' onto the operand list", e)
-			reduced, err := e.Reduce()
+			reduced, err := parser.ReduceExpr(e)
 			if err != nil {
 				if warning, isWarning := err.(WarningError); isWarning {
 					warning.Warn()
@@ -313,11 +333,7 @@ func parseOpcallWithOriginalParser(phase OperatorPhase, src string) (*Opcall, er
 		for i, arg := range args {
 			DEBUG("    arg[%d]: %s", i, arg)
 		}
-		return &Opcall{
-			op:   op,
-			args: args,
-			src:  src,
-		}, nil
+		return graft.NewOpcall(op, args, src), nil
 	}
 	DEBUG("parsing `%s': not an operator (no match)", src)
 	return nil, nil
@@ -326,7 +342,7 @@ func parseOpcallWithOriginalParser(phase OperatorPhase, src string) (*Opcall, er
 // processArgumentExpressions processes parsed expressions similar to original argify
 func processArgumentExpressions(args []*Expr) ([]*Expr, error) {
 	var final []*Expr
-	
+
 	for _, e := range args {
 		// Handle nested operator calls
 		if e.Type == OperatorCallCall {
@@ -335,9 +351,9 @@ func processArgumentExpressions(args []*Expr) ([]*Expr, error) {
 			final = append(final, e)
 			continue
 		}
-		
+
 		// Process other expressions as before
-		reduced, err := e.Reduce()
+		reduced, err := parser.ReduceExpr(e)
 		if err != nil {
 			if warning, isWarning := err.(WarningError); isWarning {
 				warning.Warn()
@@ -345,7 +361,7 @@ func processArgumentExpressions(args []*Expr) ([]*Expr, error) {
 				fmt.Fprintf(os.Stdout, "warning: %s\n", err)
 			}
 		}
-		
+
 		// Special case: preserve LogicalOr expressions
 		if e.Type == LogicalOr && reduced.Type != LogicalOr {
 			final = append(final, e)
@@ -353,21 +369,21 @@ func processArgumentExpressions(args []*Expr) ([]*Expr, error) {
 			final = append(final, reduced)
 		}
 	}
-	
+
 	return final, nil
 }
 
 // createFullOperatorRegistry creates a complete registry of all operators
 func createFullOperatorRegistry() *OperatorRegistry {
 	registry := NewOperatorRegistry()
-	
+
 	// Register all operators from OpRegistry
 	for name, op := range OpRegistry {
 		// Determine min/max args based on operator type
 		// This is a simplified version - ideally each operator would declare its arg count
 		minArgs := 1
 		maxArgs := -1
-		
+
 		// Special cases based on known operators
 		switch name {
 		case "calc", "empty", "grab", "param", "defer", "stringify":
@@ -380,7 +396,7 @@ func createFullOperatorRegistry() *OperatorRegistry {
 			minArgs = 3
 			maxArgs = 6
 		}
-		
+
 		registry.Register(&OperatorInfo{
 			Name:       name,
 			Precedence: PrecedencePostfix,
@@ -389,11 +405,11 @@ func createFullOperatorRegistry() *OperatorRegistry {
 			Phase:      op.Phase(),
 		})
 	}
-	
+
 	// Register binary operators
 	binaryOps := []struct {
-		name string
-		precedence Precedence
+		name          string
+		precedence    Precedence
 		associativity Associativity
 	}{
 		// Logical operators
@@ -413,7 +429,7 @@ func createFullOperatorRegistry() *OperatorRegistry {
 		{"/", PrecedenceMultiplicative, LeftAssociative},
 		{"%", PrecedenceMultiplicative, LeftAssociative},
 	}
-	
+
 	for _, binOp := range binaryOps {
 		registry.Register(&OperatorInfo{
 			Name:          binOp.name,
@@ -424,7 +440,7 @@ func createFullOperatorRegistry() *OperatorRegistry {
 			Phase:         EvalPhase,
 		})
 	}
-	
+
 	// Register ternary operator
 	registry.Register(&OperatorInfo{
 		Name:          "?:",
@@ -434,7 +450,7 @@ func createFullOperatorRegistry() *OperatorRegistry {
 		MaxArgs:       3,
 		Phase:         EvalPhase,
 	})
-	
+
 	// Register unary operators
 	registry.Register(&OperatorInfo{
 		Name:          "!",
@@ -444,7 +460,7 @@ func createFullOperatorRegistry() *OperatorRegistry {
 		MaxArgs:       1,
 		Phase:         EvalPhase,
 	})
-	
+
 	return registry
 }
 
@@ -473,13 +489,13 @@ func (e *ExpressionEvaluatorOperator) Dependencies(ev *Evaluator, _ []*Expr, _ [
 // Run ...
 func (e *ExpressionEvaluatorOperator) Run(ev *Evaluator, _ []*Expr) (*Response, error) {
 	DEBUG("evaluating expression: %s", e.expr.String())
-	
+
 	// Evaluate the expression
 	result, err := EvaluateExpr(e.expr, ev)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// EvaluateExpr returns a Response, so we just return it directly
 	return result, nil
 }
@@ -489,25 +505,25 @@ func extractExpressionDependencies(expr *Expr, ev *Evaluator) []*tree.Cursor {
 	if expr == nil {
 		return nil
 	}
-	
+
 	var deps []*tree.Cursor
-	
+
 	switch expr.Type {
 	case Reference:
 		if expr.Reference != nil {
 			deps = append(deps, expr.Reference)
 		}
-		
+
 	case OperatorCall:
 		// Get dependencies from operator arguments
 		for _, arg := range expr.Args() {
 			deps = append(deps, extractExpressionDependencies(arg, ev)...)
 		}
-		
+
 	case LogicalOr:
 		deps = append(deps, extractExpressionDependencies(expr.Left, ev)...)
 		deps = append(deps, extractExpressionDependencies(expr.Right, ev)...)
 	}
-	
+
 	return deps
 }

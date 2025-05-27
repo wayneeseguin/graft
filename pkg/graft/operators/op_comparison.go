@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"fmt"
+	"reflect"
+
+	"github.com/starkandwayne/goutils/tree"
+)
 
 // ComparisonOperator implements comparison operations (==, !=, <, >, <=, >=)
 type ComparisonOperator struct {

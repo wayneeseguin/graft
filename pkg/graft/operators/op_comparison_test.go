@@ -1,5 +1,11 @@
 package operators
 
+import (
+	"testing"
+
+	"github.com/geofffranks/simpleyaml"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 func TestComparisonOperators(t *testing.T) {
 	YAML := func(s string) map[interface{}]interface{} {
@@ -15,7 +21,7 @@ func TestComparisonOperators(t *testing.T) {
 		Convey("Equality (==) operator", func() {
 			Convey("compares numbers correctly", func() {
 				ev := &Evaluator{Tree: YAML(`{}`)}
-				
+
 				// Integer equality
 				op := &ComparisonOperator{op: "=="}
 				resp, err := op.Run(ev, []*Expr{
@@ -24,7 +30,7 @@ func TestComparisonOperators(t *testing.T) {
 				})
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, true)
-				
+
 				// Float equality
 				resp, err = op.Run(ev, []*Expr{
 					&Expr{Type: Literal, Literal: 3.14},
@@ -32,7 +38,7 @@ func TestComparisonOperators(t *testing.T) {
 				})
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, true)
-				
+
 				// Mixed numeric types
 				resp, err = op.Run(ev, []*Expr{
 					&Expr{Type: Literal, Literal: int64(5)},
@@ -41,18 +47,18 @@ func TestComparisonOperators(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, true)
 			})
-			
+
 			Convey("compares strings correctly", func() {
 				ev := &Evaluator{Tree: YAML(`{}`)}
 				op := &ComparisonOperator{op: "=="}
-				
+
 				resp, err := op.Run(ev, []*Expr{
 					&Expr{Type: Literal, Literal: "hello"},
 					&Expr{Type: Literal, Literal: "hello"},
 				})
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, true)
-				
+
 				resp, err = op.Run(ev, []*Expr{
 					&Expr{Type: Literal, Literal: "hello"},
 					&Expr{Type: Literal, Literal: "world"},
@@ -60,11 +66,11 @@ func TestComparisonOperators(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, false)
 			})
-			
+
 			Convey("compares booleans correctly", func() {
 				ev := &Evaluator{Tree: YAML(`{}`)}
 				op := &ComparisonOperator{op: "=="}
-				
+
 				resp, err := op.Run(ev, []*Expr{
 					&Expr{Type: Literal, Literal: true},
 					&Expr{Type: Literal, Literal: true},
@@ -72,11 +78,11 @@ func TestComparisonOperators(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, true)
 			})
-			
+
 			Convey("compares nil correctly", func() {
 				ev := &Evaluator{Tree: YAML(`{}`)}
 				op := &ComparisonOperator{op: "=="}
-				
+
 				resp, err := op.Run(ev, []*Expr{
 					&Expr{Type: Literal, Literal: nil},
 					&Expr{Type: Literal, Literal: nil},
@@ -85,18 +91,18 @@ func TestComparisonOperators(t *testing.T) {
 				So(resp.Value, ShouldEqual, true)
 			})
 		})
-		
+
 		Convey("Inequality (!=) operator", func() {
 			ev := &Evaluator{Tree: YAML(`{}`)}
 			op := &ComparisonOperator{op: "!="}
-			
+
 			resp, err := op.Run(ev, []*Expr{
 				&Expr{Type: Literal, Literal: int64(42)},
 				&Expr{Type: Literal, Literal: int64(43)},
 			})
 			So(err, ShouldBeNil)
 			So(resp.Value, ShouldEqual, true)
-			
+
 			resp, err = op.Run(ev, []*Expr{
 				&Expr{Type: Literal, Literal: "hello"},
 				&Expr{Type: Literal, Literal: "hello"},
@@ -104,11 +110,11 @@ func TestComparisonOperators(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(resp.Value, ShouldEqual, false)
 		})
-		
+
 		Convey("Less than (<) operator", func() {
 			ev := &Evaluator{Tree: YAML(`{}`)}
 			op := &ComparisonOperator{op: "<"}
-			
+
 			Convey("compares numbers", func() {
 				resp, err := op.Run(ev, []*Expr{
 					&Expr{Type: Literal, Literal: int64(5)},
@@ -116,7 +122,7 @@ func TestComparisonOperators(t *testing.T) {
 				})
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, true)
-				
+
 				resp, err = op.Run(ev, []*Expr{
 					&Expr{Type: Literal, Literal: 3.14},
 					&Expr{Type: Literal, Literal: 2.71},
@@ -124,7 +130,7 @@ func TestComparisonOperators(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, false)
 			})
-			
+
 			Convey("compares strings", func() {
 				resp, err := op.Run(ev, []*Expr{
 					&Expr{Type: Literal, Literal: "apple"},
@@ -134,11 +140,11 @@ func TestComparisonOperators(t *testing.T) {
 				So(resp.Value, ShouldEqual, true)
 			})
 		})
-		
+
 		Convey("Greater than (>) operator", func() {
 			ev := &Evaluator{Tree: YAML(`{}`)}
 			op := &ComparisonOperator{op: ">"}
-			
+
 			resp, err := op.Run(ev, []*Expr{
 				&Expr{Type: Literal, Literal: int64(10)},
 				&Expr{Type: Literal, Literal: int64(5)},
@@ -146,18 +152,18 @@ func TestComparisonOperators(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(resp.Value, ShouldEqual, true)
 		})
-		
+
 		Convey("Less than or equal (<=) operator", func() {
 			ev := &Evaluator{Tree: YAML(`{}`)}
 			op := &ComparisonOperator{op: "<="}
-			
+
 			resp, err := op.Run(ev, []*Expr{
 				&Expr{Type: Literal, Literal: int64(5)},
 				&Expr{Type: Literal, Literal: int64(5)},
 			})
 			So(err, ShouldBeNil)
 			So(resp.Value, ShouldEqual, true)
-			
+
 			resp, err = op.Run(ev, []*Expr{
 				&Expr{Type: Literal, Literal: int64(5)},
 				&Expr{Type: Literal, Literal: int64(10)},
@@ -165,11 +171,11 @@ func TestComparisonOperators(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(resp.Value, ShouldEqual, true)
 		})
-		
+
 		Convey("Greater than or equal (>=) operator", func() {
 			ev := &Evaluator{Tree: YAML(`{}`)}
 			op := &ComparisonOperator{op: ">="}
-			
+
 			resp, err := op.Run(ev, []*Expr{
 				&Expr{Type: Literal, Literal: int64(10)},
 				&Expr{Type: Literal, Literal: int64(5)},
@@ -177,7 +183,7 @@ func TestComparisonOperators(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(resp.Value, ShouldEqual, true)
 		})
-		
+
 		Convey("handles references", func() {
 			ev := &Evaluator{Tree: YAML(`
 meta:
@@ -185,7 +191,7 @@ meta:
   name: test
 `)}
 			op := &ComparisonOperator{op: "=="}
-			
+
 			cursor, _ := tree.ParseCursor("meta.value")
 			resp, err := op.Run(ev, []*Expr{
 				&Expr{Type: Reference, Reference: cursor},
@@ -214,17 +220,17 @@ name: alice
 age: 30
 score: 85
 `)}
-			
+
 			// Test comparison in expression
 			result, err := parseAndEvaluateExpression(ev, `(( age > 25 ))`)
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, true)
-			
+
 			// Test with string comparison
 			result, err = parseAndEvaluateExpression(ev, `(( name == "alice" ))`)
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, true)
-			
+
 			// Test complex expression
 			result, err = parseAndEvaluateExpression(ev, `(( score >= 80 && score <= 90 ))`)
 			So(err, ShouldBeNil)
@@ -239,7 +245,7 @@ func parseAndEvaluateExpression(ev *Evaluator, expr string) (interface{}, error)
 	oldUseEnhancedParser := UseEnhancedParser
 	UseEnhancedParser = true
 	defer func() { UseEnhancedParser = oldUseEnhancedParser }()
-	
+
 	opcall, err := ParseOpcallIntegrated(EvalPhase, expr)
 	if err != nil {
 		return nil, err
@@ -247,7 +253,7 @@ func parseAndEvaluateExpression(ev *Evaluator, expr string) (interface{}, error)
 	if opcall == nil {
 		return nil, nil
 	}
-	
+
 	resp, err := opcall.Run(ev)
 	if err != nil {
 		return nil, err

@@ -1,5 +1,15 @@
 package operators
 
+import (
+	"encoding/binary"
+	"fmt"
+	"net"
+	"strconv"
+	"strings"
+
+	"github.com/starkandwayne/goutils/ansi"
+	"github.com/starkandwayne/goutils/tree"
+)
 
 const UNDEFINED_AZ = "__UNDEFINED_AZ__"
 
@@ -390,7 +400,7 @@ func (s StaticIPOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		// parse argument, could be in form of <az>:<number>, or just <number>
 		var offset int64
 		az := UNDEFINED_AZ
-		
+
 		switch v := val.(type) {
 		case string:
 			if strings.Contains(v, ":") {

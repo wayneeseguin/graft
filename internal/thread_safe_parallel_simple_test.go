@@ -1,12 +1,10 @@
 package internal
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"fmt"
 	"sync"
 	"testing"
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -28,7 +26,7 @@ func TestThreadSafeParallelEngineSimple(t *testing.T) {
 				Operator: "set",
 				Args:     []interface{}{"new-value"},
 			}
-			
+
 			err := engine.Submit(task)
 			So(err, ShouldBeNil)
 
@@ -74,23 +72,23 @@ func TestThreadSafeParallelEngineSimple(t *testing.T) {
 			// Submit many tasks concurrently
 			var wg sync.WaitGroup
 			numTasks := 50
-			
+
 			for i := 0; i < numTasks; i++ {
 				wg.Add(1)
 				go func(idx int) {
 					defer wg.Done()
-					
+
 					task := &ExecutionTask{
 						ID:       fmt.Sprintf("task-%d", idx),
 						Path:     []string{fmt.Sprintf("key-%d", idx)},
 						Operator: "set",
 						Args:     []interface{}{fmt.Sprintf("value-%d", idx)},
 					}
-					
+
 					engine.Submit(task)
 				}(i)
 			}
-			
+
 			wg.Wait()
 
 			// Collect all results

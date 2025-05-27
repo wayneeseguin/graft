@@ -25,12 +25,12 @@ func NewMetricsExporter(registry *MetricsRegistry) *MetricsExporter {
 // ExportPrometheus exports metrics in Prometheus format
 func (e *MetricsExporter) ExportPrometheus(w io.Writer) error {
 	snapshot := e.registry.GetSnapshot()
-	
+
 	// Write header
 	fmt.Fprintf(w, "# Graft metrics export\n")
 	fmt.Fprintf(w, "# Timestamp: %s\n", snapshot.Timestamp.Format(time.RFC3339))
 	fmt.Fprintf(w, "# Uptime: %s\n\n", snapshot.Uptime)
-	
+
 	// Export each metric family
 	families := e.registry.collector.GetAllMetricFamilies()
 	for _, family := range families {
@@ -38,10 +38,10 @@ func (e *MetricsExporter) ExportPrometheus(w io.Writer) error {
 			return err
 		}
 	}
-	
+
 	// Export resource metrics
 	e.exportPrometheusResources(w, snapshot.Resources)
-	
+
 	return nil
 }
 
@@ -50,15 +50,15 @@ func (e *MetricsExporter) exportPrometheusFamily(w io.Writer, family *MetricFami
 	// Write help and type
 	fmt.Fprintf(w, "# HELP %s %s\n", family.Name, family.Help)
 	fmt.Fprintf(w, "# TYPE %s %s\n", family.Name, strings.ToLower(string(family.Type)))
-	
+
 	// Export each metric
 	metrics := family.GetAll()
-	
+
 	// Sort metrics for consistent output
 	sort.Slice(metrics, func(i, j int) bool {
 		return labelsToKey(metrics[i].Labels()) < labelsToKey(metrics[j].Labels())
 	})
-	
+
 	for _, metric := range metrics {
 		labels := metric.Labels()
 		labelStr := ""
@@ -70,22 +70,22 @@ func (e *MetricsExporter) exportPrometheusFamily(w io.Writer, family *MetricFami
 			sort.Strings(pairs)
 			labelStr = "{" + strings.Join(pairs, ",") + "}"
 		}
-		
+
 		switch m := metric.(type) {
 		case *Counter:
 			fmt.Fprintf(w, "%s%s %d\n", family.Name, labelStr, m.Get())
-			
+
 		case *Gauge:
 			fmt.Fprintf(w, "%s%s %d\n", family.Name, labelStr, m.Get())
-			
+
 		case *Histogram:
 			stats := m.GetStats()
 			base := family.Name + labelStr
-			
+
 			// Export histogram stats
 			fmt.Fprintf(w, "%s_sum %f\n", base, stats.Sum)
 			fmt.Fprintf(w, "%s_count %d\n", base, stats.Count)
-			
+
 			// Export buckets (simplified - using percentiles as buckets)
 			buckets := []struct {
 				le    string
@@ -97,26 +97,26 @@ func (e *MetricsExporter) exportPrometheusFamily(w io.Writer, family *MetricFami
 				{"0.99", stats.P99},
 				{"+Inf", stats.Max},
 			}
-			
+
 			for _, bucket := range buckets {
 				fmt.Fprintf(w, "%s_bucket{le=\"%s\"} %f\n", base, bucket.le, bucket.value)
 			}
-			
+
 		case *Summary:
 			// Similar to histogram but with quantiles
 			stats := m.GetStats()
 			base := family.Name + labelStr
-			
+
 			fmt.Fprintf(w, "%s_sum %f\n", base, stats.Sum)
 			fmt.Fprintf(w, "%s_count %d\n", base, stats.Count)
-			
+
 			quantiles := m.GetQuantiles()
 			for q, v := range quantiles {
 				fmt.Fprintf(w, "%s{quantile=\"%g\"} %f\n", base, q, v)
 			}
 		}
 	}
-	
+
 	fmt.Fprintln(w) // Empty line between families
 	return nil
 }
@@ -127,7 +127,7 @@ func (e *MetricsExporter) exportPrometheusResources(w io.Writer, resources *Reso
 	fmt.Fprintf(w, "# HELP graft_process_info Graft process information\n")
 	fmt.Fprintf(w, "# TYPE graft_process_info gauge\n")
 	fmt.Fprintf(w, "graft_process_info{cpus=\"%d\"} 1\n\n", resources.NumCPU)
-	
+
 	// Memory metrics
 	fmt.Fprintf(w, "# HELP graft_memory_bytes Memory usage by type\n")
 	fmt.Fprintf(w, "# TYPE graft_memory_bytes gauge\n")
@@ -137,12 +137,12 @@ func (e *MetricsExporter) exportPrometheusResources(w io.Writer, resources *Reso
 	fmt.Fprintf(w, "graft_memory_bytes{type=\"heap_inuse\"} %d\n", resources.MemStats.HeapInuse)
 	fmt.Fprintf(w, "graft_memory_bytes{type=\"stack_sys\"} %d\n", resources.MemStats.StackSys)
 	fmt.Fprintf(w, "graft_memory_bytes{type=\"sys\"} %d\n\n", resources.MemStats.Sys)
-	
+
 	// GC metrics
 	fmt.Fprintf(w, "# HELP graft_gc_total Total number of GC cycles\n")
 	fmt.Fprintf(w, "# TYPE graft_gc_total counter\n")
 	fmt.Fprintf(w, "graft_gc_total %d\n\n", resources.MemStats.NumGC)
-	
+
 	fmt.Fprintf(w, "# HELP graft_gc_pause_seconds GC pause durations\n")
 	fmt.Fprintf(w, "# TYPE graft_gc_pause_seconds summary\n")
 	if len(resources.RecentGCPauses) > 0 {
@@ -159,7 +159,7 @@ func (e *MetricsExporter) exportPrometheusResources(w io.Writer, resources *Reso
 // ExportJSON exports metrics in JSON format
 func (e *MetricsExporter) ExportJSON(w io.Writer) error {
 	snapshot := e.registry.GetSnapshot()
-	
+
 	// Create structured output
 	output := map[string]interface{}{
 		"timestamp": snapshot.Timestamp,
@@ -167,7 +167,7 @@ func (e *MetricsExporter) ExportJSON(w io.Writer) error {
 		"metrics":   make(map[string]interface{}),
 		"resources": snapshot.Resources,
 	}
-	
+
 	// Process each metric family
 	for _, family := range e.registry.collector.GetAllMetricFamilies() {
 		familyData := map[string]interface{}{
@@ -175,15 +175,15 @@ func (e *MetricsExporter) ExportJSON(w io.Writer) error {
 			"type":    family.Type,
 			"metrics": make(map[string]interface{}),
 		}
-		
+
 		for _, metric := range family.GetAll() {
 			key := labelsToKey(metric.Labels())
 			if key == "" {
 				key = "default"
 			}
-			
+
 			value := metric.Value()
-			
+
 			// Enhance histogram/summary output
 			switch family.Type {
 			case MetricTypeHistogram:
@@ -203,13 +203,13 @@ func (e *MetricsExporter) ExportJSON(w io.Writer) error {
 					}
 				}
 			}
-			
+
 			familyData["metrics"].(map[string]interface{})[key] = value
 		}
-		
+
 		output["metrics"].(map[string]interface{})[family.Name] = familyData
 	}
-	
+
 	// Encode to JSON
 	encoder := json.NewEncoder(w)
 	encoder.SetIndent("", "  ")
@@ -219,12 +219,12 @@ func (e *MetricsExporter) ExportJSON(w io.Writer) error {
 // ExportText exports metrics in human-readable text format
 func (e *MetricsExporter) ExportText(w io.Writer) error {
 	snapshot := e.registry.GetSnapshot()
-	
+
 	// Header
 	fmt.Fprintf(w, "=== Graft Performance Metrics ===\n")
 	fmt.Fprintf(w, "Timestamp: %s\n", snapshot.Timestamp.Format("2006-01-02 15:04:05"))
 	fmt.Fprintf(w, "Uptime: %s\n\n", formatMetricsDuration(snapshot.Uptime))
-	
+
 	// Parsing metrics
 	fmt.Fprintf(w, "Parsing Performance:\n")
 	e.exportTextSection(w, []string{
@@ -232,22 +232,22 @@ func (e *MetricsExporter) ExportText(w io.Writer) error {
 		"graft_parse_duration_seconds",
 		"graft_parse_errors_total",
 	})
-	
+
 	// Evaluation metrics
 	fmt.Fprintf(w, "\nEvaluation Performance:\n")
 	e.exportTextSection(w, []string{
 		"graft_eval_operations_total",
 		"graft_eval_duration_seconds",
 	})
-	
+
 	// Cache metrics
 	fmt.Fprintf(w, "\nCache Performance:\n")
 	e.exportTextCacheMetrics(w)
-	
+
 	// Resource metrics
 	fmt.Fprintf(w, "\nResource Usage:\n")
 	e.exportTextResources(w, snapshot.Resources)
-	
+
 	// Throughput
 	fmt.Fprintf(w, "\nThroughput:\n")
 	e.exportTextSection(w, []string{
@@ -255,7 +255,7 @@ func (e *MetricsExporter) ExportText(w io.Writer) error {
 		"graft_documents_processed_total",
 		"graft_bytes_processed_total",
 	})
-	
+
 	return nil
 }
 
@@ -266,13 +266,13 @@ func (e *MetricsExporter) exportTextSection(w io.Writer, metricNames []string) {
 			if family.Name != name {
 				continue
 			}
-			
+
 			for _, metric := range family.GetAll() {
 				label := ""
 				if len(metric.Labels()) > 0 {
 					label = " " + labelsToKey(metric.Labels())
 				}
-				
+
 				switch m := metric.(type) {
 				case *Counter:
 					fmt.Fprintf(w, "  %s%s: %d\n", family.Name, label, m.Get())
@@ -299,7 +299,7 @@ func (e *MetricsExporter) exportTextCacheMetrics(w io.Writer) {
 		misses int64
 		size   int64
 	})
-	
+
 	// Collect cache metrics by type
 	for _, metric := range e.registry.collector.CacheHits.GetAll() {
 		if cache, ok := metric.Labels()["cache"]; ok {
@@ -308,7 +308,7 @@ func (e *MetricsExporter) exportTextCacheMetrics(w io.Writer) {
 			cacheTypes[cache] = stats
 		}
 	}
-	
+
 	for _, metric := range e.registry.collector.CacheMisses.GetAll() {
 		if cache, ok := metric.Labels()["cache"]; ok {
 			stats := cacheTypes[cache]
@@ -316,7 +316,7 @@ func (e *MetricsExporter) exportTextCacheMetrics(w io.Writer) {
 			cacheTypes[cache] = stats
 		}
 	}
-	
+
 	for _, metric := range e.registry.collector.CacheSize.GetAll() {
 		if cache, ok := metric.Labels()["cache"]; ok {
 			stats := cacheTypes[cache]
@@ -324,7 +324,7 @@ func (e *MetricsExporter) exportTextCacheMetrics(w io.Writer) {
 			cacheTypes[cache] = stats
 		}
 	}
-	
+
 	// Display cache stats
 	for cacheType, stats := range cacheTypes {
 		total := stats.hits + stats.misses
@@ -332,7 +332,7 @@ func (e *MetricsExporter) exportTextCacheMetrics(w io.Writer) {
 		if total > 0 {
 			hitRate = float64(stats.hits) / float64(total) * 100
 		}
-		
+
 		fmt.Fprintf(w, "  %s cache:\n", cacheType)
 		fmt.Fprintf(w, "    Hit rate: %.1f%% (%d hits, %d misses)\n", hitRate, stats.hits, stats.misses)
 		fmt.Fprintf(w, "    Size: %d entries\n", stats.size)
@@ -349,7 +349,7 @@ func (e *MetricsExporter) exportTextResources(w io.Writer, resources *ResourceSn
 	fmt.Fprintf(w, "    Goroutines: %d\n", resources.NumGoroutines)
 	fmt.Fprintf(w, "    CPUs: %d\n", resources.NumCPU)
 	fmt.Fprintf(w, "    GC runs: %d\n", resources.MemStats.NumGC)
-	
+
 	if len(resources.RecentGCPauses) > 0 {
 		var total time.Duration
 		var max time.Duration
@@ -372,7 +372,7 @@ func formatMetricsDuration(d time.Duration) string {
 	hours := int(d.Hours()) % 24
 	minutes := int(d.Minutes()) % 60
 	seconds := int(d.Seconds()) % 60
-	
+
 	parts := []string{}
 	if days > 0 {
 		parts = append(parts, fmt.Sprintf("%dd", days))
@@ -386,7 +386,7 @@ func formatMetricsDuration(d time.Duration) string {
 	if seconds > 0 || len(parts) == 0 {
 		parts = append(parts, fmt.Sprintf("%ds", seconds))
 	}
-	
+
 	return strings.Join(parts, " ")
 }
 
@@ -396,7 +396,7 @@ func formatBytes(bytes uint64) string {
 		MB = KB * 1024
 		GB = MB * 1024
 	)
-	
+
 	switch {
 	case bytes >= GB:
 		return fmt.Sprintf("%.2f GB", float64(bytes)/GB)
@@ -421,7 +421,7 @@ const (
 // Export exports metrics in the specified format
 func (e *MetricsExporter) Export(format ExportFormat) ([]byte, error) {
 	var buf bytes.Buffer
-	
+
 	switch format {
 	case ExportFormatPrometheus:
 		err := e.ExportPrometheus(&buf)
