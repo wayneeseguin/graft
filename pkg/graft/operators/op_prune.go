@@ -4,15 +4,17 @@ import (
 	"fmt"
 
 	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
 var keysToPrune []string
 
-func addToPruneListIfNecessary(paths ...string) {
+func addToPruneListIfNecessary(engine graft.EngineContext, paths ...string) {
+	prunePaths := engine.GetKeysToPrune()
 	for _, path := range paths {
-		if !isIncluded(keysToPrune, path) {
+		if !isIncluded(prunePaths, path) {
 			DEBUG("adding '%s' to the list of paths to prune", path)
-			keysToPrune = append(keysToPrune, path)
+			engine.AddKeyToPrune(path)
 		}
 	}
 }
@@ -50,7 +52,8 @@ func (PruneOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	DEBUG("running (( prune ... )) operation at $.%s", ev.Here)
 	defer DEBUG("done with (( prune ... )) operation at $.%s\n", ev.Here)
 
-	addToPruneListIfNecessary(fmt.Sprintf("%s", ev.Here))
+	engine := graft.GetEngine(ev)
+	addToPruneListIfNecessary(engine, fmt.Sprintf("%s", ev.Here))
 
 	// simply replace it with nil (will be pruned at the end anyway)
 	return &Response{

@@ -13,9 +13,11 @@ import (
 	"github.com/geofffranks/yaml"
 	"github.com/starkandwayne/goutils/ansi"
 	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
-var kv *vaultkv.KV = nil
+// globalKV is the global vault client for backward compatibility
+var globalKV *vaultkv.KV = nil
 
 var vaultSecretCache = map[string]map[string]interface{}{}
 
@@ -137,7 +139,7 @@ func initializeVaultClient() error {
 		return fmt.Errorf("Error setting up Vault client: %s", err)
 	}
 
-	kv = client.NewKV()
+	globalKV = client.NewKV()
 
 	return nil
 }
@@ -148,6 +150,9 @@ func initializeVaultClient() error {
 func (o VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	DEBUG("running (( vault ... )) operation at $.%s", ev.Here)
 	defer DEBUG("done with (( vault ... )) operation at $.%s\n", ev.Here)
+
+	// Get engine context
+	engine := graft.GetEngine(ev)
 
 	// syntax: (( vault "secret/path:key" ))
 	// syntax: (( vault path.object "to concat with" other.object ))
@@ -178,15 +183,11 @@ func (o VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		return nil, err
 	}
 
-	// Track vault references
-	if refs, found := VaultRefs[key]; !found {
-		VaultRefs[key] = []string{ev.Here.String()}
-	} else {
-		VaultRefs[key] = append(refs, ev.Here.String())
-	}
+	// Track vault references using engine context
+	engine.AddVaultRef(key, []string{ev.Here.String()})
 
 	// Perform the vault lookup
-	secret, err := o.performVaultLookup(key)
+	secret, err := o.performVaultLookup(engine, key)
 	if err != nil {
 		// Check if we should try the default
 		if processor.hasDefault && isVaultNotFound(err) {
@@ -260,16 +261,26 @@ func (VaultOperator) resolveVaultArgs(ev *Evaluator, args []*Expr) (string, erro
 }
 
 // performVaultLookup performs the actual vault lookup
-func (VaultOperator) performVaultLookup(key string) (string, error) {
-	if SkipVault {
+func (VaultOperator) performVaultLookup(engine graft.EngineContext, key string) (string, error) {
+	if engine.IsVaultSkipped() {
 		return "REDACTED", nil
 	}
 
+	kv := engine.GetVaultClient()
 	if kv == nil {
-		err := initializeVaultClient()
-		if err != nil {
-			return "", fmt.Errorf("Error during Vault client initialization: %s", err)
+		// For backward compatibility, try to initialize from environment
+		if SkipVault {
+			return "REDACTED", nil
 		}
+		
+		// Fall back to global initialization for now
+		if globalKV == nil {
+			err := initializeVaultClient()
+			if err != nil {
+				return "", fmt.Errorf("Error during Vault client initialization: %s", err)
+			}
+		}
+		kv = globalKV
 	}
 
 	leftPart, rightPart := parsePath(key)
@@ -277,15 +288,17 @@ func (VaultOperator) performVaultLookup(key string) (string, error) {
 		return "", ansi.Errorf("@R{invalid argument} @c{%s}@R{; must be in the form} @m{path/to/secret:key}", key)
 	}
 
+	// Check cache first
+	vaultCache := engine.GetVaultCache()
 	var fullSecret map[string]interface{}
 	var found bool
-	if fullSecret, found = vaultSecretCache[leftPart]; found {
+	if fullSecret, found = vaultCache[leftPart]; found {
 		DEBUG("vault: Cache hit for `%s`", leftPart)
 	} else {
 		DEBUG("vault: Cache MISS for `%s`", leftPart)
 		// Secret isn't cached. Grab it from the vault.
 		var err error
-		fullSecret, err = getVaultSecret(leftPart)
+		fullSecret, err = getVaultSecretWithClient(kv, leftPart)
 		if err != nil {
 			//Normalize the error messages
 			switch err.(type) {
@@ -294,7 +307,7 @@ func (VaultOperator) performVaultLookup(key string) (string, error) {
 			}
 			return "", err
 		}
-		vaultSecretCache[leftPart] = fullSecret
+		engine.SetVaultCache(leftPart, fullSecret)
 	}
 
 	secret, err := extractSubkey(fullSecret, leftPart, rightPart)
@@ -314,7 +327,22 @@ func getVaultSecret(secret string) (map[string]interface{}, error) {
 	ret := map[string]interface{}{}
 
 	DEBUG("Fetching Vault secret at `%s'", secret)
-	_, err := kv.Get(secret, &ret, nil)
+	_, err := globalKV.Get(secret, &ret, nil)
+	if err != nil {
+		DEBUG(" failure.")
+		return nil, err
+	}
+
+	DEBUG("  success.")
+	return ret, nil
+}
+
+// getVaultSecretWithClient retrieves a secret using the provided client
+func getVaultSecretWithClient(kvClient *vaultkv.KV, secret string) (map[string]interface{}, error) {
+	ret := map[string]interface{}{}
+
+	DEBUG("Fetching Vault secret at `%s'", secret)
+	_, err := kvClient.Get(secret, &ret, nil)
 	if err != nil {
 		DEBUG(" failure.")
 		return nil, err

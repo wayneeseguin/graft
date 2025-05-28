@@ -16,6 +16,7 @@ import (
 	"github.com/geofffranks/yaml"
 	"github.com/starkandwayne/goutils/ansi"
 	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
 // awsSession holds a shared AWS session struct
@@ -203,18 +204,24 @@ func (o AwsOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 	value := "REDACTED"
 
-	if !SkipAws {
-		if awsSession == nil {
-			awsSession, err = initializeAwsSession(os.Getenv("AWS_PROFILE"), os.Getenv("AWS_REGION"), os.Getenv("AWS_ROLE"))
+	// Get engine context for AWS operations
+	engine := graft.GetEngine(ev)
+	
+	if !engine.IsAWSSkipped() {
+		session := engine.GetAWSSession()
+		if session == nil {
+			session, err = initializeAwsSession(os.Getenv("AWS_PROFILE"), os.Getenv("AWS_REGION"), os.Getenv("AWS_ROLE"))
 			if err != nil {
 				return nil, fmt.Errorf("error during AWS session initialization: %s", err)
 			}
+			// Note: We cannot store session back to engine from here, 
+			// this would require additional interface methods
 		}
 
 		if o.variant == "awsparam" {
-			value, err = getAwsParam(awsSession, key)
+			value, err = o.getAwsParamFromEngine(engine, session, key)
 		} else if o.variant == "awssecret" {
-			value, err = getAwsSecret(awsSession, key, params)
+			value, err = o.getAwsSecretFromEngine(engine, session, key, params)
 		}
 
 		if err != nil {
@@ -258,6 +265,59 @@ func parseAwsOpKey(key string) (string, url.Values, error) {
 	}
 
 	return split[0], values, nil
+}
+
+// getAwsSecretFromEngine fetches a secret using the engine context
+func (o AwsOperator) getAwsSecretFromEngine(engine graft.EngineContext, awsSession *session.Session, secret string, params url.Values) (string, error) {
+	cache := engine.GetAWSSecretsCache()
+	if val, cached := cache[secret]; cached {
+		return val, nil
+	}
+
+	client := engine.GetSecretsManagerClient()
+	if client == nil {
+		client = secretsmanager.New(awsSession)
+	}
+
+	input := &secretsmanager.GetSecretValueInput{
+		SecretId: aws.String(secret),
+	}
+
+	output, err := client.GetSecretValue(input)
+	if err != nil {
+		return "", err
+	}
+
+	value := aws.StringValue(output.SecretString)
+	engine.SetAWSSecretCache(secret, value)
+	return value, nil
+}
+
+// getAwsParamFromEngine fetches a parameter using the engine context  
+func (o AwsOperator) getAwsParamFromEngine(engine graft.EngineContext, awsSession *session.Session, param string) (string, error) {
+	cache := engine.GetAWSParamsCache()
+	if val, cached := cache[param]; cached {
+		return val, nil
+	}
+
+	client := engine.GetParameterStoreClient()
+	if client == nil {
+		client = ssm.New(awsSession)
+	}
+
+	input := &ssm.GetParameterInput{
+		Name:           aws.String(param),
+		WithDecryption: aws.Bool(true),
+	}
+
+	output, err := client.GetParameter(input)
+	if err != nil {
+		return "", err
+	}
+
+	value := aws.StringValue(output.Parameter.Value)
+	engine.SetAWSParamCache(param, value)
+	return value, nil
 }
 
 // init registers the two variants of the AwsOperator

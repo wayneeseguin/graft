@@ -38,8 +38,8 @@ func deepEqual(a, b interface{}) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-// deepCopy creates a deep copy of the given value
-func deepCopy(v interface{}) interface{} {
+// deepCopyHelper creates a deep copy of the given value
+func deepCopyHelper(v interface{}) interface{} {
 	if v == nil {
 		return nil
 	}
@@ -48,19 +48,19 @@ func deepCopy(v interface{}) interface{} {
 	case map[interface{}]interface{}:
 		copy := make(map[interface{}]interface{})
 		for k, v := range val {
-			copy[deepCopy(k)] = deepCopy(v)
+			copy[deepCopyHelper(k)] = deepCopyHelper(v)
 		}
 		return copy
 	case []interface{}:
 		copy := make([]interface{}, len(val))
 		for i, v := range val {
-			copy[i] = deepCopy(v)
+			copy[i] = deepCopyHelper(v)
 		}
 		return copy
 	case map[string]interface{}:
 		copy := make(map[string]interface{})
 		for k, v := range val {
-			copy[k] = deepCopy(v)
+			copy[k] = deepCopyHelper(v)
 		}
 		return copy
 	default:

@@ -26,6 +26,9 @@ type Evaluator struct {
 	Only []string
 
 	pointer *interface{}
+	
+	// Reference to the engine (for accessing registries and state)
+	engine interface{} // Using interface{} to avoid circular dependency
 }
 
 func nameOfObj(o interface{}, def string) string {

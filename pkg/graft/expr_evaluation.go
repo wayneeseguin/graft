@@ -8,7 +8,7 @@ import (
 // EvaluateExpr evaluates an expression, including nested operator calls
 func EvaluateExpr(e *Expr, ev *Evaluator) (*Response, error) {
 	if e == nil {
-		return nil, NewEvaluationError("nil expression", Position{})
+		return nil, NewExprEvaluationError("nil expression", Position{})
 	}
 	
 	switch e.Type {
@@ -53,7 +53,7 @@ func EvaluateExpr(e *Expr, ev *Evaluator) (*Response, error) {
 		return EvaluateExpr(e.Right, ev)
 		
 	default:
-		return nil, NewEvaluationError(fmt.Sprintf("unknown expression type: %v", e.Type), e.Pos)
+		return nil, NewExprEvaluationError(fmt.Sprintf("unknown expression type: %v", e.Type), e.Pos)
 	}
 }
 
@@ -86,7 +86,7 @@ func looksLikeBooleanExpr(e *Expr) bool {
 // evaluateOperatorCall evaluates a nested operator call expression
 func evaluateOperatorCall(e *Expr, ev *Evaluator) (*Response, error) {
 	if e.Type != OperatorCall {
-		return nil, NewEvaluationError("not an operator call expression", e.Pos)
+		return nil, NewExprEvaluationError("not an operator call expression", e.Pos)
 	}
 	
 	opName := e.Op()
@@ -95,7 +95,7 @@ func evaluateOperatorCall(e *Expr, ev *Evaluator) (*Response, error) {
 	// Get the operator
 	op := OperatorFor(opName)
 	if _, ok := op.(*NullOperator); ok {
-		return nil, NewOperatorError(fmt.Sprintf("unknown operator: %s", opName), e.Pos)
+		return nil, NewExprOperatorError(fmt.Sprintf("unknown operator: %s", opName), e.Pos)
 	}
 	
 	// Phase checking is handled elsewhere in the pipeline
@@ -112,7 +112,7 @@ func evaluateOperatorCall(e *Expr, ev *Evaluator) (*Response, error) {
 			// Recursively evaluate nested operator calls
 			resp, err := evaluateOperatorCall(arg, ev)
 			if err != nil {
-				return nil, WrapError(err, EvaluationError, arg.Pos).
+				return nil, WrapError(err, ExprEvaluationError, arg.Pos).
 					WithContext(fmt.Sprintf("in nested operator '%s'", arg.Op()))
 			}
 			// Convert response back to expression

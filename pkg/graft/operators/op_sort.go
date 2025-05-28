@@ -7,8 +7,10 @@ import (
 	"strings"
 
 	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
+// pathsToSort moved to engine context - keeping this for backward compatibility
 var pathsToSort = map[string]string{}
 
 type itemType int
@@ -59,6 +61,27 @@ func addToSortListIfNecessary(operator string, path string) {
 		DEBUG("adding sort by '%s' of path '%s' to the list of paths to sort", byKey, path)
 		if _, ok := pathsToSort[path]; !ok {
 			pathsToSort[path] = byKey
+		}
+	}
+}
+
+// AddToSortListIfNecessaryWithEngine is the engine-context-aware version
+func AddToSortListIfNecessaryWithEngine(operator string, path string, engine graft.EngineContext) {
+	if opcall, err := ParseOpcall(MergePhase, operator); err == nil {
+		var byKey string
+		args := opcall.Args()
+		if len(args) == 2 {
+			byKey = args[1].String()
+		}
+
+		DEBUG("adding sort by '%s' of path '%s' to the list of paths to sort", byKey, path)
+		if engine != nil {
+			engine.AddPathToSort(path, byKey)
+		} else {
+			// Fallback to global state for backward compatibility
+			if _, ok := pathsToSort[path]; !ok {
+				pathsToSort[path] = byKey
+			}
 		}
 	}
 }

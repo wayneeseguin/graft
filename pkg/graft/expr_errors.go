@@ -23,8 +23,8 @@ const (
 	SyntaxError ExprErrorType = iota
 	TypeError
 	ReferenceError
-	EvaluationError
-	OperatorError
+	ExprEvaluationError
+	ExprOperatorError
 )
 
 // Position tracks location in source
@@ -90,9 +90,9 @@ func (e *ExprError) typeString() string {
 		return "Type Error"
 	case ReferenceError:
 		return "Reference Error"
-	case EvaluationError:
+	case ExprEvaluationError:
 		return "Evaluation Error"
-	case OperatorError:
+	case ExprOperatorError:
 		return "Operator Error"
 	default:
 		return ""
@@ -202,19 +202,19 @@ func NewReferenceError(msg string, pos Position) *ExprError {
 	}
 }
 
-// NewEvaluationError creates a new evaluation error
-func NewEvaluationError(msg string, pos Position) *ExprError {
+// NewExprEvaluationError creates a new evaluation error
+func NewExprEvaluationError(msg string, pos Position) *ExprError {
 	return &ExprError{
-		Type:     EvaluationError,
+		Type:     ExprEvaluationError,
 		Message:  msg,
 		Position: pos,
 	}
 }
 
-// NewOperatorError creates a new operator error
-func NewOperatorError(msg string, pos Position) *ExprError {
+// NewExprOperatorError creates a new operator error
+func NewExprOperatorError(msg string, pos Position) *ExprError {
 	return &ExprError{
-		Type:     OperatorError,
+		Type:     ExprOperatorError,
 		Message:  msg,
 		Position: pos,
 	}

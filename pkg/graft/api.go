@@ -38,6 +38,9 @@ type Engine interface {
 	
 	// ToYAML converts a document to YAML
 	ToYAML(doc Document) ([]byte, error)
+	
+	// RegisterOperator registers a custom operator
+	RegisterOperator(name string, op Operator) error
 }
 
 // Config holds configuration for the Engine
@@ -73,11 +76,6 @@ type VaultClient interface {
 	List(path string) ([]string, error)
 }
 
-// NewEngine creates a new graft engine with the given configuration
-func NewEngine(cfg *Config) (Engine, error) {
-	// TODO: Implement engine creation
-	return nil, nil
-}
 
 // DefaultConfig returns a default configuration
 func DefaultConfig() *Config {

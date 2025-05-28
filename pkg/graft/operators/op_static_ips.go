@@ -9,6 +9,7 @@ import (
 
 	"github.com/starkandwayne/goutils/ansi"
 	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
 const UNDEFINED_AZ = "__UNDEFINED_AZ__"
@@ -468,17 +469,19 @@ func (s StaticIPOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		// check to see if the address is already claimed
 		ip := pool[offset]
 		DEBUG("     [%d]: checking to see if %s is already claimed", i, ip)
-		if thief, taken := UsedIPs[ip]; taken {
+		
+		// Get engine context for IP tracking
+		engine := graft.GetEngine(ev)
+		usedIPs := engine.GetUsedIPs()
+		
+		if thief, taken := usedIPs[ip]; taken {
 			DEBUG("     [%d]: %s is in use by %s\n", i, ip, thief)
 			return nil, ansi.Errorf("@R{tried to use IP '}@c{%s}@R{', but that address is already allocated to} @c{%s}", ip, thief)
 		}
 
 		// claim this address for ourselves
 		DEBUG("     [%d]: claiming %s for job %s", i, ip, current)
-		if UsedIPs == nil {
-			UsedIPs = make(map[string]string)
-		}
-		UsedIPs[ip] = current
+		engine.SetUsedIP(ip, current)
 		ips = append(ips, ip)
 
 		DEBUG("")

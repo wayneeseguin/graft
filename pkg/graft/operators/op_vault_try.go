@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
 // VaultTryOperator provides a way to try multiple vault paths with a fallback default
@@ -87,16 +88,15 @@ func (o VaultTryOperator) tryVaultPath(ev *Evaluator, pathExpr *Expr) (*Response
 		return nil, err
 	}
 
+	// Get engine context
+	engine := graft.GetEngine(ev)
+	
 	// Track this vault reference
-	if refs, found := VaultRefs[path]; !found {
-		VaultRefs[path] = []string{ev.Here.String()}
-	} else {
-		VaultRefs[path] = append(refs, ev.Here.String())
-	}
+	engine.AddVaultRef(path, []string{ev.Here.String()})
 
 	// Use the shared vault infrastructure
 	vaultOp := VaultOperator{}
-	secret, err := vaultOp.performVaultLookup(path)
+	secret, err := vaultOp.performVaultLookup(engine, path)
 	if err != nil {
 		return nil, err
 	}
