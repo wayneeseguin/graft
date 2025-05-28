@@ -161,42 +161,50 @@ func (m *MockEngine) WithAWSConfig(config AWSConfig) Engine {
 // MockDocument provides a mock implementation of Document for testing
 type MockDocument struct {
 	// Control behavior
-	GetFunc        func(path string) (interface{}, error)
-	GetStringFunc  func(path string) (string, error)
-	GetIntFunc     func(path string) (int, error)
-	GetBoolFunc    func(path string) (bool, error)
-	GetSliceFunc   func(path string) ([]interface{}, error)
-	GetMapFunc     func(path string) (map[interface{}]interface{}, error)
-	SetFunc        func(path string, value interface{}) error
-	DeleteFunc     func(path string) error
-	KeysFunc       func() []string
-	ToYAMLFunc     func() ([]byte, error)
-	ToJSONFunc     func() ([]byte, error)
-	RawDataFunc    func() interface{}
-	DeepCopyFunc   func() Document
-	CloneFunc      func() Document
-	PruneFunc      func(key string) Document
-	CherryPickFunc func(keys ...string) Document
-	GetDataFunc    func() interface{}
+	GetFunc              func(path string) (interface{}, error)
+	GetStringFunc        func(path string) (string, error)
+	GetIntFunc           func(path string) (int, error)
+	GetInt64Func         func(path string) (int64, error)
+	GetFloat64Func       func(path string) (float64, error)
+	GetBoolFunc          func(path string) (bool, error)
+	GetMapFunc           func(path string) (map[string]interface{}, error)
+	GetSliceFunc         func(path string) ([]interface{}, error)
+	GetStringSliceFunc   func(path string) ([]string, error)
+	GetMapStringStringFunc func(path string) (map[string]string, error)
+	SetFunc              func(path string, value interface{}) error
+	DeleteFunc           func(path string) error
+	KeysFunc             func() []string
+	ToYAMLFunc           func() ([]byte, error)
+	ToJSONFunc           func() ([]byte, error)
+	RawDataFunc          func() interface{}
+	DeepCopyFunc         func() Document
+	CloneFunc            func() Document
+	PruneFunc            func(key string) Document
+	CherryPickFunc       func(keys ...string) Document
+	GetDataFunc          func() interface{}
 
 	// Call tracking
-	GetCalls        []string
-	GetStringCalls  []string
-	GetIntCalls     []string
-	GetBoolCalls    []string
-	GetSliceCalls   []string
-	GetMapCalls     []string
-	SetCalls        []struct{ Path string; Value interface{} }
-	DeleteCalls     []string
-	KeysCalls       int
-	ToYAMLCalls     int
-	ToJSONCalls     int
-	RawDataCalls    int
-	DeepCopyCalls   int
-	CloneCalls      int
-	PruneCalls      []string
-	CherryPickCalls [][]string
-	GetDataCalls    int
+	GetCalls               []string
+	GetStringCalls         []string
+	GetIntCalls            []string
+	GetInt64Calls          []string
+	GetFloat64Calls        []string
+	GetBoolCalls           []string
+	GetMapCalls            []string
+	GetSliceCalls          []string
+	GetStringSliceCalls    []string
+	GetMapStringStringCalls []string
+	SetCalls               []struct{ Path string; Value interface{} }
+	DeleteCalls            []string
+	KeysCalls              int
+	ToYAMLCalls            int
+	ToJSONCalls            int
+	RawDataCalls           int
+	DeepCopyCalls          int
+	CloneCalls             int
+	PruneCalls             []string
+	CherryPickCalls        [][]string
+	GetDataCalls           int
 
 	// Test data
 	TestData map[string]interface{}
@@ -207,19 +215,23 @@ func NewMockDocument() *MockDocument {
 	m := &MockDocument{
 		TestData: make(map[string]interface{}),
 		// Default implementations
-		GetFunc:        func(path string) (interface{}, error) { return nil, nil },
-		GetStringFunc:  func(path string) (string, error) { return "", nil },
-		GetIntFunc:     func(path string) (int, error) { return 0, nil },
-		GetBoolFunc:    func(path string) (bool, error) { return false, nil },
-		GetSliceFunc:   func(path string) ([]interface{}, error) { return []interface{}{}, nil },
-		GetMapFunc:     func(path string) (map[interface{}]interface{}, error) { return make(map[interface{}]interface{}), nil },
-		SetFunc:        func(path string, value interface{}) error { return nil },
-		DeleteFunc:     func(path string) error { return nil },
-		KeysFunc:       func() []string { return []string{} },
-		ToYAMLFunc:     func() ([]byte, error) { return []byte{}, nil },
-		ToJSONFunc:     func() ([]byte, error) { return []byte{}, nil },
-		RawDataFunc:    func() interface{} { return make(map[interface{}]interface{}) },
-		GetDataFunc:    func() interface{} { return make(map[interface{}]interface{}) },
+		GetFunc:              func(path string) (interface{}, error) { return nil, nil },
+		GetStringFunc:        func(path string) (string, error) { return "", nil },
+		GetIntFunc:           func(path string) (int, error) { return 0, nil },
+		GetInt64Func:         func(path string) (int64, error) { return 0, nil },
+		GetFloat64Func:       func(path string) (float64, error) { return 0, nil },
+		GetBoolFunc:          func(path string) (bool, error) { return false, nil },
+		GetMapFunc:           func(path string) (map[string]interface{}, error) { return make(map[string]interface{}), nil },
+		GetSliceFunc:         func(path string) ([]interface{}, error) { return []interface{}{}, nil },
+		GetStringSliceFunc:   func(path string) ([]string, error) { return []string{}, nil },
+		GetMapStringStringFunc: func(path string) (map[string]string, error) { return make(map[string]string), nil },
+		SetFunc:              func(path string, value interface{}) error { return nil },
+		DeleteFunc:           func(path string) error { return nil },
+		KeysFunc:             func() []string { return []string{} },
+		ToYAMLFunc:           func() ([]byte, error) { return []byte{}, nil },
+		ToJSONFunc:           func() ([]byte, error) { return []byte{}, nil },
+		RawDataFunc:          func() interface{} { return make(map[interface{}]interface{}) },
+		GetDataFunc:          func() interface{} { return make(map[interface{}]interface{}) },
 	}
 	// Self-referential functions need to be set after creation
 	m.DeepCopyFunc = func() Document { return NewMockDocument() }
@@ -250,14 +262,34 @@ func (m *MockDocument) GetBool(path string) (bool, error) {
 	return m.GetBoolFunc(path)
 }
 
+func (m *MockDocument) GetInt64(path string) (int64, error) {
+	m.GetInt64Calls = append(m.GetInt64Calls, path)
+	return m.GetInt64Func(path)
+}
+
+func (m *MockDocument) GetFloat64(path string) (float64, error) {
+	m.GetFloat64Calls = append(m.GetFloat64Calls, path)
+	return m.GetFloat64Func(path)
+}
+
 func (m *MockDocument) GetSlice(path string) ([]interface{}, error) {
 	m.GetSliceCalls = append(m.GetSliceCalls, path)
 	return m.GetSliceFunc(path)
 }
 
-func (m *MockDocument) GetMap(path string) (map[interface{}]interface{}, error) {
+func (m *MockDocument) GetMap(path string) (map[string]interface{}, error) {
 	m.GetMapCalls = append(m.GetMapCalls, path)
 	return m.GetMapFunc(path)
+}
+
+func (m *MockDocument) GetStringSlice(path string) ([]string, error) {
+	m.GetStringSliceCalls = append(m.GetStringSliceCalls, path)
+	return m.GetStringSliceFunc(path)
+}
+
+func (m *MockDocument) GetMapStringString(path string) (map[string]string, error) {
+	m.GetMapStringStringCalls = append(m.GetMapStringStringCalls, path)
+	return m.GetMapStringStringFunc(path)
 }
 
 func (m *MockDocument) Set(path string, value interface{}) error {

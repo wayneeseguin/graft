@@ -165,15 +165,29 @@ func (d *document) GetSlice(path string) ([]interface{}, error) {
 }
 
 // GetMap retrieves a map value at the given path
-func (d *document) GetMap(path string) (map[interface{}]interface{}, error) {
+func (d *document) GetMap(path string) (map[string]interface{}, error) {
 	val, err := d.Get(path)
 	if err != nil {
 		return nil, err
 	}
-	if m, ok := val.(map[interface{}]interface{}); ok {
-		return m, nil
+	
+	switch v := val.(type) {
+	case map[string]interface{}:
+		return v, nil
+	case map[interface{}]interface{}:
+		// Convert to string-keyed map
+		result := make(map[string]interface{})
+		for k, v := range v {
+			key, ok := k.(string)
+			if !ok {
+				return nil, fmt.Errorf("map at path %s contains non-string key: %v", path, k)
+			}
+			result[key] = v
+		}
+		return result, nil
+	default:
+		return nil, NewValidationError(fmt.Sprintf("value at path '%s' is not a map (got %T)", path, val))
 	}
-	return nil, NewValidationError(fmt.Sprintf("value at path '%s' is not a map (got %T)", path, val))
 }
 
 // Keys returns all top-level keys
@@ -325,4 +339,105 @@ func (d *document) CherryPick(keys ...string) Document {
 // GetData returns the underlying data (for backward compatibility)
 func (d *document) GetData() interface{} {
 	return d.data
+}
+
+// GetInt64 retrieves an int64 value at the given path
+func (d *document) GetInt64(path string) (int64, error) {
+	val, err := d.Get(path)
+	if err != nil {
+		return 0, err
+	}
+	
+	switch v := val.(type) {
+	case int64:
+		return v, nil
+	case int:
+		return int64(v), nil
+	case float64:
+		if v == float64(int64(v)) {
+			return int64(v), nil
+		}
+		return 0, fmt.Errorf("value at path %s is a float, not an integer", path)
+	default:
+		return 0, fmt.Errorf("value at path %s is not an integer (got %T)", path, val)
+	}
+}
+
+// GetFloat64 retrieves a float64 value at the given path
+func (d *document) GetFloat64(path string) (float64, error) {
+	val, err := d.Get(path)
+	if err != nil {
+		return 0, err
+	}
+	
+	switch v := val.(type) {
+	case float64:
+		return v, nil
+	case int:
+		return float64(v), nil
+	case int64:
+		return float64(v), nil
+	default:
+		return 0, fmt.Errorf("value at path %s is not a number (got %T)", path, val)
+	}
+}
+
+
+// GetStringSlice retrieves a string slice value at the given path
+func (d *document) GetStringSlice(path string) ([]string, error) {
+	val, err := d.Get(path)
+	if err != nil {
+		return nil, err
+	}
+	
+	slice, ok := val.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("value at path %s is not a slice (got %T)", path, val)
+	}
+	
+	result := make([]string, 0, len(slice))
+	for i, item := range slice {
+		str, ok := item.(string)
+		if !ok {
+			return nil, fmt.Errorf("item at index %d in slice at path %s is not a string (got %T)", i, path, item)
+		}
+		result = append(result, str)
+	}
+	return result, nil
+}
+
+// GetMapStringString retrieves a string-to-string map at the given path
+func (d *document) GetMapStringString(path string) (map[string]string, error) {
+	val, err := d.Get(path)
+	if err != nil {
+		return nil, err
+	}
+	
+	var rawMap map[interface{}]interface{}
+	switch v := val.(type) {
+	case map[string]interface{}:
+		// Convert to interface{} keyed map for uniform processing
+		rawMap = make(map[interface{}]interface{})
+		for k, v := range v {
+			rawMap[k] = v
+		}
+	case map[interface{}]interface{}:
+		rawMap = v
+	default:
+		return nil, fmt.Errorf("value at path %s is not a map (got %T)", path, val)
+	}
+	
+	result := make(map[string]string)
+	for k, v := range rawMap {
+		key, ok := k.(string)
+		if !ok {
+			return nil, fmt.Errorf("map at path %s contains non-string key: %v", path, k)
+		}
+		value, ok := v.(string)
+		if !ok {
+			return nil, fmt.Errorf("map at path %s contains non-string value for key %s: %v", path, key, v)
+		}
+		result[key] = value
+	}
+	return result, nil
 }

@@ -24,7 +24,7 @@ type Document interface {
 	GetSlice(path string) ([]interface{}, error)
 	
 	// GetMap retrieves a map value at the given path
-	GetMap(path string) (map[interface{}]interface{}, error)
+	GetMap(path string) (map[string]interface{}, error)
 	
 	// Set sets a value at the given path
 	Set(path string, value interface{}) error
@@ -55,6 +55,12 @@ type Document interface {
 	
 	// GetData returns the underlying data (for backward compatibility)
 	GetData() interface{}
+	
+	// Additional type-safe getters
+	GetInt64(path string) (int64, error)
+	GetFloat64(path string) (float64, error)
+	GetStringSlice(path string) ([]string, error)
+	GetMapStringString(path string) (map[string]string, error)
 }
 
 // Engine is the enhanced interface for using graft as a library
