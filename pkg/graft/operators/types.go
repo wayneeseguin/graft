@@ -119,13 +119,8 @@ func DebugOn() bool {
 	return graft.DebugOn()
 }
 
-// UseEnhancedParser returns true if enhanced parser is enabled
-func UseEnhancedParser() bool {
-	// Enhanced parser is now the default
-	return true
-}
-
-// ParseOpcallEnhanced parses operator call with enhanced parser
+// TODO: ParseOpcallEnhanced => ParseOpCall (no mention of "Enhanced")
+// ParseOpcallEnhanced parses operator call with parser
 func ParseOpcallEnhanced(phase OperatorPhase, src string, ev *Evaluator) (*graft.Opcall, error) {
 	return graft.ParseOpcallEnhanced(phase, src, ev)
 }

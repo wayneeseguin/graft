@@ -2,6 +2,7 @@ package graft
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -9,27 +10,58 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// testTreeWrapper wraps COWTree to provide the test API
+type testTreeWrapper struct {
+	*COWTree
+}
+
+// Set with value first, then path (test API)
+func (w *testTreeWrapper) Set(value interface{}, path ...string) error {
+	if len(path) == 1 {
+		return w.COWTree.Set(path[0], value)
+	}
+	return w.COWTree.SetAtPath(value, path...)
+}
+
+// Get with variadic path (test API)
+func (w *testTreeWrapper) Get(path ...string) (interface{}, error) {
+	if len(path) == 1 {
+		return w.COWTree.Get(path[0])
+	}
+	// Join multiple path elements with dots
+	return w.COWTree.Get(strings.Join(path, "."))
+}
+
+// Copy returns a testTreeWrapper
+func (w *testTreeWrapper) Copy() *testTreeWrapper {
+	return &testTreeWrapper{COWTree: w.COWTree.Copy().(*COWTree)}
+}
+
+func newTestTree(init map[interface{}]interface{}) *testTreeWrapper {
+	return &testTreeWrapper{COWTree: NewCOWTree(init)}
+}
+
 func TestCOWTree(t *testing.T) {
 	Convey("COWTree basic operations", t, func() {
-		tree := NewCOWTree(nil)
+		tree := newTestTree(nil)
 		
-		Convey("Set and Find operations", func() {
-			err := tree.Set("test-value", "meta", "name")
+		Convey("Set and Get operations", func() {
+			err := tree.Set("meta.name", "test-value")
 			So(err, ShouldBeNil)
 			
-			value, err := tree.Find("meta", "name")
+			value, err := tree.Get("meta", "name")
 			So(err, ShouldBeNil)
 			So(value, ShouldEqual, "test-value")
 		})
 		
 		Convey("Exists operation", func() {
-			tree.Set("value", "key")
+			tree.Set("key", "value")
 			So(tree.Exists("key"), ShouldBeTrue)
 			So(tree.Exists("nonexistent"), ShouldBeFalse)
 		})
 		
 		Convey("Delete operation", func() {
-			tree.Set("value", "key")
+			tree.Set("key", "value")
 			So(tree.Exists("key"), ShouldBeTrue)
 			
 			err := tree.Delete("key")
@@ -38,19 +70,19 @@ func TestCOWTree(t *testing.T) {
 		})
 		
 		Convey("Copy operation (COW semantics)", func() {
-			tree.Set("original", "key")
+			tree.Set("key", "original")
 			copied := tree.Copy()
 			
 			// Modify original
-			tree.Set("modified", "key")
+			tree.Set("key", "modified")
 			
 			// Copy should remain unchanged
-			value, err := copied.Find("key")
+			value, err := copied.Get("key")
 			So(err, ShouldBeNil)
 			So(value, ShouldEqual, "original")
 			
 			// Original should be modified
-			value, err = tree.Find("key")
+			value, err = tree.Get("key")
 			So(err, ShouldBeNil)
 			So(value, ShouldEqual, "modified")
 		})
@@ -58,7 +90,7 @@ func TestCOWTree(t *testing.T) {
 		Convey("Version tracking", func() {
 			initialVersion := tree.GetVersion()
 			
-			tree.Set("value", "key")
+			tree.Set("key", "value")
 			newVersion := tree.GetVersion()
 			
 			So(newVersion, ShouldBeGreaterThan, initialVersion)
@@ -74,17 +106,17 @@ func TestCOWTreeCopyOnWrite(t *testing.T) {
 			},
 		}
 		
-		tree1 := NewCOWTree(originalData)
+		tree1 := newTestTree(originalData)
 		
 		Convey("Shallow copy shares memory initially", func() {
 			tree2 := tree1.Copy()
 			
 			// Both trees should have the same value
-			value1, err := tree1.Find("shared", "value")
+			value1, err := tree1.Get("shared", "value")
 			So(err, ShouldBeNil)
 			So(value1, ShouldEqual, "original")
 			
-			value2, err := tree2.Find("shared", "value")
+			value2, err := tree2.Get("shared", "value")
 			So(err, ShouldBeNil)
 			So(value2, ShouldEqual, "original")
 		})
@@ -97,12 +129,12 @@ func TestCOWTreeCopyOnWrite(t *testing.T) {
 			So(err, ShouldBeNil)
 			
 			// tree1 should remain unchanged
-			value1, err := tree1.Find("shared", "value")
+			value1, err := tree1.Get("shared", "value")
 			So(err, ShouldBeNil)
 			So(value1, ShouldEqual, "original")
 			
 			// tree2 should have the new value
-			value2, err := tree2.Find("shared", "value")
+			value2, err := tree2.Get("shared", "value")
 			So(err, ShouldBeNil)
 			So(value2, ShouldEqual, "modified")
 		})
@@ -117,13 +149,13 @@ func TestCOWTreeCopyOnWrite(t *testing.T) {
 			tree3.Set("tree3", "shared", "value")
 			
 			// Each should have its own value
-			value1, _ := tree1.Find("shared", "value")
+			value1, _ := tree1.Get("shared", "value")
 			So(value1, ShouldEqual, "tree1")
 			
-			value2, _ := tree2.Find("shared", "value")
+			value2, _ := tree2.Get("shared", "value")
 			So(value2, ShouldEqual, "tree2")
 			
-			value3, _ := tree3.Find("shared", "value")
+			value3, _ := tree3.Get("shared", "value")
 			So(value3, ShouldEqual, "tree3")
 		})
 	})
@@ -135,7 +167,7 @@ func TestCOWTreeConcurrency(t *testing.T) {
 	}
 	
 	Convey("COWTree concurrent operations", t, func() {
-		tree := NewCOWTree(map[interface{}]interface{}{
+		tree := newTestTree(map[interface{}]interface{}{
 			"counters": map[interface{}]interface{}{},
 		})
 		
@@ -155,7 +187,7 @@ func TestCOWTreeConcurrency(t *testing.T) {
 					defer wg.Done()
 					for j := 0; j < 100; j++ {
 						key := fmt.Sprintf("counter%d", j%10)
-						value, err := tree.Find("counters", key)
+						value, err := tree.Get("counters", key)
 						if err != nil {
 							errors <- fmt.Errorf("reader %d: %v", id, err)
 						} else if value == nil {
@@ -196,7 +228,7 @@ func TestCOWTreeConcurrency(t *testing.T) {
 		
 		Convey("Concurrent copying and modification", func() {
 			var wg sync.WaitGroup
-			copies := make(chan ThreadSafeTree, 50)
+			copies := make(chan *testTreeWrapper, 50)
 			
 			// Set initial data
 			tree.Set("initial", "shared", "value")
@@ -233,7 +265,7 @@ func TestCOWTreeConcurrency(t *testing.T) {
 			copyCount := 0
 			for copy := range copies {
 				copyCount++
-				value, err := copy.Find("shared", "value")
+				value, err := copy.Get("shared", "value")
 				So(err, ShouldBeNil)
 				So(value, ShouldNotBeNil)
 			}
@@ -245,7 +277,7 @@ func TestCOWTreeConcurrency(t *testing.T) {
 
 func TestCOWTreeTransactions(t *testing.T) {
 	Convey("COWTree transaction operations", t, func() {
-		tree := NewCOWTree(map[interface{}]interface{}{
+		tree := newTestTree(map[interface{}]interface{}{
 			"account": map[interface{}]interface{}{
 				"balance": 100,
 			},
@@ -278,17 +310,17 @@ func TestCOWTreeTransactions(t *testing.T) {
 			So(err, ShouldBeNil)
 			
 			// Verify changes were applied
-			balance, err := tree.Find("account", "balance")
+			balance, err := tree.Get("account", "balance")
 			So(err, ShouldBeNil)
 			So(balance, ShouldEqual, 50)
 			
-			lastOp, err := tree.Find("account", "last_operation")
+			lastOp, err := tree.Get("account", "last_operation")
 			So(err, ShouldBeNil)
 			So(lastOp, ShouldEqual, "debit")
 		})
 		
 		Convey("Failed transaction rollback", func() {
-			originalBalance, _ := tree.Find("account", "balance")
+			originalBalance, _ := tree.Get("account", "balance")
 			
 			err := tree.Transaction(func(tx TreeTransaction) error {
 				tx.Set(0, "account", "balance")
@@ -298,7 +330,7 @@ func TestCOWTreeTransactions(t *testing.T) {
 			So(err, ShouldNotBeNil)
 			
 			// Balance should remain unchanged
-			currentBalance, _ := tree.Find("account", "balance")
+			currentBalance, _ := tree.Get("account", "balance")
 			So(currentBalance, ShouldEqual, originalBalance)
 		})
 	})
@@ -317,7 +349,7 @@ func TestCOWTreeMemorySharing(t *testing.T) {
 			},
 		}
 		
-		tree1 := NewCOWTree(originalData)
+		tree1 := newTestTree(originalData)
 		
 		Convey("Deep copy shares unmodified paths", func() {
 			tree2 := tree1.Copy()
@@ -327,13 +359,13 @@ func TestCOWTreeMemorySharing(t *testing.T) {
 			tree2.Set("modified", "level1", "level2", "level3", "value")
 			
 			// tree1 and tree3 should still share memory for unmodified parts
-			value1, _ := tree1.Find("level1", "level2", "level3", "value")
-			value3, _ := tree3.Find("level1", "level2", "level3", "value")
+			value1, _ := tree1.Get("level1", "level2", "level3", "value")
+			value3, _ := tree3.Get("level1", "level2", "level3", "value")
 			
 			So(value1, ShouldEqual, "deep-value")
 			So(value3, ShouldEqual, "deep-value")
 			
-			value2, _ := tree2.Find("level1", "level2", "level3", "value")
+			value2, _ := tree2.Get("level1", "level2", "level3", "value")
 			So(value2, ShouldEqual, "modified")
 		})
 		
@@ -354,6 +386,8 @@ func TestCOWTreeMemorySharing(t *testing.T) {
 }
 
 // Benchmark COW tree vs SafeTree performance
+// TODO: SafeTree implementation removed - this benchmark compares COWTree with SafeTree
+/*
 func BenchmarkCOWTreeVsSafeTree(b *testing.B) {
 	initialData := map[interface{}]interface{}{
 		"data": map[interface{}]interface{}{},
@@ -372,21 +406,21 @@ func BenchmarkCOWTreeVsSafeTree(b *testing.B) {
 			i := 0
 			for pb.Next() {
 				key := fmt.Sprintf("key%d", i%1000)
-				tree.Find("data", key)
+				tree.Get("data", key)
 				i++
 			}
 		})
 	})
 	
 	b.Run("COWTree-Find", func(b *testing.B) {
-		tree := NewCOWTree(initialData)
+		tree := newTestTree(initialData)
 		b.ResetTimer()
 		
 		b.RunParallel(func(pb *testing.PB) {
 			i := 0
 			for pb.Next() {
 				key := fmt.Sprintf("key%d", i%1000)
-				tree.Find("data", key)
+				tree.Get("data", key)
 				i++
 			}
 		})
@@ -407,7 +441,7 @@ func BenchmarkCOWTreeVsSafeTree(b *testing.B) {
 	})
 	
 	b.Run("COWTree-Set", func(b *testing.B) {
-		tree := NewCOWTree(nil)
+		tree := newTestTree(nil)
 		b.ResetTimer()
 		
 		b.RunParallel(func(pb *testing.PB) {
@@ -430,7 +464,7 @@ func BenchmarkCOWTreeVsSafeTree(b *testing.B) {
 	})
 	
 	b.Run("COWTree-Copy", func(b *testing.B) {
-		tree := NewCOWTree(initialData)
+		tree := newTestTree(initialData)
 		b.ResetTimer()
 		
 		for i := 0; i < b.N; i++ {
@@ -449,7 +483,7 @@ func BenchmarkCOWTreeVsSafeTree(b *testing.B) {
 	})
 	
 	b.Run("COWTree-CopyAndModify", func(b *testing.B) {
-		tree := NewCOWTree(initialData)
+		tree := newTestTree(initialData)
 		b.ResetTimer()
 		
 		for i := 0; i < b.N; i++ {
@@ -457,4 +491,4 @@ func BenchmarkCOWTreeVsSafeTree(b *testing.B) {
 			copy.Set(i, "modified", "value")
 		}
 	})
-}
+}*/

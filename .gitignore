@@ -10,3 +10,4 @@ artifacts
 *.tgz
 *.gz
 *.zip
+*.test

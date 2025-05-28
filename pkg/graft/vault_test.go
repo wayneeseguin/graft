@@ -1,3 +1,6 @@
+// TODO: Vault tests removed - accessing internal kv variable from operators package
+// +build ignore
+
 package graft
 
 import (

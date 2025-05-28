@@ -1,6 +1,6 @@
 # Expression Operators Guide
 
-This guide covers the enhanced expression operators available in graft, including arithmetic, comparison, boolean logic, and conditional expressions.
+This guide covers the expression operators available in graft, including arithmetic, comparison, boolean logic, and conditional expressions.
 
 ## Table of Contents
 
@@ -200,7 +200,7 @@ examples:
   truthy4: (( ![] ))          # true
   truthy5: (( !{} ))          # true
   truthy6: (( !nil ))         # true
-  
+
   falsy1: (( !"hello" ))      # false (non-empty string is truthy)
   falsy2: (( !42 ))           # false (non-zero is truthy)
   falsy3: (( ![1, 2] ))       # false (non-empty array is truthy)
@@ -300,7 +300,7 @@ scaling:
   load_multiplier: 1.5
   current_load: 0.8
   max_instances: 10
-  
+
   calculated_instances: (( scaling.base_instances * scaling.load_multiplier * scaling.current_load ))
   final_instances: (( scaling.calculated_instances > scaling.max_instances ? scaling.max_instances : scaling.calculated_instances ))
 ```
@@ -311,18 +311,16 @@ scaling:
 features:
   premium: true
   trial_days_left: 5
-  
+
 settings:
   max_uploads: (( features.premium ? 1000 : 10 ))
   can_export: (( features.premium || features.trial_days_left > 0 ))
   show_upgrade: (( !features.premium && features.trial_days_left <= 3 ))
 ```
 
-## Migration Guide
+## Migration Guide from Spruce
 
-### From Legacy to Enhanced Parser
-
-The parser is fully backward compatible with existing graft files.
+The parser is fully backward compatible with existing spruce files.
 
 ### Common Patterns
 

@@ -14,12 +14,12 @@ features:
   debug_enabled: (( negate meta.is_production ))
   verbose_logging: (( negate meta.is_production ))
   show_stack_traces: (( negate meta.is_production ))
-  
+
   # Production features - enabled when NOT in development
   is_development: (( grab meta.environment == "development" ))
   caching_enabled: (( negate features.is_development ))
   minification_enabled: (( negate features.is_development ))
-  
+
   # Combined conditions
   # Enable profiling in staging but not in production
   is_staging: (( grab meta.environment == "staging" ))
@@ -31,18 +31,18 @@ access:
     is_authenticated: true
     is_admin: false
     is_guest: (( negate access.user.is_authenticated ))
-  
+
   # Permissions based on negations
   permissions:
     # Can edit if authenticated AND not a guest
     can_edit: (( grab access.user.is_authenticated && (negate access.user.is_guest) ))
-    
+
     # Can delete if admin (authenticated is implied)
     can_delete: (( grab access.user.is_admin ))
-    
+
     # Can view if authenticated OR in development (public access in dev)
     can_view: (( grab access.user.is_authenticated || meta.is_not_production ))
-    
+
     # Restricted areas - admin only in production
     restricted_access: (( grab meta.is_production && (negate access.user.is_admin) ))
 
@@ -53,25 +53,25 @@ services:
     is_healthy: true
     is_degraded: false
     is_down: (( negate services.api.is_healthy ))
-  
+
   database:
     is_healthy: true
     is_degraded: false
     is_down: (( negate services.database.is_healthy ))
-  
+
   cache:
     is_healthy: false
     is_degraded: true
     is_down: (( negate services.cache.is_healthy ))
-  
+
   # Overall system health
   all_healthy: (( grab services.api.is_healthy && services.database.is_healthy && services.cache.is_healthy ))
   any_unhealthy: (( negate services.all_healthy ))
-  
+
   # Fallback decisions
   use_cache: (( grab services.cache.is_healthy ))
   bypass_cache: (( negate services.use_cache ))
-  
+
   # Circuit breaker logic
   circuit_breaker:
     api_enabled: (( grab services.api.is_healthy || (negate meta.is_production) ))
@@ -83,19 +83,19 @@ feature_dependencies:
   search_enabled: true
   analytics_enabled: false
   recommendations_enabled: true
-  
+
   # Derived features using negate
   search_disabled: (( negate feature_dependencies.search_enabled ))
   analytics_disabled: (( negate feature_dependencies.analytics_enabled ))
-  
+
   # Complex dependencies
   # Recommendations need both search AND analytics
-  can_show_recommendations: (( 
-    grab feature_dependencies.recommendations_enabled && 
-    feature_dependencies.search_enabled && 
-    (negate feature_dependencies.analytics_disabled) 
+  can_show_recommendations: ((
+    grab feature_dependencies.recommendations_enabled &&
+    feature_dependencies.search_enabled &&
+    (negate feature_dependencies.analytics_disabled)
   ))
-  
+
   # Privacy mode disables analytics and recommendations
   privacy_mode: (( grab feature_dependencies.analytics_disabled ))
   full_tracking: (( negate feature_dependencies.privacy_mode ))
@@ -107,33 +107,33 @@ validation:
     has_email: true
     has_password: false
     terms_accepted: true
-  
+
   # Check for missing fields
   missing:
     name: (( negate validation.input.has_name ))
     email: (( negate validation.input.has_email ))
     password: (( negate validation.input.has_password ))
     terms: (( negate validation.input.terms_accepted ))
-  
+
   # Validation results
   errors:
     missing_password: (( grab validation.missing.password ))  # true
     terms_not_accepted: (( grab validation.missing.terms ))   # false
-  
+
   # Overall validation
   has_errors: (( grab validation.errors.missing_password || validation.errors.terms_not_accepted ))
   is_valid: (( negate validation.has_errors ))
 
-# Comparing negate with ! operator (enhanced parser)
+# Comparing negate with ! operator
 comparison:
   value: true
-  
+
   # Using negate operator
   using_negate: (( negate comparison.value ))  # false
-  
-  # Using ! operator (enhanced parser only)
+
+  # Using ! operator
   using_bang: (( ! comparison.value ))  # false
-  
+
   # Both produce same result
   are_equivalent: true  # (( using_negate == using_bang ))
 
@@ -142,15 +142,15 @@ migration:
   # Feature migration status
   old_system_active: false
   new_system_active: (( negate migration.old_system_active ))  # true
-  
+
   # Data migration
   migration_complete: true
   migration_pending: (( negate migration.migration_complete ))  # false
-  
+
   # Rollback conditions
   should_rollback: false
   continue_forward: (( negate migration.should_rollback ))  # true
-  
+
   # Dual running during migration
   run_both_systems: (( grab migration.old_system_active && migration.new_system_active ))
 
@@ -161,14 +161,14 @@ business_rules:
     is_paid: true
     is_shipped: false
     is_cancelled: false
-  
+
   status:
     # Derived states using negate
     payment_pending: (( negate business_rules.order.is_paid ))
     awaiting_shipment: (( grab business_rules.order.is_paid && (negate business_rules.order.is_shipped) ))
     completed: (( grab business_rules.order.is_paid && business_rules.order.is_shipped ))
     active: (( negate business_rules.order.is_cancelled ))
-    
+
   # Actions available
   actions:
     can_cancel: (( grab business_rules.status.active && (negate business_rules.order.is_shipped) ))

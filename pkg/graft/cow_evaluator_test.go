@@ -87,7 +87,7 @@ func TestEnhancedMigrationHelper(t *testing.T) {
 			tree := helper.GetThreadSafeTree()
 			So(tree, ShouldNotBeNil)
 			
-			value, err := tree.Find("meta", "name")
+			value, err := tree.Get("meta.name")
 			So(err, ShouldBeNil)
 			So(value, ShouldEqual, "original")
 		})
@@ -251,7 +251,7 @@ func TestCOWTreeFactory(t *testing.T) {
 			tree := factory.CreateFromData(data)
 			So(tree, ShouldNotBeNil)
 			
-			value, err := tree.Find("test")
+			value, err := tree.Get("test")
 			So(err, ShouldBeNil)
 			So(value, ShouldEqual, "value")
 		})
@@ -263,7 +263,7 @@ func TestCOWTreeFactory(t *testing.T) {
 			err := tree.Set("new-value", "new-key")
 			So(err, ShouldBeNil)
 			
-			value, err := tree.Find("new-key")
+			value, err := tree.Get("new-key")
 			So(err, ShouldBeNil)
 			So(value, ShouldEqual, "new-value")
 		})

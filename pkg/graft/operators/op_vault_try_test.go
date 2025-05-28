@@ -24,7 +24,7 @@ func TestVaultTryOperator(t *testing.T) {
 
 	Convey("vault-try operator", t, func() {
 		// Reset vault client
-		kv = nil
+		globalKV = nil
 
 		// Create mock vault server
 		mock := httptest.NewServer(

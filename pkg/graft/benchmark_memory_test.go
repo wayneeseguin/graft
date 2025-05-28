@@ -1,7 +1,6 @@
 package graft_test
 
 import (
-	"strings"
 	"testing"
 	
 	"github.com/starkandwayne/goutils/tree"
@@ -23,21 +22,21 @@ func BenchmarkConcatOperatorMemory(b *testing.B) {
 	}
 	
 	// Create test expressions
-	args := []*Expr{
-		{Type: Literal, Literal: "prefix-"},
-		{Type: Reference, Reference: func() *tree.Cursor {
+	args := []*graft.Expr{
+		{Type: graft.Literal, Literal: "prefix-"},
+		{Type: graft.Reference, Reference: func() *tree.Cursor {
 			c, _ := tree.ParseCursor("name")
 			return c
 		}()},
-		{Type: Literal, Literal: "-"},
-		{Type: Reference, Reference: func() *tree.Cursor {
+		{Type: graft.Literal, Literal: "-"},
+		{Type: graft.Reference, Reference: func() *tree.Cursor {
 			c, _ := tree.ParseCursor("value")
 			return c
 		}()},
-		{Type: Literal, Literal: "-suffix"},
+		{Type: graft.Literal, Literal: "-suffix"},
 	}
 	
-	op := operators.ConcatOperatorEnhanced{}
+	op := operators.ConcatOperator{}
 	
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -49,7 +48,7 @@ func BenchmarkConcatOperatorMemory(b *testing.B) {
 
 // BenchmarkJoinOperatorMemory benchmarks memory allocations in join operator
 func BenchmarkJoinOperatorMemory(b *testing.B) {
-	ev := &Evaluator{
+	ev := &graft.Evaluator{
 		Tree: map[interface{}]interface{}{
 			"items": []interface{}{"one", "two", "three", "four", "five"},
 		},
@@ -60,15 +59,15 @@ func BenchmarkJoinOperatorMemory(b *testing.B) {
 	}
 	
 	// Create test expressions
-	args := []*Expr{
-		{Type: Literal, Literal: ", "},
-		{Type: Reference, Reference: func() *tree.Cursor {
+	args := []*graft.Expr{
+		{Type: graft.Literal, Literal: ", "},
+		{Type: graft.Reference, Reference: func() *tree.Cursor {
 			c, _ := tree.ParseCursor("items")
 			return c
 		}()},
 	}
 	
-	op := operators.JoinOperatorEnhanced{}
+	op := operators.JoinOperator{}
 	
 	b.ResetTimer()
 	b.ReportAllocs()

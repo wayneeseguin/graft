@@ -67,7 +67,16 @@ func (e MultiError) Error() string {
 	if len(e.Errors) == 0 {
 		return "no errors"
 	}
-	return fmt.Sprintf("%d errors occurred", len(e.Errors))
+	if len(e.Errors) == 1 {
+		return e.Errors[0].Error()
+	}
+	
+	// For multiple errors, list them all
+	var msgs []string
+	for _, err := range e.Errors {
+		msgs = append(msgs, err.Error())
+	}
+	return fmt.Sprintf("%d errors occurred:\n  %s", len(e.Errors), strings.Join(msgs, "\n  "))
 }
 
 func (e *MultiError) Append(err error) {

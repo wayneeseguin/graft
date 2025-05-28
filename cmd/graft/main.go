@@ -14,9 +14,9 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/starkandwayne/goutils/ansi"
 
+	"github.com/wayneeseguin/graft/log"
 	"github.com/wayneeseguin/graft/pkg/graft"
 	"github.com/wayneeseguin/graft/pkg/graft/merger"
-	"github.com/wayneeseguin/graft/log"
 
 	"strings"
 
@@ -73,7 +73,6 @@ type mergeOpts struct {
 	FallbackAppend bool               `goptions:"--fallback-append, description='Default merge normally tries to key merge, then inline. This flag says do an append instead of an inline.'"`
 	EnableGoPatch  bool               `goptions:"--go-patch, description='Enable the use of go-patch when parsing files to be merged'"`
 	MultiDoc       bool               `goptions:"--multi-doc, -m, description='Treat multi-doc yaml as multiple files.'"`
-	LegacyParser   bool               `goptions:"--legacy-parser, description='Use the legacy parser instead of the enhanced parser with additional operators'"`
 	Help           bool               `goptions:"--help, -h"`
 	Files          goptions.Remainder `goptions:"description='List of files to merge. To read STDIN, specify a filename of \\'-\\'.'"`
 }
@@ -292,11 +291,6 @@ func splitLoadYamlFile(file string) ([]YamlFile, error) {
 }
 
 func cmdMergeEval(options mergeOpts) (map[interface{}]interface{}, error) {
-	// Handle parser selection
-	if options.LegacyParser {
-		// Enhanced parser is now the default
-	}
-	
 	files := []YamlFile{}
 
 	if len(options.Files) < 1 {
@@ -337,11 +331,6 @@ func cmdMergeEval(options mergeOpts) (map[interface{}]interface{}, error) {
 }
 
 func cmdFanEval(options mergeOpts) ([]map[interface{}]interface{}, error) {
-	// Handle parser selection
-	if options.LegacyParser {
-		// Enhanced parser is now the default
-	}
-	
 	stdinInfo, err := os.Stdin.Stat()
 	if err != nil {
 		return nil, ansi.Errorf("@R{Error statting STDIN} - Bailing out: %s\n", err.Error())

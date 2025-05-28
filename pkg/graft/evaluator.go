@@ -450,7 +450,7 @@ func (ev *Evaluator) SortPaths(pathKeyMap map[string]string) error {
 			}
 		}
 
-		if err := sortList(path, value.([]interface{}), sortBy); err != nil {
+		if err := SortList(path, value.([]interface{}), sortBy); err != nil {
 			return err
 		}
 	}

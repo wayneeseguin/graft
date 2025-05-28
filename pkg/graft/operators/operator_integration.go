@@ -32,6 +32,8 @@ func IntegrateEnhancedParserCore() {
 	DEBUG("Enhanced parser core integration initialized")
 }
 
+// TODO: ParseOpcallIntegrated removed - UseEnhancedParser not implemented
+/*
 // ParseOpcallIntegrated is the new integrated version that uses enhanced parser when appropriate
 func ParseOpcallIntegrated(phase OperatorPhase, src string) (*Opcall, error) {
 	// Check if we should use enhanced parser
@@ -57,6 +59,7 @@ func ParseOpcallIntegrated(phase OperatorPhase, src string) (*Opcall, error) {
 	// Use original implementation
 	return parseOpcallWithOriginalParser(phase, src)
 }
+*/
 
 // shouldUseEnhancedParserForExpression determines if an expression benefits from enhanced parser
 func shouldUseEnhancedParserForExpression(src string) bool {

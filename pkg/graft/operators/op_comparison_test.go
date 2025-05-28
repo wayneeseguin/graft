@@ -6,6 +6,8 @@ import (
 	"github.com/geofffranks/simpleyaml"
 	"github.com/starkandwayne/goutils/tree"
 	. "github.com/smartystreets/goconvey/convey"
+	
+	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
 func TestComparisonOperators(t *testing.T) {
@@ -21,72 +23,72 @@ func TestComparisonOperators(t *testing.T) {
 	Convey("Comparison Operators", t, func() {
 		Convey("Equality (==) operator", func() {
 			Convey("compares numbers correctly", func() {
-				ev := &Evaluator{Tree: YAML(`{}`)}
+				ev := &graft.Evaluator{Tree: YAML(`{}`)}
 
 				// Integer equality
 				op := &ComparisonOperator{op: "=="}
-				resp, err := op.Run(ev, []*Expr{
-					&Expr{Type: Literal, Literal: int64(42)},
-					&Expr{Type: Literal, Literal: int64(42)},
+				resp, err := op.Run(ev, []*graft.Expr{
+					&graft.Expr{Type: graft.Literal, Literal: int64(42)},
+					&graft.Expr{Type: graft.Literal, Literal: int64(42)},
 				})
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, true)
 
 				// Float equality
-				resp, err = op.Run(ev, []*Expr{
-					&Expr{Type: Literal, Literal: 3.14},
-					&Expr{Type: Literal, Literal: 3.14},
+				resp, err = op.Run(ev, []*graft.Expr{
+					&graft.Expr{Type: graft.Literal, Literal: 3.14},
+					&graft.Expr{Type: graft.Literal, Literal: 3.14},
 				})
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, true)
 
 				// Mixed numeric types
-				resp, err = op.Run(ev, []*Expr{
-					&Expr{Type: Literal, Literal: int64(5)},
-					&Expr{Type: Literal, Literal: 5.0},
+				resp, err = op.Run(ev, []*graft.Expr{
+					&graft.Expr{Type: graft.Literal, Literal: int64(5)},
+					&graft.Expr{Type: graft.Literal, Literal: 5.0},
 				})
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, true)
 			})
 
 			Convey("compares strings correctly", func() {
-				ev := &Evaluator{Tree: YAML(`{}`)}
+				ev := &graft.Evaluator{Tree: YAML(`{}`)}
 				op := &ComparisonOperator{op: "=="}
 
-				resp, err := op.Run(ev, []*Expr{
-					&Expr{Type: Literal, Literal: "hello"},
-					&Expr{Type: Literal, Literal: "hello"},
+				resp, err := op.Run(ev, []*graft.Expr{
+					&graft.Expr{Type: graft.Literal, Literal: "hello"},
+					&graft.Expr{Type: graft.Literal, Literal: "hello"},
 				})
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, true)
 
-				resp, err = op.Run(ev, []*Expr{
-					&Expr{Type: Literal, Literal: "hello"},
-					&Expr{Type: Literal, Literal: "world"},
+				resp, err = op.Run(ev, []*graft.Expr{
+					&graft.Expr{Type: graft.Literal, Literal: "hello"},
+					&graft.Expr{Type: graft.Literal, Literal: "world"},
 				})
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, false)
 			})
 
 			Convey("compares booleans correctly", func() {
-				ev := &Evaluator{Tree: YAML(`{}`)}
+				ev := &graft.Evaluator{Tree: YAML(`{}`)}
 				op := &ComparisonOperator{op: "=="}
 
-				resp, err := op.Run(ev, []*Expr{
-					&Expr{Type: Literal, Literal: true},
-					&Expr{Type: Literal, Literal: true},
+				resp, err := op.Run(ev, []*graft.Expr{
+					&graft.Expr{Type: graft.Literal, Literal: true},
+					&graft.Expr{Type: graft.Literal, Literal: true},
 				})
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, true)
 			})
 
 			Convey("compares nil correctly", func() {
-				ev := &Evaluator{Tree: YAML(`{}`)}
+				ev := &graft.Evaluator{Tree: YAML(`{}`)}
 				op := &ComparisonOperator{op: "=="}
 
-				resp, err := op.Run(ev, []*Expr{
-					&Expr{Type: Literal, Literal: nil},
-					&Expr{Type: Literal, Literal: nil},
+				resp, err := op.Run(ev, []*graft.Expr{
+					&graft.Expr{Type: graft.Literal, Literal: nil},
+					&graft.Expr{Type: graft.Literal, Literal: nil},
 				})
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, true)
@@ -94,48 +96,48 @@ func TestComparisonOperators(t *testing.T) {
 		})
 
 		Convey("Inequality (!=) operator", func() {
-			ev := &Evaluator{Tree: YAML(`{}`)}
+			ev := &graft.Evaluator{Tree: YAML(`{}`)}
 			op := &ComparisonOperator{op: "!="}
 
-			resp, err := op.Run(ev, []*Expr{
-				&Expr{Type: Literal, Literal: int64(42)},
-				&Expr{Type: Literal, Literal: int64(43)},
+			resp, err := op.Run(ev, []*graft.Expr{
+				&graft.Expr{Type: graft.Literal, Literal: int64(42)},
+				&graft.Expr{Type: graft.Literal, Literal: int64(43)},
 			})
 			So(err, ShouldBeNil)
 			So(resp.Value, ShouldEqual, true)
 
-			resp, err = op.Run(ev, []*Expr{
-				&Expr{Type: Literal, Literal: "hello"},
-				&Expr{Type: Literal, Literal: "hello"},
+			resp, err = op.Run(ev, []*graft.Expr{
+				&graft.Expr{Type: graft.Literal, Literal: "hello"},
+				&graft.Expr{Type: graft.Literal, Literal: "hello"},
 			})
 			So(err, ShouldBeNil)
 			So(resp.Value, ShouldEqual, false)
 		})
 
 		Convey("Less than (<) operator", func() {
-			ev := &Evaluator{Tree: YAML(`{}`)}
+			ev := &graft.Evaluator{Tree: YAML(`{}`)}
 			op := &ComparisonOperator{op: "<"}
 
 			Convey("compares numbers", func() {
-				resp, err := op.Run(ev, []*Expr{
-					&Expr{Type: Literal, Literal: int64(5)},
-					&Expr{Type: Literal, Literal: int64(10)},
+				resp, err := op.Run(ev, []*graft.Expr{
+					&graft.Expr{Type: graft.Literal, Literal: int64(5)},
+					&graft.Expr{Type: graft.Literal, Literal: int64(10)},
 				})
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, true)
 
-				resp, err = op.Run(ev, []*Expr{
-					&Expr{Type: Literal, Literal: 3.14},
-					&Expr{Type: Literal, Literal: 2.71},
+				resp, err = op.Run(ev, []*graft.Expr{
+					&graft.Expr{Type: graft.Literal, Literal: 3.14},
+					&graft.Expr{Type: graft.Literal, Literal: 2.71},
 				})
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, false)
 			})
 
 			Convey("compares strings", func() {
-				resp, err := op.Run(ev, []*Expr{
-					&Expr{Type: Literal, Literal: "apple"},
-					&Expr{Type: Literal, Literal: "banana"},
+				resp, err := op.Run(ev, []*graft.Expr{
+					&graft.Expr{Type: graft.Literal, Literal: "apple"},
+					&graft.Expr{Type: graft.Literal, Literal: "banana"},
 				})
 				So(err, ShouldBeNil)
 				So(resp.Value, ShouldEqual, true)
@@ -143,50 +145,50 @@ func TestComparisonOperators(t *testing.T) {
 		})
 
 		Convey("Greater than (>) operator", func() {
-			ev := &Evaluator{Tree: YAML(`{}`)}
+			ev := &graft.Evaluator{Tree: YAML(`{}`)}
 			op := &ComparisonOperator{op: ">"}
 
-			resp, err := op.Run(ev, []*Expr{
-				&Expr{Type: Literal, Literal: int64(10)},
-				&Expr{Type: Literal, Literal: int64(5)},
+			resp, err := op.Run(ev, []*graft.Expr{
+				&graft.Expr{Type: graft.Literal, Literal: int64(10)},
+				&graft.Expr{Type: graft.Literal, Literal: int64(5)},
 			})
 			So(err, ShouldBeNil)
 			So(resp.Value, ShouldEqual, true)
 		})
 
 		Convey("Less than or equal (<=) operator", func() {
-			ev := &Evaluator{Tree: YAML(`{}`)}
+			ev := &graft.Evaluator{Tree: YAML(`{}`)}
 			op := &ComparisonOperator{op: "<="}
 
-			resp, err := op.Run(ev, []*Expr{
-				&Expr{Type: Literal, Literal: int64(5)},
-				&Expr{Type: Literal, Literal: int64(5)},
+			resp, err := op.Run(ev, []*graft.Expr{
+				&graft.Expr{Type: graft.Literal, Literal: int64(5)},
+				&graft.Expr{Type: graft.Literal, Literal: int64(5)},
 			})
 			So(err, ShouldBeNil)
 			So(resp.Value, ShouldEqual, true)
 
-			resp, err = op.Run(ev, []*Expr{
-				&Expr{Type: Literal, Literal: int64(5)},
-				&Expr{Type: Literal, Literal: int64(10)},
+			resp, err = op.Run(ev, []*graft.Expr{
+				&graft.Expr{Type: graft.Literal, Literal: int64(5)},
+				&graft.Expr{Type: graft.Literal, Literal: int64(10)},
 			})
 			So(err, ShouldBeNil)
 			So(resp.Value, ShouldEqual, true)
 		})
 
 		Convey("Greater than or equal (>=) operator", func() {
-			ev := &Evaluator{Tree: YAML(`{}`)}
+			ev := &graft.Evaluator{Tree: YAML(`{}`)}
 			op := &ComparisonOperator{op: ">="}
 
-			resp, err := op.Run(ev, []*Expr{
-				&Expr{Type: Literal, Literal: int64(10)},
-				&Expr{Type: Literal, Literal: int64(5)},
+			resp, err := op.Run(ev, []*graft.Expr{
+				&graft.Expr{Type: graft.Literal, Literal: int64(10)},
+				&graft.Expr{Type: graft.Literal, Literal: int64(5)},
 			})
 			So(err, ShouldBeNil)
 			So(resp.Value, ShouldEqual, true)
 		})
 
 		Convey("handles references", func() {
-			ev := &Evaluator{Tree: YAML(`
+			ev := &graft.Evaluator{Tree: YAML(`
 meta:
   value: 42
   name: test
@@ -194,9 +196,9 @@ meta:
 			op := &ComparisonOperator{op: "=="}
 
 			cursor, _ := tree.ParseCursor("meta.value")
-			resp, err := op.Run(ev, []*Expr{
-				&Expr{Type: Reference, Reference: cursor},
-				&Expr{Type: Literal, Literal: int64(42)},
+			resp, err := op.Run(ev, []*graft.Expr{
+				&graft.Expr{Type: graft.Reference, Reference: cursor},
+				&graft.Expr{Type: graft.Literal, Literal: int64(42)},
 			})
 			So(err, ShouldBeNil)
 			So(resp.Value, ShouldEqual, true)
@@ -216,7 +218,7 @@ func TestComparisonIntegration(t *testing.T) {
 	}
 	Convey("Comparison operators in expressions", t, func() {
 		Convey("work with  parser", func() {
-			ev := &Evaluator{Tree: YAML(`
+			ev := &graft.Evaluator{Tree: YAML(`
 name: alice
 age: 30
 score: 85
@@ -241,11 +243,11 @@ score: 85
 }
 
 // Helper function for testing
-func parseAndEvaluateExpression(ev *Evaluator, expr string) (interface{}, error) {
+func parseAndEvaluateExpression(ev *graft.Evaluator, expr string) (interface{}, error) {
 	// Enable  parser for tests
 	// Enhanced parser is now the default
 
-	opcall, err := ParseOpcallIntegrated(EvalPhase, expr)
+	opcall, err := graft.ParseOpcallCompat(graft.EvalPhase, expr)
 	if err != nil {
 		return nil, err
 	}
