@@ -15,7 +15,7 @@ import (
 // ExampleBasicMerge demonstrates basic document merging
 func ExampleBasicMerge() {
 	// Create an engine with default settings
-	engine, err := DefaultEngineV2()
+	engine, err := CreateDefaultEngine()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -49,7 +49,7 @@ deployment:
 
 // ExampleWithOperators demonstrates using graft operators
 func ExampleWithOperators() {
-	engine, _ := DefaultEngineV2()
+	engine, _ := CreateDefaultEngine()
 	
 	doc, _ := engine.ParseYAML([]byte(`
 database:
@@ -85,7 +85,7 @@ environment: production
 
 // ExampleWithPruning demonstrates selective key removal
 func ExampleWithPruning() {
-	engine, _ := DefaultEngineV2()
+	engine, _ := CreateDefaultEngine()
 	
 	doc1, _ := engine.ParseYAML([]byte(`
 app:
@@ -122,7 +122,7 @@ secrets:
 
 // ExampleWithCherryPick demonstrates selective key inclusion
 func ExampleWithCherryPick() {
-	engine, _ := DefaultEngineV2()
+	engine, _ := CreateDefaultEngine()
 	
 	doc, _ := engine.ParseYAML([]byte(`
 app:
@@ -153,7 +153,7 @@ metadata:
 
 // ExampleCustomOperator demonstrates registering a custom operator
 func ExampleCustomOperator() {
-	engine, _ := DefaultEngineV2()
+	engine, _ := CreateDefaultEngine()
 	
 	// Register a custom operator
 	customOp := &CustomUppercaseOperator{}
@@ -179,7 +179,7 @@ app:
 
 // ExampleDocumentManipulation demonstrates the Document interface
 func ExampleDocumentManipulation() {
-	engine, _ := DefaultEngineV2()
+	engine, _ := CreateDefaultEngine()
 	
 	doc, _ := engine.ParseYAML([]byte(`
 app:
@@ -213,8 +213,8 @@ app:
 // ExampleConfiguredEngine demonstrates creating an engine with custom configuration
 func ExampleConfiguredEngine() {
 	// Create engine with custom configuration
-	engine, err := NewEngineV2(
-		WithLoggerV2(&CustomLogger{}),
+	engine, err := NewEngine(
+		WithLogger(&CustomLogger{}),
 		WithCache(true, 2000),
 		WithConcurrency(20),
 		WithEnhancedParser(true),

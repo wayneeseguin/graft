@@ -5,13 +5,13 @@ import (
 	"testing"
 )
 
-// TestMockEngineV2 demonstrates how to use the mock engine for testing
-func TestMockEngineV2(t *testing.T) {
+// TestMockEngine demonstrates how to use the mock engine for testing
+func TestMockEngine(t *testing.T) {
 	// Create a mock engine
-	mockEngine := NewMockEngineV2()
+	mockEngine := NewMockEngine()
 	
 	// Test that it implements the interface
-	var _ EngineV2 = mockEngine
+	var _ Engine = mockEngine
 	
 	// Test basic functionality
 	doc, err := mockEngine.ParseYAML([]byte("test: value"))
@@ -31,12 +31,12 @@ func TestMockEngineV2(t *testing.T) {
 	}
 }
 
-// TestMockEngineV2CustomBehavior demonstrates customizing mock behavior
-func TestMockEngineV2CustomBehavior(t *testing.T) {
-	mockEngine := NewMockEngineV2()
+// TestMockEngineCustomBehavior demonstrates customizing mock behavior
+func TestMockEngineCustomBehavior(t *testing.T) {
+	mockEngine := NewMockEngine()
 	
 	// Customize behavior to return an error
-	mockEngine.ParseYAMLFunc = func(data []byte) (DocumentV2, error) {
+	mockEngine.ParseYAMLFunc = func(data []byte) (Document, error) {
 		return nil, NewParseError("mock error", nil)
 	}
 	
@@ -55,12 +55,12 @@ func TestMockEngineV2CustomBehavior(t *testing.T) {
 	}
 }
 
-// TestMockDocumentV2 demonstrates how to use the mock document
-func TestMockDocumentV2(t *testing.T) {
-	mockDoc := NewMockDocumentV2()
+// TestMockDocument demonstrates how to use the mock document
+func TestMockDocument(t *testing.T) {
+	mockDoc := NewMockDocument()
 	
 	// Test that it implements the interface
-	var _ DocumentV2 = mockDoc
+	var _ Document = mockDoc
 	
 	// Test basic functionality
 	err := mockDoc.Set("test.path", "value")
@@ -92,9 +92,9 @@ func TestMockDocumentV2(t *testing.T) {
 	}
 }
 
-// TestMockDocumentV2CustomBehavior demonstrates customizing mock document behavior
-func TestMockDocumentV2CustomBehavior(t *testing.T) {
-	mockDoc := NewMockDocumentV2()
+// TestMockDocumentCustomBehavior demonstrates customizing mock document behavior
+func TestMockDocumentCustomBehavior(t *testing.T) {
+	mockDoc := NewMockDocument()
 	
 	// Set up test data
 	mockDoc.TestData["name"] = "test-app"
@@ -186,10 +186,10 @@ func TestMockUsage(t *testing.T) {
 	// This example shows how to test a service that uses the graft library
 	
 	// Create a mock engine for testing
-	mockEngine := NewMockEngineV2()
+	mockEngine := NewMockEngine()
 	
 	// Set up expected behavior
-	expectedDoc := NewMockDocumentV2()
+	expectedDoc := NewMockDocument()
 	expectedDoc.GetStringFunc = func(path string) (string, error) {
 		if path == "database.url" {
 			return "postgresql://localhost:5432/test", nil
@@ -197,11 +197,11 @@ func TestMockUsage(t *testing.T) {
 		return "", NewValidationError("path not found")
 	}
 	
-	mockEngine.ParseFileFunc = func(path string) (DocumentV2, error) {
+	mockEngine.ParseFileFunc = func(path string) (Document, error) {
 		return expectedDoc, nil
 	}
 	
-	mockEngine.EvaluateFunc = func(ctx context.Context, doc DocumentV2) (DocumentV2, error) {
+	mockEngine.EvaluateFunc = func(ctx context.Context, doc Document) (Document, error) {
 		return doc, nil // Just return the document unchanged
 	}
 	
@@ -229,7 +229,7 @@ func TestMockUsage(t *testing.T) {
 
 // ConfigService is an example service that uses the graft library
 type ConfigService struct {
-	engine EngineV2
+	engine Engine
 }
 
 // TestConfig represents the application configuration for testing

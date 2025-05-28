@@ -7,9 +7,9 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestEngineV2_ParseYAML(t *testing.T) {
-	Convey("Given an EngineV2 instance", t, func() {
-		engine, err := NewEngineV2()
+func TestEngine_ParseYAML(t *testing.T) {
+	Convey("Given an Engine instance", t, func() {
+		engine, err := NewEngine()
 		So(err, ShouldBeNil)
 		So(engine, ShouldNotBeNil)
 
@@ -76,9 +76,9 @@ name: test
 	})
 }
 
-func TestEngineV2_ParseJSON(t *testing.T) {
-	Convey("Given an EngineV2 instance", t, func() {
-		engine, err := NewEngineV2()
+func TestEngine_ParseJSON(t *testing.T) {
+	Convey("Given an Engine instance", t, func() {
+		engine, err := NewEngine()
 		So(err, ShouldBeNil)
 
 		Convey("When parsing valid JSON", func() {
@@ -123,9 +123,9 @@ func TestEngineV2_ParseJSON(t *testing.T) {
 	})
 }
 
-func TestEngineV2_Merge(t *testing.T) {
-	Convey("Given an EngineV2 instance and documents", t, func() {
-		engine, err := NewEngineV2()
+func TestEngine_Merge(t *testing.T) {
+	Convey("Given an Engine instance and documents", t, func() {
+		engine, err := NewEngine()
 		So(err, ShouldBeNil)
 
 		doc1, err := engine.ParseYAML([]byte(`
@@ -197,9 +197,9 @@ new_field: added
 	})
 }
 
-func TestEngineV2_Evaluate(t *testing.T) {
-	Convey("Given an EngineV2 instance", t, func() {
-		engine, err := NewEngineV2()
+func TestEngine_Evaluate(t *testing.T) {
+	Convey("Given an Engine instance", t, func() {
+		engine, err := NewEngine()
 		So(err, ShouldBeNil)
 
 		Convey("When evaluating a document with operators", func() {
@@ -261,10 +261,10 @@ name: (( unknown_operator "test" ))
 	})
 }
 
-func TestEngineV2_WithOptions(t *testing.T) {
+func TestEngine_WithOptions(t *testing.T) {
 	Convey("Given various engine options", t, func() {
 		Convey("When creating engine with vault configuration", func() {
-			engine, err := NewEngineV2(
+			engine, err := NewEngine(
 				WithVaultConfig("https://vault.example.com", "mytoken"),
 				WithDebugLogging(true),
 			)
@@ -276,7 +276,7 @@ func TestEngineV2_WithOptions(t *testing.T) {
 		})
 
 		Convey("When creating engine with AWS configuration", func() {
-			engine, err := NewEngineV2(
+			engine, err := NewEngine(
 				WithAWSRegion("us-west-2"),
 				WithConcurrency(10),
 			)
@@ -288,7 +288,7 @@ func TestEngineV2_WithOptions(t *testing.T) {
 		})
 
 		Convey("When creating engine with invalid options", func() {
-			engine, err := NewEngineV2(
+			engine, err := NewEngine(
 				WithConcurrency(-1),
 			)
 
@@ -300,9 +300,9 @@ func TestEngineV2_WithOptions(t *testing.T) {
 	})
 }
 
-func TestEngineV2_Context(t *testing.T) {
-	Convey("Given an EngineV2 instance", t, func() {
-		engine, err := NewEngineV2()
+func TestEngine_Context(t *testing.T) {
+	Convey("Given an Engine instance", t, func() {
+		engine, err := NewEngine()
 		So(err, ShouldBeNil)
 
 		doc, err := engine.ParseYAML([]byte(`

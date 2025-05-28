@@ -10,13 +10,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// document implements the DocumentV2 interface
+// document implements the Document interface
 type document struct {
 	data map[interface{}]interface{}
 }
 
-// NewDocumentV2 creates a new document from a map
-func NewDocumentV2(data map[interface{}]interface{}) DocumentV2 {
+// NewDocument creates a new document from a map
+func NewDocument(data map[interface{}]interface{}) Document {
 	if data == nil {
 		data = make(map[interface{}]interface{})
 	}
@@ -24,19 +24,19 @@ func NewDocumentV2(data map[interface{}]interface{}) DocumentV2 {
 }
 
 // NewDocumentFromInterface creates a document from any interface{}
-func NewDocumentFromInterface(data interface{}) (DocumentV2, error) {
+func NewDocumentFromInterface(data interface{}) (Document, error) {
 	switch v := data.(type) {
 	case map[interface{}]interface{}:
-		return NewDocumentV2(v), nil
+		return NewDocument(v), nil
 	case map[string]interface{}:
 		// Convert map[string]interface{} to map[interface{}]interface{}
 		converted := make(map[interface{}]interface{})
 		for k, val := range v {
 			converted[k] = val
 		}
-		return NewDocumentV2(converted), nil
+		return NewDocument(converted), nil
 	case nil:
-		return NewDocumentV2(nil), nil
+		return NewDocument(nil), nil
 	default:
 		return nil, NewValidationError(fmt.Sprintf("cannot create document from type %T", data))
 	}
@@ -210,13 +210,13 @@ func (d *document) RawData() interface{} {
 }
 
 // Clone creates a deep copy of the document
-func (d *document) Clone() DocumentV2 {
+func (d *document) Clone() Document {
 	cloned := deepCopy(d.data)
 	if clonedMap, ok := cloned.(map[interface{}]interface{}); ok {
-		return NewDocumentV2(clonedMap)
+		return NewDocument(clonedMap)
 	}
 	// Fallback - this shouldn't happen
-	return NewDocumentV2(make(map[interface{}]interface{}))
+	return NewDocument(make(map[interface{}]interface{}))
 }
 
 // ensurePathExists creates intermediate maps/slices as needed for the given path
@@ -294,6 +294,35 @@ func parseIndex(component string) (string, int, bool) {
 }
 
 // CreateEmptyDocument creates a new empty document
-func CreateEmptyDocument() DocumentV2 {
-	return NewDocumentV2(make(map[interface{}]interface{}))
+func CreateEmptyDocument() Document {
+	return NewDocument(make(map[interface{}]interface{}))
+}
+
+// Prune removes a key from the document
+func (d *document) Prune(key string) Document {
+	// Clone the document to avoid modifying the original
+	cloned := d.Clone().(*document)
+	
+	// Remove the key
+	delete(cloned.data, key)
+	
+	return cloned
+}
+
+// CherryPick creates a new document with only the specified keys
+func (d *document) CherryPick(keys ...string) Document {
+	picked := make(map[interface{}]interface{})
+	
+	for _, key := range keys {
+		if val, exists := d.data[key]; exists {
+			picked[key] = deepCopy(val)
+		}
+	}
+	
+	return NewDocument(picked)
+}
+
+// GetData returns the underlying data (for backward compatibility)
+func (d *document) GetData() interface{} {
+	return d.data
 }

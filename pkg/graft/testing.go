@@ -9,13 +9,13 @@ import (
 
 // TestHelper provides utilities for testing graft operations
 type TestHelper struct {
-	engine EngineV2
+	engine Engine
 	t      *testing.T
 }
 
 // NewTestHelper creates a new test helper with default engine configuration
 func NewTestHelper(t *testing.T) *TestHelper {
-	engine, err := NewEngineV2()
+	engine, err := NewEngine()
 	if err != nil {
 		t.Fatalf("Failed to create test engine: %v", err)
 	}
@@ -27,7 +27,7 @@ func NewTestHelper(t *testing.T) *TestHelper {
 
 // NewTestHelperWithOptions creates a new test helper with custom engine options
 func NewTestHelperWithOptions(t *testing.T, opts ...EngineOption) *TestHelper {
-	engine, err := NewEngineV2(opts...)
+	engine, err := NewEngine(opts...)
 	if err != nil {
 		t.Fatalf("Failed to create test engine with options: %v", err)
 	}
@@ -38,7 +38,7 @@ func NewTestHelperWithOptions(t *testing.T, opts ...EngineOption) *TestHelper {
 }
 
 // ParseYAMLString parses YAML from string and returns a document
-func (h *TestHelper) ParseYAMLString(yamlStr string) DocumentV2 {
+func (h *TestHelper) ParseYAMLString(yamlStr string) Document {
 	doc, err := h.engine.ParseYAML([]byte(yamlStr))
 	if err != nil {
 		h.t.Fatalf("Failed to parse YAML: %v\nYAML:\n%s", err, yamlStr)
@@ -47,7 +47,7 @@ func (h *TestHelper) ParseYAMLString(yamlStr string) DocumentV2 {
 }
 
 // ParseJSONString parses JSON from string and returns a document
-func (h *TestHelper) ParseJSONString(jsonStr string) DocumentV2 {
+func (h *TestHelper) ParseJSONString(jsonStr string) Document {
 	doc, err := h.engine.ParseJSON([]byte(jsonStr))
 	if err != nil {
 		h.t.Fatalf("Failed to parse JSON: %v\nJSON:\n%s", err, jsonStr)
@@ -56,7 +56,7 @@ func (h *TestHelper) ParseJSONString(jsonStr string) DocumentV2 {
 }
 
 // MustMerge merges documents and fails the test if there's an error
-func (h *TestHelper) MustMerge(docs ...DocumentV2) DocumentV2 {
+func (h *TestHelper) MustMerge(docs ...Document) Document {
 	ctx := context.Background()
 	result, err := h.engine.Merge(ctx, docs...).Execute()
 	if err != nil {
@@ -66,7 +66,7 @@ func (h *TestHelper) MustMerge(docs ...DocumentV2) DocumentV2 {
 }
 
 // MustMergeWithPrune merges documents with pruning and fails the test if there's an error
-func (h *TestHelper) MustMergeWithPrune(prune []string, docs ...DocumentV2) DocumentV2 {
+func (h *TestHelper) MustMergeWithPrune(prune []string, docs ...Document) Document {
 	ctx := context.Background()
 	builder := h.engine.Merge(ctx, docs...)
 	for _, key := range prune {
@@ -80,7 +80,7 @@ func (h *TestHelper) MustMergeWithPrune(prune []string, docs ...DocumentV2) Docu
 }
 
 // MustEvaluate evaluates a document and fails the test if there's an error
-func (h *TestHelper) MustEvaluate(doc DocumentV2) DocumentV2 {
+func (h *TestHelper) MustEvaluate(doc Document) Document {
 	ctx := context.Background()
 	result, err := h.engine.Evaluate(ctx, doc)
 	if err != nil {
@@ -90,13 +90,13 @@ func (h *TestHelper) MustEvaluate(doc DocumentV2) DocumentV2 {
 }
 
 // MustMergeAndEvaluate merges and evaluates documents in one step
-func (h *TestHelper) MustMergeAndEvaluate(docs ...DocumentV2) DocumentV2 {
+func (h *TestHelper) MustMergeAndEvaluate(docs ...Document) Document {
 	merged := h.MustMerge(docs...)
 	return h.MustEvaluate(merged)
 }
 
 // AssertPath asserts that a path exists and has the expected value
-func (h *TestHelper) AssertPath(doc DocumentV2, path string, expected interface{}) {
+func (h *TestHelper) AssertPath(doc Document, path string, expected interface{}) {
 	actual, err := doc.Get(path)
 	if err != nil {
 		h.t.Fatalf("Path '%s' not found: %v", path, err)
@@ -107,7 +107,7 @@ func (h *TestHelper) AssertPath(doc DocumentV2, path string, expected interface{
 }
 
 // AssertPathString asserts that a path exists and has the expected string value
-func (h *TestHelper) AssertPathString(doc DocumentV2, path string, expected string) {
+func (h *TestHelper) AssertPathString(doc Document, path string, expected string) {
 	actual, err := doc.GetString(path)
 	if err != nil {
 		h.t.Fatalf("Path '%s' string value error: %v", path, err)
@@ -118,7 +118,7 @@ func (h *TestHelper) AssertPathString(doc DocumentV2, path string, expected stri
 }
 
 // AssertPathInt asserts that a path exists and has the expected int value
-func (h *TestHelper) AssertPathInt(doc DocumentV2, path string, expected int) {
+func (h *TestHelper) AssertPathInt(doc Document, path string, expected int) {
 	actual, err := doc.GetInt(path)
 	if err != nil {
 		h.t.Fatalf("Path '%s' int value error: %v", path, err)
@@ -129,7 +129,7 @@ func (h *TestHelper) AssertPathInt(doc DocumentV2, path string, expected int) {
 }
 
 // AssertPathBool asserts that a path exists and has the expected bool value
-func (h *TestHelper) AssertPathBool(doc DocumentV2, path string, expected bool) {
+func (h *TestHelper) AssertPathBool(doc Document, path string, expected bool) {
 	actual, err := doc.GetBool(path)
 	if err != nil {
 		h.t.Fatalf("Path '%s' bool value error: %v", path, err)
@@ -140,7 +140,7 @@ func (h *TestHelper) AssertPathBool(doc DocumentV2, path string, expected bool) 
 }
 
 // AssertPathNotExists asserts that a path does not exist
-func (h *TestHelper) AssertPathNotExists(doc DocumentV2, path string) {
+func (h *TestHelper) AssertPathNotExists(doc Document, path string) {
 	_, err := doc.Get(path)
 	if err == nil {
 		h.t.Fatalf("Path '%s' should not exist", path)
@@ -206,7 +206,7 @@ func (h *TestHelper) TestWithMockOperator(name string, mock *MockOperator, testF
 }
 
 // CompareDocuments compares two documents and returns detailed differences
-func (h *TestHelper) CompareDocuments(doc1, doc2 DocumentV2) []string {
+func (h *TestHelper) CompareDocuments(doc1, doc2 Document) []string {
 	var differences []string
 
 	yaml1, err1 := doc1.ToYAML()
@@ -227,7 +227,7 @@ func (h *TestHelper) CompareDocuments(doc1, doc2 DocumentV2) []string {
 }
 
 // AssertDocumentsEqual asserts that two documents are equal
-func (h *TestHelper) AssertDocumentsEqual(doc1, doc2 DocumentV2) {
+func (h *TestHelper) AssertDocumentsEqual(doc1, doc2 Document) {
 	differences := h.CompareDocuments(doc1, doc2)
 	if len(differences) > 0 {
 		h.t.Fatalf("Documents are not equal:\n%s", fmt.Sprintf("%v", differences))
@@ -235,7 +235,7 @@ func (h *TestHelper) AssertDocumentsEqual(doc1, doc2 DocumentV2) {
 }
 
 // CreateTestDocument creates a document from a map for testing
-func (h *TestHelper) CreateTestDocument(data map[string]interface{}) DocumentV2 {
+func (h *TestHelper) CreateTestDocument(data map[string]interface{}) Document {
 	// Convert string keys to interface{} keys to match graft's internal format
 	converted := make(map[interface{}]interface{})
 	h.convertMapKeys(data, converted)

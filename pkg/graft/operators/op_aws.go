@@ -320,6 +320,16 @@ func (o AwsOperator) getAwsParamFromEngine(engine graft.EngineContext, awsSessio
 	return value, nil
 }
 
+// NewAwsParamOperator creates a new AWS Parameter Store operator
+func NewAwsParamOperator() *AwsOperator {
+	return &AwsOperator{variant: "awsparam"}
+}
+
+// NewAwsSecretOperator creates a new AWS Secrets Manager operator
+func NewAwsSecretOperator() *AwsOperator {
+	return &AwsOperator{variant: "awssecret"}
+}
+
 // init registers the two variants of the AwsOperator
 func init() {
 	RegisterOp("awsparam", AwsOperator{variant: "awsparam"})

@@ -2,93 +2,325 @@ package graft
 
 import (
 	"context"
-	"fmt"
 	"io"
-	"github.com/starkandwayne/goutils/tree"
 )
 
-// Document represents a YAML/JSON document
-type Document map[interface{}]interface{}
-
-// MergeOptions configures how documents are merged
-type MergeOptions struct {
-	SkipEval       bool     // Skip operator evaluation after merging
-	Prune          []string // Keys to prune from final output
-	CherryPick     []string // Keys to cherry-pick from final output
-	FallbackAppend bool     // Default to append instead of inline for arrays
-	EnableGoPatch  bool     // Enable go-patch format parsing
+// Document represents a YAML/JSON document in a more user-friendly format
+// This abstraction hides the internal map[interface{}]interface{} representation
+type Document interface {
+	// Get retrieves a value at the given path (e.g., "meta.instance_groups.0.name")
+	Get(path string) (interface{}, error)
+	
+	// GetString retrieves a string value at the given path
+	GetString(path string) (string, error)
+	
+	// GetInt retrieves an integer value at the given path
+	GetInt(path string) (int, error)
+	
+	// GetBool retrieves a boolean value at the given path
+	GetBool(path string) (bool, error)
+	
+	// GetSlice retrieves a slice value at the given path
+	GetSlice(path string) ([]interface{}, error)
+	
+	// GetMap retrieves a map value at the given path
+	GetMap(path string) (map[interface{}]interface{}, error)
+	
+	// Set sets a value at the given path
+	Set(path string, value interface{}) error
+	
+	// Delete removes a value at the given path
+	Delete(path string) error
+	
+	// Keys returns all top-level keys
+	Keys() []string
+	
+	// ToYAML converts the document to YAML bytes
+	ToYAML() ([]byte, error)
+	
+	// ToJSON converts the document to JSON bytes
+	ToJSON() ([]byte, error)
+	
+	// RawData returns the underlying data structure
+	RawData() interface{}
+	
+	// Clone creates a deep copy of the document
+	Clone() Document
+	
+	// Prune removes a key from the document
+	Prune(key string) Document
+	
+	// CherryPick creates a new document with only the specified keys
+	CherryPick(keys ...string) Document
+	
+	// GetData returns the underlying data (for backward compatibility)
+	GetData() interface{}
 }
 
-// Engine is the main interface for using graft as a library
+// Engine is the enhanced interface for using graft as a library
 type Engine interface {
-	// Merge combines multiple documents into one
-	Merge(ctx context.Context, docs []Document, opts MergeOptions) (Document, error)
+	// Document operations
+	ParseYAML(data []byte) (Document, error)
+	ParseJSON(data []byte) (Document, error)
+	ParseFile(path string) (Document, error)
+	ParseReader(reader io.Reader) (Document, error)
 	
-	// MergeReaders merges documents from io.Readers
-	MergeReaders(ctx context.Context, readers []io.Reader, opts MergeOptions) (Document, error)
-	
-	// MergeFiles merges documents from file paths
-	MergeFiles(ctx context.Context, paths []string, opts MergeOptions) (Document, error)
+	// Merge operations with builder pattern options
+	Merge(ctx context.Context, docs ...Document) MergeBuilder
+	MergeFiles(ctx context.Context, paths ...string) MergeBuilder
+	MergeReaders(ctx context.Context, readers ...io.Reader) MergeBuilder
 	
 	// Evaluate processes operators in a document
 	Evaluate(ctx context.Context, doc Document) (Document, error)
 	
-	// ToJSON converts a document to JSON
-	ToJSON(doc Document, strict bool) ([]byte, error)
-	
-	// ToYAML converts a document to YAML
+	// Output operations
 	ToYAML(doc Document) ([]byte, error)
+	ToJSON(doc Document) ([]byte, error)
+	ToJSONIndent(doc Document, indent string) ([]byte, error)
 	
-	// RegisterOperator registers a custom operator
+	// Operator management
 	RegisterOperator(name string, op Operator) error
+	UnregisterOperator(name string) error
+	ListOperators() []string
+	
+	// Configuration
+	WithLogger(logger Logger) Engine
+	WithVaultClient(client VaultClient) Engine
+	WithAWSConfig(config AWSConfig) Engine
 }
 
-// Config holds configuration for the Engine
-type Config struct {
-	// Logger for debug/trace output
-	Logger Logger
+// ArrayMergeStrategy defines how arrays are merged
+type ArrayMergeStrategy int
+
+const (
+	// InlineArrays is the default - arrays are merged inline by index
+	InlineArrays ArrayMergeStrategy = iota
+	// AppendArrays appends arrays instead of merging inline
+	AppendArrays
+	// ReplaceArrays replaces the entire array
+	ReplaceArrays
+	// PrependArrays prepends new array elements
+	PrependArrays
+)
+
+// MergeBuilder provides a fluent interface for merge operations
+type MergeBuilder interface {
+	// WithPrune specifies keys to remove from the final output
+	WithPrune(keys ...string) MergeBuilder
 	
-	// VaultClient for vault operations
-	VaultClient VaultClient
+	// WithCherryPick specifies keys to keep in the final output (all others removed)
+	WithCherryPick(keys ...string) MergeBuilder
 	
-	// Cache configuration
-	EnableCache bool
-	CacheSize   int
+	// WithArrayMergeStrategy sets how arrays are merged
+	WithArrayMergeStrategy(strategy ArrayMergeStrategy) MergeBuilder
 	
-	// Performance tuning
-	MaxConcurrency int
-	UseEnhancedParser bool
+	// SkipEvaluation skips operator evaluation after merging
+	SkipEvaluation() MergeBuilder
 	
-	// Feature flags
-	EnableMetrics bool
+	// EnableGoPatch enables go-patch format parsing
+	EnableGoPatch() MergeBuilder
+	
+	// FallbackAppend uses append instead of inline for arrays by default
+	FallbackAppend() MergeBuilder
+	
+	// Execute performs the merge operation
+	Execute() (Document, error)
 }
 
-// Logger interface for logging
+// EngineOptions configures a new engine instance using functional options
+type EngineOptions struct {
+	Logger             Logger
+	VaultClient        VaultClient
+	AWSConfig          *AWSConfig
+	EnableCache        bool
+	CacheSize          int
+	MaxConcurrency     int
+	UseEnhancedParser  bool // Deprecated: enhanced parser is now always enabled
+	EnableMetrics      bool
+	CustomOperators    map[string]Operator
+	VaultAddress       string
+	VaultToken         string
+	DebugLogging       bool
+	AWSRegion          string
+}
+
+// EngineOption is a functional option for configuring an engine
+type EngineOption func(*EngineOptions)
+
+// WithLogger sets the logger for the engine
+func WithLogger(logger Logger) EngineOption {
+	return func(opts *EngineOptions) {
+		opts.Logger = logger
+	}
+}
+
+// WithVaultClient sets the vault client for the engine
+func WithVaultClient(client VaultClient) EngineOption {
+	return func(opts *EngineOptions) {
+		opts.VaultClient = client
+	}
+}
+
+// WithAWSConfig sets the AWS configuration
+func WithAWSConfig(config *AWSConfig) EngineOption {
+	return func(opts *EngineOptions) {
+		opts.AWSConfig = config
+	}
+}
+
+// WithCache enables caching with the specified size
+func WithCache(enabled bool, size int) EngineOption {
+	return func(opts *EngineOptions) {
+		opts.EnableCache = enabled
+		opts.CacheSize = size
+	}
+}
+
+// WithConcurrency sets the maximum number of concurrent operations
+func WithConcurrency(max int) EngineOption {
+	return func(opts *EngineOptions) {
+		opts.MaxConcurrency = max
+	}
+}
+
+// WithEnhancedParser is deprecated - the enhanced parser is now the default
+// This option is kept for backward compatibility but has no effect
+func WithEnhancedParser(enabled bool) EngineOption {
+	return func(opts *EngineOptions) {
+		// No-op - enhanced parser is now always enabled
+	}
+}
+
+// WithMetrics enables metrics collection
+func WithMetrics(enabled bool) EngineOption {
+	return func(opts *EngineOptions) {
+		opts.EnableMetrics = enabled
+	}
+}
+
+// WithCustomOperator registers a custom operator
+func WithCustomOperator(name string, op Operator) EngineOption {
+	return func(opts *EngineOptions) {
+		if opts.CustomOperators == nil {
+			opts.CustomOperators = make(map[string]Operator)
+		}
+		opts.CustomOperators[name] = op
+	}
+}
+
+// WithVaultConfig configures vault settings
+func WithVaultConfig(address, token string) EngineOption {
+	return func(opts *EngineOptions) {
+		opts.VaultAddress = address
+		opts.VaultToken = token
+	}
+}
+
+// WithDebugLogging enables debug logging
+func WithDebugLogging(enabled bool) EngineOption {
+	return func(opts *EngineOptions) {
+		opts.DebugLogging = enabled
+	}
+}
+
+// WithAWSRegion sets the AWS region
+func WithAWSRegion(region string) EngineOption {
+	return func(opts *EngineOptions) {
+		opts.AWSRegion = region
+	}
+}
+
+// Logger interface for structured logging
 type Logger interface {
-	Debug(format string, args ...interface{})
-	Trace(format string, args ...interface{})
-	Error(format string, args ...interface{})
+	Debug(msg string, fields ...interface{})
+	Info(msg string, fields ...interface{})
+	Warn(msg string, fields ...interface{})
+	Error(msg string, fields ...interface{})
 }
 
 // VaultClient interface for vault operations
 type VaultClient interface {
 	Get(path string) (map[string]interface{}, error)
 	List(path string) ([]string, error)
+	Put(path string, data map[string]interface{}) error
 }
 
+// AWSConfig holds AWS-specific configuration
+type AWSConfig struct {
+	Region    string
+	Profile   string
+	Role      string
+	SkipAuth  bool
+	Endpoint  string // For testing with localstack
+}
 
-// DefaultConfig returns a default configuration
-func DefaultConfig() *Config {
-	return &Config{
-		EnableCache:       true,
-		CacheSize:         1000,
-		MaxConcurrency:    10,
-		UseEnhancedParser: true,
-		EnableMetrics:     false,
+// NewEngine creates a new engine instance with the given options
+func NewEngine(options ...EngineOption) (Engine, error) {
+	opts := &EngineOptions{
+		EnableCache:        true,
+		CacheSize:          1000,
+		MaxConcurrency:     10,
+		UseEnhancedParser:  true,
+		EnableMetrics:      false,
 	}
+	
+	for _, option := range options {
+		option(opts)
+	}
+	
+	return createEngineFromOptions(opts)
 }
 
-// Global variables for vault operations (will be encapsulated in Phase 2)
+// CreateDefaultEngine creates an engine with sensible defaults
+func CreateDefaultEngine() (Engine, error) {
+	return NewEngine(
+		WithCache(true, 1000),
+		WithConcurrency(10),
+		WithEnhancedParser(true),
+	)
+}
+
+// TODO: Implement convenience functions after Engine implementation is complete
+
+// QuickMerge is a convenience function for simple merge operations
+// func QuickMerge(yamlSources ...string) ([]byte, error) {
+// 	engine, err := DefaultEngine()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	
+// 	var docs []Document
+// 	for _, source := range yamlSources {
+// 		doc, err := engine.ParseYAML([]byte(source))
+// 		if err != nil {
+// 			return nil, NewParseError("failed to parse YAML", err)
+// 		}
+// 		docs = append(docs, doc)
+// 	}
+// 	
+// 	result, err := engine.Merge(context.Background(), docs...).Execute()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	
+// 	return engine.ToYAML(result)
+// }
+
+// QuickMergeFiles is a convenience function for merging files
+// func QuickMergeFiles(paths ...string) ([]byte, error) {
+// 	engine, err := DefaultEngine()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	
+// 	result, err := engine.MergeFiles(context.Background(), paths...).Execute()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	
+// 	return engine.ToYAML(result)
+// }
+// Global variables for backward compatibility with CLI
 var (
 	// VaultRefs tracks vault references found during evaluation
 	VaultRefs = map[string][]string{}
@@ -109,100 +341,9 @@ var (
 	pathsToSort = make(map[string]string)
 )
 
-// SetupOperators initializes all operators for a given phase
-func SetupOperators(phase OperatorPhase) error {
-	errors := MultiError{Errors: []error{}}
-	for _, op := range OpRegistry {
-		if op.Phase() == phase {
-			if err := op.Setup(); err != nil {
-				errors.Append(err)
-			}
-		}
-	}
-	if len(errors.Errors) > 0 {
-		return errors
-	}
-	return nil
-}
-
-// OperatorFor returns the operator for the given name
-func OperatorFor(name string) Operator {
-	if op, ok := OpRegistry[name]; ok {
-		return op
-	}
-	return &NullOperator{}
-}
-
-// NullOperator is returned when an operator is not found
-type NullOperator struct{}
-
-func (n *NullOperator) Setup() error { return nil }
-func (n *NullOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
-	return nil, fmt.Errorf("operator not found")
-}
-func (n *NullOperator) Dependencies(ev *Evaluator, args []*Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	return nil
-}
-func (n *NullOperator) Phase() OperatorPhase { return EvalPhase }
-
 // addToPruneListIfNecessary adds a path to the prune list if needed (temporary until Phase 2)
 func addToPruneListIfNecessary(paths ...string) {
 	for _, path := range paths {
 		keysToPrune = append(keysToPrune, path)
 	}
-}
-
-// NewOpcall creates a new Opcall (Phase 1 helper)
-func NewOpcall(op Operator, args []*Expr, src string) *Opcall {
-	return &Opcall{
-		op:   op,
-		args: args,
-		src:  src,
-	}
-}
-
-// TRACE is a helper function for trace logging
-func TRACE(format string, args ...interface{}) {
-	// TODO: Implement proper trace logging
-	DEBUG(format, args...)
-}
-
-// DefaultKeyGenerator generates unique keys for static IPs
-func DefaultKeyGenerator() func() (string, error) {
-	var counter int
-	return func() (string, error) {
-		counter++
-		return fmt.Sprintf("key-%d", counter), nil
-	}
-}
-
-// Merge merges two data structures (simplified for Phase 1)
-func Merge(dst, src interface{}) error {
-	// TODO: Implement proper merge logic
-	// For Phase 1, just do a simple type assertion and copy
-	dstMap, ok := dst.(map[interface{}]interface{})
-	if !ok {
-		return fmt.Errorf("dst must be a map")
-	}
-	srcMap, ok := src.(map[interface{}]interface{})
-	if !ok {
-		return fmt.Errorf("src must be a map")
-	}
-	for k, v := range srcMap {
-		dstMap[k] = v
-	}
-	return nil
-}
-
-// DebugOn returns true if debug mode is enabled
-func DebugOn() bool {
-	// TODO: Implement proper debug flag checking
-	return false
-}
-
-// ParseOpcallEnhanced parses an operator call using the enhanced parser
-func ParseOpcallEnhanced(phase OperatorPhase, src string, ev *Evaluator) (*Opcall, error) {
-	// TODO: Implement enhanced parsing
-	// For Phase 1, just delegate to regular parsing
-	return ParseOpcall(phase, src)
 }

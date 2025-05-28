@@ -8,7 +8,7 @@ import (
 )
 
 // NewDefaultEngine creates an engine with all default operators registered
-func NewDefaultEngine() graft.Engine {
+func NewDefaultEngine() *graft.DefaultEngine {
 	config := graft.DefaultEngineConfig()
 
 	// Configure from environment
@@ -21,7 +21,7 @@ func NewDefaultEngine() graft.Engine {
 		config.AWSRegion = os.Getenv("AWS_DEFAULT_REGION")
 	}
 
-	engine := graft.NewEngineWithConfig(config)
+	engine := graft.NewDefaultEngineWithConfig(config)
 
 	// Register all default operators
 	registerDefaultOperators(engine)
@@ -30,7 +30,7 @@ func NewDefaultEngine() graft.Engine {
 }
 
 // registerDefaultOperators registers all built-in operators with the engine
-func registerDefaultOperators(engine graft.Engine) {
+func registerDefaultOperators(engine *graft.DefaultEngine) {
 	// Type checking operators
 	engine.RegisterOperator("empty", &operators.EmptyOperator{})
 	engine.RegisterOperator("null", &operators.NullOperator{})
@@ -64,13 +64,13 @@ func registerDefaultOperators(engine graft.Engine) {
 	engine.RegisterOperator("vault", &operators.VaultOperator{})
 	engine.RegisterOperator("vault-try", &operators.VaultTryOperator{})
 	engine.RegisterOperator("file", &operators.FileOperator{})
-	// TODO: engine.RegisterOperator("awsparam", &operators.AwsParamOperator{})
-	// TODO: engine.RegisterOperator("awssecret", &operators.AwsSecretOperator{})
+	engine.RegisterOperator("awsparam", operators.NewAwsParamOperator())
+	engine.RegisterOperator("awssecret", operators.NewAwsSecretOperator())
 	engine.RegisterOperator("load", &operators.LoadOperator{})
 
 	// Network operations
 	engine.RegisterOperator("static_ips", &operators.StaticIPOperator{})
-	// TODO: engine.RegisterOperator("ips", &operators.IPsOperator{})
+	engine.RegisterOperator("ips", &operators.IpsOperator{})
 
 	// Advanced operations
 	engine.RegisterOperator("inject", &operators.InjectOperator{})
@@ -78,8 +78,8 @@ func registerDefaultOperators(engine graft.Engine) {
 }
 
 // NewMinimalEngine creates an engine with only essential operators
-func NewMinimalEngine() graft.Engine {
-	engine := graft.NewEngine()
+func NewMinimalEngine() *graft.DefaultEngine {
+	engine := graft.NewDefaultEngine()
 
 	// Register only essential operators
 	engine.RegisterOperator("grab", &operators.GrabOperator{})
@@ -90,13 +90,13 @@ func NewMinimalEngine() graft.Engine {
 }
 
 // NewTestEngine creates an engine suitable for testing
-func NewTestEngine() graft.Engine {
+func NewTestEngine() *graft.DefaultEngine {
 	config := graft.DefaultEngineConfig()
 	config.SkipVault = true
 	config.SkipAWS = true
 	config.EnableCaching = false
 
-	engine := graft.NewEngineWithConfig(config)
+	engine := graft.NewDefaultEngineWithConfig(config)
 	registerDefaultOperators(engine)
 
 	return engine

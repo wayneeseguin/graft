@@ -94,7 +94,7 @@ func evaluateOperatorCall(e *Expr, ev *Evaluator) (*Response, error) {
 	
 	// Get the operator
 	op := OperatorFor(opName)
-	if _, ok := op.(*NullOperator); ok {
+	if op == nil {
 		return nil, NewExprOperatorError(fmt.Sprintf("unknown operator: %s", opName), e.Pos)
 	}
 	

@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-func BenchmarkEngineV2_ParseYAML(b *testing.B) {
-	engine, err := NewEngineV2()
+func BenchmarkEngine_ParseYAML(b *testing.B) {
+	engine, err := NewEngine()
 	if err != nil {
 		b.Fatalf("Failed to create engine: %v", err)
 	}
@@ -43,8 +43,8 @@ config:
 	})
 }
 
-func BenchmarkEngineV2_ParseJSON(b *testing.B) {
-	engine, err := NewEngineV2()
+func BenchmarkEngine_ParseJSON(b *testing.B) {
+	engine, err := NewEngine()
 	if err != nil {
 		b.Fatalf("Failed to create engine: %v", err)
 	}
@@ -80,8 +80,8 @@ func BenchmarkEngineV2_ParseJSON(b *testing.B) {
 	})
 }
 
-func BenchmarkEngineV2_Merge(b *testing.B) {
-	engine, err := NewEngineV2()
+func BenchmarkEngine_Merge(b *testing.B) {
+	engine, err := NewEngine()
 	if err != nil {
 		b.Fatalf("Failed to create engine: %v", err)
 	}
@@ -127,7 +127,7 @@ config:
 	})
 
 	b.Run("MultipleSmallDocuments", func(b *testing.B) {
-		docs := make([]DocumentV2, 10)
+		docs := make([]Document, 10)
 		for i := 0; i < 10; i++ {
 			docs[i], _ = engine.ParseYAML([]byte(fmt.Sprintf(`
 name: doc%d
@@ -145,8 +145,8 @@ value: %d
 	})
 }
 
-func BenchmarkEngineV2_Evaluate(b *testing.B) {
-	engine, err := NewEngineV2()
+func BenchmarkEngine_Evaluate(b *testing.B) {
+	engine, err := NewEngine()
 	if err != nil {
 		b.Fatalf("Failed to create engine: %v", err)
 	}
@@ -220,7 +220,7 @@ config:
 }
 
 func BenchmarkDocument_Operations(b *testing.B) {
-	engine, err := NewEngineV2()
+	engine, err := NewEngine()
 	if err != nil {
 		b.Fatalf("Failed to create engine: %v", err)
 	}
@@ -265,8 +265,8 @@ func BenchmarkDocument_Operations(b *testing.B) {
 	})
 }
 
-func BenchmarkEngineV2_MergeAndEvaluate(b *testing.B) {
-	engine, err := NewEngineV2()
+func BenchmarkEngine_MergeAndEvaluate(b *testing.B) {
+	engine, err := NewEngine()
 	if err != nil {
 		b.Fatalf("Failed to create engine: %v", err)
 	}
@@ -311,8 +311,8 @@ deployment:
 	})
 }
 
-func BenchmarkEngineV2_Concurrency(b *testing.B) {
-	engine, err := NewEngineV2(WithConcurrency(10))
+func BenchmarkEngine_Concurrency(b *testing.B) {
+	engine, err := NewEngine(WithConcurrency(10))
 	if err != nil {
 		b.Fatalf("Failed to create engine: %v", err)
 	}
@@ -321,7 +321,7 @@ func BenchmarkEngineV2_Concurrency(b *testing.B) {
 	doc := generateDocumentWithManyOperators(200)
 
 	b.Run("Sequential", func(b *testing.B) {
-		sequentialEngine, _ := NewEngineV2(WithConcurrency(1))
+		sequentialEngine, _ := NewEngine(WithConcurrency(1))
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			_, err := sequentialEngine.Evaluate(ctx, doc)
@@ -381,8 +381,8 @@ func generateLargeJSON(itemCount int) []byte {
 	return []byte(builder.String())
 }
 
-func generateDocumentWithManyOperators(operatorCount int) DocumentV2 {
-	engine, _ := NewEngineV2()
+func generateDocumentWithManyOperators(operatorCount int) Document {
+	engine, _ := NewEngine()
 
 	var builder strings.Builder
 	builder.WriteString("meta:\n")

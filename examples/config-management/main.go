@@ -16,7 +16,7 @@ func main() {
 	fmt.Println("=== Graft Configuration Management Example ===")
 
 	// Create engine
-	engine, err := graft.NewEngineV2()
+	engine, err := graft.NewEngine()
 	if err != nil {
 		log.Fatal("Failed to create engine:", err)
 	}
@@ -38,7 +38,7 @@ func main() {
 	}
 }
 
-func generateConfig(engine graft.EngineV2, environment string) graft.DocumentV2 {
+func generateConfig(engine graft.Engine, environment string) graft.Document {
 	// Base configuration
 	baseConfig := `
 application:
@@ -162,7 +162,7 @@ server:
 	return evaluated
 }
 
-func saveConfig(engine graft.EngineV2, config graft.DocumentV2, filename string) {
+func saveConfig(engine graft.Engine, config graft.Document, filename string) {
 	yamlBytes, err := engine.ToYAML(config)
 	if err != nil {
 		log.Printf("Failed to convert to YAML: %v", err)
@@ -178,7 +178,7 @@ func saveConfig(engine graft.EngineV2, config graft.DocumentV2, filename string)
 	fmt.Printf("  ✓ Saved to %s\n", filename)
 }
 
-func displayKeyConfig(config graft.DocumentV2, env string) {
+func displayKeyConfig(config graft.Document, env string) {
 	// Extract key configuration values
 	appName, _ := config.GetString("application.full_name")
 	dbUrl, _ := config.GetString("database.url")

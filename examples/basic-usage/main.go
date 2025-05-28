@@ -13,7 +13,7 @@ func main() {
 	fmt.Println("=== Graft Library Basic Usage Example ===")
 
 	// Create a new engine
-	engine, err := graft.NewEngineV2()
+	engine, err := graft.NewEngine()
 	if err != nil {
 		log.Fatal("Failed to create engine:", err)
 	}
@@ -35,7 +35,7 @@ func main() {
 	runMultiDocumentMerging(engine)
 }
 
-func runBasicMerging(engine graft.EngineV2) {
+func runBasicMerging(engine graft.Engine) {
 	base := `
 name: my-app
 config:
@@ -65,7 +65,7 @@ config:
 	fmt.Printf("Merged result:\n%s", yamlOut)
 }
 
-func runOperatorEvaluation(engine graft.EngineV2) {
+func runOperatorEvaluation(engine graft.Engine) {
 	yamlContent := `
 app:
   name: web-service
@@ -90,7 +90,7 @@ config:
 	fmt.Printf("Evaluated result:\n%s", yamlOut)
 }
 
-func runDocumentAccess(engine graft.EngineV2) {
+func runDocumentAccess(engine graft.Engine) {
 	yamlContent := `
 application:
   name: api-server
@@ -128,7 +128,7 @@ application:
 	}
 }
 
-func runMultiDocumentMerging(engine graft.EngineV2) {
+func runMultiDocumentMerging(engine graft.Engine) {
 	// Base configuration
 	base := `
 service:

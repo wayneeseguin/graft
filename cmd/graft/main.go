@@ -16,7 +16,6 @@ import (
 
 	"github.com/wayneeseguin/graft/log"
 	"github.com/wayneeseguin/graft/pkg/graft"
-	"github.com/wayneeseguin/graft/pkg/graft/merger"
 
 	"strings"
 
@@ -322,12 +321,12 @@ func cmdMergeEval(options mergeOpts) (map[interface{}]interface{}, error) {
 		}
 	}
 
-	ev, err := mergeAllDocs(files, options)
+	result, err := mergeAllDocs(files, options)
 	if err != nil {
 		return nil, err
 	}
 
-	return ev.Tree, nil
+	return result, nil
 }
 
 func cmdFanEval(options mergeOpts) ([]map[interface{}]interface{}, error) {
@@ -385,11 +384,11 @@ func cmdFanEval(options mergeOpts) ([]map[interface{}]interface{}, error) {
 	for _, doc := range docs {
 		sourceBuffer := bytes.NewBuffer(sourceBytes)
 		source = YamlFile{Path: source.Path, Reader: io.NopCloser(sourceBuffer)}
-		ev, err := mergeAllDocs([]YamlFile{source, doc}, options)
+		result, err := mergeAllDocs([]YamlFile{source, doc}, options)
 		if err != nil {
 			return nil, err
 		}
-		roots = append(roots, ev.Tree)
+		roots = append(roots, result)
 	}
 
 	return roots, nil
@@ -475,10 +474,15 @@ func readFile(file *YamlFile) ([]byte, error) {
 	return data, nil
 }
 
-func mergeAllDocs(files []YamlFile, options mergeOpts) (*graft.Evaluator, error) {
-	m := &merger.Merger{AppendByDefault: options.FallbackAppend}
-	root := make(map[interface{}]interface{})
+func mergeAllDocs(files []YamlFile, options mergeOpts) (map[interface{}]interface{}, error) {
+	// Create engine with default settings
+	engine, err := graft.CreateDefaultEngine()
+	if err != nil {
+		return nil, ansi.Errorf("@R{Failed to create graft engine}: %s", err.Error())
+	}
 
+	// Parse all documents
+	docs := []graft.Document{}
 	for _, file := range files {
 		log.DEBUG("Processing file '%s'", file.Path)
 
@@ -487,40 +491,69 @@ func mergeAllDocs(files []YamlFile, options mergeOpts) (*graft.Evaluator, error)
 			return nil, err
 		}
 
-		doc, err := parseYAML(data)
-		if err != nil {
-			if isArrayError(err) && options.EnableGoPatch {
+		// Check if it's a go-patch document
+		if options.EnableGoPatch {
+			_, parseErr := parseYAML(data)
+			if isArrayError(parseErr) {
 				log.DEBUG("Detected root of document as an array. Attempting go-patch parsing")
-				ops, err := parseGoPatch(data)
+				_, err := parseGoPatch(data)
 				if err != nil {
 					return nil, ansi.Errorf("@m{%s}: @R{%s}\n", file.Path, err.Error())
 				}
-				newObj, err := ops.Apply(root)
-				if err != nil {
-					return nil, ansi.Errorf("@m{%s}: @R{%s}\n", file.Path, err.Error())
-				}
-				if newRoot, ok := newObj.(map[interface{}]interface{}); !ok {
-					return nil, ansi.Errorf("@m{%s}: @R{Unable to convert go-patch output into a hash/map for further merging|\n", file.Path)
-				} else {
-					root = newRoot
-				}
-			} else {
-				return nil, ansi.Errorf("@m{%s}: @R{%s}\n", file.Path, err.Error())
+				// For go-patch, we need to apply it after merging other docs
+				// Store it for later application
+				// TODO: Properly integrate go-patch with new API
+				return nil, ansi.Errorf("@R{go-patch support needs to be reimplemented with new API}")
 			}
-		} else {
-			m.Merge(root, doc)
 		}
-		tmpYaml, _ := yaml.Marshal(root) // we don't care about errors for debugging
-		log.TRACE("Current data after processing '%s':\n%s", file.Path, tmpYaml)
+
+		// Parse as YAML
+		doc, err := engine.ParseYAML(data)
+		if err != nil {
+			return nil, ansi.Errorf("@m{%s}: @R{%s}\n", file.Path, err.Error())
+		}
+		docs = append(docs, doc)
 	}
 
-	if m.Error() != nil {
-		return nil, m.Error()
+	// Merge all documents
+	mergeBuilder := engine.Merge(nil, docs...)
+	
+	// Apply merge options
+	if options.FallbackAppend {
+		mergeBuilder = mergeBuilder.WithArrayMergeStrategy(graft.AppendArrays)
+	}
+	
+	// Execute merge
+	merged, err := mergeBuilder.Execute()
+	if err != nil {
+		return nil, ansi.Errorf("@R{Merge failed}: %s", err.Error())
 	}
 
-	ev := &graft.Evaluator{Tree: root, SkipEval: options.SkipEval}
-	err := ev.Run(options.Prune, options.CherryPick)
-	return ev, err
+	// Evaluate operators unless skipped
+	var result graft.Document
+	if !options.SkipEval {
+		result, err = engine.Evaluate(nil, merged)
+		if err != nil {
+			return nil, ansi.Errorf("@R{Evaluation failed}: %s", err.Error())
+		}
+	} else {
+		result = merged
+	}
+
+	// Apply pruning and cherry-picking
+	if len(options.Prune) > 0 {
+		for _, key := range options.Prune {
+			result = result.Prune(key)
+		}
+	}
+	
+	if len(options.CherryPick) > 0 {
+		result = result.CherryPick(options.CherryPick...)
+	}
+
+	// Get the raw data for backward compatibility
+	// The CLI expects a map[interface{}]interface{}
+	return result.GetData().(map[interface{}]interface{}), nil
 }
 
 func diffFiles(paths []string) (string, bool, error) {

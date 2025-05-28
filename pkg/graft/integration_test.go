@@ -1,214 +1,383 @@
 package graft
 
-// TODO: Enhanced parser integration test removed - enhanced parser not implemented
-/*
-func TestEnhancedParserIntegration(t *testing.T) {
-	Convey("Enhanced Parser Full Integration", t, func() {
-		// Save original state
-		originalFlag := UseEnhancedParser
-		defer func() {
-			UseEnhancedParser = originalFlag
-			// Restore original concat operator
-			RegisterOp("concat", ConcatOperator{})
-		}()
-		
-		Convey("With enhanced parser disabled", func() {
-			UseEnhancedParser = false
-			
-			Convey("Simple expressions work as before", func() {
-				opcall, err := ParseOpcall(EvalPhase, `(( concat "hello" "world" ))`)
+import (
+	"context"
+	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
+)
+
+func TestIntegration_BasicMergeAndEvaluate(t *testing.T) {
+	Convey("Given base and override configurations", t, func() {
+		engine, err := NewEngine()
+		So(err, ShouldBeNil)
+
+		baseConfig := []byte(`
+meta:
+  app_name: "myapp"
+  version: "1.0.0"
+  environment: "dev"
+
+database:
+  host: "localhost"
+  port: 5432
+  name: "myapp_dev"
+
+features:
+  auth: true
+  logging: false
+`)
+
+		overrideConfig := []byte(`
+database:
+  host: "prod.example.com"
+  ssl: true
+
+features:
+  logging: true
+  metrics: true
+
+deployment:
+  replicas: (( calc meta.environment == "prod" ? 3 : 1 ))
+  image: (( concat meta.app_name ":" meta.version ))
+`)
+
+		Convey("When merging and evaluating", func() {
+			baseDoc, err := engine.ParseYAML(baseConfig)
+			So(err, ShouldBeNil)
+
+			overrideDoc, err := engine.ParseYAML(overrideConfig)
+			So(err, ShouldBeNil)
+
+			ctx := context.Background()
+			merged, err := engine.Merge(ctx, baseDoc, overrideDoc).Execute()
+			So(err, ShouldBeNil)
+
+			result, err := engine.Evaluate(ctx, merged)
+			So(err, ShouldBeNil)
+
+			Convey("Then the configuration should be properly merged and evaluated", func() {
+				// Check merged values
+				host, err := result.GetString("database.host")
 				So(err, ShouldBeNil)
-				So(opcall, ShouldNotBeNil)
-				So(len(opcall.args), ShouldEqual, 2)
-				So(opcall.args[0].Type, ShouldEqual, Literal)
-			})
-		})
-		
-		Convey("With enhanced parser enabled", func() {
-			EnableEnhancedParser()
-			
-			Convey("Simple operators still work", func() {
-				opcall, err := ParseOpcall(EvalPhase, `(( concat "hello" " " "world" ))`)
+				So(host, ShouldEqual, "prod.example.com")
+
+				ssl, err := result.GetBool("database.ssl")
 				So(err, ShouldBeNil)
-				So(opcall, ShouldNotBeNil)
-				So(len(opcall.args), ShouldEqual, 3)
-			})
-			
-			Convey("Nested operators work", func() {
-				opcall, err := ParseOpcall(EvalPhase, `(( concat (grab name) " world" ))`)
+				So(ssl, ShouldEqual, true)
+
+				port, err := result.GetInt("database.port")
 				So(err, ShouldBeNil)
-				So(opcall, ShouldNotBeNil)
-				So(len(opcall.args), ShouldEqual, 2)
-				So(opcall.args[0].Type, ShouldEqual, OperatorCall)
-				So(opcall.args[0].Op(), ShouldEqual, "grab")
-			})
-			
-			Convey("Complex nested expressions work", func() {
-				opcall, err := ParseOpcall(EvalPhase, `(( concat (grab prefix) "-" (grab suffix) ))`)
+				So(port, ShouldEqual, 5432)
+
+				// Check evaluated operators
+				image, err := result.GetString("deployment.image")
 				So(err, ShouldBeNil)
-				So(opcall, ShouldNotBeNil)
-				So(len(opcall.args), ShouldEqual, 3)
-				So(opcall.args[0].Type, ShouldEqual, OperatorCall)
-				So(opcall.args[2].Type, ShouldEqual, OperatorCall)
-			})
-			
-			Convey("Evaluating nested operators works", func() {
-				ev := &Evaluator{
-					Tree: map[interface{}]interface{}{
-						"name":   "graft",
-						"prefix": "hello",
-						"suffix": "world",
-					},
-				}
-				
-				// Create opcall with nested grab
-				opcall, err := ParseOpcall(EvalPhase, `(( concat (grab name) " is awesome" ))`)
+				So(image, ShouldEqual, "myapp:1.0.0")
+
+				replicas, err := result.GetInt("deployment.replicas")
 				So(err, ShouldBeNil)
-				So(opcall, ShouldNotBeNil)
-				
-				// Run the operator
-				resp, err := opcall.Run(ev)
-				So(err, ShouldBeNil)
-				So(resp, ShouldNotBeNil)
-				So(resp.Type, ShouldEqual, Replace)
-				So(resp.Value, ShouldEqual, "graft is awesome")
-			})
-			
-			Convey("Deeply nested operators work", func() {
-				ev := &Evaluator{
-					Tree: map[interface{}]interface{}{
-						"parts": map[interface{}]interface{}{
-							"first":  "hello",
-							"second": "world",
-						},
-					},
-				}
-				
-				// concat with nested grabs
-				opcall, err := ParseOpcall(EvalPhase, `(( concat (grab parts.first) " " (grab parts.second) ))`)
-				So(err, ShouldBeNil)
-				So(opcall, ShouldNotBeNil)
-				
-				resp, err := opcall.Run(ev)
-				So(err, ShouldBeNil)
-				So(resp.Value, ShouldEqual, "hello world")
-			})
-		})
-		
-		Convey("Environment variable control", func() {
-			// Test that GRAFT_ENHANCED_PARSER env var works
-			// This is tested indirectly through InitEnhancedParser()
-			So(UseEnhancedParser, ShouldEqual, originalFlag)
-		})
-		
-		Convey("Backward compatibility", func() {
-			EnableEnhancedParser()
-			
-			Convey("Existing expressions continue to work", func() {
-				testCases := []struct {
-					name string
-					expr string
-					args int
-					checkOp string // For cases where the enhanced parser creates a wrapper
-				}{
-					{"simple grab", `(( grab foo.bar ))`, 1, "grab"},
-					{"vault with default", `(( vault "secret:key" || "default" ))`, 0, ""}, // Enhanced parser creates ExpressionWrapperOperator
-					{"static_ips", `(( static_ips 1 2 3 ))`, 3, "static_ips"},
-					{"concat literals", `(( concat "a" "b" "c" ))`, 3, "concat"},
-				}
-				
-				for _, tc := range testCases {
-					Convey(tc.name, func() {
-						opcall, err := ParseOpcall(EvalPhase, tc.expr)
-						So(err, ShouldBeNil)
-						if opcall != nil {
-							if tc.checkOp != "" {
-								// Regular operator
-								So(len(opcall.args), ShouldEqual, tc.args)
-								_, isNull := opcall.op.(NullOperator)
-								So(isNull, ShouldBeFalse)
-							} else {
-								// Expression wrapper (for || expressions)
-								_, isWrapper := opcall.op.(*ExpressionWrapperOperator)
-								So(isWrapper, ShouldBeTrue)
-							}
-						}
-					})
-				}
+				So(replicas, ShouldEqual, 1) // dev environment
 			})
 		})
 	})
 }
-*/
 
-// TODO: Operator helpers test removed - helper functions not implemented
-/*
-func TestOperatorHelpers(t *testing.T) {
-	Convey("Operator Helper Functions", t, func() {
-		ev := &Evaluator{
-			Tree: map[interface{}]interface{}{
-				"foo": map[interface{}]interface{}{
-					"bar": "baz",
-				},
-				"list": []interface{}{"a", "b", "c"},
-			},
-		}
-		
-		Convey("ResolveOperatorArgument", func() {
-			Convey("resolves literals", func() {
-				expr := &Expr{Type: Literal, Literal: "test"}
-				val, err := ResolveOperatorArgument(ev, expr)
+func TestIntegration_ComplexMergeWithArrays(t *testing.T) {
+	Convey("Given configurations with array merging", t, func() {
+		engine, err := NewEngine()
+		So(err, ShouldBeNil)
+
+		baseConfig := []byte(`
+services:
+  - name: "api"
+    port: 8080
+  - name: "db"
+    port: 5432
+
+middleware:
+  - auth
+  - logging
+`)
+
+		overrideConfig := []byte(`
+services:
+  - name: "cache"
+    port: 6379
+
+middleware:
+  - name: cors
+    replace: all
+  - metrics
+  - tracing
+`)
+
+		Convey("When merging with default array behavior", func() {
+			baseDoc, err := engine.ParseYAML(baseConfig)
+			So(err, ShouldBeNil)
+
+			overrideDoc, err := engine.ParseYAML(overrideConfig)
+			So(err, ShouldBeNil)
+
+			ctx := context.Background()
+			result, err := engine.Merge(ctx, baseDoc, overrideDoc).Execute()
+			So(err, ShouldBeNil)
+
+			Convey("Then arrays should be replaced", func() {
+				services, err := result.GetSlice("services")
 				So(err, ShouldBeNil)
-				So(val, ShouldEqual, "test")
-			})
-			
-			Convey("resolves references", func() {
-				cursor, _ := tree.ParseCursor("foo.bar")
-				expr := &Expr{Type: Reference, Reference: cursor}
-				val, err := ResolveOperatorArgument(ev, expr)
+				So(len(services), ShouldEqual, 1)
+
+				middleware, err := result.GetSlice("middleware")
 				So(err, ShouldBeNil)
-				So(val, ShouldEqual, "baz")
-			})
-			
-			Convey("resolves nested operator calls", func() {
-				EnableEnhancedParser()
-				defer func() { RegisterOp("concat", ConcatOperator{}) }()
-				
-				// Create a nested grab operator call
-				cursor, _ := tree.ParseCursor("foo.bar")
-				grabExpr := NewOperatorCall("grab", []*Expr{
-					{Type: Reference, Reference: cursor},
-				})
-				
-				val, err := ResolveOperatorArgument(ev, grabExpr)
-				So(err, ShouldBeNil)
-				So(val, ShouldEqual, "baz")
-			})
-		})
-		
-		Convey("AsString", func() {
-			Convey("converts various types to string", func() {
-				s, _ := AsString("hello")
-				So(s, ShouldEqual, "hello")
-				s, _ = AsString(42)
-				So(s, ShouldEqual, "42")
-				s, _ = AsString(true)
-				So(s, ShouldEqual, "true")
-				s, _ = AsString(nil)
-				So(s, ShouldEqual, "")
-			})
-		})
-		
-		Convey("AsStringArray", func() {
-			Convey("converts to string array", func() {
-				result, err := AsStringArray([]interface{}{"a", "b", "c"})
-				So(err, ShouldBeNil)
-				So(result, ShouldResemble, []string{"a", "b", "c"})
-				
-				result, err = AsStringArray("single")
-				So(err, ShouldBeNil)
-				So(result, ShouldResemble, []string{"single"})
+				So(len(middleware), ShouldEqual, 3)
 			})
 		})
 	})
-}*/
+}
+
+func TestIntegration_PruningWorkflow(t *testing.T) {
+	Convey("Given a configuration with sensitive data", t, func() {
+		engine, err := NewEngine()
+		So(err, ShouldBeNil)
+
+		config := []byte(`
+app:
+  name: "myapp"
+  version: "1.0.0"
+
+database:
+  host: "localhost"
+  port: 5432
+  password: "secret123"
+
+secrets:
+  api_key: "super-secret-key"
+  db_password: "another-secret"
+
+public_config:
+  timeout: 30
+  retries: 3
+`)
+
+		Convey("When processing with pruning", func() {
+			doc, err := engine.ParseYAML(config)
+			So(err, ShouldBeNil)
+
+			ctx := context.Background()
+			result, err := engine.Merge(ctx, doc).
+				WithPrune("database.password").
+				WithPrune("secrets").
+				Execute()
+			So(err, ShouldBeNil)
+
+			Convey("Then sensitive data should be removed", func() {
+				// Public data should remain
+				name, err := result.GetString("app.name")
+				So(err, ShouldBeNil)
+				So(name, ShouldEqual, "myapp")
+
+				timeout, err := result.GetInt("public_config.timeout")
+				So(err, ShouldBeNil)
+				So(timeout, ShouldEqual, 30)
+
+				// Sensitive data should be removed
+				_, err = result.Get("database.password")
+				So(err, ShouldNotBeNil)
+
+				_, err = result.Get("secrets")
+				So(err, ShouldNotBeNil)
+
+				// Other database config should remain
+				host, err := result.GetString("database.host")
+				So(err, ShouldBeNil)
+				So(host, ShouldEqual, "localhost")
+			})
+		})
+	})
+}
+
+func TestIntegration_ConditionalConfiguration(t *testing.T) {
+	Convey("Given environment-specific configuration", t, func() {
+		engine, err := NewEngine()
+		So(err, ShouldBeNil)
+
+		config := []byte(`
+meta:
+  environment: "production"
+
+app:
+  name: "myapp"
+  debug: (( calc meta.environment == "development" ? true : false ))
+  log_level: (( calc meta.environment == "production" ? "error" : "debug" ))
+
+database:
+  pool_size: (( calc meta.environment == "production" ? 20 : 5 ))
+  ssl: (( calc meta.environment == "production" ? true : false ))
+
+features:
+  metrics: (( calc meta.environment == "production" || meta.environment == "staging" ))
+  profiling: (( calc meta.environment == "development" ))
+`)
+
+		Convey("When evaluating for production environment", func() {
+			doc, err := engine.ParseYAML(config)
+			So(err, ShouldBeNil)
+
+			ctx := context.Background()
+			result, err := engine.Evaluate(ctx, doc)
+			So(err, ShouldBeNil)
+
+			Convey("Then production settings should be applied", func() {
+				debug, err := result.GetBool("app.debug")
+				So(err, ShouldBeNil)
+				So(debug, ShouldEqual, false)
+
+				logLevel, err := result.GetString("app.log_level")
+				So(err, ShouldBeNil)
+				So(logLevel, ShouldEqual, "error")
+
+				poolSize, err := result.GetInt("database.pool_size")
+				So(err, ShouldBeNil)
+				So(poolSize, ShouldEqual, 20)
+
+				ssl, err := result.GetBool("database.ssl")
+				So(err, ShouldBeNil)
+				So(ssl, ShouldEqual, true)
+
+				metrics, err := result.GetBool("features.metrics")
+				So(err, ShouldBeNil)
+				So(metrics, ShouldEqual, true)
+
+				profiling, err := result.GetBool("features.profiling")
+				So(err, ShouldBeNil)
+				So(profiling, ShouldEqual, false)
+			})
+		})
+	})
+}
+
+func TestIntegration_ErrorHandling(t *testing.T) {
+	Convey("Given various error scenarios", t, func() {
+		engine, err := NewEngine()
+		So(err, ShouldBeNil)
+
+		Convey("When document has syntax errors", func() {
+			invalidYAML := []byte(`
+name: test
+  invalid: indentation
+`)
+			doc, err := engine.ParseYAML(invalidYAML)
+
+			Convey("Then it should return a parse error", func() {
+				So(err, ShouldNotBeNil)
+				So(doc, ShouldBeNil)
+
+				graftErr, ok := err.(*GraftError)
+				So(ok, ShouldBeTrue)
+				So(graftErr.Type, ShouldEqual, ParseError)
+			})
+		})
+
+		Convey("When evaluation has operator errors", func() {
+			invalidOperator := []byte(`
+result: (( unknown_operator "test" ))
+`)
+			doc, err := engine.ParseYAML(invalidOperator)
+			So(err, ShouldBeNil)
+
+			ctx := context.Background()
+			result, err := engine.Evaluate(ctx, doc)
+
+			Convey("Then it should return an operator error", func() {
+				So(err, ShouldNotBeNil)
+				So(result, ShouldBeNil)
+
+				graftErr, ok := err.(*GraftError)
+				So(ok, ShouldBeTrue)
+				So(graftErr.Type, ShouldEqual, OperatorError)
+			})
+		})
+
+		Convey("When evaluation has reference errors", func() {
+			invalidReference := []byte(`
+result: (( grab nonexistent.path ))
+`)
+			doc, err := engine.ParseYAML(invalidReference)
+			So(err, ShouldBeNil)
+
+			ctx := context.Background()
+			result, err := engine.Evaluate(ctx, doc)
+
+			Convey("Then it should return a reference error", func() {
+				So(err, ShouldNotBeNil)
+				So(result, ShouldBeNil)
+
+				graftErr, ok := err.(*GraftError)
+				So(ok, ShouldBeTrue)
+				So(graftErr.Type, ShouldEqual, EvaluationError)
+			})
+		})
+	})
+}
+
+func TestIntegration_MultiDocumentProcessing(t *testing.T) {
+	Convey("Given multiple documents to process", t, func() {
+		engine, err := NewEngine()
+		So(err, ShouldBeNil)
+
+		configs := [][]byte{
+			[]byte(`
+meta:
+  app: "myapp"
+  team: "platform"
+`),
+			[]byte(`
+database:
+  host: "localhost"
+  name: (( concat meta.app "_db" ))
+`),
+			[]byte(`
+services:
+  api:
+    name: (( grab meta.app ))
+    team: (( grab meta.team ))
+    database: (( grab database.name ))
+`),
+		}
+
+		Convey("When processing multiple documents in sequence", func() {
+			var result Document
+			ctx := context.Background()
+
+			for i, configData := range configs {
+				doc, err := engine.ParseYAML(configData)
+				So(err, ShouldBeNil)
+
+				if i == 0 {
+					result = doc
+				} else {
+					result, err = engine.Merge(ctx, result, doc).Execute()
+					So(err, ShouldBeNil)
+				}
+			}
+
+			finalResult, err := engine.Evaluate(ctx, result)
+			So(err, ShouldBeNil)
+
+			Convey("Then all documents should be properly merged and evaluated", func() {
+				appName, err := finalResult.GetString("services.api.name")
+				So(err, ShouldBeNil)
+				So(appName, ShouldEqual, "myapp")
+
+				team, err := finalResult.GetString("services.api.team")
+				So(err, ShouldBeNil)
+				So(team, ShouldEqual, "platform")
+
+				dbName, err := finalResult.GetString("services.api.database")
+				So(err, ShouldBeNil)
+				So(dbName, ShouldEqual, "myapp_db")
+			})
+		})
+	})
+}

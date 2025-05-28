@@ -11,10 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/starkandwayne/goutils/tree"
 	vaultkv "github.com/cloudfoundry-community/vaultkv"
+	"gopkg.in/yaml.v2"
 )
 
-// engine implements the Engine interface
-type engine struct {
+// DefaultEngine is the default implementation of the Engine interface
+// It provides all the core functionality needed by graft
+type DefaultEngine struct {
 	// Configuration
 	config EngineConfig
 	
@@ -90,14 +92,14 @@ type EngineMetrics struct {
 	mu              sync.RWMutex
 }
 
-// NewEngine creates a new engine with default configuration
-func NewEngine() Engine {
-	return NewEngineWithConfig(DefaultEngineConfig())
+// NewDefaultEngine creates a new default engine with default configuration
+func NewDefaultEngine() *DefaultEngine {
+	return NewDefaultEngineWithConfig(DefaultEngineConfig())
 }
 
-// NewEngineWithConfig creates a new engine with custom configuration
-func NewEngineWithConfig(config EngineConfig) Engine {
-	e := &engine{
+// NewDefaultEngineWithConfig creates a new default engine with custom configuration
+func NewDefaultEngineWithConfig(config EngineConfig) *DefaultEngine {
+	e := &DefaultEngine{
 		config:           config,
 		operators:        make(map[string]Operator),
 		vaultSecretCache: make(map[string]map[string]interface{}),
@@ -142,7 +144,7 @@ func DefaultEngineConfig() EngineConfig {
 }
 
 // RegisterOperator registers a custom operator
-func (e *engine) RegisterOperator(name string, op Operator) error {
+func (e *DefaultEngine) RegisterOperator(name string, op Operator) error {
 	e.opMutex.Lock()
 	defer e.opMutex.Unlock()
 	
@@ -155,205 +157,29 @@ func (e *engine) RegisterOperator(name string, op Operator) error {
 }
 
 // GetOperator retrieves an operator by name
-func (e *engine) GetOperator(name string) (Operator, bool) {
+func (e *DefaultEngine) GetOperator(name string) (Operator, bool) {
 	e.opMutex.RLock()
 	defer e.opMutex.RUnlock()
 	
-	op, exists := e.operators[name]
+	// First check engine's registry
+	if op, exists := e.operators[name]; exists {
+		return op, true
+	}
+	
+	// Fall back to global registry for backward compatibility
+	op, exists := OpRegistry[name]
 	return op, exists
 }
 
-// Merge merges multiple documents according to graft semantics
-func (e *engine) Merge(ctx context.Context, docs []Document, opts MergeOptions) (Document, error) {
-	if len(docs) == 0 {
-		return nil, fmt.Errorf("no documents to merge")
-	}
-	
-	// Convert documents to the internal format
-	trees := make([]map[interface{}]interface{}, len(docs))
-	for i, d := range docs {
-		// Document is already map[interface{}]interface{}
-		trees[i] = d
-	}
-	
-	// Perform the merge
-	result := trees[0]
-	for i := 1; i < len(trees); i++ {
-		var err error
-		result, err = e.mergeTwo(result, trees[i], opts)
-		if err != nil {
-			return nil, err
-		}
-	}
-	
-	// Apply post-merge operations
-	if len(opts.Prune) > 0 {
-		result = e.pruneKeys(result, opts.Prune)
-	}
-	
-	if len(opts.CherryPick) > 0 {
-		result = e.cherryPick(result, opts.CherryPick)
-	}
-	
-	// Evaluate if requested
-	if !opts.SkipEval {
-		evaluator := e.createEvaluator(result)
-		if err := e.evaluate(ctx, evaluator); err != nil {
-			return nil, err
-		}
-		result = evaluator.Tree
-	}
-	
-	return result, nil
-}
+// EngineContext interface methods for internal operator access
 
-// MergeReaders merges documents from readers
-func (e *engine) MergeReaders(ctx context.Context, readers []io.Reader, opts MergeOptions) (Document, error) {
-	docs := make([]Document, 0, len(readers))
-	
-	for _, reader := range readers {
-		doc, err := parseDocument(reader)
-		if err != nil {
-			return nil, err
-		}
-		docs = append(docs, doc)
-	}
-	
-	return e.Merge(ctx, docs, opts)
-}
-
-// MergeFiles merges documents from files
-func (e *engine) MergeFiles(ctx context.Context, paths []string, opts MergeOptions) (Document, error) {
-	// Implementation will use MergeReaders after opening files
-	// Placeholder for now
-	return nil, fmt.Errorf("not implemented")
-}
-
-// Evaluate evaluates graft operators in a document
-func (e *engine) Evaluate(ctx context.Context, doc Document) (Document, error) {
-	// Document is already map[interface{}]interface{}
-	evaluator := e.createEvaluator(doc)
-	if err := e.evaluate(ctx, evaluator); err != nil {
-		return nil, err
-	}
-	
-	return evaluator.Tree, nil
-}
-
-// ToJSON converts a document to JSON
-func (e *engine) ToJSON(doc Document, strict bool) ([]byte, error) {
-	// Implementation will handle conversion
-	// Placeholder for now
-	return nil, fmt.Errorf("not implemented")
-}
-
-// ToYAML converts a document to YAML
-func (e *engine) ToYAML(doc Document) ([]byte, error) {
-	// Implementation will handle conversion
-	// Placeholder for now
-	return nil, fmt.Errorf("not implemented")
-}
-
-// Internal methods
-
-func (e *engine) registerDefaultOperators() {
-	// Basic operators are registered through the factory
-	// This is kept minimal to avoid circular dependencies
-	// Use NewDefaultEngine() from engine_factory.go for full operator set
-}
-
-func (e *engine) initializeVault() {
-	// Initialize vault connection
-	// Implementation will set up e.vaultKV
-}
-
-func (e *engine) initializeAWS() {
-	// Initialize AWS clients
-	// Implementation will set up AWS session and clients
-}
-
-func (e *engine) createEvaluator(t map[interface{}]interface{}) *Evaluator {
-	here, _ := tree.ParseCursor("$")
-	return &Evaluator{
-		Tree: t,
-		Deps: map[string][]tree.Cursor{},
-		Here: here,
-		engine: e,
-	}
-}
-
-func (e *engine) evaluate(ctx context.Context, ev *Evaluator) error {
-	// Set the engine context on the evaluator
-	ev.engine = e
-	
-	// Run evaluation phases
-	for _, phase := range []OperatorPhase{MergePhase, EvalPhase} {
-		if err := ev.RunPhase(phase); err != nil {
-			return err
-		}
-	}
-	
-	return nil
-}
-
-func (e *engine) mergeTwo(a, b map[interface{}]interface{}, opts MergeOptions) (map[interface{}]interface{}, error) {
-	// This will use the merger package
-	// Placeholder for now
-	result := make(map[interface{}]interface{})
-	
-	// Copy from a
-	for k, v := range a {
-		result[k] = v
-	}
-	
-	// Merge from b
-	for k, v := range b {
-		result[k] = v
-	}
-	
-	return result, nil
-}
-
-func (e *engine) pruneKeys(doc map[interface{}]interface{}, keys []string) map[interface{}]interface{} {
-	// Implementation for pruning
-	return doc
-}
-
-func (e *engine) cherryPick(doc map[interface{}]interface{}, keys []string) map[interface{}]interface{} {
-	// Implementation for cherry-picking
-	return doc
-}
-
-func convertToTree(input interface{}) map[interface{}]interface{} {
-	// Convert various document formats to the internal tree format
-	switch v := input.(type) {
-	case map[string]interface{}:
-		result := make(map[interface{}]interface{})
-		for k, val := range v {
-			result[k] = val
-		}
-		return result
-	default:
-		// Return as-is wrapped in a map
-		return map[interface{}]interface{}{"value": input}
-	}
-}
-
-func parseDocument(reader io.Reader) (Document, error) {
-	// Parse YAML/JSON from reader
-	// Placeholder for now
-	return nil, fmt.Errorf("not implemented")
-}
-
-// GetVaultClient returns the vault client (for operators that need it)
-func (e *engine) GetVaultClient() *vaultkv.KV {
+func (e *DefaultEngine) GetVaultClient() *vaultkv.KV {
 	e.vaultMutex.RLock()
 	defer e.vaultMutex.RUnlock()
 	return e.vaultKV
 }
 
-// GetVaultCache returns the vault cache
-func (e *engine) GetVaultCache() map[string]map[string]interface{} {
+func (e *DefaultEngine) GetVaultCache() map[string]map[string]interface{} {
 	// Return a copy to avoid concurrent modification
 	e.vaultMutex.RLock()
 	defer e.vaultMutex.RUnlock()
@@ -365,89 +191,41 @@ func (e *engine) GetVaultCache() map[string]map[string]interface{} {
 	return cache
 }
 
-// SetVaultCache updates the vault cache
-func (e *engine) SetVaultCache(path string, data map[string]interface{}) {
+func (e *DefaultEngine) SetVaultCache(path string, data map[string]interface{}) {
 	e.vaultMutex.Lock()
 	defer e.vaultMutex.Unlock()
 	e.vaultSecretCache[path] = data
 }
 
-// AddVaultRef adds a vault reference
-func (e *engine) AddVaultRef(path string, keys []string) {
+func (e *DefaultEngine) AddVaultRef(path string, keys []string) {
 	e.vaultMutex.Lock()
 	defer e.vaultMutex.Unlock()
 	e.vaultRefs[path] = keys
 }
 
-// GetUsedIPs returns the used IPs map
-func (e *engine) GetUsedIPs() map[string]string {
-	e.ipMutex.RLock()
-	defer e.ipMutex.RUnlock()
-	
-	ips := make(map[string]string)
-	for k, v := range e.usedIPs {
-		ips[k] = v
-	}
-	return ips
-}
-
-// SetUsedIP sets a used IP
-func (e *engine) SetUsedIP(key, ip string) {
-	e.ipMutex.Lock()
-	defer e.ipMutex.Unlock()
-	e.usedIPs[key] = ip
-}
-
-// AddKeyToPrune adds a key to be pruned
-func (e *engine) AddKeyToPrune(key string) {
-	e.pruneMutex.Lock()
-	defer e.pruneMutex.Unlock()
-	e.keysToPrune = append(e.keysToPrune, key)
-}
-
-// GetKeysToPrune returns keys to prune
-func (e *engine) GetKeysToPrune() []string {
-	e.pruneMutex.RLock()
-	defer e.pruneMutex.RUnlock()
-	
-	keys := make([]string, len(e.keysToPrune))
-	copy(keys, e.keysToPrune)
-	return keys
-}
-
-// IsVaultSkipped returns whether vault operations are skipped
-func (e *engine) IsVaultSkipped() bool {
+func (e *DefaultEngine) IsVaultSkipped() bool {
 	return e.skipVault
 }
 
-// IsAWSSkipped returns whether AWS operations are skipped
-func (e *engine) IsAWSSkipped() bool {
-	return e.skipAws
-}
-
-// GetAWSSession returns the AWS session
-func (e *engine) GetAWSSession() *session.Session {
+func (e *DefaultEngine) GetAWSSession() *session.Session {
 	e.awsMutex.RLock()
 	defer e.awsMutex.RUnlock()
 	return e.awsSession
 }
 
-// GetSecretsManagerClient returns the AWS Secrets Manager client
-func (e *engine) GetSecretsManagerClient() secretsmanageriface.SecretsManagerAPI {
+func (e *DefaultEngine) GetSecretsManagerClient() secretsmanageriface.SecretsManagerAPI {
 	e.awsMutex.RLock()
 	defer e.awsMutex.RUnlock()
 	return e.secretsManagerClient
 }
 
-// GetParameterStoreClient returns the AWS Parameter Store client
-func (e *engine) GetParameterStoreClient() ssmiface.SSMAPI {
+func (e *DefaultEngine) GetParameterStoreClient() ssmiface.SSMAPI {
 	e.awsMutex.RLock()
 	defer e.awsMutex.RUnlock()
 	return e.parameterstoreClient
 }
 
-// GetAWSSecretsCache returns the AWS secrets cache
-func (e *engine) GetAWSSecretsCache() map[string]string {
+func (e *DefaultEngine) GetAWSSecretsCache() map[string]string {
 	e.awsMutex.RLock()
 	defer e.awsMutex.RUnlock()
 	
@@ -458,15 +236,13 @@ func (e *engine) GetAWSSecretsCache() map[string]string {
 	return cache
 }
 
-// SetAWSSecretCache sets a value in the AWS secrets cache
-func (e *engine) SetAWSSecretCache(key, value string) {
+func (e *DefaultEngine) SetAWSSecretCache(key, value string) {
 	e.awsMutex.Lock()
 	defer e.awsMutex.Unlock()
 	e.awsSecretsCache[key] = value
 }
 
-// GetAWSParamsCache returns the AWS parameters cache
-func (e *engine) GetAWSParamsCache() map[string]string {
+func (e *DefaultEngine) GetAWSParamsCache() map[string]string {
 	e.awsMutex.RLock()
 	defer e.awsMutex.RUnlock()
 	
@@ -477,22 +253,55 @@ func (e *engine) GetAWSParamsCache() map[string]string {
 	return cache
 }
 
-// SetAWSParamCache sets a value in the AWS parameters cache
-func (e *engine) SetAWSParamCache(key, value string) {
+func (e *DefaultEngine) SetAWSParamCache(key, value string) {
 	e.awsMutex.Lock()
 	defer e.awsMutex.Unlock()
 	e.awsParamsCache[key] = value
 }
 
-// AddPathToSort adds a path to be sorted
-func (e *engine) AddPathToSort(path, order string) {
+func (e *DefaultEngine) IsAWSSkipped() bool {
+	return e.skipAws
+}
+
+func (e *DefaultEngine) GetUsedIPs() map[string]string {
+	e.ipMutex.RLock()
+	defer e.ipMutex.RUnlock()
+	
+	ips := make(map[string]string)
+	for k, v := range e.usedIPs {
+		ips[k] = v
+	}
+	return ips
+}
+
+func (e *DefaultEngine) SetUsedIP(key, ip string) {
+	e.ipMutex.Lock()
+	defer e.ipMutex.Unlock()
+	e.usedIPs[key] = ip
+}
+
+func (e *DefaultEngine) AddKeyToPrune(key string) {
+	e.pruneMutex.Lock()
+	defer e.pruneMutex.Unlock()
+	e.keysToPrune = append(e.keysToPrune, key)
+}
+
+func (e *DefaultEngine) GetKeysToPrune() []string {
+	e.pruneMutex.RLock()
+	defer e.pruneMutex.RUnlock()
+	
+	keys := make([]string, len(e.keysToPrune))
+	copy(keys, e.keysToPrune)
+	return keys
+}
+
+func (e *DefaultEngine) AddPathToSort(path, order string) {
 	e.sortMutex.Lock()
 	defer e.sortMutex.Unlock()
 	e.pathsToSort[path] = order
 }
 
-// GetPathsToSort returns paths to sort
-func (e *engine) GetPathsToSort() map[string]string {
+func (e *DefaultEngine) GetPathsToSort() map[string]string {
 	e.sortMutex.RLock()
 	defer e.sortMutex.RUnlock()
 	
@@ -501,4 +310,238 @@ func (e *engine) GetPathsToSort() map[string]string {
 		paths[k] = v
 	}
 	return paths
+}
+
+// Internal methods
+
+func (e *DefaultEngine) registerDefaultOperators() {
+	// Basic operators are registered through the factory
+	// This is kept minimal to avoid circular dependencies
+	// Use factory.NewDefaultEngine() for full operator set
+}
+
+func (e *DefaultEngine) initializeVault() {
+	// Initialize vault connection
+	// Implementation will set up e.vaultKV
+}
+
+func (e *DefaultEngine) initializeAWS() {
+	// Initialize AWS clients
+	// Implementation will set up AWS session and clients
+}
+
+func (e *DefaultEngine) createEvaluator(t map[interface{}]interface{}) *Evaluator {
+	here, _ := tree.ParseCursor("$")
+	return &Evaluator{
+		Tree: t,
+		Deps: map[string][]tree.Cursor{},
+		Here: here,
+		engine: e,
+	}
+}
+
+func (e *DefaultEngine) evaluate(ctx context.Context, ev *Evaluator) error {
+	// Set the engine context on the evaluator - use the EngineContext interface
+	ev.engine = EngineContext(e)
+	
+	// Run evaluation phases
+	for _, phase := range []OperatorPhase{MergePhase, EvalPhase} {
+		if err := ev.RunPhase(phase); err != nil {
+			return err
+		}
+	}
+	
+	return nil
+}
+
+// Implement Engine interface methods
+
+// ParseYAML parses YAML data into a Document
+func (e *DefaultEngine) ParseYAML(data []byte) (Document, error) {
+	// Enhanced parser is now always used through the standard path
+	
+	// Fall back to standard YAML parsing
+	var result map[interface{}]interface{}
+	err := yaml.Unmarshal(data, &result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+	}
+	
+	if result == nil {
+		result = make(map[interface{}]interface{})
+	}
+	
+	return NewDocument(result), nil
+}
+
+// ParseJSON parses JSON data into a Document
+func (e *DefaultEngine) ParseJSON(data []byte) (Document, error) {
+	// Implementation will be added
+	return nil, fmt.Errorf("not implemented")
+}
+
+// ParseFile parses a file into a Document
+func (e *DefaultEngine) ParseFile(path string) (Document, error) {
+	// Implementation will be added
+	return nil, fmt.Errorf("not implemented")
+}
+
+// ParseReader parses data from a reader into a Document
+func (e *DefaultEngine) ParseReader(reader io.Reader) (Document, error) {
+	// Implementation will be added
+	return nil, fmt.Errorf("not implemented")
+}
+
+// Merge creates a new merge builder for combining documents
+func (e *DefaultEngine) Merge(ctx context.Context, docs ...Document) MergeBuilder {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	
+	return &mergeBuilderImpl{
+		engine: e,
+		ctx:    ctx,
+		docs:   docs,
+	}
+}
+
+// MergeFiles creates a merge builder for files
+func (e *DefaultEngine) MergeFiles(ctx context.Context, paths ...string) MergeBuilder {
+	// Implementation will be added
+	return nil
+}
+
+// MergeReaders creates a merge builder for readers
+func (e *DefaultEngine) MergeReaders(ctx context.Context, readers ...io.Reader) MergeBuilder {
+	// Implementation will be added
+	return nil
+}
+
+// Evaluate processes operators in a document
+func (e *DefaultEngine) Evaluate(ctx context.Context, doc Document) (Document, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	
+	// Get the raw data
+	data, ok := doc.RawData().(map[interface{}]interface{})
+	if !ok {
+		return nil, fmt.Errorf("document data is not a map")
+	}
+	
+	// Create evaluator
+	ev := e.createEvaluator(data)
+	
+	// Run evaluation
+	err := e.evaluate(ctx, ev)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Return evaluated document
+	return NewDocument(ev.Tree), nil
+}
+
+// ToYAML converts a document to YAML bytes
+func (e *DefaultEngine) ToYAML(doc Document) ([]byte, error) {
+	// Implementation will be added
+	return nil, fmt.Errorf("not implemented")
+}
+
+// ToJSON converts a document to JSON bytes
+func (e *DefaultEngine) ToJSON(doc Document) ([]byte, error) {
+	// Implementation will be added
+	return nil, fmt.Errorf("not implemented")
+}
+
+// ToJSONIndent converts a document to indented JSON bytes
+func (e *DefaultEngine) ToJSONIndent(doc Document, indent string) ([]byte, error) {
+	// Implementation will be added
+	return nil, fmt.Errorf("not implemented")
+}
+
+// UnregisterOperator removes a custom operator
+func (e *DefaultEngine) UnregisterOperator(name string) error {
+	e.opMutex.Lock()
+	defer e.opMutex.Unlock()
+	
+	delete(e.operators, name)
+	return nil
+}
+
+// ListOperators returns all available operators
+func (e *DefaultEngine) ListOperators() []string {
+	e.opMutex.RLock()
+	defer e.opMutex.RUnlock()
+	
+	names := make([]string, 0, len(e.operators)+len(OpRegistry))
+	
+	// Add engine-specific operators
+	for name := range e.operators {
+		names = append(names, name)
+	}
+	
+	// Add global operators
+	for name := range OpRegistry {
+		// Check if not already in the list
+		found := false
+		for _, existing := range names {
+			if existing == name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			names = append(names, name)
+		}
+	}
+	
+	return names
+}
+
+// WithLogger sets a new logger (returns new engine instance)
+func (e *DefaultEngine) WithLogger(logger Logger) Engine {
+	// For now, return self as logging is not implemented yet
+	return e
+}
+
+// WithVaultClient sets a new vault client (returns new engine instance)
+func (e *DefaultEngine) WithVaultClient(client VaultClient) Engine {
+	// For now, return self as custom vault client is not implemented yet
+	return e
+}
+
+// WithAWSConfig sets AWS configuration (returns new engine instance)
+func (e *DefaultEngine) WithAWSConfig(config AWSConfig) Engine {
+	// For now, return self as AWS config is not fully implemented yet
+	return e
+}
+
+// createEngineFromOptions creates an engine from EngineOptions (used by api.go)
+func createEngineFromOptions(opts *EngineOptions) (Engine, error) {
+	// Create engine config from options
+	config := EngineConfig{
+		VaultAddr:         opts.VaultAddress,
+		VaultToken:        opts.VaultToken,
+		AWSRegion:         opts.AWSRegion,
+		UseEnhancedParser: opts.UseEnhancedParser,
+		EnableCaching:     opts.EnableCache,
+		CacheSize:         opts.CacheSize,
+		EnableParallel:    opts.MaxConcurrency > 1,
+		MaxWorkers:        opts.MaxConcurrency,
+	}
+	
+	// Create the engine
+	engine := NewDefaultEngineWithConfig(config)
+	
+	// Register custom operators if any
+	if opts.CustomOperators != nil {
+		for name, op := range opts.CustomOperators {
+			if err := engine.RegisterOperator(name, op); err != nil {
+				return nil, err
+			}
+		}
+	}
+	
+	return engine, nil
 }

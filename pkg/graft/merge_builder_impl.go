@@ -8,15 +8,16 @@ import (
 
 // mergeBuilderImpl implements the MergeBuilder interface
 type mergeBuilderImpl struct {
-	engine         EngineContext
-	ctx            context.Context
-	docs           []DocumentV2
-	pruneKeys      []string
-	cherryPickKeys []string
-	skipEvaluation bool
-	goPatch        bool
-	fallbackAppend bool
-	error          error // Stores any error from construction
+	engine           Engine
+	ctx              context.Context
+	docs             []Document
+	pruneKeys        []string
+	cherryPickKeys   []string
+	skipEvaluation   bool
+	goPatch          bool
+	fallbackAppend   bool
+	arrayStrategy    ArrayMergeStrategy
+	error            error // Stores any error from construction
 }
 
 // WithPrune adds keys to remove from the final output
@@ -71,11 +72,27 @@ func (m *mergeBuilderImpl) FallbackAppend() MergeBuilder {
 	
 	newBuilder := *m // Copy the builder
 	newBuilder.fallbackAppend = true
+	newBuilder.arrayStrategy = AppendArrays
+	return &newBuilder
+}
+
+// WithArrayMergeStrategy sets how arrays are merged
+func (m *mergeBuilderImpl) WithArrayMergeStrategy(strategy ArrayMergeStrategy) MergeBuilder {
+	if m.error != nil {
+		return m // Propagate error
+	}
+	
+	newBuilder := *m // Copy the builder
+	newBuilder.arrayStrategy = strategy
+	// Update fallbackAppend based on strategy
+	if strategy == AppendArrays {
+		newBuilder.fallbackAppend = true
+	}
 	return &newBuilder
 }
 
 // Execute performs the merge operation
-func (m *mergeBuilderImpl) Execute() (DocumentV2, error) {
+func (m *mergeBuilderImpl) Execute() (Document, error) {
 	// Check for construction errors first
 	if m.error != nil {
 		return nil, m.error
@@ -90,7 +107,7 @@ func (m *mergeBuilderImpl) Execute() (DocumentV2, error) {
 
 	// Handle empty document list
 	if len(m.docs) == 0 {
-		return NewDocumentV2(make(map[interface{}]interface{})), nil
+		return NewDocument(make(map[interface{}]interface{})), nil
 	}
 
 	// Handle single document case
@@ -109,7 +126,7 @@ func (m *mergeBuilderImpl) Execute() (DocumentV2, error) {
 }
 
 // mergeDocuments performs the actual document merging
-func (m *mergeBuilderImpl) mergeDocuments() (DocumentV2, error) {
+func (m *mergeBuilderImpl) mergeDocuments() (Document, error) {
 	// Start with the first document as base
 	baseData := m.docs[0].RawData().(map[interface{}]interface{})
 	result := deepCopyMap(baseData)
@@ -130,7 +147,7 @@ func (m *mergeBuilderImpl) mergeDocuments() (DocumentV2, error) {
 		}
 	}
 
-	return NewDocumentV2(result), nil
+	return NewDocument(result), nil
 }
 
 // mergeInto merges overlay data into base data
@@ -202,7 +219,7 @@ func (m *mergeBuilderImpl) mergeValues(base, overlay interface{}) (interface{}, 
 }
 
 // applyPostProcessing applies pruning, cherry-picking, and evaluation
-func (m *mergeBuilderImpl) applyPostProcessing(doc DocumentV2) (DocumentV2, error) {
+func (m *mergeBuilderImpl) applyPostProcessing(doc Document) (Document, error) {
 	result := doc
 
 	// Apply pruning
@@ -236,7 +253,7 @@ func (m *mergeBuilderImpl) applyPostProcessing(doc DocumentV2) (DocumentV2, erro
 }
 
 // applyPruning removes specified keys from the document
-func (m *mergeBuilderImpl) applyPruning(doc DocumentV2) (DocumentV2, error) {
+func (m *mergeBuilderImpl) applyPruning(doc Document) (Document, error) {
 	data := doc.RawData().(map[interface{}]interface{})
 	result := deepCopyMap(data)
 
@@ -248,11 +265,11 @@ func (m *mergeBuilderImpl) applyPruning(doc DocumentV2) (DocumentV2, error) {
 		}
 	}
 
-	return NewDocumentV2(result), nil
+	return NewDocument(result), nil
 }
 
 // applyCherryPicking keeps only specified keys in the document
-func (m *mergeBuilderImpl) applyCherryPicking(doc DocumentV2) (DocumentV2, error) {
+func (m *mergeBuilderImpl) applyCherryPicking(doc Document) (Document, error) {
 	data := doc.RawData().(map[interface{}]interface{})
 	result := make(map[interface{}]interface{})
 
@@ -268,11 +285,11 @@ func (m *mergeBuilderImpl) applyCherryPicking(doc DocumentV2) (DocumentV2, error
 		}
 	}
 
-	return NewDocumentV2(result), nil
+	return NewDocument(result), nil
 }
 
 // applyEvaluation runs operator evaluation on the document
-func (m *mergeBuilderImpl) applyEvaluation(doc DocumentV2) (DocumentV2, error) {
+func (m *mergeBuilderImpl) applyEvaluation(doc Document) (Document, error) {
 	data := doc.RawData().(map[interface{}]interface{})
 	
 	// Create evaluator
@@ -288,7 +305,7 @@ func (m *mergeBuilderImpl) applyEvaluation(doc DocumentV2) (DocumentV2, error) {
 		return nil, NewEvaluationError("", "failed to evaluate merged document", err)
 	}
 
-	return NewDocumentV2(evaluator.Tree), nil
+	return NewDocument(evaluator.Tree), nil
 }
 
 // Helper functions for key manipulation

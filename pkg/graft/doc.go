@@ -13,10 +13,10 @@ Graft enables powerful document manipulation through:
 
 # Quick Start
 
-The primary entry point is the EngineV2 interface, which provides all
+The primary entry point is the Engine interface, which provides all
 document processing capabilities:
 
-	engine, err := graft.NewEngineV2()
+	engine, err := graft.NewEngine()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -97,7 +97,7 @@ Graft provides structured error types for precise error handling:
 
 Configure the engine with functional options:
 
-	engine, err := NewEngineV2(
+	engine, err := NewEngine(
 		WithConcurrency(10),
 		WithCache(true, 1000),
 		WithVaultConfig("https://vault.example.com", "token"),
@@ -130,7 +130,7 @@ Graft provides comprehensive testing utilities:
 
 ## Vault Integration
 
-	engine, err := NewEngineV2(
+	engine, err := NewEngine(
 		WithVaultConfig("https://vault.company.com", vaultToken),
 	)
 
@@ -143,7 +143,7 @@ Graft provides comprehensive testing utilities:
 
 ## AWS Integration
 
-	engine, err := NewEngineV2(
+	engine, err := NewEngine(
 		WithAWSRegion("us-west-2"),
 	)
 
@@ -158,7 +158,7 @@ Graft provides comprehensive testing utilities:
 
 For high-performance scenarios:
 
-	engine, err := NewEngineV2(
+	engine, err := NewEngine(
 		WithConcurrency(runtime.NumCPU()),
 		WithCache(true, 10000),
 		WithEnhancedParser(true),
