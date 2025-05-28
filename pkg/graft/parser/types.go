@@ -2,7 +2,9 @@ package parser
 
 import (
 	"fmt"
+	"unsafe"
 	"github.com/wayneeseguin/graft/pkg/graft"
+	"github.com/starkandwayne/goutils/tree"
 )
 
 // OperatorRegistry holds operator metadata for the parser
@@ -233,11 +235,40 @@ func NewOperatorCall(op string, args []*graft.Expr) *graft.Expr {
 // NewOperatorCallWithPos creates a new operator call expression with position
 func NewOperatorCallWithPos(op string, args []*graft.Expr, pos graft.Position) *graft.Expr {
 	expr := &graft.Expr{
-		Type: graft.OperatorCall,
-		Name: op,
-		Pos:  pos,
+		Type:     graft.OperatorCall,
+		Name:     op,
+		Operator: op,  // Set both Name and Operator for compatibility
+		Pos:      pos,
 	}
-	expr.SetArgs(args)
+	
+	// Create a minimal Opcall structure to store args
+	// We use reflection to set the private args field
+	opcall := &graft.Opcall{}
+	
+	// Use a type assertion and struct literal to create opcall with args
+	// This is a workaround since we can't access private fields directly
+	type opcallWithArgs struct {
+		src       string
+		where     *tree.Cursor
+		canonical *tree.Cursor
+		op        graft.Operator
+		args      []*graft.Expr
+	}
+	
+	// Create a new opcall with args set
+	opcallPtr := (*opcallWithArgs)(unsafe.Pointer(opcall))
+	opcallPtr.args = args
+	
+	expr.Call = opcall
+	
+	// Also set Left/Right for backward compatibility
+	if len(args) >= 1 {
+		expr.Left = args[0]
+	}
+	if len(args) >= 2 {
+		expr.Right = args[1]
+	}
+	
 	return expr
 }
 

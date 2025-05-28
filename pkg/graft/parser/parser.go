@@ -297,6 +297,29 @@ func (p *Parser) parsePrimary() (*Expr, error) {
 		return p.parseLiteral(token.Value, p.tokenPosition(token))
 		
 	case TokenReference:
+		// Check if this is actually an operator
+		if _, ok := p.registry.Get(token.Value); ok {
+			// It's an operator, check if it has arguments
+			nextToken := p.peek()
+			if nextToken.Type == TokenCloseParen || nextToken.Type == TokenComma || 
+			   nextToken.Type == TokenEOF || p.isBinaryOperatorToken(nextToken.Type) {
+				// No arguments follow, treat as reference
+				p.advance()
+				cursor, err := tree.ParseCursor(token.Value)
+				if err != nil {
+					return nil, p.syntaxError(fmt.Sprintf("invalid reference '%s': %v", token.Value, err), p.tokenPosition(token))
+				}
+				return &Expr{
+					Type:      Reference,
+					Reference: cursor,
+					Pos:       p.tokenPosition(token),
+				}, nil
+			}
+			// Has arguments, parse as operator call
+			return p.parseOperatorCall()
+		}
+		
+		// Not an operator, parse as reference
 		p.advance()
 		cursor, err := tree.ParseCursor(token.Value)
 		if err != nil {
@@ -363,7 +386,23 @@ func (p *Parser) parsePrimary() (*Expr, error) {
 			}, nil
 		}
 		
-		return p.parseOperatorCall()
+		// Check if this is a registered operator
+		if _, ok := p.registry.Get(token.Value); ok {
+			// It's a registered operator, parse as operator call
+			return p.parseOperatorCall()
+		}
+		
+		// Otherwise treat as reference
+		p.advance()
+		cursor, err := tree.ParseCursor(token.Value)
+		if err != nil {
+			return nil, p.syntaxError(fmt.Sprintf("invalid reference '%s': %v", token.Value, err), p.tokenPosition(token))
+		}
+		return &Expr{
+			Type:      Reference,
+			Reference: cursor,
+			Pos:       p.tokenPosition(token),
+		}, nil
 		
 	case TokenMinus:
 		// This could be a negative number or a minus operator
@@ -397,7 +436,7 @@ func (p *Parser) parseOperatorCall() (*Expr, error) {
 	
 	// Map token types to operator names
 	switch token.Type {
-	case TokenOperator:
+	case TokenOperator, TokenReference:
 		opName = token.Value
 	case TokenPlus:
 		opName = "+"
@@ -421,6 +460,7 @@ func (p *Parser) parseOperatorCall() (*Expr, error) {
 	if !ok {
 		return nil, p.syntaxError(fmt.Sprintf("unknown operator '%s'", baseOpName), p.tokenPosition(token))
 	}
+	DEBUG("parser: parseOperatorCall for '%s', MinArgs=%d, MaxArgs=%d", baseOpName, opInfo.MinArgs, opInfo.MaxArgs)
 	
 	p.advance() // consume operator
 	
@@ -464,9 +504,11 @@ func (p *Parser) parseOperatorCall() (*Expr, error) {
 	} else {
 		// Parse space-separated arguments until we hit something that ends the operator
 		argIndex := 0
+		DEBUG("parser: parseOperatorCall parsing args, isAtEnd=%v, current=%d, len=%d", p.isAtEnd(), p.current, len(p.tokens))
 		for !p.isAtEnd() {
 			// Check if we've hit something that ends the operator call
 			token := p.currentToken()
+			DEBUG("parser: parseOperatorCall checking token type=%v value=%q", token.Type, token.Value)
 			if token.Type == TokenLogicalOr || token.Type == TokenCloseParen || token.Type == TokenComma {
 				break
 			}
@@ -497,6 +539,12 @@ func (p *Parser) parseOperatorCall() (*Expr, error) {
 			
 			args = append(args, arg)
 			argIndex++
+			
+			// Check if we've reached the maximum number of arguments
+			if opInfo.MaxArgs >= 0 && len(args) >= opInfo.MaxArgs {
+				DEBUG("parser: parseOperatorCall reached MaxArgs limit for '%s', stopping at %d args", baseOpName, len(args))
+				break
+			}
 			
 			// Continue parsing space-separated arguments
 		}

@@ -10,6 +10,11 @@ import (
 func TestParserMemoization(t *testing.T) {
 	Convey("Parser Memoization", t, func() {
 		registry := NewOperatorRegistry()
+		registry.Register(&OperatorInfo{
+			Name: "grab",
+			MinArgs: 1,
+			MaxArgs: 2,
+		})
 		
 		Convey("Basic expression caching", func() {
 			cache := NewParserMemoizationCache(100, time.Minute)

@@ -12,7 +12,9 @@ func TestTokenizer(t *testing.T) {
 			Convey("should tokenize simple operator call", func() {
 				tokens := TokenizeExpression(`grab defaults.password`)
 				So(len(tokens), ShouldEqual, 2)
-				So(tokens[0].Type, ShouldEqual, TokenOperator)
+				// Note: operators without global registration are tokenized as references
+				// The parser handles converting them to operator calls
+				So(tokens[0].Type, ShouldEqual, TokenReference)
 				So(tokens[0].Value, ShouldEqual, "grab")
 				So(tokens[1].Type, ShouldEqual, TokenReference)
 				So(tokens[1].Value, ShouldEqual, "defaults.password")
@@ -120,7 +122,7 @@ func TestTokenizer(t *testing.T) {
 				So(tokens[0].Type, ShouldEqual, TokenLiteral)
 				So(tokens[0].Value, ShouldEqual, `"secret:pass"`)
 				So(tokens[1].Type, ShouldEqual, TokenLogicalOr)
-				So(tokens[2].Type, ShouldEqual, TokenOperator)
+				So(tokens[2].Type, ShouldEqual, TokenReference)
 				So(tokens[2].Value, ShouldEqual, "grab")
 				So(tokens[3].Type, ShouldEqual, TokenReference)
 				So(tokens[3].Value, ShouldEqual, "defaults.password")
@@ -132,11 +134,11 @@ func TestTokenizer(t *testing.T) {
 				So(tokens[0].Type, ShouldEqual, TokenLiteral)
 				So(tokens[1].Type, ShouldEqual, TokenLogicalOr)
 				So(tokens[2].Type, ShouldEqual, TokenOpenParen)
-				So(tokens[3].Type, ShouldEqual, TokenOperator)
+				So(tokens[3].Type, ShouldEqual, TokenReference)
 				So(tokens[3].Value, ShouldEqual, "grab")
 				So(tokens[4].Type, ShouldEqual, TokenReference)
 				So(tokens[5].Type, ShouldEqual, TokenLogicalOr)
-				So(tokens[6].Type, ShouldEqual, TokenOperator)
+				So(tokens[6].Type, ShouldEqual, TokenReference)
 				So(tokens[6].Value, ShouldEqual, "concat")
 				So(tokens[7].Type, ShouldEqual, TokenReference)
 				So(tokens[8].Type, ShouldEqual, TokenReference)
