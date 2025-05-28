@@ -7,7 +7,7 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// KeysOperator is an enhanced version that supports nested expressions
+// KeysOperator handles nested operator calls
 type KeysOperator struct{}
 
 // Setup ...

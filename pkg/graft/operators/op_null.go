@@ -6,7 +6,7 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// NullOperator is an enhanced version that supports nested expressions
+// NullOperator handles nested operator calls
 type NullOperator struct {
 	Missing string
 }

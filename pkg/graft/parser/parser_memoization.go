@@ -202,15 +202,15 @@ func (c *ParserMemoizationCache) CleanupExpired() {
 	}
 }
 
-// MemoizedEnhancedParser wraps EnhancedParser with memoization
-type MemoizedEnhancedParser struct {
-	*EnhancedParser
+// MemoizedParser wraps Parser with memoization
+type MemoizedParser struct {
+	*Parser
 	cache *ParserMemoizationCache
 	input string
 }
 
-// NewMemoizedEnhancedParser creates a parser with memoization
-func NewMemoizedEnhancedParser(input string, registry *OperatorRegistry) *MemoizedEnhancedParser {
+// NewMemoizedParser creates a parser with memoization
+func NewMemoizedParser(input string, registry *OperatorRegistry) *MemoizedParser {
 	// Check cache for tokens first
 	cache := GlobalParserCache
 	key := cache.CacheKey(input, registry)
@@ -220,22 +220,22 @@ func NewMemoizedEnhancedParser(input string, registry *OperatorRegistry) *Memoiz
 		tokens = cachedTokens
 	} else {
 		// Tokenize and cache
-		tokenizer := NewEnhancedTokenizer(input)
+		tokenizer := NewTokenizer(input)
 		tokens = tokenizer.Tokenize()
 		cache.SetTokens(key, tokens)
 	}
 	
-	parser := NewEnhancedParser(tokens, registry)
+	parser := NewParser(tokens, registry)
 	
-	return &MemoizedEnhancedParser{
-		EnhancedParser: parser,
+	return &MemoizedParser{
+		Parser: parser,
 		cache:          cache,
 		input:          input,
 	}
 }
 
 // Parse parses with memoization
-func (mp *MemoizedEnhancedParser) Parse() (*Expr, error) {
+func (mp *MemoizedParser) Parse() (*Expr, error) {
 	// Generate cache key
 	key := mp.cache.CacheKey(mp.input, mp.registry)
 	
@@ -245,7 +245,7 @@ func (mp *MemoizedEnhancedParser) Parse() (*Expr, error) {
 	}
 	
 	// Parse normally
-	expr, err := mp.EnhancedParser.Parse()
+	expr, err := mp.Parser.Parse()
 	if err != nil {
 		return nil, err
 	}
@@ -257,9 +257,9 @@ func (mp *MemoizedEnhancedParser) Parse() (*Expr, error) {
 }
 
 // WithMemoization configures an existing parser to use memoization
-func (p *EnhancedParser) WithMemoization(input string) *MemoizedEnhancedParser {
-	return &MemoizedEnhancedParser{
-		EnhancedParser: p,
+func (p *Parser) WithMemoization(input string) *MemoizedParser {
+	return &MemoizedParser{
+		Parser: p,
 		cache:          GlobalParserCache,
 		input:          input,
 	}

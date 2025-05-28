@@ -7,14 +7,14 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestEnhancedRemainingOperators(t *testing.T) {
-	Convey("Enhanced Remaining Operators", t, func() {
-		// Enable enhanced parser for these tests
-		oldUseEnhanced := UseEnhancedParser
-		EnableEnhancedParser()
+func TestRemainingOperators(t *testing.T) {
+	Convey(" Remaining Operators", t, func() {
+		// Enable  parser for these tests
+		oldUse := true
+		// Enhanced parser is now the default
 		defer func() {
-			if !oldUseEnhanced {
-				DisableEnhancedParser()
+			if !oldUse {
+				// Enhanced parser is now the default
 			}
 		}()
 
@@ -269,7 +269,7 @@ result: (( param (concat meta.param_prefix meta.param_name) ))
 				So(err, ShouldNotBeNil)
 				So(err.Error(), ShouldContainSubstring, "unresolved parameter")
 				// Note: In ParamPhase, nested operators might not evaluate fully
-				// but the enhanced param operator should still try to resolve what it can
+				// but the  param operator should still try to resolve what it can
 			})
 		})
 

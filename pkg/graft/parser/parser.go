@@ -8,8 +8,8 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// EnhancedParser implements a precedence-climbing parser for Graft expressions
-type EnhancedParser struct {
+// Parser implements a precedence-climbing parser for Graft expressions
+type Parser struct {
 	tokens   []Token
 	current  int
 	registry *OperatorRegistry
@@ -17,8 +17,8 @@ type EnhancedParser struct {
 	errors   *ErrorRecoveryContext
 }
 
-// NewEnhancedParser creates a new parser with the given tokens
-func NewEnhancedParser(tokens []Token, registry *OperatorRegistry) *EnhancedParser {
+// NewParser creates a new parser with the given tokens
+func NewParser(tokens []Token, registry *OperatorRegistry) *Parser {
 	// Check if error collection is enabled
 	collectErrors := os.Getenv("GRAFT_COLLECT_ERRORS") == "1"
 	maxErrors := 10
@@ -26,7 +26,7 @@ func NewEnhancedParser(tokens []Token, registry *OperatorRegistry) *EnhancedPars
 		maxErrors = 1
 	}
 	
-	return &EnhancedParser{
+	return &Parser{
 		tokens:   tokens,
 		current:  0,
 		registry: registry,
@@ -35,13 +35,13 @@ func NewEnhancedParser(tokens []Token, registry *OperatorRegistry) *EnhancedPars
 }
 
 // WithSource sets the source code for better error messages
-func (p *EnhancedParser) WithSource(source string) *EnhancedParser {
+func (p *Parser) WithSource(source string) *Parser {
 	p.source = source
 	return p
 }
 
 // WithErrorRecovery configures error recovery behavior
-func (p *EnhancedParser) WithErrorRecovery(stopOnFirst bool, maxErrors int) *EnhancedParser {
+func (p *Parser) WithErrorRecovery(stopOnFirst bool, maxErrors int) *Parser {
 	// Phase 1: Create new error context with desired settings
 	if stopOnFirst {
 		p.errors = NewErrorRecoveryContext(1)
@@ -52,14 +52,14 @@ func (p *EnhancedParser) WithErrorRecovery(stopOnFirst bool, maxErrors int) *Enh
 }
 
 // EnableErrorCollection enables collecting multiple errors
-func (p *EnhancedParser) EnableErrorCollection() *EnhancedParser {
+func (p *Parser) EnableErrorCollection() *Parser {
 	// Phase 1: Create new error context with multiple error support
 	p.errors = NewErrorRecoveryContext(10)
 	return p
 }
 
 // Parse parses the tokens into an expression tree
-func (p *EnhancedParser) Parse() (*Expr, error) {
+func (p *Parser) Parse() (*Expr, error) {
 	if len(p.tokens) == 0 {
 		return nil, p.syntaxError("no tokens to parse", Position{Line: 1, Column: 1})
 	}
@@ -91,13 +91,13 @@ func ParseExpression(input string, registry *OperatorRegistry) (*Expr, error) {
 	GlobalPatternTracker.RecordPattern(input)
 	
 	// Use memoized parser
-	parser := NewMemoizedEnhancedParser(input, registry)
+	parser := NewMemoizedParser(input, registry)
 	return parser.Parse()
 }
 
 // ParseMultiple parses multiple space-separated expressions
 // This is used for parsing operator arguments
-func (p *EnhancedParser) ParseMultiple() ([]*Expr, error) {
+func (p *Parser) ParseMultiple() ([]*Expr, error) {
 	if len(p.tokens) == 0 {
 		return []*Expr{}, nil
 	}
@@ -124,7 +124,7 @@ func (p *EnhancedParser) ParseMultiple() ([]*Expr, error) {
 }
 
 // parseExpression parses an expression with precedence climbing
-func (p *EnhancedParser) parseExpression(minPrecedence Precedence) (*Expr, error) {
+func (p *Parser) parseExpression(minPrecedence Precedence) (*Expr, error) {
 	left, err := p.parsePrimary()
 	if err != nil {
 		return nil, err
@@ -284,7 +284,7 @@ func (p *EnhancedParser) parseExpression(minPrecedence Precedence) (*Expr, error
 }
 
 // parsePrimary parses a primary expression (literal, reference, parenthesized, or operator call)
-func (p *EnhancedParser) parsePrimary() (*Expr, error) {
+func (p *Parser) parsePrimary() (*Expr, error) {
 	if p.isAtEnd() {
 		return nil, p.syntaxError("unexpected end of expression", Position{Line: 1, Column: 1})
 	}
@@ -387,7 +387,7 @@ func (p *EnhancedParser) parsePrimary() (*Expr, error) {
 }
 
 // parseOperatorCall parses an operator call like (( grab foo.bar ))
-func (p *EnhancedParser) parseOperatorCall() (*Expr, error) {
+func (p *Parser) parseOperatorCall() (*Expr, error) {
 	if p.isAtEnd() {
 		return nil, p.syntaxError("expected operator", Position{Line: 1, Column: 1})
 	}
@@ -526,7 +526,7 @@ func (p *EnhancedParser) parseOperatorCall() (*Expr, error) {
 }
 
 // parseLiteral parses a literal value (string, number, boolean, null)
-func (p *EnhancedParser) parseLiteral(value string, pos Position) (*Expr, error) {
+func (p *Parser) parseLiteral(value string, pos Position) (*Expr, error) {
 	// Check if it's a quoted string
 	isQuoted := len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"'
 	if isQuoted {
@@ -586,7 +586,7 @@ func (p *EnhancedParser) parseLiteral(value string, pos Position) (*Expr, error)
 }
 
 // isBinaryOperatorToken checks if a token type is a binary operator
-func (p *EnhancedParser) isBinaryOperatorToken(tokType TokenType) bool {
+func (p *Parser) isBinaryOperatorToken(tokType TokenType) bool {
 	switch tokType {
 	case TokenLogicalOr, TokenLogicalAnd, TokenEquals, TokenNotEquals,
 		TokenLessThan, TokenGreaterThan, TokenLessEqual, TokenGreaterEqual,
@@ -598,7 +598,7 @@ func (p *EnhancedParser) isBinaryOperatorToken(tokType TokenType) bool {
 }
 
 // isReferenceExpectingOperator checks if an operator expects references as arguments
-func (p *EnhancedParser) isReferenceExpectingOperator(opName string) bool {
+func (p *Parser) isReferenceExpectingOperator(opName string) bool {
 	switch opName {
 	case "grab", "param", "prune", "static_ips", "ips":
 		return true
@@ -607,7 +607,7 @@ func (p *EnhancedParser) isReferenceExpectingOperator(opName string) bool {
 }
 
 // canBeBinaryOperator checks if an operator can be used as a binary operator in the current context
-func (p *EnhancedParser) canBeBinaryOperator(opInfo *OperatorInfo, left *Expr) bool {
+func (p *Parser) canBeBinaryOperator(opInfo *OperatorInfo, left *Expr) bool {
 	// Check if this is a binary operator
 	switch opInfo.Name {
 	case "||", "&&", "+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">=":
@@ -618,7 +618,7 @@ func (p *EnhancedParser) canBeBinaryOperator(opInfo *OperatorInfo, left *Expr) b
 
 // Helper methods
 
-func (p *EnhancedParser) currentToken() Token {
+func (p *Parser) currentToken() Token {
 	if p.isAtEnd() {
 		return Token{Type: TokenEOF}
 	}
@@ -630,17 +630,17 @@ func (t Token) Position() int {
 	return t.Pos
 }
 
-func (p *EnhancedParser) advance() {
+func (p *Parser) advance() {
 	if !p.isAtEnd() {
 		p.current++
 	}
 }
 
-func (p *EnhancedParser) isAtEnd() bool {
+func (p *Parser) isAtEnd() bool {
 	return p.current >= len(p.tokens)
 }
 
-func (p *EnhancedParser) consume(tokenType TokenType) bool {
+func (p *Parser) consume(tokenType TokenType) bool {
 	if p.isAtEnd() || p.currentToken().Type != tokenType {
 		return false
 	}
@@ -648,7 +648,7 @@ func (p *EnhancedParser) consume(tokenType TokenType) bool {
 	return true
 }
 
-func (p *EnhancedParser) peek() Token {
+func (p *Parser) peek() Token {
 	if p.current+1 >= len(p.tokens) {
 		return Token{Type: TokenEOF}
 	}
@@ -658,14 +658,14 @@ func (p *EnhancedParser) peek() Token {
 // Error handling helpers
 
 // syntaxError creates a syntax error with position information
-func (p *EnhancedParser) syntaxError(msg string, pos Position) error {
+func (p *Parser) syntaxError(msg string, pos Position) error {
 	err := NewSyntaxError(msg, pos)
 	// Phase 1: Return as error interface
 	return err
 }
 
 // tokenPosition converts token position to Position
-func (p *EnhancedParser) tokenPosition(token Token) Position {
+func (p *Parser) tokenPosition(token Token) Position {
 	return Position{
 		Offset: token.Pos,
 		Line:   token.Line,
@@ -674,7 +674,7 @@ func (p *EnhancedParser) tokenPosition(token Token) Position {
 }
 
 // synchronize attempts to recover from a parse error by finding a safe synchronization point
-func (p *EnhancedParser) synchronize() {
+func (p *Parser) synchronize() {
 	p.advance()
 	
 	// Skip tokens until we find a safe stopping point
@@ -697,7 +697,7 @@ func (p *EnhancedParser) synchronize() {
 }
 
 // expectToken checks for an expected token and generates an error if not found
-func (p *EnhancedParser) expectToken(tokenType TokenType, context string) error {
+func (p *Parser) expectToken(tokenType TokenType, context string) error {
 	if p.isAtEnd() {
 		return p.syntaxError(fmt.Sprintf("unexpected end of expression, expected %s %s", tokenTypeString(tokenType), context), 
 			Position{Line: 1, Column: 1})
@@ -714,7 +714,7 @@ func (p *EnhancedParser) expectToken(tokenType TokenType, context string) error 
 }
 
 // parseOperatorModifiers parses operator modifiers like :nocache
-func (p *EnhancedParser) parseOperatorModifiers(opName string) map[string]bool {
+func (p *Parser) parseOperatorModifiers(opName string) map[string]bool {
 	modifiers := make(map[string]bool)
 	
 	// Check if the operator name contains modifiers (format: "operator:modifier1:modifier2")

@@ -1,6 +1,6 @@
 # Expression Operators
 
-These operators enable complex expressions with boolean logic, comparisons, and conditional evaluation. They are available when using the enhanced parser (default in v1.31.0+).
+These operators enable complex expressions with boolean logic, comparisons, and conditional evaluation.
 
 ## Boolean Operators
 

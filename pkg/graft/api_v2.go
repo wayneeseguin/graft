@@ -109,7 +109,7 @@ type EngineOptions struct {
 	EnableCache        bool
 	CacheSize          int
 	MaxConcurrency     int
-	UseEnhancedParser  bool
+	UseEnhancedParser  bool // Deprecated: enhanced parser is now always enabled
 	EnableMetrics      bool
 	CustomOperators    map[string]Operator
 	VaultAddress       string
@@ -157,10 +157,11 @@ func WithConcurrency(max int) EngineOption {
 	}
 }
 
-// WithEnhancedParser enables the enhanced parser
+// WithEnhancedParser is deprecated - the enhanced parser is now the default
+// This option is kept for backward compatibility but has no effect
 func WithEnhancedParser(enabled bool) EngineOption {
 	return func(opts *EngineOptions) {
-		opts.UseEnhancedParser = enabled
+		// No-op - enhanced parser is now always enabled
 	}
 }
 

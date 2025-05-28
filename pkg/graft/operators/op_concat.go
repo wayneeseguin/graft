@@ -8,7 +8,7 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// ConcatOperator is an enhanced version that handles nested operator calls
+// ConcatOperator handles nested operator calls
 type ConcatOperator struct{}
 
 // Setup ...

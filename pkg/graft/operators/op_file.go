@@ -8,7 +8,7 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// FileOperator is an enhanced version that supports nested expressions
+// FileOperator handles nested operator calls
 type FileOperator struct{}
 
 // Setup ...

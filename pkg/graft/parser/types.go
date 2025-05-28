@@ -218,17 +218,12 @@ func createFullOperatorRegistry() *OperatorRegistry {
 	return createOperatorRegistry()
 }
 
-// parseOpcallWithEnhancedParser uses the enhanced parser to parse an operator call
-func parseOpcallWithEnhancedParser(phase graft.OperatorPhase, src string) (*graft.Opcall, error) {
-	// Phase 1: Delegate to ParseOpcallEnhanced
-	return ParseOpcallEnhanced(phase, src)
+// parseOpcallWithParser uses the parser to parse an operator call
+func parseOpcallWithParser(phase graft.OperatorPhase, src string) (*graft.Opcall, error) {
+	// Phase 1: Delegate to ParseOpcall
+	return ParseOpcall(phase, src)
 }
 
-// ParseOpcall is the main entry point for parsing operator calls
-func ParseOpcall(phase graft.OperatorPhase, src string) (*graft.Opcall, error) {
-	// Phase 1: Use the compatibility version
-	return ParseOpcallCompat(phase, src)
-}
 
 // NewOperatorCall creates a new operator call expression
 func NewOperatorCall(op string, args []*graft.Expr) *graft.Expr {

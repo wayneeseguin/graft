@@ -230,7 +230,7 @@ The `(( null ))` operator serves two purposes:
 1. Without arguments: Returns a null value
 2. With an argument: Checks if the value is null, returning true or false
 
-**Note:** This operator is only available when using the enhanced parser (default in v1.31.0+).
+**Note:** The `null` operator provides explicit null value handling.
 
 ### Examples:
 

@@ -1,6 +1,6 @@
 # Negate Operator Examples
 
-The `negate` operator returns the logical NOT of a boolean value. It's the legacy operator for boolean negation (the `!` operator is preferred in the enhanced parser).
+The `negate` operator returns the logical NOT of a boolean value. For more concise syntax, the `!` operator is also available.
 
 ## Files in this directory:
 
@@ -9,13 +9,12 @@ The `negate` operator returns the logical NOT of a boolean value. It's the legac
 3. **inverse-config.yml** - Creating inverse configuration values
 4. **with-conditionals.yml** - Combining with conditional logic
 
-## Key Differences from `!` operator:
+## Key Differences between `negate` and `!`:
 
 - `negate` is a function-style operator: `(( negate value ))`
 - `!` is a prefix operator: `(( ! value ))`
 - Both produce the same result, but `!` is more concise
-- `negate` works in both legacy and enhanced parsers
-- `!` only works in the enhanced parser
+- Both operators are fully supported
 
 ## Usage Patterns:
 
@@ -33,6 +32,11 @@ config:
 features:
   legacy_ui: true
   modern_ui: (( negate features.legacy_ui ))  # false
+
+# Using ! operator (more concise)
+settings:
+  verbose: true
+  quiet: (( ! settings.verbose ))  # false
 ```
 
 ## Running Examples:
@@ -44,6 +48,6 @@ graft merge basic.yml
 # Test with parameters
 graft merge feature-flags.yml <(echo "debug: true")
 
-# Compare with ! operator (enhanced parser)
+# Test conditional logic
 graft merge with-conditionals.yml
 ```

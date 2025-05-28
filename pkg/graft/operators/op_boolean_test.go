@@ -181,7 +181,7 @@ name: test
 empty: ""
 `)}
 
-		Convey("work with enhanced parser", func() {
+		Convey("work with  parser", func() {
 			// Test AND
 			result, err := parseAndEvaluateExpression(ev, `(( enabled && count > 0 ))`)
 			So(err, ShouldBeNil)

@@ -86,6 +86,8 @@ const (
 	EnvVar
 	// BoshVariable reference
 	BoshVar
+	// OperatorCall represents a nested operator call
+	OperatorCall
 )
 
 // Operator interface that all operators must implement
@@ -161,4 +163,149 @@ func (op *Opcall) Run(ev *Evaluator) (*Response, error) {
 		return nil, fmt.Errorf("$.%s: %s", op.where, err)
 	}
 	return r, nil
+}
+
+// IsOperator checks if an expression is an operator call
+func (e *Expr) IsOperator() bool {
+	return e != nil && e.Type == OperatorCall
+}
+
+// IsOperatorNamed checks if an expression is a specific operator
+func (e *Expr) IsOperatorNamed(name string) bool {
+	return e.IsOperator() && e.Operator == name
+}
+
+// GetOperatorName returns the operator name if this is an operator expression
+func (e *Expr) GetOperatorName() string {
+	if e.IsOperator() {
+		return e.Operator
+	}
+	return ""
+}
+
+// Op returns the operator name for compatibility
+func (e *Expr) Op() string {
+	return e.Operator
+}
+
+// Args returns the arguments for an operator call expression
+func (e *Expr) Args() []*Expr {
+	if e.Call != nil {
+		return e.Call.Args()
+	}
+	// For binary operators, return left and right as args
+	if e.Left != nil && e.Right != nil {
+		return []*Expr{e.Left, e.Right}
+	}
+	if e.Left != nil {
+		return []*Expr{e.Left}
+	}
+	return nil
+}
+
+// Dependencies returns the dependencies for this expression
+func (e *Expr) Dependencies(ev *Evaluator, locs []*tree.Cursor) []*tree.Cursor {
+	deps := []*tree.Cursor{}
+	
+	switch e.Type {
+	case Reference:
+		if e.Reference != nil {
+			deps = append(deps, e.Reference)
+		}
+	case OperatorCall:
+		if e.Call != nil {
+			deps = append(deps, e.Call.Dependencies(ev, locs)...)
+		}
+	}
+	
+	// Check left and right expressions
+	if e.Left != nil {
+		deps = append(deps, e.Left.Dependencies(ev, locs)...)
+	}
+	if e.Right != nil {
+		deps = append(deps, e.Right.Dependencies(ev, locs)...)
+	}
+	
+	return deps
+}
+
+// String returns a string representation of the expression
+func (e *Expr) String() string {
+	if e == nil {
+		return "<nil>"
+	}
+	
+	switch e.Type {
+	case Literal:
+		return fmt.Sprintf("%v", e.Literal)
+	case Reference:
+		if e.Reference != nil {
+			return e.Reference.String()
+		}
+		return "<nil reference>"
+	case OperatorCall:
+		return fmt.Sprintf("%s(...)", e.Operator)
+	case EnvVar:
+		return fmt.Sprintf("$%s", e.Name)
+	case BoshVar:
+		return fmt.Sprintf("((%s))", e.Name)
+	case LogicalOr:
+		return fmt.Sprintf("(%s || %s)", e.Left.String(), e.Right.String())
+	case LogicalAnd:
+		return fmt.Sprintf("(%s && %s)", e.Left.String(), e.Right.String())
+	case Addition:
+		return fmt.Sprintf("(%s + %s)", e.Left.String(), e.Right.String())
+	case Subtraction:
+		return fmt.Sprintf("(%s - %s)", e.Left.String(), e.Right.String())
+	case Multiplication:
+		return fmt.Sprintf("(%s * %s)", e.Left.String(), e.Right.String())
+	case Division:
+		return fmt.Sprintf("(%s / %s)", e.Left.String(), e.Right.String())
+	case Modulo:
+		return fmt.Sprintf("(%s %% %s)", e.Left.String(), e.Right.String())
+	case Equal:
+		return fmt.Sprintf("(%s == %s)", e.Left.String(), e.Right.String())
+	case NotEqual:
+		return fmt.Sprintf("(%s != %s)", e.Left.String(), e.Right.String())
+	case LessThan:
+		return fmt.Sprintf("(%s < %s)", e.Left.String(), e.Right.String())
+	case LessThanOrEqual:
+		return fmt.Sprintf("(%s <= %s)", e.Left.String(), e.Right.String())
+	case GreaterThan:
+		return fmt.Sprintf("(%s > %s)", e.Left.String(), e.Right.String())
+	case GreaterThanOrEqual:
+		return fmt.Sprintf("(%s >= %s)", e.Left.String(), e.Right.String())
+	case Negate:
+		return fmt.Sprintf("!%s", e.Left.String())
+	default:
+		return fmt.Sprintf("<unknown type %d>", e.Type)
+	}
+}
+
+// SetArgs sets the arguments for an operator call expression
+func (e *Expr) SetArgs(args []*Expr) {
+	if e.Call != nil {
+		e.Call.args = args
+	}
+}
+
+// Evaluate evaluates the expression against the given tree
+func (e *Expr) Evaluate(tree interface{}) (interface{}, error) {
+	switch e.Type {
+	case Literal:
+		return e.Literal, nil
+	case Reference:
+		if e.Reference != nil {
+			return e.Reference.Resolve(tree)
+		}
+		return nil, fmt.Errorf("nil reference")
+	case EnvVar:
+		// TODO: Implement environment variable lookup
+		return nil, fmt.Errorf("environment variable evaluation not implemented")
+	case OperatorCall:
+		// TODO: Implement operator call evaluation
+		return nil, fmt.Errorf("operator call evaluation not implemented")
+	default:
+		return nil, fmt.Errorf("unsupported expression type for evaluation: %d", e.Type)
+	}
 }

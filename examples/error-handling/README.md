@@ -2,9 +2,9 @@
 
 This directory contains examples that demonstrate Graft's improved error handling capabilities.
 
-## Enhanced Error Messages
+## Error Messages
 
-The enhanced parser provides detailed error messages with:
+The parser provides detailed error messages with:
 
 1. **Error Type Classification**
    - Syntax Error: Problems with expression syntax

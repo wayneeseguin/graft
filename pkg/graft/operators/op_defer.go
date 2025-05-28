@@ -7,7 +7,7 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// DeferOperator is an enhanced version that supports nested expressions
+// DeferOperator handles nested operator calls
 type DeferOperator struct{}
 
 // Setup ...

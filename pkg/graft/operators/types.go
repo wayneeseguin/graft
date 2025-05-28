@@ -121,7 +121,8 @@ func DebugOn() bool {
 
 // UseEnhancedParser returns true if enhanced parser is enabled
 func UseEnhancedParser() bool {
-	return graft.UseEnhancedParser
+	// Enhanced parser is now the default
+	return true
 }
 
 // ParseOpcallEnhanced parses operator call with enhanced parser

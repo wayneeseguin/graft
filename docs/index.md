@@ -105,9 +105,9 @@ Practical guides for common tasks:
 - [FAQ](reference/faq.md)
 - [Troubleshooting](reference/troubleshooting.md)
 
-## Enhanced Parser
+## Advanced Features
 
-As of v1.31.0, graft includes an enhanced parser that supports:
+graft supports:
 - Nested operator expressions
 - Environment variable expansion in references
 - Complex arithmetic and boolean expressions

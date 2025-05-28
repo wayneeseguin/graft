@@ -15,13 +15,13 @@ func TestParserMemoization(t *testing.T) {
 			cache := NewParserMemoizationCache(100, time.Minute)
 			
 			// Parse the same expression twice
-			parser1 := NewMemoizedEnhancedParser("grab meta.key", registry)
+			parser1 := NewMemoizedParser("grab meta.key", registry)
 			parser1.cache = cache
 			expr1, err1 := parser1.Parse()
 			So(err1, ShouldBeNil)
 			So(expr1, ShouldNotBeNil)
 			
-			parser2 := NewMemoizedEnhancedParser("grab meta.key", registry)
+			parser2 := NewMemoizedParser("grab meta.key", registry)
 			parser2.cache = cache
 			expr2, err2 := parser2.Parse()
 			So(err2, ShouldBeNil)
@@ -38,14 +38,14 @@ func TestParserMemoization(t *testing.T) {
 			key := cache.CacheKey("grab meta.key", registry)
 			
 			// First tokenization should cache tokens
-			parser1 := NewMemoizedEnhancedParser("grab meta.key", registry)
+			parser1 := NewMemoizedParser("grab meta.key", registry)
 			parser1.cache = cache
 			
 			// Second parser should use cached tokens
 			tokens, found := cache.GetTokens(key)
 			if !found {
 				// Cache tokens manually for test
-				tokenizer := NewEnhancedTokenizer("grab meta.key")
+				tokenizer := NewTokenizer("grab meta.key")
 				tokens = tokenizer.Tokenize()
 				cache.SetTokens(key, tokens)
 				
@@ -60,15 +60,15 @@ func TestParserMemoization(t *testing.T) {
 			cache := NewParserMemoizationCache(2, time.Minute) // Small cache
 			
 			// Fill cache beyond capacity
-			parser1 := NewMemoizedEnhancedParser("grab meta.key1", registry)
+			parser1 := NewMemoizedParser("grab meta.key1", registry)
 			parser1.cache = cache
 			parser1.Parse()
 			
-			parser2 := NewMemoizedEnhancedParser("grab meta.key2", registry)
+			parser2 := NewMemoizedParser("grab meta.key2", registry)
 			parser2.cache = cache
 			parser2.Parse()
 			
-			parser3 := NewMemoizedEnhancedParser("grab meta.key3", registry)
+			parser3 := NewMemoizedParser("grab meta.key3", registry)
 			parser3.cache = cache
 			parser3.Parse()
 			
@@ -80,7 +80,7 @@ func TestParserMemoization(t *testing.T) {
 		Convey("TTL expiration", func() {
 			cache := NewParserMemoizationCache(100, 10*time.Millisecond) // Short TTL
 			
-			parser := NewMemoizedEnhancedParser("grab meta.key", registry)
+			parser := NewMemoizedParser("grab meta.key", registry)
 			parser.cache = cache
 			parser.Parse()
 			
@@ -163,13 +163,13 @@ func TestParserMemoization(t *testing.T) {
 			
 			complexExpr := `grab meta.environments.production || grab meta.environments.staging`
 			
-			parser1 := NewMemoizedEnhancedParser(complexExpr, registry)
+			parser1 := NewMemoizedParser(complexExpr, registry)
 			parser1.cache = cache
 			expr1, err1 := parser1.Parse()
 			So(err1, ShouldBeNil)
 			So(expr1, ShouldNotBeNil)
 			
-			parser2 := NewMemoizedEnhancedParser(complexExpr, registry)
+			parser2 := NewMemoizedParser(complexExpr, registry)
 			parser2.cache = cache
 			expr2, err2 := parser2.Parse()
 			So(err2, ShouldBeNil)
@@ -196,7 +196,7 @@ func BenchmarkParserMemoization(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			expr := expressions[i%len(expressions)]
-			parser := NewMemoizedEnhancedParser(expr, registry)
+			parser := NewMemoizedParser(expr, registry)
 			parser.cache = cache
 			parser.Parse()
 		}
@@ -209,9 +209,9 @@ func BenchmarkParserMemoization(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			expr := expressions[i%len(expressions)]
-			tokenizer := NewEnhancedTokenizer(expr)
+			tokenizer := NewTokenizer(expr)
 			tokens := tokenizer.Tokenize()
-			parser := NewEnhancedParser(tokens, registry)
+			parser := NewParser(tokens, registry)
 			parser.Parse()
 		}
 	})
@@ -225,7 +225,7 @@ func TestParserMemoizationMemoryUsage(t *testing.T) {
 		// Fill cache with many expressions
 		for i := 0; i < 100; i++ {
 			expr := "grab meta.key" + string(rune(i))
-			parser := NewMemoizedEnhancedParser(expr, registry)
+			parser := NewMemoizedParser(expr, registry)
 			parser.cache = cache
 			parser.Parse()
 		}

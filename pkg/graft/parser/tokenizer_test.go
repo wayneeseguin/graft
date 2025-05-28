@@ -6,8 +6,8 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestEnhancedTokenizer(t *testing.T) {
-	Convey("Enhanced Tokenizer", t, func() {
+func TestTokenizer(t *testing.T) {
+	Convey(" Tokenizer", t, func() {
 		Convey("Basic Tokenization", func() {
 			Convey("should tokenize simple operator call", func() {
 				tokens := TokenizeExpression(`grab defaults.password`)

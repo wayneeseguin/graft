@@ -294,7 +294,7 @@ func splitLoadYamlFile(file string) ([]YamlFile, error) {
 func cmdMergeEval(options mergeOpts) (map[interface{}]interface{}, error) {
 	// Handle parser selection
 	if options.LegacyParser {
-		graft.UseEnhancedParser = false
+		// Enhanced parser is now the default
 	}
 	
 	files := []YamlFile{}
@@ -339,7 +339,7 @@ func cmdMergeEval(options mergeOpts) (map[interface{}]interface{}, error) {
 func cmdFanEval(options mergeOpts) ([]map[interface{}]interface{}, error) {
 	// Handle parser selection
 	if options.LegacyParser {
-		graft.UseEnhancedParser = false
+		// Enhanced parser is now the default
 	}
 	
 	stdinInfo, err := os.Stdin.Stat()

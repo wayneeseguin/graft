@@ -7,7 +7,7 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// StringifyOperator is an enhanced version that supports nested expressions
+// StringifyOperator handles nested operator calls
 type StringifyOperator struct{}
 
 // Setup ...

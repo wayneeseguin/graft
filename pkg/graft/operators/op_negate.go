@@ -6,7 +6,7 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// NegateOperator is an enhanced version that supports nested expressions
+// NegateOperator handles nested operator calls
 type NegateOperator struct{}
 
 // Setup ...

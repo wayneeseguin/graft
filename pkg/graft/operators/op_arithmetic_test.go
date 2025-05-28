@@ -37,8 +37,8 @@ func testArithmeticError(input string, expectedError string) {
 
 func TestArithmeticOperators(t *testing.T) {
 	Convey("Arithmetic Operators", t, func() {
-		// Enable enhanced parser for arithmetic operators
-		// Arithmetic operators require enhanced parser, which should be enabled by default
+		// Enable  parser for arithmetic operators
+		// Arithmetic operators require  parser, which should be enabled by default
 
 		Convey("Addition Operator (+)", func() {
 			Convey("should add two integers", func() {

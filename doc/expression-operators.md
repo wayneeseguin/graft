@@ -15,7 +15,7 @@ This guide covers the enhanced expression operators available in graft, includin
 
 ## Overview
 
-graft's enhanced parser (enabled by default) supports a rich set of operators for building complex expressions:
+graft supports a rich set of operators for building complex expressions:
 
 ```yaml
 # Simple arithmetic
@@ -322,16 +322,7 @@ settings:
 
 ### From Legacy to Enhanced Parser
 
-The enhanced parser is backward compatible, but if you need to use the legacy parser:
-
-```bash
-# Via environment variable
-export GRAFT_LEGACY_PARSER=true
-graft merge file.yml
-
-# Via command line flag
-graft merge --legacy-parser file.yml
-```
+The parser is fully backward compatible with existing graft files.
 
 ### Common Patterns
 

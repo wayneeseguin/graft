@@ -8,7 +8,7 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// JoinOperator is an enhanced version that supports nested expressions
+// JoinOperator handles nested operator calls
 type JoinOperator struct{}
 
 // Setup ...
@@ -23,7 +23,7 @@ func (JoinOperator) Phase() OperatorPhase {
 
 // Dependencies returns the nodes that (( join ... )) requires to be resolved
 func (JoinOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	// For the enhanced version, we can't pre-calculate all dependencies
+	// For the  version, we can't pre-calculate all dependencies
 	// because nested expressions might compute paths dynamically
 	return auto
 }

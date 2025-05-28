@@ -13,8 +13,8 @@ const (
 	testParamPhase = 2
 )
 
-func TestEnhancedParser(t *testing.T) {
-	Convey("Enhanced Parser", t, func() {
+func TestParser(t *testing.T) {
+	Convey(" Parser", t, func() {
 		var registry *OperatorRegistry
 		
 		// Setup registry
@@ -58,10 +58,10 @@ func TestEnhancedParser(t *testing.T) {
 		})
 		
 		parseExpression := func(input string) (*Expr, error) {
-			tokenizer := NewEnhancedTokenizer(input)
+			tokenizer := NewTokenizer(input)
 			tokens := tokenizer.Tokenize()
 			
-			parser := NewEnhancedParser(tokens, registry)
+			parser := NewParser(tokens, registry)
 			return parser.Parse()
 		}
 		

@@ -10,13 +10,13 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// UseEnhancedParser is a feature flag to enable the new parser
+// UseParser is a feature flag to enable the new parser
 // This allows gradual rollout and easy rollback
-// Default is true to use enhanced parser - set to false to use legacy parser
-var UseEnhancedParser = true
+// Default is true to use parser - set to false to use legacy parser
+var UseParser = true
 
-// ParseOpcallEnhanced is the enhanced version of ParseOpcall that uses the new parser
-func ParseOpcallEnhanced(phase OperatorPhase, src string) (*Opcall, error) {
+// ParseOpcall is the enhanced version of ParseOpcall that uses the new parser
+func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 	// Strip outer (( )) markers and validate format
 	originalSrc := src
 	src = strings.TrimSpace(src)
@@ -38,7 +38,7 @@ func ParseOpcallEnhanced(phase OperatorPhase, src string) (*Opcall, error) {
 		return nil, nil
 	}
 	
-	DEBUG("ParseOpcallEnhanced: parsing '%s' (inner: '%s') in phase %v", src, inner, phase)
+	DEBUG("ParseOpcall: parsing '%s' (inner: '%s') in phase %v", src, inner, phase)
 	
 	// Check for special patterns that should be ignored
 	// ((!something)) - spiff-like bang notation
@@ -85,8 +85,8 @@ func ParseOpcallEnhanced(phase OperatorPhase, src string) (*Opcall, error) {
 					return parseOpcallLegacyArgs(op, argStr, src, phase)
 				}
 				
-				// Parse arguments with the enhanced parser
-				args, err := ParseArgumentsEnhanced(phase, argStr)
+				// Parse arguments with the parser
+				args, err := ParseArguments(phase, argStr)
 				if err != nil {
 					return nil, err
 				}
@@ -100,51 +100,51 @@ func ParseOpcallEnhanced(phase OperatorPhase, src string) (*Opcall, error) {
 	// This handles arithmetic expressions, comparisons, etc.
 	registry := createFullOperatorRegistry()
 	
-	tokenizer := NewEnhancedTokenizer(inner)
+	tokenizer := NewTokenizer(inner)
 	tokens := tokenizer.Tokenize()
 	
-	DEBUG("ParseOpcallEnhanced: tokenized '%s' into %d tokens", inner, len(tokens))
+	DEBUG("ParseOpcall: tokenized '%s' into %d tokens", inner, len(tokens))
 	for i, tok := range tokens {
-		DEBUG("ParseOpcallEnhanced:   token[%d]: '%s' (type=%v)", i, tok.Value, tok.Type)
+		DEBUG("ParseOpcall:   token[%d]: '%s' (type=%v)", i, tok.Value, tok.Type)
 	}
 	
 	if len(tokens) == 0 {
 		return nil, nil
 	}
 	
-	parser := NewEnhancedParser(tokens, registry).WithSource(originalSrc)
+	parser := NewParser(tokens, registry).WithSource(originalSrc)
 	expr, err := parser.Parse()
 	if err != nil {
-		DEBUG("ParseOpcallEnhanced: parser.Parse() error: %v", err)
+		DEBUG("ParseOpcall: parser.Parse() error: %v", err)
 		return nil, err
 	}
 	
-	DEBUG("ParseOpcallEnhanced: parsed expression type: %v", expr.Type)
+	DEBUG("ParseOpcall: parsed expression type: %v", expr.Type)
 	
 	// Handle the parsed expression
 	if expr.Type == OperatorCall {
 		// It's an operator call (could be arithmetic, comparison, etc.)
 		opname := expr.Op()
 		args := expr.Args()
-		DEBUG("ParseOpcallEnhanced: operator '%s' with %d args", opname, len(args))
+		DEBUG("ParseOpcall: operator '%s' with %d args", opname, len(args))
 		for i, arg := range args {
-			DEBUG("ParseOpcallEnhanced:   arg[%d]: type=%v, value=%v", i, arg.Type, arg.String())
+			DEBUG("ParseOpcall:   arg[%d]: type=%v, value=%v", i, arg.Type, arg.String())
 		}
 		
 		op := OperatorFor(opname)
 		if _, ok := op.(*NullOperator); ok {
 			// Unknown operator
-			DEBUG("ParseOpcallEnhanced: unknown operator '%s'", opname)
+			DEBUG("ParseOpcall: unknown operator '%s'", opname)
 			return nil, nil
 		}
 		
 		// Check phase
 		if op.Phase() != phase {
-			DEBUG("ParseOpcallEnhanced: operator '%s' is in phase %v, wanted %v", opname, op.Phase(), phase)
+			DEBUG("ParseOpcall: operator '%s' is in phase %v, wanted %v", opname, op.Phase(), phase)
 			return nil, nil
 		}
 		
-		DEBUG("ParseOpcallEnhanced: returning operator '%s' with %d args", opname, len(args))
+		DEBUG("ParseOpcall: returning operator '%s' with %d args", opname, len(args))
 		return graft.NewOpcall(op, args, src), nil
 	}
 	
@@ -165,8 +165,8 @@ func ParseOpcallEnhanced(phase OperatorPhase, src string) (*Opcall, error) {
 	return graft.NewOpcall(&ExpressionWrapperOperator{expr: expr}, []*graft.Expr{}, src), nil
 }
 
-// ParseArgumentsEnhanced parses operator arguments using the enhanced parser
-func ParseArgumentsEnhanced(phase OperatorPhase, src string) ([]*graft.Expr, error) {
+// ParseArguments parses operator arguments using the parser
+func ParseArguments(phase OperatorPhase, src string) ([]*graft.Expr, error) {
 	if src == "" {
 		return []*graft.Expr{}, nil
 	}
@@ -177,11 +177,11 @@ func ParseArgumentsEnhanced(phase OperatorPhase, src string) ([]*graft.Expr, err
 	// For operators like concat that take multiple space-separated arguments,
 	// we can now use ParseMultiple to handle them properly
 	
-	// Use the enhanced parser to parse multiple arguments
-	tokenizer := NewEnhancedTokenizer(src)
+	// Use the parser to parse multiple arguments
+	tokenizer := NewTokenizer(src)
 	tokens := tokenizer.Tokenize()
 	
-	parser := NewEnhancedParser(tokens, registry).WithSource(src)
+	parser := NewParser(tokens, registry).WithSource(src)
 	args, err := parser.ParseMultiple()
 	if err != nil {
 		return nil, err
@@ -271,22 +271,22 @@ func createOperatorRegistry() *OperatorRegistry {
 	return registry
 }
 
-// argifyEnhanced is the enhanced version of argify using the new parser
-func argifyEnhanced(phase OperatorPhase, src string) ([]*graft.Expr, error) {
-	return ParseArgumentsEnhanced(phase, src)
+// argify is the enhanced version of argify using the new parser
+func argify(phase OperatorPhase, src string) ([]*graft.Expr, error) {
+	return ParseArguments(phase, src)
 }
 
-// IntegrateEnhancedParser updates the existing ParseOpcall to optionally use the enhanced parser
+// IntegrateParser updates the existing ParseOpcall to optionally use the parser
 // This is called during initialization if the feature flag is set
-func IntegrateEnhancedParser() {
-	if !UseEnhancedParser {
+func IntegrateParser() {
+	if !UseParser {
 		return
 	}
 	
 	// Override the global ParseOpcall function
 	// This would require making ParseOpcall a variable, which is a bigger change
 	// For now, we'll need to update call sites individually
-	fmt.Fprintf(os.Stderr, "Enhanced parser integration enabled\n")
+	fmt.Fprintf(os.Stderr, " parser integration enabled\n")
 }
 
 // ExpressionWrapperOperator wraps a parsed expression for evaluation

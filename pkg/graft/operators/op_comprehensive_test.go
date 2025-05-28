@@ -11,16 +11,9 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestEnhancedOperatorsComprehensive(t *testing.T) {
-	Convey("Enhanced Operators Comprehensive Test", t, func() {
-		// Enable enhanced parser for these tests
-		oldUseEnhanced := UseEnhancedParser
-		EnableEnhancedParser()
-		defer func() {
-			if !oldUseEnhanced {
-				DisableEnhancedParser()
-			}
-		}()
+func TestOperatorsComprehensive(t *testing.T) {
+	Convey(" Operators Comprehensive Test", t, func() {
+		// Enhanced parser is now the default
 
 		Convey("file operator with nested concat", func() {
 			// Create a temp file

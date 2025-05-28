@@ -7,7 +7,7 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// EmptyOperator is an enhanced version that supports nested expressions
+// EmptyOperator handles nested operator calls
 type EmptyOperator struct{}
 
 // Setup ...

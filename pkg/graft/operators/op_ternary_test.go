@@ -132,7 +132,7 @@ environment: production
 debug: false
 `)}
 
-		Convey("works with enhanced parser", func() {
+		Convey("works with  parser", func() {
 			// Simple ternary
 			result, err := parseAndEvaluateExpression(ev, `(( age >= 18 ? "adult" : "minor" ))`)
 			So(err, ShouldBeNil)

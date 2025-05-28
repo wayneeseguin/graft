@@ -199,8 +199,6 @@ func (pev *ParallelEvaluator) isOperatorThreadSafe(op graft.Operator) bool {
 	switch op.(type) {
 	case *operators.GrabOperator, *operators.ConcatOperator, *operators.JoinOperator:
 		return true
-	case *operators.ConcatOperatorEnhanced, *operators.JoinOperatorEnhanced:
-		return true
 	case *operators.VaultOperator:
 		return true // With proper connection pooling
 	case *operators.CalcOperator:

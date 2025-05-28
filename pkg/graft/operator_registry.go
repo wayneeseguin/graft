@@ -4,67 +4,6 @@ import (
 	"fmt"
 )
 
-// ExprType represents the type of an expression
-// NOTE: This extends the existing ExprType enumeration
-const (
-	// Existing types (already defined in operator.go)
-	// Reference ExprType = iota
-	// Literal
-	// LogicalOr
-	// EnvVar
-	
-	// New type for operator calls
-	OperatorCall ExprType = iota + 10 // Start at 10 to avoid conflicts
-)
-
-// OperatorExpr represents an operator call expression
-// This is a specialized expression type for nested operators
-type OperatorExpr struct {
-	Type   ExprType
-	OpName string   // Operator name (e.g., "grab", "concat", "vault")
-	OpArgs []*Expr  // Operator arguments
-	Phase  OperatorPhase // Phase when this operator should run
-}
-
-// NewOperatorExpr creates a new operator expression
-func NewOperatorExpr(name string, args []*Expr) *Expr {
-	return &Expr{
-		Type: OperatorCall,
-		Name: name,
-		// We'll store operator args in a special way
-		// For now, we use the Name field for the operator name
-		// and will extend the Expr struct in the next iteration
-	}
-}
-
-// IsOperator checks if an expression is an operator call
-func (e *Expr) IsOperator() bool {
-	return e != nil && e.Type == OperatorCall
-}
-
-// IsOperatorNamed checks if an expression is a specific operator
-func (e *Expr) IsOperatorNamed(name string) bool {
-	return e.IsOperator() && e.Name == name
-}
-
-// GetOperatorName returns the operator name if this is an operator expression
-func (e *Expr) GetOperatorName() string {
-	if e.IsOperator() {
-		return e.Name
-	}
-	return ""
-}
-
-// OperatorInfo stores metadata about operators for the enhanced parser
-type OperatorInfo struct {
-	Name          string
-	Precedence    Precedence
-	Associativity Associativity
-	MinArgs       int
-	MaxArgs       int // -1 for unlimited
-	Phase         OperatorPhase
-}
-
 // Precedence levels for operators
 type Precedence int
 
@@ -104,8 +43,15 @@ const (
 	AssociativityRight = RightAssociative
 )
 
-// Token is defined in tokenizer_enhanced.go
-// TokenEOF is defined in tokenizer_enhanced.go
+// OperatorInfo stores metadata about operators
+type OperatorInfo struct {
+	Name          string
+	Precedence    Precedence
+	Associativity Associativity
+	MinArgs       int
+	MaxArgs       int // -1 for unlimited
+	Phase         OperatorPhase
+}
 
 // OperatorRegistry manages operator metadata
 type OperatorRegistry struct {
@@ -138,7 +84,6 @@ func (r *OperatorRegistry) Get(name string) *OperatorInfo {
 }
 
 // OperatorInfoRegistry contains metadata for all operators
-// This will be populated during initialization
 var OperatorInfoRegistry = map[string]OperatorInfo{
 	"vault-try": {
 		Name:       "vault-try",
@@ -252,6 +197,76 @@ var OperatorInfoRegistry = map[string]OperatorInfo{
 		MaxArgs:    -1, // unlimited args for paths with defaults
 		Phase:      EvalPhase,
 	},
+	"calc": {
+		Name:       "calc",
+		Precedence: PrecedenceCall,
+		MinArgs:    1,
+		MaxArgs:    1,
+		Phase:      EvalPhase,
+	},
+	"sort": {
+		Name:       "sort",
+		Precedence: PrecedenceCall,
+		MinArgs:    1,
+		MaxArgs:    2,
+		Phase:      EvalPhase,
+	},
+	"shuffle": {
+		Name:       "shuffle",
+		Precedence: PrecedenceCall,
+		MinArgs:    1,
+		MaxArgs:    2,
+		Phase:      EvalPhase,
+	},
+	"ips": {
+		Name:       "ips",
+		Precedence: PrecedenceCall,
+		MinArgs:    1,
+		MaxArgs:    -1,
+		Phase:      EvalPhase,
+	},
+	"inject": {
+		Name:       "inject",
+		Precedence: PrecedenceCall,
+		MinArgs:    1,
+		MaxArgs:    1,
+		Phase:      EvalPhase,
+	},
+	"load": {
+		Name:       "load",
+		Precedence: PrecedenceCall,
+		MinArgs:    1,
+		MaxArgs:    1,
+		Phase:      EvalPhase,
+	},
+	"prune": {
+		Name:       "prune",
+		Precedence: PrecedenceCall,
+		MinArgs:    1,
+		MaxArgs:    -1,
+		Phase:      EvalPhase,
+	},
+	"cartesian-product": {
+		Name:       "cartesian-product",
+		Precedence: PrecedenceCall,
+		MinArgs:    1,
+		MaxArgs:    -1,
+		Phase:      EvalPhase,
+	},
+	"awsparam": {
+		Name:       "awsparam",
+		Precedence: PrecedenceCall,
+		MinArgs:    1,
+		MaxArgs:    -1,
+		Phase:      EvalPhase,
+	},
+	"awssecret": {
+		Name:       "awssecret",
+		Precedence: PrecedenceCall,
+		MinArgs:    1,
+		MaxArgs:    -1,
+		Phase:      EvalPhase,
+	},
 	// Arithmetic operators
 	"+": {
 		Name:          "+",
@@ -293,6 +308,88 @@ var OperatorInfoRegistry = map[string]OperatorInfo{
 		MaxArgs:       2,
 		Phase:         EvalPhase,
 	},
+	// Comparison operators
+	"==": {
+		Name:          "==",
+		Precedence:    PrecedenceEquality,
+		Associativity: LeftAssociative,
+		MinArgs:       2,
+		MaxArgs:       2,
+		Phase:         EvalPhase,
+	},
+	"!=": {
+		Name:          "!=",
+		Precedence:    PrecedenceEquality,
+		Associativity: LeftAssociative,
+		MinArgs:       2,
+		MaxArgs:       2,
+		Phase:         EvalPhase,
+	},
+	"<": {
+		Name:          "<",
+		Precedence:    PrecedenceComparison,
+		Associativity: LeftAssociative,
+		MinArgs:       2,
+		MaxArgs:       2,
+		Phase:         EvalPhase,
+	},
+	">": {
+		Name:          ">",
+		Precedence:    PrecedenceComparison,
+		Associativity: LeftAssociative,
+		MinArgs:       2,
+		MaxArgs:       2,
+		Phase:         EvalPhase,
+	},
+	"<=": {
+		Name:          "<=",
+		Precedence:    PrecedenceComparison,
+		Associativity: LeftAssociative,
+		MinArgs:       2,
+		MaxArgs:       2,
+		Phase:         EvalPhase,
+	},
+	">=": {
+		Name:          ">=",
+		Precedence:    PrecedenceComparison,
+		Associativity: LeftAssociative,
+		MinArgs:       2,
+		MaxArgs:       2,
+		Phase:         EvalPhase,
+	},
+	// Boolean operators
+	"&&": {
+		Name:          "&&",
+		Precedence:    PrecedenceAnd,
+		Associativity: LeftAssociative,
+		MinArgs:       2,
+		MaxArgs:       2,
+		Phase:         EvalPhase,
+	},
+	"||": {
+		Name:          "||",
+		Precedence:    PrecedenceOr,
+		Associativity: LeftAssociative,
+		MinArgs:       2,
+		MaxArgs:       2,
+		Phase:         EvalPhase,
+	},
+	"!": {
+		Name:       "!",
+		Precedence: PrecedenceUnary,
+		MinArgs:    1,
+		MaxArgs:    1,
+		Phase:      EvalPhase,
+	},
+	// Ternary operator
+	"?:": {
+		Name:          "?:",
+		Precedence:    PrecedenceTernary,
+		Associativity: RightAssociative,
+		MinArgs:       3,
+		MaxArgs:       3,
+		Phase:         EvalPhase,
+	},
 }
 
 // GetOperatorInfo retrieves operator metadata
@@ -325,15 +422,4 @@ func ValidateOperatorArgs(opName string, argCount int) error {
 	}
 	
 	return nil
-}
-
-// String representation for debugging (extends existing String method)
-func (e *Expr) StringEnhanced() string {
-	switch e.Type {
-	case OperatorCall:
-		return fmt.Sprintf("%s(...)", e.Name)
-	default:
-		// Fall back to existing String() method
-		return e.String()
-	}
 }

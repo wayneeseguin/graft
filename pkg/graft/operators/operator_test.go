@@ -3178,10 +3178,7 @@ func TestOperators(t *testing.T) {
 
 	Convey("Parser", t, func() {
 		// These tests specifically test parsing of unknown operators
-		// so we need to disable the enhanced parser which registers additional operators
-		oldUseEnhanced := UseEnhancedParser
-		UseEnhancedParser = false
-		defer func() { UseEnhancedParser = oldUseEnhanced }()
+		// Enhanced parser is now the default
 
 		// Also need to temporarily remove the null operator from registry
 		oldNullOp := OpRegistry["null"]
@@ -3200,13 +3197,13 @@ func TestOperators(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(op, ShouldNotBeNil)
 
-				_, ok := op.op.(NullOperator)
+				_, ok := op.Operator().(NullOperator)
 				So(ok, ShouldBeTrue)
-				So(op.op.(NullOperator).Missing, ShouldEqual, name)
+				So(op.Operator().(NullOperator).Missing, ShouldEqual, name)
 
-				So(len(op.args), ShouldEqual, len(args))
+				So(len(op.Args()), ShouldEqual, len(args))
 				for i, expect := range args {
-					exprOk(op.args[i], expect)
+					exprOk(op.Args()[i], expect)
 				}
 			}
 

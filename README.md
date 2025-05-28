@@ -30,7 +30,7 @@ YAML <── graft <───┤
                                                └─ 🌻
 ```
 
-> **Note**: As of version 1.31.0, graft uses an enhanced parser by default that supports additional operators including boolean logic (`&&`, `||`), comparisons (`==`, `!=`, `<`, `>`, `<=`, `>=`), ternary operator (`? :`), and negation (`!`). To use the legacy parser, set the environment variable `GRAFT_LEGACY_PARSER=1` or use the `--legacy-parser` flag.
+> **Note**: graft supports additional operators including boolean logic (`&&`, `||`), comparisons (`==`, `!=`, `<`, `>`, `<=`, `>=`), ternary operator (`? :`), and negation (`!`).
 
 [![Slack][slack-badge]][slack-channel] ( We'll be in `#graft`)
 

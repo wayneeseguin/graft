@@ -1,6 +1,10 @@
 package operators
 
-import "testing"
+import (
+	"testing"
+	
+	. "github.com/smartystreets/goconvey/convey"
+)
 
 func TestNegationOperator(t *testing.T) {
 	Convey("Negation Operator (!)", t, func() {

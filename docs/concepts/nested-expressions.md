@@ -1,10 +1,10 @@
 # Nested Expressions in graft
 
-> **Enhanced Parser Feature**: graft supports nesting operators within other operators, enabling powerful expression composition.
+> **Feature**: graft supports nesting operators within other operators, enabling powerful expression composition.
 
 ## Overview
 
-With the enhanced parser (default in v1.31.0+), you can use operators as arguments to other operators. This allows you to build complex expressions without intermediate variables.
+You can use operators as arguments to other operators. This allows you to build complex expressions without intermediate variables.
 
 ## Basic Syntax
 
@@ -225,7 +225,7 @@ Deeply nested expressions are evaluated recursively. For very complex operations
 ### Common Errors
 
 1. **"Unknown expression type"**
-   - Ensure you're using the enhanced parser (default in v1.31.0+)
+   - Check your graft syntax is correct
    - Check parentheses are balanced
    - Verify operator names are correct
 
@@ -263,15 +263,7 @@ If you have existing configurations:
 
 1. **No breaking changes** - Old syntax continues to work
 2. **Incremental adoption** - Add nested expressions as needed
-3. **Legacy mode available** - Use `GRAFT_LEGACY_PARSER=1` or `--legacy-parser` if needed
-
-```bash
-# Use legacy parser if needed
-GRAFT_LEGACY_PARSER=1 graft merge config.yml
-
-# Or with flag
-graft merge --legacy-parser config.yml
-```
+3. **Full backward compatibility** - All existing graft files continue to work
 
 ## Performance Considerations
 

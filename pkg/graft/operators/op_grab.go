@@ -7,7 +7,7 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// GrabOperator is an enhanced version that supports nested expressions
+// GrabOperator handles nested operator calls
 type GrabOperator struct{}
 
 // Setup ...

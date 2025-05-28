@@ -1,6 +1,6 @@
 # Operator API Documentation
 
-This guide explains how to create new operators for graft and integrate them with the enhanced parser system.
+This guide explains how to create new operators for graft and integrate them with the parser system.
 
 ## Overview
 
@@ -97,15 +97,6 @@ func init() {
 }
 ```
 
-Or register conditionally for enhanced parser only:
-
-```go
-func init() {
-    if UseEnhancedParser {
-        RegisterOp("myoperator", MyOperator{})
-    }
-}
-```
 
 ## Operator Implementation Guidelines
 
@@ -188,9 +179,9 @@ return nil, fmt.Errorf("myoperator: path '%s' not found in document", path)
 return nil, fmt.Errorf("myoperator: %v", err) // Wrap underlying errors
 ```
 
-## Binary Operators for Enhanced Parser
+## Binary Operators
 
-To create operators that work with the enhanced parser's expression syntax:
+To create operators that work with the parser's expression syntax:
 
 ### 1. Define the Operator Structure
 
@@ -236,7 +227,7 @@ func (m MyBinaryOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 ```go
 func init() {
-    // For operators parsed by enhanced parser
+    // For operators parsed by the parser
     RegisterOp("==", ComparisonOperator{op: "=="})
     RegisterOp("+", ArithmeticOperator{op: "+"})
     RegisterOp("&&", BooleanOperator{op: "&&"})
@@ -300,8 +291,7 @@ For operators that work with expressions:
 
 ```go
 func TestMyOperatorInExpressions(t *testing.T) {
-    UseEnhancedParser = true
-    defer func() { UseEnhancedParser = false }()
+    // Parser now supports expressions by default
     
     RunOperatorTests(t, nil, []OperatorTest{
         {
@@ -452,14 +442,11 @@ resp, err := EvaluateExpr(args[0], ev)
 log.DEBUG("Evaluated expression: %v -> %v (err: %v)", args[0], resp, err)
 ```
 
-### 3. Test with Enhanced Parser
+### 3. Test the Operator
 
 ```bash
-# Test with enhanced parser
-GRAFT_ENHANCED_PARSER=1 graft merge test.yml
-
-# Or use the legacy parser to compare
-graft merge --legacy-parser test.yml
+# Test the operator
+graft merge test.yml
 ```
 
 ## Common Patterns
@@ -528,9 +515,8 @@ Example migration:
 
 func init() {
     RegisterOp("concat", ConcatOperator{})
-    if UseEnhancedParser {
-        RegisterOp("+", ConcatOperator{}) // Support both
-    }
+    // Can also register operators with symbolic names
+    RegisterOp("+", ConcatOperator{})
 }
 ```
 
@@ -539,4 +525,4 @@ func init() {
 - [Expression Operators Guide](expression-operators.md) - User documentation
 - [Operator Examples](../examples/expression-operators/) - Example YAML files
 - [Test Suite](../operator_test.go) - Comprehensive test examples
-- [Parser Documentation](parser-enhanced.go) - Enhanced parser implementation
+- [Parser Documentation](parser.go) - Parser implementation

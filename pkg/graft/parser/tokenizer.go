@@ -89,8 +89,8 @@ func (t Token) String() string {
 	}
 }
 
-// EnhancedTokenizer provides context-aware tokenization
-type EnhancedTokenizer struct {
+// Tokenizer provides context-aware tokenization
+type Tokenizer struct {
 	input    string
 	pos      int
 	line     int
@@ -100,9 +100,9 @@ type EnhancedTokenizer struct {
 	escaped  bool
 }
 
-// NewEnhancedTokenizer creates a new tokenizer
-func NewEnhancedTokenizer(input string) *EnhancedTokenizer {
-	return &EnhancedTokenizer{
+// NewTokenizer creates a new tokenizer
+func NewTokenizer(input string) *Tokenizer {
+	return &Tokenizer{
 		input:  input,
 		pos:    0,
 		line:   1,
@@ -112,7 +112,7 @@ func NewEnhancedTokenizer(input string) *EnhancedTokenizer {
 }
 
 // Tokenize performs the tokenization
-func (t *EnhancedTokenizer) Tokenize() []Token {
+func (t *Tokenizer) Tokenize() []Token {
 	t.tokens = make([]Token, 0, cap(t.tokens)) // Reuse existing capacity
 	var current strings.Builder
 	
@@ -317,13 +317,13 @@ func (t *EnhancedTokenizer) Tokenize() []Token {
 }
 
 // advance moves to the next character
-func (t *EnhancedTokenizer) advance() {
+func (t *Tokenizer) advance() {
 	t.pos++
 	t.col++
 }
 
 // peek looks at the next character without consuming it
-func (t *EnhancedTokenizer) peek() byte {
+func (t *Tokenizer) peek() byte {
 	if t.pos+1 < len(t.input) {
 		return t.input[t.pos+1]
 	}
@@ -331,13 +331,13 @@ func (t *EnhancedTokenizer) peek() byte {
 }
 
 // isOperatorChar checks if a character could be part of an operator name
-func (t *EnhancedTokenizer) isOperatorChar(ch byte) bool {
+func (t *Tokenizer) isOperatorChar(ch byte) bool {
 	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || 
 		   (ch >= '0' && ch <= '9') || ch == '-' || ch == '_'
 }
 
 // handleEscaped handles escaped characters
-func (t *EnhancedTokenizer) handleEscaped(current *strings.Builder, ch byte) {
+func (t *Tokenizer) handleEscaped(current *strings.Builder, ch byte) {
 	switch ch {
 	case 'n':
 		current.WriteByte('\n')
@@ -352,7 +352,7 @@ func (t *EnhancedTokenizer) handleEscaped(current *strings.Builder, ch byte) {
 }
 
 // flushCurrent adds the current token if it's not empty
-func (t *EnhancedTokenizer) flushCurrent(current *strings.Builder) {
+func (t *Tokenizer) flushCurrent(current *strings.Builder) {
 	if current.Len() > 0 {
 		value := current.String()
 		tokType := t.classifyToken(value)
@@ -365,7 +365,7 @@ func (t *EnhancedTokenizer) flushCurrent(current *strings.Builder) {
 }
 
 // classifyToken determines the type of a token
-func (t *EnhancedTokenizer) classifyToken(value string) TokenType {
+func (t *Tokenizer) classifyToken(value string) TokenType {
 	// Check if it's a quoted string
 	if strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`) {
 		return TokenLiteral
@@ -449,7 +449,7 @@ func isNumericString(s string) bool {
 }
 
 // addToken adds a token to the list at the current position
-func (t *EnhancedTokenizer) addToken(value string, tokType TokenType) {
+func (t *Tokenizer) addToken(value string, tokType TokenType) {
 	// For operators added directly, calculate position based on value length
 	pos := t.pos - len(value)
 	col := t.col - len(value)
@@ -458,7 +458,7 @@ func (t *EnhancedTokenizer) addToken(value string, tokType TokenType) {
 }
 
 // addTokenAt adds a token at a specific position
-func (t *EnhancedTokenizer) addTokenAt(value string, tokType TokenType, pos, col int) {
+func (t *Tokenizer) addTokenAt(value string, tokType TokenType, pos, col int) {
 	// Intern operator names and common literals
 	if tokType == TokenOperator || tokType == TokenLiteral {
 		if tokType == TokenOperator || value == "true" || value == "false" || value == "null" || value == "nil" {
@@ -477,7 +477,7 @@ func (t *EnhancedTokenizer) addTokenAt(value string, tokType TokenType, pos, col
 
 // TokenizeExpression is a convenience function for tokenizing expressions
 func TokenizeExpression(input string) []Token {
-	tokenizer := NewEnhancedTokenizer(input)
+	tokenizer := NewTokenizer(input)
 	return tokenizer.Tokenize()
 }
 

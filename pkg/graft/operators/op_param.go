@@ -7,7 +7,7 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// ParamOperator is an enhanced version that supports nested expressions
+// ParamOperator handles nested operator calls
 type ParamOperator struct{}
 
 // Setup ...

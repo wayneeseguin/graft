@@ -215,7 +215,7 @@ func TestComparisonIntegration(t *testing.T) {
 		return data
 	}
 	Convey("Comparison operators in expressions", t, func() {
-		Convey("work with enhanced parser", func() {
+		Convey("work with  parser", func() {
 			ev := &Evaluator{Tree: YAML(`
 name: alice
 age: 30
@@ -242,10 +242,8 @@ score: 85
 
 // Helper function for testing
 func parseAndEvaluateExpression(ev *Evaluator, expr string) (interface{}, error) {
-	// Enable enhanced parser for tests
-	oldUseEnhancedParser := UseEnhancedParser
-	UseEnhancedParser = true
-	defer func() { UseEnhancedParser = oldUseEnhancedParser }()
+	// Enable  parser for tests
+	// Enhanced parser is now the default
 
 	opcall, err := ParseOpcallIntegrated(EvalPhase, expr)
 	if err != nil {
