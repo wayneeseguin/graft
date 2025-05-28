@@ -22,23 +22,8 @@ func (Base64Operator) Phase() OperatorPhase {
 }
 
 // Dependencies ...
-func (Base64Operator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	deps := auto
-
-	for _, arg := range args {
-		if arg.Type == OperatorCall {
-			// Get dependencies from nested operator
-			nestedOp := OperatorFor(arg.Op())
-			if _, ok := nestedOp.(NullOperator); !ok {
-				nestedDeps := nestedOp.Dependencies(ev, arg.Args(), nil, nil)
-				deps = append(deps, nestedDeps...)
-			}
-		} else if arg.Type == Reference {
-			deps = append(deps, arg.Reference)
-		}
-	}
-
-	return deps
+func (Base64Operator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+	return auto
 }
 
 // Run ...
@@ -47,10 +32,10 @@ func (Base64Operator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	defer DEBUG("done with (( base64 ... )) operation at $%s\n", ev.Here)
 
 	if len(args) != 1 {
-		return nil, fmt.Errorf("base64 operator requires exactly one string or reference argument")
+		return nil, fmt.Errorf("base64 operator requires exactly one string or reference argument, got %d arguments", len(args))
 	}
 
-	// Use ResolveOperatorArgument to support nested expressions
+	// Use ResolveOperatorArgument to handle nested expressions
 	val, err := ResolveOperatorArgument(ev, args[0])
 	if err != nil {
 		DEBUG("  arg[0]: failed to resolve expression to a concrete value")
@@ -58,21 +43,28 @@ func (Base64Operator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		return nil, err
 	}
 
-	// Check if it's a string - original behavior only accepts strings
-	contents, ok := val.(string)
-	if !ok {
-		DEBUG("  arg[0]: %v is not a string scalar", val)
-		return nil, ansi.Errorf("@R{tried to base64 encode} @c{%v}@R{, which is not a string scalar}", val)
+	if val == nil {
+		return nil, ansi.Errorf("@R{base64 operator argument resolved to nil}")
 	}
 
-	DEBUG("  resolved argument to string: %s", contents)
+	// Convert to string
+	var contents string
+	switch v := val.(type) {
+	case string:
+		DEBUG("  resolved to string: '%s'", v)
+		contents = v
+	default:
+		DEBUG("  resolved to non-string: %T = %v", v, v)
+		// For non-string scalars, convert to string representation
+		contents = fmt.Sprintf("%v", v)
+	}
 
 	encoded := base64.StdEncoding.EncodeToString([]byte(contents))
-	DEBUG("  resolved (( base64 ... )) operation to the string:\n    \"%s\"", string(encoded))
+	DEBUG("  resolved (( base64 ... )) operation to the string:\n    \"%s\"", encoded)
 
 	return &Response{
 		Type:  Replace,
-		Value: string(encoded),
+		Value: encoded,
 	}, nil
 }
 

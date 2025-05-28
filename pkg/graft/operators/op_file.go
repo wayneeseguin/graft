@@ -2,14 +2,13 @@ package operators
 
 import (
 	"fmt"
-	"os"
+	"io/ioutil"
 	"path/filepath"
 
-	"github.com/starkandwayne/goutils/ansi"
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// FileOperator ...
+// FileOperator is an enhanced version that supports nested expressions
 type FileOperator struct{}
 
 // Setup ...
@@ -23,23 +22,8 @@ func (FileOperator) Phase() OperatorPhase {
 }
 
 // Dependencies ...
-func (FileOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	deps := auto
-
-	for _, arg := range args {
-		if arg.Type == OperatorCall {
-			// Get dependencies from nested operator
-			nestedOp := OperatorFor(arg.Op())
-			if _, ok := nestedOp.(NullOperator); !ok {
-				nestedDeps := nestedOp.Dependencies(ev, arg.Args(), nil, nil)
-				deps = append(deps, nestedDeps...)
-			}
-		} else if arg.Type == Reference {
-			deps = append(deps, arg.Reference)
-		}
-	}
-
-	return deps
+func (FileOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+	return auto
 }
 
 // Run ...
@@ -47,54 +31,66 @@ func (FileOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	DEBUG("running (( file ... )) operation at $.%s", ev.Here)
 	defer DEBUG("done with (( file ... )) operation at $%s\n", ev.Here)
 
-	if len(args) != 1 {
-		return nil, fmt.Errorf("file operator requires exactly one string or reference argument")
+	var filename string
+
+	// Argument validation and processing
+	if len(args) == 1 {
+		// Use ResolveOperatorArgument to handle nested expressions
+		val, err := ResolveOperatorArgument(ev, args[0])
+		if err != nil {
+			DEBUG("failed to resolve expression to a concrete value")
+			DEBUG("error was: %s", err)
+			return nil, err
+		}
+
+		if val == nil {
+			return nil, fmt.Errorf("file operator argument resolved to nil")
+		}
+
+		filename = fmt.Sprintf("%v", val)
+		DEBUG("using filename '%s'", filename)
+
+	} else if len(args) == 2 {
+		// Handle base path + filename
+		basePath, err := ResolveOperatorArgument(ev, args[0])
+		if err != nil {
+			DEBUG("failed to resolve base path expression")
+			DEBUG("error was: %s", err)
+			return nil, err
+		}
+
+		fileName, err := ResolveOperatorArgument(ev, args[1])
+		if err != nil {
+			DEBUG("failed to resolve filename expression")
+			DEBUG("error was: %s", err)
+			return nil, err
+		}
+
+		if basePath == nil || fileName == nil {
+			return nil, fmt.Errorf("file operator arguments cannot be nil")
+		}
+
+		filename = filepath.Join(fmt.Sprintf("%v", basePath), fmt.Sprintf("%v", fileName))
+		DEBUG("using combined path '%s'", filename)
+
+	} else {
+		return nil, fmt.Errorf("file operator requires one or two string arguments")
 	}
 
-	fbasepath := os.Getenv("GRAFT_FILE_BASE_PATH")
-
-	// Use ResolveOperatorArgument to support nested expressions
-	val, err := ResolveOperatorArgument(ev, args[0])
+	// Read the file
+	file, err := ioutil.ReadFile(filename)
 	if err != nil {
-		DEBUG("  arg[0]: failed to resolve expression to a concrete value")
-		DEBUG("     [0]: error was: %s", err)
+		DEBUG("failed to read file")
+		DEBUG("error was: %s", err)
 		return nil, err
 	}
 
-	// Check if it's a non-scalar type
-	switch val.(type) {
-	case map[interface{}]interface{}, map[string]interface{}:
-		DEBUG("  arg[0]: %v is not a string scalar", val)
-		return nil, ansi.Errorf("@R{tried to read file} @c{%v}@R{, which is not a string scalar}", val)
-	case []interface{}:
-		DEBUG("  arg[0]: %v is not a string scalar", val)
-		return nil, ansi.Errorf("@R{tried to read file} @c{%v}@R{, which is not a string scalar}", val)
-	}
-
-	// Convert to string
-	fname, err := AsString(val)
-	if err != nil {
-		DEBUG("  arg[0]: %v cannot be converted to string", val)
-		return nil, ansi.Errorf("@R{tried to read file} @c{%v}@R{, which cannot be converted to string}", val)
-	}
-
-	DEBUG("  resolved argument to filename: %s", fname)
-
-	if !filepath.IsAbs(fname) {
-		fname = filepath.Join(fbasepath, fname)
-	}
-
-	contents, err := os.ReadFile(fname)
-	if err != nil {
-		DEBUG("  File %s cannot be read: %s", fname, err)
-		return nil, ansi.Errorf("@R{tried to read file} @c{%s}@R{: could not be read - %s}", fname, err)
-	}
-
-	DEBUG("  resolved (( file ... )) operation to the string:\n    \"%s\"", string(contents))
+	contents := string(file)
+	DEBUG("file read successfully")
 
 	return &Response{
 		Type:  Replace,
-		Value: string(contents),
+		Value: contents,
 	}, nil
 }
 

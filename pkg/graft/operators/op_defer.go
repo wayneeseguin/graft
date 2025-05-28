@@ -7,47 +7,100 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// DeferOperator sheds the "defer" command off of (( defer args args args )) and
-// leaves (( args args args ))
+// DeferOperator is an enhanced version that supports nested expressions
 type DeferOperator struct{}
 
-// Setup doesn't do anything for Defer. We're a pretty lightweight operator.
+// Setup ...
 func (DeferOperator) Setup() error {
 	return nil
 }
 
-// Phase gives back Param phase in this case, because we don't want any
-// following phases to pick up the operator post-deference
+// Phase ...
 func (DeferOperator) Phase() OperatorPhase {
 	return EvalPhase
 }
 
-// Dependencies returns an empty slice - defer produces no deps at all.
-func (DeferOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, _ []*tree.Cursor) []*tree.Cursor {
-	return nil
+// Dependencies ...
+func (DeferOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+	return auto
 }
 
-// Run chops off "defer" and leaves the args in double parens. Need to
-// reconstruct the operator string
-func (DeferOperator) Run(_ *Evaluator, args []*Expr) (*Response, error) {
-	DEBUG("Running defer operator...")
+// Run ...
+func (DeferOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
+	DEBUG("running (( defer ... )) operation at $.%s", ev.Here)
+	defer DEBUG("done with (( defer ... )) operation at $.%s\n", ev.Here)
+
 	if len(args) == 0 {
 		return nil, fmt.Errorf("Defer has no arguments - what are you deferring?")
 	}
 
-	components := []string{"(("} //Join these with spaces at the end
+	// The defer operator's purpose is to preserve the expression for later evaluation
+	// Build the deferred expression from all arguments
+
+	components := []string{"(("} // Join these with spaces at the end
 
 	for _, arg := range args {
 		components = append(components, arg.String())
 	}
 	components = append(components, "))")
 
-	DEBUG("Returning from defer operator")
+	deferred := strings.Join(components, " ")
+	DEBUG("deferring expression: %s", deferred)
 
 	return &Response{
 		Type:  Replace,
-		Value: strings.Join(components, " "),
+		Value: deferred,
 	}, nil
+}
+
+// reconstructExpr reconstructs a string representation of an expression
+func reconstructExpr(e *Expr) string {
+	if e == nil {
+		return ""
+	}
+
+	switch e.Type {
+	case Literal:
+		if e.Literal == nil {
+			return "nil"
+		}
+		if s, ok := e.Literal.(string); ok {
+			return fmt.Sprintf(`"%s"`, s)
+		}
+		return fmt.Sprintf("%v", e.Literal)
+
+	case Reference:
+		if e.Reference != nil {
+			return e.Reference.String()
+		}
+		return ""
+
+	case EnvVar:
+		return fmt.Sprintf("$%s", e.Name)
+
+	case LogicalOr:
+		left := reconstructExpr(e.Left)
+		right := reconstructExpr(e.Right)
+		return fmt.Sprintf("%s || %s", left, right)
+
+	case OperatorCall:
+		op := e.Op()
+		args := e.Args()
+		if op == "" {
+			return e.String() // fallback
+		}
+		argStrs := make([]string, len(args))
+		for i, arg := range args {
+			argStrs[i] = reconstructExpr(arg)
+		}
+		if len(argStrs) == 0 {
+			return op
+		}
+		return fmt.Sprintf("%s %s", op, strings.Join(argStrs, " "))
+
+	default:
+		return e.String()
+	}
 }
 
 func init() {

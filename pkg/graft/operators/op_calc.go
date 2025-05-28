@@ -27,24 +27,25 @@ func (CalcOperator) Phase() OperatorPhase {
 }
 
 // Dependencies ...
-func (CalcOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, _ []*tree.Cursor) []*tree.Cursor {
+func (CalcOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
 	DEBUG("Calculating dependencies for (( calc ... ))")
 	deps := []*tree.Cursor{}
 
-	// The dependency checks are straightforward on the happy path:
-	// There must be one literal argument containing possible references.
-	if len(args) == 1 {
-		switch args[0].Type {
-		case Literal:
-			if cursors, searchError := searchForCursors(args[0].Literal.(string)); searchError == nil {
-				for _, cursor := range cursors {
-					deps = append(deps, cursor)
+	// Check dependencies in all arguments
+	for _, arg := range args {
+		deps = append(deps, arg.Dependencies(ev, nil)...)
+
+		// Also check for references in literal strings
+		if arg.Type == Literal && arg.Literal != nil {
+			if str, ok := arg.Literal.(string); ok {
+				if cursors, err := searchForCursors(str); err == nil {
+					deps = append(deps, cursors...)
 				}
 			}
 		}
 	}
 
-	return deps
+	return append(auto, deps...)
 }
 
 // Run ...
@@ -52,54 +53,68 @@ func (CalcOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	DEBUG("running (( calc ... )) operation at $.%s", ev.Here)
 	defer DEBUG("done with (( calc ... )) operation at $%s\n", ev.Here)
 
-	// The calc operator expects one literal argument containing the quoted expression to be evaluated
+	// The calc operator expects one argument containing the expression to be evaluated
 	if len(args) != 1 {
 		return nil, ansi.Errorf("@R{calc operator only expects} @r{one} @R{argument containing the expression}")
 	}
 
-	switch args[0].Type {
-	case Literal:
-		// Replace all Graft references with the respective value
-		DEBUG("  input expression: %s", args[0].Literal.(string))
-		input, replaceError := replaceReferences(ev, args[0].Literal.(string))
-		if replaceError != nil {
-			return nil, replaceError
-		}
-
-		// Once all Graft references (variables) are replaced, try to read the expression
-		DEBUG("  processed expression: %s", input)
-		expression, expressionError := govaluate.NewEvaluableExpressionWithFunctions(input, supportedFunctions())
-		if expressionError != nil {
-			return nil, expressionError
-		}
-
-		// Check that there are no named variables in the expression that we cannot evaluate/insert
-		if len(expression.Vars()) > 0 {
-			return nil, ansi.Errorf("@R{calc operator does not support named variables in expression:} @r{%s}", strings.Join(expression.Vars(), ", "))
-		}
-
-		// Evaluate without a variables list (named variables are not supported)
-		result, evaluateError := expression.Evaluate(nil)
-		if evaluateError != nil {
-			return nil, evaluateError
-		}
-
-		if resultFloat, ok := result.(float64); ok {
-			resultInt := int64(resultFloat)
-			if float64(resultInt) == resultFloat {
-				result = resultInt
-			}
-		}
-
-		DEBUG("  evaluated result: %v", result)
-		return &Response{
-			Type:  Replace,
-			Value: result,
-		}, nil
-
-	default:
-		return nil, ansi.Errorf("@R{calc operator argument is suppose to be a quoted mathematical expression (type} @r{Literal}@R{)}")
+	// Resolve the argument using ResolveOperatorArgument to support nested expressions
+	val, err := ResolveOperatorArgument(ev, args[0])
+	if err != nil {
+		return nil, err
 	}
+
+	// Convert the resolved value to a string for processing
+	var input string
+	switch v := val.(type) {
+	case string:
+		input = v
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		input = fmt.Sprintf("%d", v)
+	case float32, float64:
+		input = fmt.Sprintf("%f", v)
+	default:
+		return nil, ansi.Errorf("@R{calc operator argument must resolve to a string or number, got} @r{%T}", val)
+	}
+
+	// Replace all Graft references with the respective value
+	DEBUG("  input expression: %s", input)
+	processed, replaceError := replaceReferences(ev, input)
+	if replaceError != nil {
+		return nil, replaceError
+	}
+
+	// Once all Graft references (variables) are replaced, try to read the expression
+	DEBUG("  processed expression: %s", processed)
+	expression, expressionError := govaluate.NewEvaluableExpressionWithFunctions(processed, supportedFunctions())
+	if expressionError != nil {
+		return nil, expressionError
+	}
+
+	// Check that there are no named variables in the expression that we cannot evaluate/insert
+	if len(expression.Vars()) > 0 {
+		return nil, ansi.Errorf("@R{calc operator does not support named variables in expression:} @r{%s}", strings.Join(expression.Vars(), ", "))
+	}
+
+	// Evaluate without a variables list (named variables are not supported)
+	result, evaluateError := expression.Evaluate(nil)
+	if evaluateError != nil {
+		return nil, evaluateError
+	}
+
+	// Convert float results to int if they have no fractional part
+	if resultFloat, ok := result.(float64); ok {
+		resultInt := int64(resultFloat)
+		if float64(resultInt) == resultFloat {
+			result = resultInt
+		}
+	}
+
+	DEBUG("  evaluated result: %v", result)
+	return &Response{
+		Type:  Replace,
+		Value: result,
+	}, nil
 }
 
 func searchForCursors(input string) ([]*tree.Cursor, error) {

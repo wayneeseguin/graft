@@ -8,7 +8,7 @@ import (
 	"github.com/starkandwayne/goutils/tree"
 )
 
-// ConcatOperator ...
+// ConcatOperator is an enhanced version that handles nested operator calls
 type ConcatOperator struct{}
 
 // Setup ...
@@ -22,7 +22,8 @@ func (ConcatOperator) Phase() OperatorPhase {
 }
 
 // Dependencies ...
-func (ConcatOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+func (ConcatOperator) Dependencies(ev *Evaluator, args []*Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+	// Include dependencies from nested operator calls
 	deps := auto
 
 	for _, arg := range args {
@@ -30,11 +31,9 @@ func (ConcatOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor
 			// Get dependencies from nested operator
 			nestedOp := OperatorFor(arg.Op())
 			if _, ok := nestedOp.(NullOperator); !ok {
-				nestedDeps := nestedOp.Dependencies(ev, arg.Args(), nil, nil)
+				nestedDeps := nestedOp.Dependencies(ev, arg.Args(), locs, auto)
 				deps = append(deps, nestedDeps...)
 			}
-		} else if arg.Type == Reference {
-			deps = append(deps, arg.Reference)
 		}
 	}
 
@@ -54,45 +53,52 @@ func (ConcatOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	}
 
 	for i, arg := range args {
-		// Use ResolveOperatorArgument to support nested expressions
-		val, err := ResolveOperatorArgument(ev, arg)
+		// Use the helper to resolve arguments, including nested operators
+		v, err := ResolveOperatorArgument(ev, arg)
 		if err != nil {
 			DEBUG("  arg[%d]: failed to resolve expression to a concrete value", i)
 			DEBUG("     [%d]: error was: %s", i, err)
-			// Wrap error to maintain backward compatibility
-			if arg.Type == Reference {
-				return nil, fmt.Errorf("Unable to resolve `%s`: %s", arg.Reference, err)
-			}
 			return nil, err
 		}
 
-		// Check if it's a non-scalar type
-		switch val.(type) {
-		case map[interface{}]interface{}, map[string]interface{}:
-			DEBUG("  arg[%d]: %v is not a string scalar", i, val)
-			return nil, ansi.Errorf("@R{tried to concat} @c{%v}@R{, which is not a string scalar}", val)
-		case []interface{}:
-			DEBUG("  arg[%d]: %v is not a string scalar", i, val)
-			return nil, ansi.Errorf("@R{tried to concat} @c{%v}@R{, which is not a string scalar}", val)
-		}
-
 		// Convert to string
-		str, err := AsString(val)
-		if err != nil {
-			DEBUG("  arg[%d]: %v cannot be converted to string", i, val)
-			return nil, ansi.Errorf("@R{tried to concat} @c{%v}@R{, which cannot be converted to string}", val)
+		var stringVal string
+		switch val := v.(type) {
+		case string:
+			stringVal = val
+		case []interface{}:
+			stringSlice := make([]string, len(val))
+			for j, elem := range val {
+				stringSlice[j] = fmt.Sprintf("%v", elem)
+			}
+			stringVal = strings.Join(stringSlice, "")
+		default:
+			stringVal = fmt.Sprintf("%v", v)
 		}
 
-		DEBUG("  arg[%d]: appending '%s' to resultant string", i, str)
-		*l = append(*l, str)
+		DEBUG("  arg[%d]: using '%s'", i, stringVal)
+		*l = append(*l, stringVal)
 	}
 
-	final := strings.Join(*l, "")
-	DEBUG("  resolved (( concat ... )) operation to the string:\n    \"%s\"", final)
+	// Escape the result for shell safety if needed
+	out := GetStringSlice()
+	defer PutStringSlice(out)
+	for _, s := range *l {
+		if len(s) == 0 {
+			*out = append(*out, "''")
+		} else if strings.Contains(s, "'") {
+			*out = append(*out, fmt.Sprintf(`"%s"`, strings.Replace(s, `"`, `\"`, -1)))
+		} else if strings.ContainsAny(s, " \t\n\"$") {
+			*out = append(*out, fmt.Sprintf("'%s'", s))
+		} else {
+			*out = append(*out, s)
+		}
+	}
 
+	DEBUG("  result: %s", ansi.Sprintf("@c{%s}", strings.Join(*l, "")))
 	return &Response{
 		Type:  Replace,
-		Value: final,
+		Value: strings.Join(*l, ""),
 	}, nil
 }
 

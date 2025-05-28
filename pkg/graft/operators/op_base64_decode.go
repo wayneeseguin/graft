@@ -22,23 +22,8 @@ func (Base64DecodeOperator) Phase() OperatorPhase {
 }
 
 // Dependencies ...
-func (Base64DecodeOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	deps := auto
-
-	for _, arg := range args {
-		if arg.Type == OperatorCall {
-			// Get dependencies from nested operator
-			nestedOp := OperatorFor(arg.Op())
-			if _, ok := nestedOp.(NullOperator); !ok {
-				nestedDeps := nestedOp.Dependencies(ev, arg.Args(), nil, nil)
-				deps = append(deps, nestedDeps...)
-			}
-		} else if arg.Type == Reference {
-			deps = append(deps, arg.Reference)
-		}
-	}
-
-	return deps
+func (Base64DecodeOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+	return auto
 }
 
 // Run ...
@@ -50,7 +35,7 @@ func (Base64DecodeOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) 
 		return nil, fmt.Errorf("base64-decode operator requires exactly one string or reference argument")
 	}
 
-	// Use ResolveOperatorArgument to support nested expressions
+	// Use ResolveOperatorArgument to handle nested expressions
 	val, err := ResolveOperatorArgument(ev, args[0])
 	if err != nil {
 		DEBUG("  arg[0]: failed to resolve expression to a concrete value")
@@ -58,24 +43,32 @@ func (Base64DecodeOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) 
 		return nil, err
 	}
 
-	// Check if it's a string - original behavior only accepts strings
-	contents, ok := val.(string)
-	if !ok {
-		DEBUG("  arg[0]: %v is not a string scalar", val)
-		return nil, ansi.Errorf("@R{tried to base64 decode} @c{%v}@R{, which is not a string scalar}", val)
+	if val == nil {
+		return nil, ansi.Errorf("@R{base64-decode operator argument resolved to nil}")
 	}
 
-	DEBUG("  resolved argument to string: %s", contents)
-
-	if decoded, err := base64.StdEncoding.DecodeString(contents); err == nil {
-		DEBUG("  resolved (( base64-decode ... )) operation to the string:\n    \"%s\"", string(decoded))
-		return &Response{
-			Type:  Replace,
-			Value: string(decoded),
-		}, nil
-	} else {
-		return nil, fmt.Errorf("unable to base64 decode string %s: %s", contents, err)
+	// Convert to string
+	var contents string
+	switch v := val.(type) {
+	case string:
+		DEBUG("  resolved to string: '%s'", v)
+		contents = v
+	default:
+		DEBUG("  resolved to non-string: %T = %v", v, v)
+		return nil, ansi.Errorf("@R{tried to base64 decode} @c{%v}@R{, which is not a string}", v)
 	}
+
+	decoded, err := base64.StdEncoding.DecodeString(contents)
+	if err != nil {
+		return nil, ansi.Errorf("@R{base64 decoding failed:} @c{%s}", err)
+	}
+
+	DEBUG("  resolved (( base64-decode ... )) operation to the string:\n    \"%s\"", string(decoded))
+
+	return &Response{
+		Type:  Replace,
+		Value: string(decoded),
+	}, nil
 }
 
 func init() {
