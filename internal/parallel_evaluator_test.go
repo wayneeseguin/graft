@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/log"
+	"github.com/wayneeseguin/graft/pkg/graft"
+	_ "github.com/wayneeseguin/graft/pkg/graft/operators" // Register operators
 )
 
 // TestParallelEvaluator tests the parallel evaluator functionality
@@ -26,10 +29,10 @@ func TestParallelEvaluator(t *testing.T) {
 			"concat3": "(( concat name \"-suffix\" ))",
 		}
 
-		ev := &Evaluator{Tree: doc}
+		ev := &graft.Evaluator{Tree: doc}
 		pev := NewParallelEvaluator(ev, 4)
 
-		waves, err := pev.ParallelDataFlow(EvalPhase)
+		waves, err := pev.ParallelDataFlow(graft.EvalPhase)
 		if err != nil {
 			t.Fatalf("Failed to build waves: %v", err)
 		}
@@ -70,6 +73,11 @@ func TestParallelEvaluator(t *testing.T) {
 	})
 
 	t.Run("DependencyHandling", func(t *testing.T) {
+		// Enable debug logging for this test
+		oldDebug := log.DebugOn
+		log.DebugOn = true
+		defer func() { log.DebugOn = oldDebug }()
+
 		// Create a test document with dependent operations
 		doc := map[interface{}]interface{}{
 			"base":     "myapp",
@@ -78,12 +86,21 @@ func TestParallelEvaluator(t *testing.T) {
 			"fullname": "(( concat name \"-release\" ))",
 		}
 
-		ev := &Evaluator{Tree: doc}
+		ev := &graft.Evaluator{Tree: doc}
 		pev := NewParallelEvaluator(ev, 4)
 
-		waves, err := pev.ParallelDataFlow(EvalPhase)
+		waves, err := pev.ParallelDataFlow(graft.EvalPhase)
 		if err != nil {
 			t.Fatalf("Failed to build waves: %v", err)
+		}
+
+		// Debug output
+		t.Logf("Found %d waves", len(waves))
+		for i, wave := range waves {
+			t.Logf("Wave %d has %d operations", i, len(wave.Operations))
+			for _, op := range wave.Operations {
+				t.Logf("  - Operation at %s", op.Canonical().String())
+			}
 		}
 
 		// Should have multiple waves due to dependencies
@@ -118,12 +135,12 @@ func TestParallelEvaluator(t *testing.T) {
 			"name3": "(( concat base3 \"-service\" ))",
 		}
 
-		ev := &Evaluator{Tree: doc}
+		ev := &graft.Evaluator{Tree: doc}
 		pev := NewParallelEvaluator(ev, 4)
 
 		// Execute with timing
 		start := time.Now()
-		err := pev.RunOpsParallel(EvalPhase)
+		err := pev.RunOpsParallel(graft.EvalPhase)
 		elapsed := time.Since(start)
 
 		if err != nil {
@@ -185,10 +202,10 @@ func TestParallelEvaluator(t *testing.T) {
 					docCopy[k] = v
 				}
 
-				evCopy := &Evaluator{Tree: docCopy}
+				evCopy := &graft.Evaluator{Tree: docCopy}
 				pevCopy := NewParallelEvaluator(evCopy, 8)
 
-				err := pevCopy.RunOpsParallel(EvalPhase)
+				err := pevCopy.RunOpsParallel(graft.EvalPhase)
 				if err != nil {
 					errors <- fmt.Errorf("iteration %d failed: %v", iteration, err)
 				}
@@ -213,11 +230,11 @@ func TestParallelEvaluator(t *testing.T) {
 			"concat2": "(( concat \"prefix-\" env ))",
 		}
 
-		ev := &Evaluator{Tree: doc}
+		ev := &graft.Evaluator{Tree: doc}
 		pev := NewParallelEvaluator(ev, 4)
 		pev.SetParallelEnabled(false)
 
-		waves, err := pev.ParallelDataFlow(EvalPhase)
+		waves, err := pev.ParallelDataFlow(graft.EvalPhase)
 		if err != nil {
 			t.Fatalf("Failed to build waves: %v", err)
 		}
@@ -260,11 +277,11 @@ func BenchmarkParallelEvaluator(b *testing.B) {
 				docCopy[k] = v
 			}
 
-			ev := &Evaluator{Tree: docCopy}
+			ev := &graft.Evaluator{Tree: docCopy}
 			pev := NewParallelEvaluator(ev, 1) // Force sequential
 			pev.SetParallelEnabled(false)
 
-			_ = pev.RunOpsParallel(EvalPhase)
+			_ = pev.RunOpsParallel(graft.EvalPhase)
 		}
 	})
 
@@ -276,17 +293,17 @@ func BenchmarkParallelEvaluator(b *testing.B) {
 				docCopy[k] = v
 			}
 
-			ev := &Evaluator{Tree: docCopy}
+			ev := &graft.Evaluator{Tree: docCopy}
 			pev := NewParallelEvaluator(ev, 8) // Allow parallelism
 
-			_ = pev.RunOpsParallel(EvalPhase)
+			_ = pev.RunOpsParallel(graft.EvalPhase)
 		}
 	})
 }
 
 // Helper functions for tests
 
-func findOperationByPath(waves []*OperatorWave, path string) *Opcall {
+func findOperationByPath(waves []*OperatorWave, path string) *graft.Opcall {
 	for _, wave := range waves {
 		for _, op := range wave.Operations {
 			if strings.Contains(op.Canonical().String(), path) {
@@ -297,7 +314,7 @@ func findOperationByPath(waves []*OperatorWave, path string) *Opcall {
 	return nil
 }
 
-func findWaveContaining(waves []*OperatorWave, op *Opcall) *OperatorWave {
+func findWaveContaining(waves []*OperatorWave, op *graft.Opcall) *OperatorWave {
 	for _, wave := range waves {
 		for _, waveOp := range wave.Operations {
 			if waveOp == op {

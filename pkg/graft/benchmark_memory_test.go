@@ -1,16 +1,17 @@
-package graft
+package graft_test
 
 import (
 	"strings"
 	"testing"
 	
 	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/pkg/graft"
 	"github.com/wayneeseguin/graft/pkg/graft/operators"
 )
 
 // BenchmarkConcatOperatorMemory benchmarks memory allocations in concat operator
 func BenchmarkConcatOperatorMemory(b *testing.B) {
-	ev := &Evaluator{
+	ev := &graft.Evaluator{
 		Tree: map[interface{}]interface{}{
 			"name": "test",
 			"value": "data",

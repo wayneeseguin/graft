@@ -102,7 +102,7 @@ func (pev *ParallelEvaluator) buildOperatorWaves(ops []*graft.Opcall) []*Operato
 	}
 
 	// Group into waves using topological sort with wave detection
-	remaining := make(map[*Opcall]bool)
+	remaining := make(map[*graft.Opcall]bool)
 	for _, op := range ops {
 		remaining[op] = true
 	}
@@ -110,7 +110,7 @@ func (pev *ParallelEvaluator) buildOperatorWaves(ops []*graft.Opcall) []*Operato
 	waveIndex := 0
 	for len(remaining) > 0 {
 		// Find all operations with no unresolved dependencies
-		currentWave := []*Opcall{}
+		currentWave := []*graft.Opcall{}
 
 		for op := range remaining {
 			hasUnresolvedDeps := false
@@ -160,12 +160,16 @@ func (pev *ParallelEvaluator) hasDependency(op1, op2 *graft.Opcall) bool {
 	op1Output := op1.Canonical()
 
 	// Check if op2 references the output of op1
-	for _, arg := range op2.Operator().Dependencies(pev.Evaluator, op2.Args(), []*tree.Cursor{}, []*tree.Cursor{}) {
-		if op1Output.Contains(arg) || arg.Contains(op1Output) {
+	deps := op2.Dependencies(pev.Evaluator, []*tree.Cursor{})
+	log.DEBUG("Checking if %s depends on %s: deps=%v", op2.Canonical(), op1.Canonical(), deps)
+	for _, arg := range deps {
+		if op1Output.Contains(arg) || arg.Contains(op1Output) || op1Output.String() == arg.String() {
+			log.DEBUG("  -> YES: %s references %s", arg, op1Output)
 			return true
 		}
 	}
 
+	log.DEBUG("  -> NO")
 	return false
 }
 
