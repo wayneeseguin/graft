@@ -1,9 +1,10 @@
-package internal
+package cache
 
 import (
 	"strings"
 	"testing"
 
+	"github.com/wayneeseguin/graft/pkg/graft/parser"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -124,7 +125,7 @@ func TestCacheKeyGeneration(t *testing.T) {
 
 		Convey("Registry signature", func() {
 			generator := NewCacheKeyGenerator(CacheKeyConfig{Algorithm: "fnv"})
-			registry := NewOperatorRegistry()
+			registry := parser.NewOperatorRegistry()
 
 			sig1 := generator.registrySignature(registry)
 			sig2 := generator.registrySignature(registry)
@@ -202,7 +203,7 @@ func BenchmarkCacheKeyGeneration(b *testing.B) {
 		CollisionDetection: true,
 	})
 
-	registry := NewOperatorRegistry()
+	registry := parser.NewOperatorRegistry()
 
 	b.Run("ExpressionKey", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {

@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/wayneeseguin/graft/internal/cache"
 )
 
 // MonitoringServer provides HTTP endpoints for monitoring
@@ -15,7 +17,7 @@ type MonitoringServer struct {
 	mu             sync.RWMutex
 	server         *http.Server
 	metricsReg     *MetricsRegistry
-	cacheAnalytics *CacheAnalytics
+	cacheAnalytics *cache.CacheAnalytics
 	timingAgg      *TimingAggregator
 	slowOpDetector *SlowOperationDetector
 	profiler       *Profiler
@@ -51,7 +53,7 @@ func NewMonitoringServer(config *MonitoringConfig) *MonitoringServer {
 	return &MonitoringServer{
 		config:         config,
 		metricsReg:     GetMetricsRegistry(),
-		cacheAnalytics: GetCacheAnalytics(),
+		cacheAnalytics: cache.GetCacheAnalytics(),
 		timingAgg:      GetTimingAggregator(),
 		slowOpDetector: GetSlowOpDetector(),
 		profiler:       GetProfiler(),
@@ -136,7 +138,7 @@ func (ms *MonitoringServer) handleMetricsJSON(w http.ResponseWriter, r *http.Req
 func (ms *MonitoringServer) handleCacheAnalytics(w http.ResponseWriter, r *http.Request) {
 	format := r.URL.Query().Get("format")
 
-	reporter := NewCacheReporter(ms.cacheAnalytics)
+	reporter := cache.NewCacheReporter(ms.cacheAnalytics)
 
 	switch format {
 	case "json":

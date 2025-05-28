@@ -1,4 +1,4 @@
-package internal
+package cache
 
 import (
 	"math"
@@ -85,10 +85,8 @@ func (ca *CacheAnalytics) RecordHit(cacheName, key string) {
 	stats.recordHit(key)
 	ca.hotKeys.recordAccess(key, true, 0)
 
-	// Update metrics collector
-	if MetricsEnabled() {
-		RecordCacheMetrics(cacheName, true)
-	}
+	// TODO: Update metrics collector when available
+	// Avoid circular dependency with internal package
 }
 
 // RecordMiss records a cache miss
@@ -104,10 +102,8 @@ func (ca *CacheAnalytics) RecordMiss(cacheName, key string, loadTime time.Durati
 	stats.recordMiss(key, loadTime)
 	ca.hotKeys.recordAccess(key, false, loadTime)
 
-	// Update metrics collector
-	if MetricsEnabled() {
-		RecordCacheMetrics(cacheName, false)
-	}
+	// TODO: Update metrics collector when available
+	// Avoid circular dependency
 }
 
 // RecordEviction records a cache eviction
@@ -119,11 +115,8 @@ func (ca *CacheAnalytics) RecordEviction(cacheName string, count int64, reason s
 	if exists {
 		stats.recordEviction(count, reason)
 
-		// Update metrics collector
-		if MetricsEnabled() {
-			mc := GetMetricsCollector()
-			mc.RecordCacheEviction(cacheName, count)
-		}
+		// TODO: Update metrics collector when available
+		// Avoid circular dependency
 	}
 }
 
@@ -139,11 +132,8 @@ func (ca *CacheAnalytics) UpdateSize(cacheName string, size, maxSize int64) {
 
 	stats.updateSize(size, maxSize)
 
-	// Update metrics collector
-	if MetricsEnabled() {
-		mc := GetMetricsCollector()
-		mc.UpdateCacheSize(cacheName, size)
-	}
+	// TODO: Update metrics collector when available
+	// Avoid circular dependency
 }
 
 // newCacheStats creates new cache stats

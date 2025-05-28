@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/wayneeseguin/graft/internal/cache"
 )
 
 // TestWorkerPool tests the worker pool implementation
@@ -160,15 +162,15 @@ func TestWorkerPool(t *testing.T) {
 // TestConcurrentCache tests the concurrent cache implementation
 func TestConcurrentCache(t *testing.T) {
 	t.Run("BasicOperations", func(t *testing.T) {
-		cache := NewConcurrentCache(CacheConfig{
+		c := cache.NewConcurrentCache(cache.CacheConfig{
 			Shards:   4,
 			Capacity: 100,
 			TTL:      0,
 		})
 		
 		// Set and get
-		cache.Set("key1", "value1")
-		value, found := cache.Get("key1")
+		c.Set("key1", "value1")
+		value, found := c.Get("key1")
 		if !found {
 			t.Fatal("Expected to find key1")
 		}
@@ -177,34 +179,34 @@ func TestConcurrentCache(t *testing.T) {
 		}
 		
 		// Miss
-		_, found = cache.Get("key2")
+		_, found = c.Get("key2")
 		if found {
 			t.Fatal("Expected not to find key2")
 		}
 		
 		// Delete
-		deleted := cache.Delete("key1")
+		deleted := c.Delete("key1")
 		if !deleted {
 			t.Fatal("Expected to delete key1")
 		}
 		
-		_, found = cache.Get("key1")
+		_, found = c.Get("key1")
 		if found {
 			t.Fatal("Expected not to find deleted key1")
 		}
 	})
 	
 	t.Run("TTLExpiration", func(t *testing.T) {
-		cache := NewConcurrentCache(CacheConfig{
+		c := cache.NewConcurrentCache(cache.CacheConfig{
 			Shards:   4,
 			Capacity: 100,
 			TTL:      100 * time.Millisecond,
 		})
 		
-		cache.Set("key1", "value1")
+		c.Set("key1", "value1")
 		
 		// Should exist immediately
-		_, found := cache.Get("key1")
+		_, found := c.Get("key1")
 		if !found {
 			t.Fatal("Expected to find key1")
 		}
@@ -213,14 +215,14 @@ func TestConcurrentCache(t *testing.T) {
 		time.Sleep(150 * time.Millisecond)
 		
 		// Should be expired
-		_, found = cache.Get("key1")
+		_, found = c.Get("key1")
 		if found {
 			t.Fatal("Expected key1 to be expired")
 		}
 	})
 	
 	t.Run("ConcurrentAccess", func(t *testing.T) {
-		cache := NewConcurrentCache(CacheConfig{
+		c := cache.NewConcurrentCache(cache.CacheConfig{
 			Shards:   16,
 			Capacity: 1000,
 			TTL:      0,
@@ -245,13 +247,13 @@ func TestConcurrentCache(t *testing.T) {
 					
 					switch j % 3 {
 					case 0:
-						cache.Set(key, j)
+						c.Set(key, j)
 						sets.Add(1)
 					case 1:
-						cache.Get(key)
+						c.Get(key)
 						gets.Add(1)
 					case 2:
-						cache.Delete(key)
+						c.Delete(key)
 						deletes.Add(1)
 					}
 				}
@@ -267,42 +269,42 @@ func TestConcurrentCache(t *testing.T) {
 		}
 		
 		// Check metrics
-		metrics := cache.Metrics()
+		metrics := c.Metrics()
 		if metrics.Sets != sets.Load() {
 			t.Fatalf("Metrics mismatch: expected %d sets, got %d", sets.Load(), metrics.Sets)
 		}
 	})
 	
 	t.Run("LRUEviction", func(t *testing.T) {
-		cache := NewConcurrentCache(CacheConfig{
+		c := cache.NewConcurrentCache(cache.CacheConfig{
 			Shards:   1, // Single shard for predictable behavior
 			Capacity: 3,
 			TTL:      0,
 		})
 		
 		// Fill cache
-		cache.Set("key1", "value1")
-		cache.Set("key2", "value2")
-		cache.Set("key3", "value3")
+		c.Set("key1", "value1")
+		c.Set("key2", "value2")
+		c.Set("key3", "value3")
 		
 		// Access key1 and key2 multiple times to increase hit count
 		for i := 0; i < 5; i++ {
-			cache.Get("key1")
-			cache.Get("key2")
+			c.Get("key1")
+			c.Get("key2")
 		}
 		
 		// Add key4, should evict key3 (least recently used)
-		cache.Set("key4", "value4")
+		c.Set("key4", "value4")
 		
 		// Check that key3 was evicted
-		_, found := cache.Get("key3")
+		_, found := c.Get("key3")
 		if found {
 			t.Fatal("Expected key3 to be evicted")
 		}
 		
 		// Check that other keys still exist
 		for _, key := range []string{"key1", "key2", "key4"} {
-			_, found := cache.Get(key)
+			_, found := c.Get(key)
 			if !found {
 				t.Fatalf("Expected to find %s", key)
 			}
@@ -383,7 +385,7 @@ func TestRaceConditions(t *testing.T) {
 	})
 	
 	t.Run("CacheRace", func(t *testing.T) {
-		cache := NewConcurrentCache(CacheConfig{
+		c := cache.NewConcurrentCache(cache.CacheConfig{
 			Shards:   16,
 			Capacity: 1000,
 			TTL:      time.Second,
@@ -398,7 +400,7 @@ func TestRaceConditions(t *testing.T) {
 				defer wg.Done()
 				for j := 0; j < 100; j++ {
 					key := fmt.Sprintf("key-%d", j)
-					cache.Set(key, id)
+					c.Set(key, id)
 				}
 			}(i)
 		}
@@ -410,7 +412,7 @@ func TestRaceConditions(t *testing.T) {
 				defer wg.Done()
 				for j := 0; j < 100; j++ {
 					key := fmt.Sprintf("key-%d", j)
-					cache.Get(key)
+					c.Get(key)
 				}
 			}()
 		}
@@ -421,7 +423,7 @@ func TestRaceConditions(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < 100; j++ {
 				key := fmt.Sprintf("key-%d", j)
-				cache.Delete(key)
+				c.Delete(key)
 			}
 		}()
 		
@@ -430,8 +432,8 @@ func TestRaceConditions(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < 100; i++ {
-				_ = cache.Metrics()
-				_ = cache.Size()
+				_ = c.Metrics()
+				_ = c.Size()
 			}
 		}()
 		
@@ -465,7 +467,7 @@ func (t *testTask) Execute(ctx context.Context) (interface{}, error) {
 
 // BenchmarkConcurrentCache benchmarks the concurrent cache
 func BenchmarkConcurrentCache(b *testing.B) {
-	cache := NewConcurrentCache(CacheConfig{
+	c := cache.NewConcurrentCache(cache.CacheConfig{
 		Shards:   16,
 		Capacity: 10000,
 		TTL:      0,
@@ -473,7 +475,7 @@ func BenchmarkConcurrentCache(b *testing.B) {
 	
 	// Pre-populate cache
 	for i := 0; i < 1000; i++ {
-		cache.Set(fmt.Sprintf("key-%d", i), i)
+		c.Set(fmt.Sprintf("key-%d", i), i)
 	}
 	
 	b.ResetTimer()
@@ -483,7 +485,7 @@ func BenchmarkConcurrentCache(b *testing.B) {
 			i := 0
 			for pb.Next() {
 				key := fmt.Sprintf("key-%d", i%1000)
-				cache.Get(key)
+				c.Get(key)
 				i++
 			}
 		})
@@ -494,7 +496,7 @@ func BenchmarkConcurrentCache(b *testing.B) {
 			i := 0
 			for pb.Next() {
 				key := fmt.Sprintf("key-%d", i%10000)
-				cache.Set(key, i)
+				c.Set(key, i)
 				i++
 			}
 		})
@@ -506,9 +508,9 @@ func BenchmarkConcurrentCache(b *testing.B) {
 			for pb.Next() {
 				key := fmt.Sprintf("key-%d", i%1000)
 				if i%10 == 0 {
-					cache.Set(key, i)
+					c.Set(key, i)
 				} else {
-					cache.Get(key)
+					c.Get(key)
 				}
 				i++
 			}

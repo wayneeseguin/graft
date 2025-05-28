@@ -44,10 +44,10 @@ func (StringifyOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 	// Handle nil specially
 	if val == nil {
-		DEBUG("resolved to nil, returning 'null'")
+		DEBUG("resolved to nil, returning nil")
 		return &Response{
 			Type:  Replace,
-			Value: "null",
+			Value: nil,
 		}, nil
 	}
 
@@ -77,11 +77,8 @@ func (StringifyOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	}
 
 	result := string(output)
-	// Remove trailing newline that yaml.Marshal adds
-	if len(result) > 0 && result[len(result)-1] == '\n' {
-		result = result[:len(result)-1]
-	}
-
+	// Keep the trailing newline that yaml.Marshal adds for complex types
+	
 	return &Response{
 		Type:  Replace,
 		Value: result,
