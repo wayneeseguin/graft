@@ -1,11 +1,16 @@
 package parser
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"testing"
+	
 	. "github.com/smartystreets/goconvey/convey"
+)
+
+// Define phase constants locally to avoid circular import
+const (
+	testMergePhase = 0
+	testEvalPhase  = 1
+	testParamPhase = 2
 )
 
 func TestEnhancedParser(t *testing.T) {
@@ -19,21 +24,21 @@ func TestEnhancedParser(t *testing.T) {
 			Precedence: PrecedencePostfix,
 			MinArgs:    1,
 			MaxArgs:    1,
-			Phase:      EvalPhase,
+			Phase:      testEvalPhase,
 		})
 		registry.Register(&OperatorInfo{
 			Name:       "vault",
 			Precedence: PrecedencePostfix,
 			MinArgs:    1,
 			MaxArgs:    -1,
-			Phase:      EvalPhase,
+			Phase:      testEvalPhase,
 		})
 		registry.Register(&OperatorInfo{
 			Name:       "concat",
 			Precedence: PrecedencePostfix,
 			MinArgs:    1,
 			MaxArgs:    -1,
-			Phase:      MergePhase,
+			Phase:      testMergePhase,
 		})
 		registry.Register(&OperatorInfo{
 			Name:          "+",
@@ -41,7 +46,7 @@ func TestEnhancedParser(t *testing.T) {
 			Associativity: AssociativityLeft,
 			MinArgs:       2,
 			MaxArgs:       2,
-			Phase:         EvalPhase,
+			Phase:         testEvalPhase,
 		})
 		registry.Register(&OperatorInfo{
 			Name:          "*",
@@ -49,7 +54,7 @@ func TestEnhancedParser(t *testing.T) {
 			Associativity: AssociativityLeft,
 			MinArgs:       2,
 			MaxArgs:       2,
-			Phase:         EvalPhase,
+			Phase:         testEvalPhase,
 		})
 		
 		parseExpression := func(input string) (*Expr, error) {

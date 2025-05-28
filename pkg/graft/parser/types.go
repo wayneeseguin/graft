@@ -230,6 +230,11 @@ func ParseOpcall(phase graft.OperatorPhase, src string) (*graft.Opcall, error) {
 	return ParseOpcallCompat(phase, src)
 }
 
+// NewOperatorCall creates a new operator call expression
+func NewOperatorCall(op string, args []*graft.Expr) *graft.Expr {
+	return NewOperatorCallWithPos(op, args, graft.Position{})
+}
+
 // NewOperatorCallWithPos creates a new operator call expression with position
 func NewOperatorCallWithPos(op string, args []*graft.Expr, pos graft.Position) *graft.Expr {
 	expr := &graft.Expr{

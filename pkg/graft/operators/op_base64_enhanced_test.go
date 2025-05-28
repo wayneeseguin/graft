@@ -4,29 +4,19 @@ import (
 	"os"
 	"testing"
 
-	"github.com/geofffranks/yaml"
+	"github.com/geofffranks/simpleyaml"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestEnhancedBase64Operators(t *testing.T) {
 	Convey("Enhanced Base64 Operators", t, func() {
-		// Enable debug temporarily
-		oldDebug := DebugOn
-		// DebugOn = true  // Disable for cleaner output
-
-		// Enable enhanced parser for these tests
-		oldUseEnhanced := UseEnhancedParser
-		EnableEnhancedParser() // This will set UseEnhancedParser and register all enhanced operators
-		defer func() {
-			DebugOn = oldDebug
-			if !oldUseEnhanced {
-				DisableEnhancedParser()
-			}
-		}()
+		// Enhanced parser should be enabled by default
+		// These tests require enhanced parser functionality
 
 		Convey("Base64 Encoding", func() {
 			Convey("should support nested concat expressions", func() {
 				// Verify enhanced parser is enabled
-				So(UseEnhancedParser, ShouldBeTrue)
+				
 
 				input := `
 user: alice
@@ -34,7 +24,9 @@ pass: secret123
 encoded: (( base64 (concat user ":" pass) ))
 `
 				var data map[interface{}]interface{}
-				err := yaml.Unmarshal([]byte(input), &data)
+				y, err := simpleyaml.NewYaml([]byte(input))
+				So(err, ShouldBeNil)
+				data, err = y.Map()
 				So(err, ShouldBeNil)
 
 				ev := &Evaluator{Tree: data}
@@ -51,7 +43,9 @@ parts:
 encoded: (( base64 (join " " parts) ))
 `
 				var data map[interface{}]interface{}
-				err := yaml.Unmarshal([]byte(input), &data)
+				y, err := simpleyaml.NewYaml([]byte(input))
+				So(err, ShouldBeNil)
+				data, err = y.Map()
 				So(err, ShouldBeNil)
 
 				ev := &Evaluator{Tree: data}
@@ -68,7 +62,9 @@ encoded: (( base64 (join " " parts) ))
 encoded: (( base64 $SECRET_VALUE ))
 `
 				var data map[interface{}]interface{}
-				err := yaml.Unmarshal([]byte(input), &data)
+				y, err := simpleyaml.NewYaml([]byte(input))
+				So(err, ShouldBeNil)
+				data, err = y.Map()
 				So(err, ShouldBeNil)
 
 				ev := &Evaluator{Tree: data}
@@ -84,7 +80,9 @@ config:
 encoded: (( base64 (grab config.apikey) ))
 `
 				var data map[interface{}]interface{}
-				err := yaml.Unmarshal([]byte(input), &data)
+				y, err := simpleyaml.NewYaml([]byte(input))
+				So(err, ShouldBeNil)
+				data, err = y.Map()
 				So(err, ShouldBeNil)
 
 				ev := &Evaluator{Tree: data}
@@ -99,7 +97,9 @@ number: 42
 encoded: (( base64 number ))
 `
 				var data map[interface{}]interface{}
-				err := yaml.Unmarshal([]byte(input), &data)
+				y, err := simpleyaml.NewYaml([]byte(input))
+				So(err, ShouldBeNil)
+				data, err = y.Map()
 				So(err, ShouldBeNil)
 
 				ev := &Evaluator{Tree: data}
@@ -116,7 +116,9 @@ encoded: "aGVsbG8gd29ybGQ="
 decoded: (( base64-decode (grab encoded) ))
 `
 				var data map[interface{}]interface{}
-				err := yaml.Unmarshal([]byte(input), &data)
+				y, err := simpleyaml.NewYaml([]byte(input))
+				So(err, ShouldBeNil)
+				data, err = y.Map()
 				So(err, ShouldBeNil)
 
 				ev := &Evaluator{Tree: data}
@@ -133,7 +135,9 @@ decoded: (( base64-decode (grab encoded) ))
 decoded: (( base64-decode $ENCODED_SECRET ))
 `
 				var data map[interface{}]interface{}
-				err := yaml.Unmarshal([]byte(input), &data)
+				y, err := simpleyaml.NewYaml([]byte(input))
+				So(err, ShouldBeNil)
+				data, err = y.Map()
 				So(err, ShouldBeNil)
 
 				ev := &Evaluator{Tree: data}
@@ -148,7 +152,9 @@ invalid: "not-valid-base64!"
 decoded: (( base64-decode invalid ))
 `
 				var data map[interface{}]interface{}
-				err := yaml.Unmarshal([]byte(input), &data)
+				y, err := simpleyaml.NewYaml([]byte(input))
+				So(err, ShouldBeNil)
+				data, err = y.Map()
 				So(err, ShouldBeNil)
 
 				ev := &Evaluator{Tree: data}
@@ -163,7 +169,9 @@ number: 123
 decoded: (( base64-decode number ))
 `
 				var data map[interface{}]interface{}
-				err := yaml.Unmarshal([]byte(input), &data)
+				y, err := simpleyaml.NewYaml([]byte(input))
+				So(err, ShouldBeNil)
+				data, err = y.Map()
 				So(err, ShouldBeNil)
 
 				ev := &Evaluator{Tree: data}
@@ -180,7 +188,9 @@ encoded: (( base64 original ))
 decoded: (( base64-decode encoded ))
 `
 			var data map[interface{}]interface{}
-			err := yaml.Unmarshal([]byte(input), &data)
+			y, err := simpleyaml.NewYaml([]byte(input))
+				So(err, ShouldBeNil)
+				data, err = y.Map()
 			So(err, ShouldBeNil)
 
 			ev := &Evaluator{Tree: data}

@@ -467,14 +467,14 @@ func TestGetArrayModifications(t *testing.T) {
 }
 
 func TestMergeObj(t *testing.T) {
-	Convey("Passing a map to m.mergeObj merges as a map", t, func() {
+	Convey("Passing a map to m.MergeObj merges as a map", t, func() {
 		Convey("merges as a map under normal conditions", func() {
 			orig := map[interface{}]interface{}{"first": 1, "second": 2}
 			n := map[interface{}]interface{}{"second": 4, "third": 3}
 			expect := map[interface{}]interface{}{"first": 1, "second": 4, "third": 3}
 
 			m := &Merger{}
-			o := m.mergeObj(orig, n, "node-path")
+			o := m.MergeObj(orig, n, "node-path")
 			err := m.Error()
 			So(o, ShouldResemble, expect)
 			So(err, ShouldBeNil)
@@ -492,7 +492,7 @@ func TestMergeObj(t *testing.T) {
 				},
 			}
 			m := &Merger{}
-			m.mergeObj(origMap, newMap, "node-path")
+			m.MergeObj(origMap, newMap, "node-path")
 			err := m.Error()
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "node-path.array.0: new object is a string, not a map - cannot merge by key")
@@ -501,20 +501,20 @@ func TestMergeObj(t *testing.T) {
 			orig := map[interface{}]interface{}{}
 			n := map[interface{}]interface{}{"map": "(( merge || nil ))"}
 			m := &Merger{}
-			m.mergeObj(orig, n, "node-path")
+			m.MergeObj(orig, n, "node-path")
 			err := m.Error()
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "node-path.map: inappropriate use of (( merge )) operator outside of a list (this is graft, after all)")
 		})
 	})
-	Convey("Passing a slice to m.mergeObj", t, func() {
+	Convey("Passing a slice to m.MergeObj", t, func() {
 		Convey("without magical merge token replaces entire array", func() {
 			orig := []interface{}{"first", "second"}
 			array := []interface{}{"my", "new", "array"}
 			expect := []interface{}{"my", "new", "array"}
 
 			m := &Merger{}
-			o := m.mergeObj(orig, array, "node-path")
+			o := m.MergeObj(orig, array, "node-path")
 			err := m.Error()
 			So(o, ShouldResemble, expect)
 			So(err, ShouldBeNil)
@@ -524,7 +524,7 @@ func TestMergeObj(t *testing.T) {
 			expect := []interface{}{"two"}
 
 			m := &Merger{}
-			o := m.mergeObj(nil, val, "node-path")
+			o := m.MergeObj(nil, val, "node-path")
 			err := m.Error()
 			So(o, ShouldResemble, expect)
 			So(err, ShouldBeNil)
@@ -539,7 +539,7 @@ func TestMergeObj(t *testing.T) {
 			}
 
 			m := &Merger{}
-			m.mergeObj(orig, array, "node-path")
+			m.MergeObj(orig, array, "node-path")
 			err := m.Error()
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "node-path.0: new object is a string, not a map - cannot merge by key")
@@ -551,19 +551,19 @@ func TestMergeObj(t *testing.T) {
 			}
 
 			m := &Merger{}
-			m.mergeObj(nil, array, "node-path")
+			m.MergeObj(nil, array, "node-path")
 			err := m.Error()
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "node-path.0: new object is a string, not a map - cannot merge by key")
 		})
 	})
-	Convey("m.mergeObj merges in place", t, func() {
+	Convey("m.MergeObj merges in place", t, func() {
 		Convey("When passed a string", func() {
 			orig := 42
 			val := "asdf"
 
 			m := &Merger{}
-			o := m.mergeObj(orig, val, "node-path")
+			o := m.MergeObj(orig, val, "node-path")
 			err := m.Error()
 			So(o, ShouldEqual, "asdf")
 			So(err, ShouldBeNil)
@@ -573,7 +573,7 @@ func TestMergeObj(t *testing.T) {
 			val := 10
 
 			m := &Merger{}
-			o := m.mergeObj(orig, val, "node-path")
+			o := m.MergeObj(orig, val, "node-path")
 			err := m.Error()
 			So(o, ShouldEqual, 10)
 			So(err, ShouldBeNil)
@@ -583,7 +583,7 @@ func TestMergeObj(t *testing.T) {
 			val := 10.4
 
 			m := &Merger{}
-			o := m.mergeObj(orig, val, "node-path")
+			o := m.MergeObj(orig, val, "node-path")
 			err := m.Error()
 			So(o, ShouldEqual, 10.4)
 			So(err, ShouldBeNil)
@@ -593,7 +593,7 @@ func TestMergeObj(t *testing.T) {
 			val := interface{}(nil)
 
 			m := &Merger{}
-			o := m.mergeObj(orig, val, "node-path")
+			o := m.MergeObj(orig, val, "node-path")
 			err := m.Error()
 			So(o, ShouldBeNil)
 			So(err, ShouldBeNil)
@@ -604,7 +604,7 @@ func TestMergeObj(t *testing.T) {
 			expect := map[interface{}]interface{}{"key": "value"}
 
 			m := &Merger{}
-			o := m.mergeObj(orig, val, "node-path")
+			o := m.MergeObj(orig, val, "node-path")
 			err := m.Error()
 			So(o, ShouldResemble, expect)
 			So(err, ShouldBeNil)
@@ -614,7 +614,7 @@ func TestMergeObj(t *testing.T) {
 			expect := map[interface{}]interface{}{"key": "value"}
 
 			m := &Merger{}
-			o := m.mergeObj(nil, val, "node-path")
+			o := m.MergeObj(nil, val, "node-path")
 			err := m.Error()
 			So(o, ShouldResemble, expect)
 			So(err, ShouldBeNil)
@@ -625,7 +625,7 @@ func TestMergeObj(t *testing.T) {
 			expect := []interface{}{"one", "two"}
 
 			m := &Merger{}
-			o := m.mergeObj(orig, val, "node-path")
+			o := m.MergeObj(orig, val, "node-path")
 			err := m.Error()
 			So(o, ShouldResemble, expect)
 			So(err, ShouldBeNil)
@@ -1120,7 +1120,7 @@ func TestMergeArray(t *testing.T) {
 				So(err, ShouldNotBeNil)
 				So(err.Error(), ShouldContainSubstring, "node-path.2: new object does not contain the key 'id' - cannot merge by key")
 			})
-			Convey("Returns an error if m.mergeObj() returns an error", func() {
+			Convey("Returns an error if m.MergeObj() returns an error", func() {
 				orig := []interface{}{
 					map[interface{}]interface{}{
 						"name": "first",
@@ -1169,7 +1169,7 @@ func TestMergeArray(t *testing.T) {
 			expect := []interface{}{expectMapSlice}
 
 			m := &Merger{}
-			o := m.mergeObj(orig, array, "node-path")
+			o := m.MergeObj(orig, array, "node-path")
 			err := m.Error()
 			So(o, ShouldResemble, expect)
 			So(err, ShouldBeNil)
@@ -1199,7 +1199,7 @@ func TestMergeArray(t *testing.T) {
 			}
 
 			m := &Merger{}
-			o := m.mergeObj(first, second, "an.inlined.merge")
+			o := m.MergeObj(first, second, "an.inlined.merge")
 			err := m.Error()
 			So(o, ShouldResemble, []interface{}{
 				map[interface{}]interface{}{
@@ -1247,7 +1247,7 @@ func TestMergeArray(t *testing.T) {
 				}
 
 				m := &Merger{}
-				o := m.mergeObj(first, second, "an.inlined.merge")
+				o := m.MergeObj(first, second, "an.inlined.merge")
 				err := m.Error()
 				So(o, ShouldResemble, []interface{}{
 					map[interface{}]interface{}{
@@ -1274,7 +1274,7 @@ func TestMergeArray(t *testing.T) {
 			expect := []interface{}{"my", "new", "array"}
 
 			m := &Merger{}
-			o := m.mergeObj(orig, array, "node-path")
+			o := m.MergeObj(orig, array, "node-path")
 			err := m.Error()
 			So(o, ShouldResemble, expect)
 			So(err, ShouldBeNil)

@@ -518,7 +518,7 @@ func (p *EnhancedParser) parseOperatorCall() (*Expr, error) {
 	modifiers := p.parseOperatorModifiers(opName)
 	if len(modifiers) > 0 {
 		for modifier, value := range modifiers {
-			SetModifierExpr(expr, fmt.Sprintf("%s:%s", modifier, value))
+			SetModifierExpr(expr, fmt.Sprintf("%s:%v", modifier, value))
 		}
 	}
 	

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/geofffranks/yaml"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestEnhancedJoinOperator(t *testing.T) {

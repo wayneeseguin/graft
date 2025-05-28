@@ -48,7 +48,7 @@ func TestEvaluator(t *testing.T) {
 					// map data flow ops into 'dataflow:' YAML list
 					var flow []map[string]string
 					for _, op := range ops {
-						flow = append(flow, map[string]string{op.where.String(): op.src})
+						flow = append(flow, map[string]string{op.Where().String(): op.Src()})
 					}
 					So(ToYAML(map[interface{}]interface{}{"dataflow": flow}),
 						ShouldEqual, ReYAML(dataflow))

@@ -18,6 +18,7 @@ import (
 	"github.com/geofffranks/simpleyaml"
 	"github.com/starkandwayne/goutils/ansi"
 	"github.com/starkandwayne/goutils/tree"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 type mockedSSM struct {

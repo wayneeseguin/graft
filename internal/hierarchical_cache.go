@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
 // HierarchicalCache implements L1 (memory) and L2 (disk) cache layers

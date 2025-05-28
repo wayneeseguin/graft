@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/geofffranks/simpleyaml"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestAdvancedOperatorIntegration(t *testing.T) {

@@ -1,11 +1,9 @@
 package parser
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"testing"
 	"time"
+	
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -150,13 +148,13 @@ func TestParserMemoization(t *testing.T) {
 			}
 			
 			// Different strings should normalize to same pattern
-			pattern1 := tracker.normalizePattern(`grab "value1"`)
-			pattern2 := tracker.normalizePattern(`grab "value2"`)
+			pattern1 := tracker.NormalizePattern(`grab "value1"`)
+			pattern2 := tracker.NormalizePattern(`grab "value2"`)
 			So(pattern1, ShouldEqual, pattern2)
 			
 			// Different numbers should normalize to same pattern
-			pattern3 := tracker.normalizePattern("calc 100 + 200")
-			pattern4 := tracker.normalizePattern("calc 50 + 75")
+			pattern3 := tracker.NormalizePattern("calc 100 + 200")
+			pattern4 := tracker.NormalizePattern("calc 50 + 75")
 			So(pattern3, ShouldEqual, pattern4)
 		})
 		

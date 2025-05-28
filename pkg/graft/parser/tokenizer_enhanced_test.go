@@ -1,10 +1,8 @@
 package parser
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"testing"
+	
 	. "github.com/smartystreets/goconvey/convey"
 )
 

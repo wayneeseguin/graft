@@ -1,4 +1,4 @@
-package graft
+package internal
 
 import (
 	"context"

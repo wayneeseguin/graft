@@ -1,4 +1,4 @@
-package graft
+package internal
 
 import (
 	"context"
@@ -6,13 +6,14 @@ import (
 	"sync"
 	"time"
 
-	tree "github.com/starkandwayne/goutils/tree"
+	gotree "github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
 // ThreadSafeEvaluatorImpl implements ThreadSafeEvaluator interface
 type ThreadSafeEvaluatorImpl struct {
 	safeTree    ThreadSafeTree
-	originalEv  *Evaluator
+	originalEv  *graft.Evaluator
 	mu          sync.RWMutex
 	listeners   []EvaluationListener
 	progress    *EvaluationProgress
@@ -29,16 +30,17 @@ func NewThreadSafeEvaluator(tree ThreadSafeTree) *ThreadSafeEvaluatorImpl {
 		rawData = make(map[interface{}]interface{})
 	}
 	
-	originalEv := &Evaluator{
+	originalEv := &graft.Evaluator{
 		Tree:     rawData,
 		SkipEval: false,
-		CheckOps: make([]*Opcall, 0),
+		Here:     &gotree.Cursor{},
+		CheckOps: make([]*graft.Opcall, 0),
 		Only:     []string{},
 	}
 	
 	// Initialize Deps separately to avoid type issues
 	if originalEv.Deps == nil {
-		originalEv.Deps = make(map[string][]tree.Cursor)
+		originalEv.Deps = make(map[string][]gotree.Cursor)
 	}
 	
 	return &ThreadSafeEvaluatorImpl{
@@ -100,32 +102,32 @@ func (tse *ThreadSafeEvaluatorImpl) Evaluate(ctx context.Context) error {
 	return err
 }
 
-// EvaluateSubtree evaluates a specific subtree
+// EvaluateSubtree performs thread-safe evaluation of a subtree
 func (tse *ThreadSafeEvaluatorImpl) EvaluateSubtree(ctx context.Context, path ...string) error {
 	tse.mu.Lock()
 	defer tse.mu.Unlock()
 	
-	// For now, this is a simplified implementation
-	// In a full implementation, we'd want to evaluate only the specified subtree
+	// This is a simplified implementation
+	// In practice, we'd need to handle subtree evaluation more carefully
 	return tse.Evaluate(ctx)
 }
 
-// ExecuteOperator executes a specific operator in a thread-safe manner
-func (tse *ThreadSafeEvaluatorImpl) ExecuteOperator(ctx context.Context, op Operator, args []interface{}) (interface{}, error) {
+// ExecuteOperator executes a single operator in a thread-safe manner
+func (tse *ThreadSafeEvaluatorImpl) ExecuteOperator(ctx context.Context, op graft.Operator, args []interface{}) (interface{}, error) {
 	tse.mu.Lock()
 	defer tse.mu.Unlock()
 	
-	// Convert args to proper format
-	exprArgs := make([]*Expr, len(args))
+	// Convert args to expressions
+	exprs := make([]*graft.Expr, len(args))
 	for i, arg := range args {
-		exprArgs[i] = &Expr{
-			Type:    Literal,
+		exprs[i] = &graft.Expr{
+			Type:    graft.Literal,
 			Literal: arg,
 		}
 	}
 	
-	// Execute operator
-	response, err := op.Run(tse.originalEv, exprArgs)
+	// Execute the operator
+	response, err := op.Run(tse.originalEv, exprs)
 	if err != nil {
 		return nil, err
 	}
@@ -187,64 +189,81 @@ func (tse *ThreadSafeEvaluatorImpl) syncBackToSafeTree() error {
 		}
 	}
 	
+	// Replace the entire tree content
 	return tse.safeTree.Replace(data)
 }
 
-// ThreadSafeOperatorAdapter wraps existing operators for thread-safe execution
+// ThreadSafeOperatorAdapter wraps an operator for thread-safe execution
 type ThreadSafeOperatorAdapter struct {
-	operator Operator
-	mu       sync.RWMutex
+	operator   graft.Operator
+	mu         sync.Mutex
+	cache      map[string]interface{}
+	cacheTTL   time.Duration
+	cacheTime  map[string]time.Time
 }
 
-// NewThreadSafeOperatorAdapter creates a thread-safe operator adapter
-func NewThreadSafeOperatorAdapter(op Operator) *ThreadSafeOperatorAdapter {
-	return &ThreadSafeOperatorAdapter{operator: op}
+// NewThreadSafeOperatorAdapter creates a new thread-safe operator adapter
+func NewThreadSafeOperatorAdapter(op graft.Operator) *ThreadSafeOperatorAdapter {
+	return &ThreadSafeOperatorAdapter{
+		operator:  op,
+		cache:     make(map[string]interface{}),
+		cacheTime: make(map[string]time.Time),
+		cacheTTL:  5 * time.Minute,
+	}
 }
 
-// Setup safely executes operator setup
-func (toa *ThreadSafeOperatorAdapter) Setup() error {
-	toa.mu.Lock()
-	defer toa.mu.Unlock()
-	return toa.operator.Setup()
-}
-
-// Run safely executes the operator
-func (toa *ThreadSafeOperatorAdapter) Run(ev *Evaluator, args []*Expr) (*Response, error) {
-	// Determine if this is a read or write operation
+// Run executes the operator in a thread-safe manner with caching
+func (toa *ThreadSafeOperatorAdapter) Run(ev *graft.Evaluator, args []*graft.Expr) (*graft.Response, error) {
+	// Generate cache key
+	cacheKey := toa.generateCacheKey(args)
+	
+	// Check cache first (for read-only operators)
 	if toa.isReadOnlyOperator() {
-		toa.mu.RLock()
-		defer toa.mu.RUnlock()
-	} else {
 		toa.mu.Lock()
-		defer toa.mu.Unlock()
+		if cached, found := toa.cache[cacheKey]; found {
+			if cacheTime, ok := toa.cacheTime[cacheKey]; ok {
+				if time.Since(cacheTime) < toa.cacheTTL {
+					toa.mu.Unlock()
+					return &graft.Response{
+						Type:  graft.Replace,
+						Value: cached,
+					}, nil
+				}
+			}
+		}
+		toa.mu.Unlock()
 	}
 	
-	return toa.operator.Run(ev, args)
+	// Execute the operator
+	response, err := toa.operator.Run(ev, args)
+	
+	// Cache successful results for read-only operators
+	if err == nil && toa.isReadOnlyOperator() {
+		toa.mu.Lock()
+		toa.cache[cacheKey] = response.Value
+		toa.cacheTime[cacheKey] = time.Now()
+		toa.mu.Unlock()
+	}
+	
+	return response, err
 }
 
-// Dependencies safely gets operator dependencies
-func (toa *ThreadSafeOperatorAdapter) Dependencies(ev *Evaluator, args []*Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	toa.mu.RLock()
-	defer toa.mu.RUnlock()
-	return toa.operator.Dependencies(ev, args, locs, auto)
+func (toa *ThreadSafeOperatorAdapter) generateCacheKey(args []*graft.Expr) string {
+	// Simple cache key generation - in practice, this would be more sophisticated
+	return fmt.Sprintf("%v", args)
 }
 
-// Phase returns the operator phase
-func (toa *ThreadSafeOperatorAdapter) Phase() OperatorPhase {
-	return toa.operator.Phase()
-}
-
-// isReadOnlyOperator determines if an operator only reads data
 func (toa *ThreadSafeOperatorAdapter) isReadOnlyOperator() bool {
-	// List of operators that only read data
+	// Define which operators are read-only and safe to cache
 	readOnlyOps := map[string]bool{
-		"grab":   true,
-		"empty":  true,
-		"length": true,
-		"keys":   true,
-		"calc":   false, // May modify intermediate values
-		"concat": true,
-		"vault":  true,
+		"*GrabOperator":     true,
+		"*ConcatOperator":   true,
+		"*Base64Operator":   true,
+		"*KeysOperator":     true,
+		"*EmptyOperator":    true,
+		"*JoinOperator":     true,
+		"*SortOperator":     true,
+		"*StringifyOperator": true,
 	}
 	
 	// This is a simplification - in practice, we'd need a better way 
@@ -269,18 +288,14 @@ func NewMigrationHelper(data map[interface{}]interface{}) *MigrationHelper {
 	}
 }
 
-// WrapEvaluator wraps an existing evaluator with thread safety
-func (mh *MigrationHelper) WrapEvaluator(originalEv *Evaluator) *ThreadSafeEvaluatorImpl {
-	// Update safe tree with original evaluator's data
-	data := make(map[string]interface{})
-	for k, v := range originalEv.Tree {
-		if keyStr, ok := k.(string); ok {
-			data[keyStr] = v
-		}
-	}
-	mh.safeTree.Replace(data)
-	
-	// Copy other evaluator properties
+// GetThreadSafeEvaluator returns a thread-safe evaluator
+func (mh *MigrationHelper) GetThreadSafeEvaluator() *ThreadSafeEvaluatorImpl {
+	return mh.tsEval
+}
+
+// MigrateEvaluator converts an existing evaluator to thread-safe
+func (mh *MigrationHelper) MigrateEvaluator(originalEv *graft.Evaluator) *ThreadSafeEvaluatorImpl {
+	// Update the internal evaluator with original's settings
 	mh.tsEval.originalEv.Deps = originalEv.Deps
 	mh.tsEval.originalEv.SkipEval = originalEv.SkipEval
 	mh.tsEval.originalEv.CheckOps = originalEv.CheckOps
@@ -295,7 +310,7 @@ func (mh *MigrationHelper) GetThreadSafeTree() ThreadSafeTree {
 }
 
 // GetCompatibleEvaluator returns an evaluator compatible with existing code
-func (mh *MigrationHelper) GetCompatibleEvaluator() *Evaluator {
+func (mh *MigrationHelper) GetCompatibleEvaluator() *graft.Evaluator {
 	return mh.tsEval.originalEv
 }
 

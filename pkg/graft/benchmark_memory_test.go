@@ -5,27 +5,35 @@ import (
 	"testing"
 	
 	"github.com/starkandwayne/goutils/tree"
-	"github.com/wayneeseguin/graft/pkg/graft"
 	"github.com/wayneeseguin/graft/pkg/graft/operators"
 )
 
 // BenchmarkConcatOperatorMemory benchmarks memory allocations in concat operator
 func BenchmarkConcatOperatorMemory(b *testing.B) {
-	ev := &graft.Evaluator{
+	ev := &Evaluator{
 		Tree: map[interface{}]interface{}{
 			"name": "test",
 			"value": "data",
 		},
-		Here: tree.ParseCursor("$"),
+		Here: func() *tree.Cursor {
+			c, _ := tree.ParseCursor("$")
+			return c
+		}(),
 	}
 	
 	// Create test expressions
-	args := []*graft.Expr{
-		{Type: graft.Literal, Literal: "prefix-"},
-		{Type: graft.Reference, Reference: tree.MustParseCursor("name")},
-		{Type: graft.Literal, Literal: "-"},
-		{Type: graft.Reference, Reference: tree.MustParseCursor("value")},
-		{Type: graft.Literal, Literal: "-suffix"},
+	args := []*Expr{
+		{Type: Literal, Literal: "prefix-"},
+		{Type: Reference, Reference: func() *tree.Cursor {
+			c, _ := tree.ParseCursor("name")
+			return c
+		}()},
+		{Type: Literal, Literal: "-"},
+		{Type: Reference, Reference: func() *tree.Cursor {
+			c, _ := tree.ParseCursor("value")
+			return c
+		}()},
+		{Type: Literal, Literal: "-suffix"},
 	}
 	
 	op := operators.ConcatOperatorEnhanced{}
@@ -40,17 +48,23 @@ func BenchmarkConcatOperatorMemory(b *testing.B) {
 
 // BenchmarkJoinOperatorMemory benchmarks memory allocations in join operator
 func BenchmarkJoinOperatorMemory(b *testing.B) {
-	ev := &graft.Evaluator{
+	ev := &Evaluator{
 		Tree: map[interface{}]interface{}{
 			"items": []interface{}{"one", "two", "three", "four", "five"},
 		},
-		Here: tree.ParseCursor("$"),
+		Here: func() *tree.Cursor {
+			c, _ := tree.ParseCursor("$")
+			return c
+		}(),
 	}
 	
 	// Create test expressions
-	args := []*graft.Expr{
-		{Type: graft.Literal, Literal: ", "},
-		{Type: graft.Reference, Reference: tree.MustParseCursor("items")},
+	args := []*Expr{
+		{Type: Literal, Literal: ", "},
+		{Type: Reference, Reference: func() *tree.Cursor {
+			c, _ := tree.ParseCursor("items")
+			return c
+		}()},
 	}
 	
 	op := operators.JoinOperatorEnhanced{}

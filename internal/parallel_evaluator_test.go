@@ -289,7 +289,7 @@ func BenchmarkParallelEvaluator(b *testing.B) {
 func findOperationByPath(waves []*OperatorWave, path string) *Opcall {
 	for _, wave := range waves {
 		for _, op := range wave.Operations {
-			if strings.Contains(op.canonical.String(), path) {
+			if strings.Contains(op.Canonical().String(), path) {
 				return op
 			}
 		}

@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Graft Library Basic Usage Example ===\n")
+	fmt.Println("=== Graft Library Basic Usage Example ===")
 
 	// Create a new engine
 	engine, err := graft.NewEngineV2()

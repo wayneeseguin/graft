@@ -57,9 +57,21 @@ func DefaultParallelConfig() *ParallelEvaluatorConfig {
 	}
 }
 
+var defaultConfig = DefaultParallelConfig()
+
+// SetParallelConfig sets the global parallel configuration
+func SetParallelConfig(config *ParallelEvaluatorConfig) {
+	defaultConfig = config
+}
+
+// GetParallelConfig returns the current parallel configuration
+func GetParallelConfig() *ParallelEvaluatorConfig {
+	return defaultConfig
+}
+
 // ParallelEvaluatorAdapter bridges the existing Evaluator with parallel execution
 type ParallelEvaluatorAdapter struct {
-	evaluator *Evaluator
+	evaluator *graft.Evaluator
 	config    *ParallelEvaluatorConfig
 	tree      ThreadSafeTree
 	engine    *ParallelExecutionEngine
@@ -71,7 +83,7 @@ type ParallelEvaluatorAdapter struct {
 }
 
 // NewParallelEvaluatorAdapter creates a new adapter
-func NewParallelEvaluatorAdapter(ev *Evaluator, config *ParallelEvaluatorConfig) *ParallelEvaluatorAdapter {
+func NewParallelEvaluatorAdapter(ev *graft.Evaluator, config *ParallelEvaluatorConfig) *ParallelEvaluatorAdapter {
 	if config == nil {
 		config = DefaultParallelConfig()
 	}
@@ -96,7 +108,7 @@ func NewParallelEvaluatorAdapter(ev *Evaluator, config *ParallelEvaluatorConfig)
 }
 
 // RunOps executes operations, using parallel execution when beneficial
-func (pa *ParallelEvaluatorAdapter) RunOps(ops []*Opcall) error {
+func (pa *ParallelEvaluatorAdapter) RunOps(ops []*graft.Opcall) error {
 	metrics := GetParallelMetrics()
 
 	if !pa.config.Enabled || len(ops) < pa.config.MinOpsForParallel {
@@ -183,28 +195,28 @@ func (pa *ParallelEvaluatorAdapter) RunOps(ops []*Opcall) error {
 
 // operationGroups represents analyzed operation groups
 type operationGroups struct {
-	parallel                []*Opcall
-	sequential              []*Opcall
+	parallel                []*graft.Opcall
+	sequential              []*graft.Opcall
 	executionOrder          []operationGroup
 	estimatedSequentialTime time.Duration
 }
 
 // operationGroup represents a group of operations that can be executed together
 type operationGroup struct {
-	ops         []*Opcall
+	ops         []*graft.Opcall
 	canParallel bool
 }
 
 // analyzeOperations groups operations for optimal execution
-func (pa *ParallelEvaluatorAdapter) analyzeOperations(ops []*Opcall) operationGroups {
+func (pa *ParallelEvaluatorAdapter) analyzeOperations(ops []*graft.Opcall) operationGroups {
 	groups := operationGroups{
-		parallel:   make([]*Opcall, 0),
-		sequential: make([]*Opcall, 0),
+		parallel:   make([]*graft.Opcall, 0),
+		sequential: make([]*graft.Opcall, 0),
 	}
 
 	// Build dependency map from evaluator
 	deps := make(map[string][]string)
-	opsByPath := make(map[string]*Opcall)
+	opsByPath := make(map[string]*graft.Opcall)
 
 	for _, op := range ops {
 		path := op.Where().String()
@@ -225,7 +237,7 @@ func (pa *ParallelEvaluatorAdapter) analyzeOperations(ops []*Opcall) operationGr
 
 	for len(processed) < len(ops) {
 		group := operationGroup{
-			ops:         make([]*Opcall, 0),
+			ops:         make([]*graft.Opcall, 0),
 			canParallel: true,
 		}
 
@@ -280,7 +292,7 @@ func (pa *ParallelEvaluatorAdapter) analyzeOperations(ops []*Opcall) operationGr
 }
 
 // isOperatorSafe checks if an operator is safe for parallel execution
-func (pa *ParallelEvaluatorAdapter) isOperatorSafe(op *Opcall) bool {
+func (pa *ParallelEvaluatorAdapter) isOperatorSafe(op *graft.Opcall) bool {
 	// Get operator type from registry
 	opType := pa.getOperatorType(op)
 	if opType == "" {
@@ -314,7 +326,7 @@ func (pa *ParallelEvaluatorAdapter) isOperatorSafe(op *Opcall) bool {
 }
 
 // getOperatorType returns the type name of an operator
-func (pa *ParallelEvaluatorAdapter) getOperatorType(op *Opcall) string {
+func (pa *ParallelEvaluatorAdapter) getOperatorType(op *graft.Opcall) string {
 	if op.Operator() == nil {
 		return ""
 	}
@@ -340,7 +352,7 @@ func (pa *ParallelEvaluatorAdapter) getOperatorType(op *Opcall) string {
 }
 
 // runParallelGroup executes a group of operations in parallel
-func (pa *ParallelEvaluatorAdapter) runParallelGroup(ops []*Opcall) error {
+func (pa *ParallelEvaluatorAdapter) runParallelGroup(ops []*graft.Opcall) error {
 	pa.totalOps.Add(int64(len(ops)))
 	pa.parallelOps.Add(int64(len(ops)))
 
@@ -388,7 +400,7 @@ func (pa *ParallelEvaluatorAdapter) runParallelGroup(ops []*Opcall) error {
 }
 
 // opcallToOperation converts an Opcall to an Operation for parallel execution
-func (pa *ParallelEvaluatorAdapter) opcallToOperation(op *Opcall) Operation {
+func (pa *ParallelEvaluatorAdapter) opcallToOperation(op *graft.Opcall) Operation {
 	return Operation{
 		Type:     "opcall",
 		Path:     strings.Split(op.Where().String(), "."),
@@ -398,7 +410,7 @@ func (pa *ParallelEvaluatorAdapter) opcallToOperation(op *Opcall) Operation {
 }
 
 // applyResult applies the result of a parallel operation back to the tree
-func (pa *ParallelEvaluatorAdapter) applyResult(op *Opcall, result interface{}) error {
+func (pa *ParallelEvaluatorAdapter) applyResult(op *graft.Opcall, result interface{}) error {
 	// For now, we rely on the operator having updated the tree directly
 	// In future, we could make this more explicit
 	return nil

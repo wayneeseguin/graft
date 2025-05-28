@@ -13,7 +13,7 @@ import (
 // for a microservices application with environment-specific overrides
 
 func main() {
-	fmt.Println("=== Graft Configuration Management Example ===\n")
+	fmt.Println("=== Graft Configuration Management Example ===")
 
 	// Create engine
 	engine, err := graft.NewEngineV2()

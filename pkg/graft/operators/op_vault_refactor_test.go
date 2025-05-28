@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/starkandwayne/goutils/tree"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestVaultArgProcessor(t *testing.T) {

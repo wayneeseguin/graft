@@ -3,19 +3,42 @@ package operators
 import (
 	"testing"
 
-	"github.com/geofffranks/yaml"
+	"github.com/geofffranks/simpleyaml"
+	. "github.com/smartystreets/goconvey/convey"
 )
+
+// testArithmetic is a helper function to test arithmetic operations
+func testArithmetic(input string, key string, expected interface{}) {
+	y, err := simpleyaml.NewYaml([]byte(input))
+	So(err, ShouldBeNil)
+	
+	data, err := y.Map()
+	So(err, ShouldBeNil)
+	
+	ev := &Evaluator{Tree: data}
+	err = ev.RunPhase(EvalPhase)
+	So(err, ShouldBeNil)
+	So(ev.Tree[key], ShouldEqual, expected)
+}
+
+// testArithmeticError is a helper function to test arithmetic errors
+func testArithmeticError(input string, expectedError string) {
+	y, err := simpleyaml.NewYaml([]byte(input))
+	So(err, ShouldBeNil)
+	
+	data, err := y.Map()
+	So(err, ShouldBeNil)
+	
+	ev := &Evaluator{Tree: data}
+	err = ev.RunPhase(EvalPhase)
+	So(err, ShouldNotBeNil)
+	So(err.Error(), ShouldContainSubstring, expectedError)
+}
 
 func TestArithmeticOperators(t *testing.T) {
 	Convey("Arithmetic Operators", t, func() {
 		// Enable enhanced parser for arithmetic operators
-		oldUseEnhanced := UseEnhancedParser
-		EnableEnhancedParser()
-		defer func() {
-			if !oldUseEnhanced {
-				DisableEnhancedParser()
-			}
-		}()
+		// Arithmetic operators require enhanced parser, which should be enabled by default
 
 		Convey("Addition Operator (+)", func() {
 			Convey("should add two integers", func() {
@@ -81,7 +104,9 @@ result: (( (grab base) + (grab addend) ))
 complex: (( (base * multiplier) + addend ))
 `
 				var data map[interface{}]interface{}
-				err := yaml.Unmarshal([]byte(input), &data)
+				y, err := simpleyaml.NewYaml([]byte(input))
+				So(err, ShouldBeNil)
+				data, err = y.Map()
 				So(err, ShouldBeNil)
 
 				ev := &Evaluator{Tree: data}
@@ -290,7 +315,9 @@ result1: (( (2 + 3) * 4 ))
 result2: (( 2 + (3 * 4) ))
 `
 				var data map[interface{}]interface{}
-				err := yaml.Unmarshal([]byte(input), &data)
+				y, err := simpleyaml.NewYaml([]byte(input))
+				So(err, ShouldBeNil)
+				data, err = y.Map()
 				So(err, ShouldBeNil)
 
 				ev := &Evaluator{Tree: data}
@@ -324,7 +351,9 @@ adjusted: (( scaled + meta.offset ))
 final: (( adjusted / 10 ))
 `
 				var data map[interface{}]interface{}
-				err := yaml.Unmarshal([]byte(input), &data)
+				y, err := simpleyaml.NewYaml([]byte(input))
+				So(err, ShouldBeNil)
+				data, err = y.Map()
 				So(err, ShouldBeNil)
 
 				ev := &Evaluator{Tree: data}
@@ -348,7 +377,9 @@ product: (( first * second ))
 average: (( sum / 2 ))
 `
 				var data map[interface{}]interface{}
-				err := yaml.Unmarshal([]byte(input), &data)
+				y, err := simpleyaml.NewYaml([]byte(input))
+				So(err, ShouldBeNil)
+				data, err = y.Map()
 				So(err, ShouldBeNil)
 
 				ev := &Evaluator{Tree: data}
@@ -362,26 +393,3 @@ average: (( sum / 2 ))
 	})
 }
 
-// Helper function to test arithmetic operations
-func testArithmetic(input, key string, expected interface{}) {
-	var data map[interface{}]interface{}
-	err := yaml.Unmarshal([]byte(input), &data)
-	So(err, ShouldBeNil)
-
-	ev := &Evaluator{Tree: data}
-	err = ev.RunPhase(EvalPhase)
-	So(err, ShouldBeNil)
-	So(ev.Tree[key], ShouldEqual, expected)
-}
-
-// Helper function to test arithmetic errors
-func testArithmeticError(input, expectedError string) {
-	var data map[interface{}]interface{}
-	err := yaml.Unmarshal([]byte(input), &data)
-	So(err, ShouldBeNil)
-
-	ev := &Evaluator{Tree: data}
-	err = ev.RunPhase(EvalPhase)
-	So(err, ShouldNotBeNil)
-	So(err.Error(), ShouldContainSubstring, expectedError)
-}

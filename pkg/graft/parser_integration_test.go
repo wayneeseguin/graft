@@ -1,111 +1,110 @@
-package parser
+package graft
 
 import (
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-import (
 	"testing"
+	
 	"github.com/starkandwayne/goutils/tree"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wayneeseguin/graft/pkg/graft/parser"
 )
 
 func TestParserIntegration(t *testing.T) {
 	Convey("Parser Integration", t, func() {
 		// Save original flag state
-		originalFlag := UseEnhancedParser
-		defer func() { UseEnhancedParser = originalFlag }()
+		originalFlag := parser.UseEnhancedParser
+		defer func() { parser.UseEnhancedParser = originalFlag }()
 		
 		Convey("Enhanced Parser Feature Flag", func() {
 			Convey("When disabled, uses original parser", func() {
-				UseEnhancedParser = false
+				parser.UseEnhancedParser = false
 				
-				opcall, err := ParseOpcallCompat(EvalPhase, `(( grab foo.bar ))`)
+				opcall, err := parser.ParseOpcallCompat(EvalPhase, `(( grab foo.bar ))`)
 				So(err, ShouldBeNil)
 				So(opcall, ShouldNotBeNil)
-				So(opcall.op, ShouldNotBeNil)
+				So(opcall.Operator(), ShouldNotBeNil)
 			})
 			
 			Convey("When enabled, uses enhanced parser", func() {
-				UseEnhancedParser = true
+				parser.UseEnhancedParser = true
 				
-				opcall, err := ParseOpcallCompat(EvalPhase, `(( concat "hello" "world" ))`)
+				opcall, err := parser.ParseOpcallCompat(EvalPhase, `(( concat "hello" "world" ))`)
 				So(err, ShouldBeNil)
 				So(opcall, ShouldNotBeNil)
-				So(opcall.op, ShouldNotBeNil)
+				So(opcall.Operator(), ShouldNotBeNil)
 			})
 		})
 		
 		Convey("Automatic Enhanced Parser Selection", func() {
-			UseEnhancedParser = false // Rely on heuristics
+			parser.UseEnhancedParser = false // Rely on heuristics
 			
 			Convey("Uses enhanced parser for nested operators", func() {
-				So(shouldUseEnhancedParser(`concat (grab foo) "bar"`), ShouldBeTrue)
-				So(shouldUseEnhancedParser(`vault "path" || grab defaults`), ShouldBeFalse) // || is handled by original
+				So(parser.ShouldUseEnhancedParser(`concat (grab foo) "bar"`), ShouldBeTrue)
+				So(parser.ShouldUseEnhancedParser(`vault "path" || grab defaults`), ShouldBeFalse) // || is handled by original
 			})
 			
 			Convey("Uses enhanced parser for arithmetic", func() {
-				So(shouldUseEnhancedParser(`1 + 2`), ShouldBeTrue)
-				So(shouldUseEnhancedParser(`count * 2`), ShouldBeTrue)
+				So(parser.ShouldUseEnhancedParser(`1 + 2`), ShouldBeTrue)
+				So(parser.ShouldUseEnhancedParser(`count * 2`), ShouldBeTrue)
 			})
 			
 			Convey("Uses enhanced parser for parentheses", func() {
-				So(shouldUseEnhancedParser(`(grab foo)`), ShouldBeTrue)
-				So(shouldUseEnhancedParser(`concat (a) (b)`), ShouldBeTrue)
+				So(parser.ShouldUseEnhancedParser(`(grab foo)`), ShouldBeTrue)
+				So(parser.ShouldUseEnhancedParser(`concat (a) (b)`), ShouldBeTrue)
 			})
 		})
 		
 		Convey("Enhanced Parser Functionality", func() {
-			UseEnhancedParser = true
+			parser.UseEnhancedParser = true
 			
 			Convey("Parses simple operator calls", func() {
-				opcall, err := ParseOpcallEnhanced(EvalPhase, `(( grab foo.bar ))`)
+				opcall, err := parser.ParseOpcallEnhanced(EvalPhase, `(( grab foo.bar ))`)
 				So(err, ShouldBeNil)
 				So(opcall, ShouldNotBeNil)
-				So(len(opcall.args), ShouldEqual, 1)
-				So(opcall.args[0].Type, ShouldEqual, Reference)
+				So(len(opcall.Args()), ShouldEqual, 1)
+				So(opcall.Args()[0].Type, ShouldEqual, Reference)
 			})
 			
 			Convey("Parses operators with multiple arguments", func() {
-				opcall, err := ParseOpcallEnhanced(EvalPhase, `(( concat "hello" " " "world" ))`)
+				opcall, err := parser.ParseOpcallEnhanced(EvalPhase, `(( concat "hello" " " "world" ))`)
 				So(err, ShouldBeNil)
 				So(opcall, ShouldNotBeNil)
-				So(len(opcall.args), ShouldEqual, 3)
-				So(opcall.args[0].Type, ShouldEqual, Literal)
-				So(opcall.args[0].Literal, ShouldEqual, "hello")
-				So(opcall.args[1].Type, ShouldEqual, Literal)
-				So(opcall.args[1].Literal, ShouldEqual, " ")
-				So(opcall.args[2].Type, ShouldEqual, Literal)
-				So(opcall.args[2].Literal, ShouldEqual, "world")
+				So(len(opcall.Args()), ShouldEqual, 3)
+				So(opcall.Args()[0].Type, ShouldEqual, Literal)
+				So(opcall.Args()[0].Literal, ShouldEqual, "hello")
+				So(opcall.Args()[1].Type, ShouldEqual, Literal)
+				So(opcall.Args()[1].Literal, ShouldEqual, " ")
+				So(opcall.Args()[2].Type, ShouldEqual, Literal)
+				So(opcall.Args()[2].Literal, ShouldEqual, "world")
 			})
 			
 			Convey("Parses nested operator calls", func() {
-				opcall, err := ParseOpcallEnhanced(EvalPhase, `(( concat (grab prefix) "-" (grab suffix) ))`)
+				opcall, err := parser.ParseOpcallEnhanced(EvalPhase, `(( concat (grab prefix) "-" (grab suffix) ))`)
 				So(err, ShouldBeNil)
 				So(opcall, ShouldNotBeNil)
-				So(len(opcall.args), ShouldEqual, 3)
+				So(len(opcall.Args()), ShouldEqual, 3)
 				
 				// First argument should be a nested grab operator
-				So(opcall.args[0].Type, ShouldEqual, OperatorCall)
-				So(opcall.args[0].Op(), ShouldEqual, "grab")
-				So(len(opcall.args[0].Args()), ShouldEqual, 1)
+				So(opcall.Args()[0].Type, ShouldEqual, OperatorCall)
+				So(opcall.Args()[0].Op(), ShouldEqual, "grab")
+				So(len(opcall.Args()[0].Args()), ShouldEqual, 1)
 				
 				// Second argument should be a literal
-				So(opcall.args[1].Type, ShouldEqual, Literal)
-				So(opcall.args[1].Literal, ShouldEqual, "-")
+				So(opcall.Args()[1].Type, ShouldEqual, Literal)
+				So(opcall.Args()[1].Literal, ShouldEqual, "-")
 				
 				// Third argument should be another nested grab operator
-				So(opcall.args[2].Type, ShouldEqual, OperatorCall)
-				So(opcall.args[2].Op(), ShouldEqual, "grab")
-				So(len(opcall.args[2].Args()), ShouldEqual, 1)
+				So(opcall.Args()[2].Type, ShouldEqual, OperatorCall)
+				So(opcall.Args()[2].Op(), ShouldEqual, "grab")
+				So(len(opcall.Args()[2].Args()), ShouldEqual, 1)
 			})
 			
 			Convey("Respects operator phases", func() {
 				// grab is EvalPhase
-				opcall, err := ParseOpcallEnhanced(MergePhase, `(( grab foo ))`)
+				opcall, err := parser.ParseOpcallEnhanced(graft.MergePhase, `(( grab foo ))`)
 				So(err, ShouldBeNil)
 				So(opcall, ShouldBeNil) // Wrong phase
 				
-				opcall, err = ParseOpcallEnhanced(EvalPhase, `(( grab foo ))`)
+				opcall, err = parser.ParseOpcallEnhanced(EvalPhase, `(( grab foo ))`)
 				So(err, ShouldBeNil)
 				So(opcall, ShouldNotBeNil) // Correct phase
 			})
@@ -169,7 +168,7 @@ func TestParserIntegration(t *testing.T) {
 							result += arg.Literal.(string)
 						}
 					}
-					return &Response{Type: Replace, Value: result}, nil
+					return &Response{Type: graft.Replace, Value: result}, nil
 				},
 			}
 			
@@ -217,5 +216,5 @@ func (m *MockOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	if m.runFunc != nil {
 		return m.runFunc(ev, args)
 	}
-	return &Response{Type: Replace, Value: nil}, nil
+	return &Response{Type: graft.Replace, Value: nil}, nil
 }

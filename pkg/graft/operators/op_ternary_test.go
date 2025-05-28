@@ -5,6 +5,7 @@ import (
 
 	"github.com/geofffranks/simpleyaml"
 	"github.com/starkandwayne/goutils/tree"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestTernaryOperator(t *testing.T) {

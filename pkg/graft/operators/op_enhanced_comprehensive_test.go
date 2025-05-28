@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/geofffranks/yaml"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestEnhancedOperatorsComprehensive(t *testing.T) {

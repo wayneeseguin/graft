@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/geofffranks/simpleyaml"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestBooleanOperators(t *testing.T) {
