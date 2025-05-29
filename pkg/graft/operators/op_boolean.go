@@ -144,6 +144,7 @@ func isTruthy(v interface{}) bool {
 
 // Register boolean operators
 func init() {
-	RegisterOp("&&", BooleanAndOperator{})
-	RegisterOp("||", FallbackOperator{})
+	// Use type-aware boolean operators
+	RegisterOp("&&", NewTypeAwareAndOperator())
+	RegisterOp("||", FallbackOperator{}) // Keep fallback operator for now - TODO: decide on || semantics
 }

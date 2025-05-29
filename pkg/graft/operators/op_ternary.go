@@ -56,5 +56,6 @@ func (TernaryOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 // Register ternary operator
 func init() {
-	RegisterOp("?:", TernaryOperator{})
+	// Use type-aware ternary operator
+	RegisterOp("?:", TypeAwareTernaryOperator{})
 }

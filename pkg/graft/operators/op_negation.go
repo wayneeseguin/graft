@@ -51,5 +51,6 @@ func (NegationOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 // Register negation operator
 func init() {
-	RegisterOp("!", NegationOperator{})
+	// Use type-aware negation operator
+	RegisterOp("!", NewTypeAwareNotOperator())
 }
