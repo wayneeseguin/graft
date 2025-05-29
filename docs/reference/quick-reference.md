@@ -9,6 +9,11 @@ graft merge base.yml override.yml
 # With options
 graft merge --prune meta --cherry-pick jobs base.yml prod.yml
 
+# Control color output
+graft --color on merge file.yml    # Force color
+graft --color off merge file.yml   # No color
+graft merge file.yml              # Auto-detect (default)
+
 # Other commands
 graft diff file1.yml file2.yml
 graft json config.yml

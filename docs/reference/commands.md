@@ -27,6 +27,7 @@ Merges multiple YAML files together in order, with later files overriding earlie
 - `-d, --debug` - Enable debug logging
 - `--trace` - Enable trace logging (very verbose)
 - `-v, --version` - Show version information
+- `--color on|off|auto` - Control color output (default: auto)
 
 ### Examples
 
@@ -205,6 +206,22 @@ Vault Paths:
 ## Global Options
 
 These options work with all commands:
+
+### Color Output
+
+The `--color` option controls whether output includes ANSI color codes:
+- `auto` (default) - Enable color when outputting to a terminal, disable for pipes/files
+- `on` - Always enable color output
+- `off` - Never use color output
+
+Example:
+```bash
+# Force color even when piping
+graft --color on merge file.yml | less -R
+
+# Disable color for clean logs
+graft --color off merge file.yml > output.log
+```
 
 ### Environment Variables
 

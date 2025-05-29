@@ -2354,6 +2354,56 @@ key2:
 			})
 			os.Setenv("DEFAULT_ARRAY_MERGE_KEY", "")
 		})
+
+		Convey("Color Options", func() {
+			Convey("--color flag validation", func() {
+				// Test invalid color option
+				os.Args = []string{"graft", "--color", "invalid", "merge", "../../assets/merge/first.yml"}
+				stdout = ""
+				stderr = ""
+				rc = 256
+				
+				main()
+				So(rc, ShouldEqual, 1)
+				So(stderr, ShouldContainSubstring, "Invalid --color option: invalid")
+			})
+
+			Convey("--color on forces color output", func() {
+				// Create a test file that will produce an error with color
+				testFile := "../../assets/test_color.yml"
+				err := os.WriteFile(testFile, []byte("test:\n  value: (( grab missing.key ))"), 0644)
+				So(err, ShouldBeNil)
+				defer os.Remove(testFile)
+
+				os.Args = []string{"graft", "--color", "on", "merge", testFile}
+				stdout = ""
+				stderr = ""
+				rc = 256
+				
+				main()
+				So(rc, ShouldEqual, 2)
+				// Check for ANSI escape sequences in error output
+				So(stderr, ShouldContainSubstring, "\x1b[")
+			})
+
+			Convey("--color off disables color output", func() {
+				// Create a test file that will produce an error without color
+				testFile := "../../assets/test_color_off.yml"
+				err := os.WriteFile(testFile, []byte("test:\n  value: (( grab missing.key ))"), 0644)
+				So(err, ShouldBeNil)
+				defer os.Remove(testFile)
+
+				os.Args = []string{"graft", "--color", "off", "merge", testFile}
+				stdout = ""
+				stderr = ""
+				rc = 256
+				
+				main()
+				So(rc, ShouldEqual, 2)
+				// Check that no ANSI escape sequences are in error output
+				So(stderr, ShouldNotContainSubstring, "\x1b[")
+			})
+		})
 	})
 }
 
@@ -2710,5 +2760,6 @@ log.PrintfStdErr = func(format string, args ...interface{}) {
 				"../../examples/calc/result.yml",
 			)
 		})
+
 	})
 }

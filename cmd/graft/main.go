@@ -78,9 +78,10 @@ type mergeOpts struct {
 
 func main() {
 	var options struct {
-		Debug   bool `goptions:"-D, --debug, description='Enable debugging'"`
-		Trace   bool `goptions:"-T, --trace, description='Enable trace mode debugging (very verbose)'"`
-		Version bool `goptions:"-v, --version, description='Display version information'"`
+		Debug   bool   `goptions:"-D, --debug, description='Enable debugging'"`
+		Trace   bool   `goptions:"-T, --trace, description='Enable trace mode debugging (very verbose)'"`
+		Version bool   `goptions:"-v, --version, description='Display version information'"`
+		Color   string `goptions:"--color, description='Control color output (on/off/auto, default: auto)'"`
 		Action  goptions.Verbs
 		Merge   mergeOpts `goptions:"merge"`
 		Fan     mergeOpts `goptions:"fan"`
@@ -115,7 +116,22 @@ func main() {
 		return
 	}
 
-	ansi.Color(isatty.IsTerminal(os.Stderr.Fd()))
+	// Handle color flag
+	shouldEnableColor := false
+	switch options.Color {
+	case "on":
+		shouldEnableColor = true
+	case "off":
+		shouldEnableColor = false
+	case "auto", "":
+		// Auto-detect based on whether stderr is a terminal
+		shouldEnableColor = isatty.IsTerminal(os.Stderr.Fd())
+	default:
+		log.PrintfStdErr("Invalid --color option: %s. Must be 'on', 'off', or 'auto'.\n", options.Color)
+		exit(1)
+		return
+	}
+	ansi.Color(shouldEnableColor)
 
 	switch options.Action {
 	case "merge":
@@ -183,7 +199,11 @@ func main() {
 		}
 
 	case "diff":
-		ansi.Color(isatty.IsTerminal(os.Stdout.Fd()))
+		// For diff, check stdout instead of stderr when auto-detecting
+		if options.Color == "auto" || options.Color == "" {
+			ansi.Color(isatty.IsTerminal(os.Stdout.Fd()))
+		}
+		// Otherwise use the already set color preference from above
 		if len(options.Diff.Files) != 2 {
 			usage()
 			return
