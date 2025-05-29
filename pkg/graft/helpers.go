@@ -3,6 +3,7 @@ package graft
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 )
 
@@ -86,6 +87,14 @@ func parsePath(path string) []string {
 		return []string{}
 	}
 	return strings.Split(path, ".")
+}
+
+// DeepCopyMap creates a deep copy of a map[interface{}]interface{}
+func DeepCopyMap(m map[interface{}]interface{}) map[interface{}]interface{} {
+	if m == nil {
+		return nil
+	}
+	return deepCopyHelper(m).(map[interface{}]interface{})
 }
 
 // splitPath is an alias for parsePath for compatibility
@@ -180,8 +189,103 @@ func setValueAtPath(data interface{}, path string, value interface{}) error {
 // SortList sorts a list of items based on a sort key
 // This is a helper that delegates to the operators package implementation
 func SortList(path string, list []interface{}, sortKey string) error {
-	// Note: This is exposed for testing purposes
-	// The actual implementation is in operators/op_sort.go
-	// For now, returning nil to allow tests to pass
+	// Handle empty list
+	if len(list) == 0 {
+		return nil
+	}
+	
+	// Type checking
+	var commonType string
+	hasInconsistentMaps := false
+	
+	for i, entry := range list {
+		var typeName string
+		
+		if entry == nil {
+			typeName = "nil"
+		} else {
+			switch v := entry.(type) {
+			case string:
+				typeName = "string"
+			case int, int32, int64:
+				typeName = "int"
+			case float32, float64:
+				typeName = "float64"
+			case []interface{}:
+				// Special error for lists of lists
+				return fmt.Errorf("$.%s is a list with list entries (not a list with maps, strings or numbers)", path)
+			case map[interface{}]interface{}:
+				// Always consider maps as maps for type checking
+				typeName = "map"
+				
+				// Check if it's a named-entry map
+				if sortKey != "" {
+					if _, hasKey := v[sortKey]; !hasKey {
+						hasInconsistentMaps = true
+					}
+				} else {
+					// Auto-detect sort key from first map
+					if i == 0 {
+						for _, field := range []string{"name", "key", "id"} {
+							if _, ok := v[field]; ok {
+								sortKey = field
+								break
+							}
+						}
+					}
+				}
+			default:
+				// Get the reflect kind
+				reflectType := reflect.TypeOf(entry)
+				if reflectType != nil {
+					typeName = reflectType.Kind().String()
+				} else {
+					typeName = "unknown"
+				}
+			}
+		}
+		
+		// Set or check common type
+		if i == 0 {
+			commonType = typeName
+		} else if commonType != typeName {
+			// Different types detected
+			if typeName == "nil" || commonType == "nil" {
+				return fmt.Errorf("$.%s is a list with different types (not a list with homogeneous entry types)", path)
+			}
+			return fmt.Errorf("$.%s is a list with different types (not a list with homogeneous entry types)", path)
+		}
+	}
+	
+	// Check for inconsistent map entries
+	if commonType == "map" && hasInconsistentMaps && sortKey != "" {
+		return fmt.Errorf("$.%s is a list with map entries, where some do not contain %s (not a list with map entries each containing %s)", path, sortKey, sortKey)
+	}
+	
+	// Sort the list
+	sort.Slice(list, func(i, j int) bool {
+		return universalLess(list[i], list[j], sortKey)
+	})
+	
 	return nil
+}
+
+// universalLess compares two values for sorting
+func universalLess(a interface{}, b interface{}, key string) bool {
+	switch a.(type) {
+	case string:
+		return strings.Compare(a.(string), b.(string)) < 0
+		
+	case float64:
+		return a.(float64) < b.(float64)
+		
+	case int:
+		return a.(int) < b.(int)
+		
+	case map[interface{}]interface{}:
+		entryA, entryB := a.(map[interface{}]interface{}), b.(map[interface{}]interface{})
+		return universalLess(entryA[key], entryB[key], key)
+	}
+	
+	return false
 }

@@ -260,7 +260,9 @@ func TestCOWTreeFactory(t *testing.T) {
 			tree := factory.CreateEmpty()
 			So(tree, ShouldNotBeNil)
 			
-			err := tree.Set("new-value", "new-key")
+			// COWTree's Set method takes path first, then value
+			cowTree := tree.(*COWTree)
+			err := cowTree.Set("new-key", "new-value")
 			So(err, ShouldBeNil)
 			
 			value, err := tree.Get("new-key")

@@ -55,8 +55,7 @@ func (Base64Operator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		contents = v
 	default:
 		DEBUG("  resolved to non-string: %T = %v", v, v)
-		// For non-string scalars, convert to string representation
-		contents = fmt.Sprintf("%v", v)
+		return nil, fmt.Errorf("base64 operator requires a string value, got %T", v)
 	}
 
 	encoded := base64.StdEncoding.EncodeToString([]byte(contents))

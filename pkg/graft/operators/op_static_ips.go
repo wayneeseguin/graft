@@ -22,7 +22,13 @@ type StaticIPOperator struct{}
 
 // Setup ...
 func (StaticIPOperator) Setup() error {
-	UsedIPs = map[string]string{}
+	// Note: We no longer reset the global UsedIPs map here because
+	// the operator now uses engine state for IP tracking.
+	// The engine state is managed separately and persists across
+	// operator calls within the same evaluation phase.
+	if UsedIPs == nil {
+		UsedIPs = map[string]string{}
+	}
 	return nil
 }
 

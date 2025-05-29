@@ -63,21 +63,21 @@ func (BooleanAndOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	}, nil
 }
 
-// BooleanOrOperator implements logical OR (||) - different from the fallback || operator
-type BooleanOrOperator struct{}
+// FallbackOperator implements fallback behavior (||) - returns first non-nil value
+type FallbackOperator struct{}
 
 // Setup initializes the operator
-func (BooleanOrOperator) Setup() error {
+func (FallbackOperator) Setup() error {
 	return nil
 }
 
 // Phase returns the operator phase
-func (BooleanOrOperator) Phase() OperatorPhase {
+func (FallbackOperator) Phase() OperatorPhase {
 	return EvalPhase
 }
 
 // Dependencies returns operator dependencies
-func (BooleanOrOperator) Dependencies(_ *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+func (FallbackOperator) Dependencies(_ *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
 	deps := make([]*tree.Cursor, 0)
 	for _, arg := range args {
 		if arg.Type == Reference && arg.Reference != nil {
@@ -87,36 +87,23 @@ func (BooleanOrOperator) Dependencies(_ *Evaluator, args []*Expr, _ []*tree.Curs
 	return append(auto, deps...)
 }
 
-// Run executes the logical OR
-func (BooleanOrOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
+// Run executes the fallback operator
+func (FallbackOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	if len(args) != 2 {
 		return nil, fmt.Errorf("|| operator requires exactly 2 arguments, got %d", len(args))
 	}
 
-	// Short-circuit evaluation: evaluate left first
+	// Evaluate left first, but allow for missing values
 	leftResp, err := EvaluateExpr(args[0], ev)
 	if err != nil {
-		return nil, err
+		// If left evaluation fails (e.g., missing key), try right
+		return EvaluateExpr(args[1], ev)
 	}
 
-	if isTruthy(leftResp.Value) {
-		// Left is truthy, return true without evaluating right
-		return &Response{
-			Type:  Replace,
-			Value: true,
-		}, nil
-	}
-
-	// Left is falsy, evaluate right
-	rightResp, err := EvaluateExpr(args[1], ev)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Response{
-		Type:  Replace,
-		Value: isTruthy(rightResp.Value),
-	}, nil
+	// If evaluation succeeded, return the result even if it's nil
+	// This implements: "|| operator treats nil as a found value"
+	// A successful evaluation with nil value is different from a failed evaluation
+	return leftResp, nil
 }
 
 // isTruthy determines if a value is truthy
@@ -158,5 +145,5 @@ func isTruthy(v interface{}) bool {
 // Register boolean operators
 func init() {
 	RegisterOp("&&", BooleanAndOperator{})
-	RegisterOp("||", BooleanOrOperator{})
+	RegisterOp("||", FallbackOperator{})
 }

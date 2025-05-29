@@ -77,7 +77,8 @@ func (InjectOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 			}
 
 			DEBUG("     [%d]: resolved to a map; appending to the list of maps to merge/inject", i)
-			vals = append(vals, m)
+			// Deep copy the map to avoid modifying the original
+			vals = append(vals, DeepCopyMap(m))
 		} else {
 			// Use ResolveOperatorArgument for all other expressions (including nested operators)
 			val, err := ResolveOperatorArgument(ev, arg)
@@ -109,7 +110,8 @@ func (InjectOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 			}
 
 			DEBUG("     [%d]: resolved to a map; appending to the list of maps to merge/inject", i)
-			vals = append(vals, m)
+			// Deep copy the map to avoid modifying the original
+			vals = append(vals, DeepCopyMap(m))
 		}
 		DEBUG("")
 	}

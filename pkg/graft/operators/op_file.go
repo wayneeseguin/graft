@@ -33,6 +33,16 @@ func (FileOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 	var filename string
 
+	// Debug the incoming arguments
+	DEBUG("file operator received %d arguments", len(args))
+	for i, arg := range args {
+		if arg != nil {
+			DEBUG("  arg[%d]: type=%v, operator=%s", i, arg.Type, arg.Operator)
+		} else {
+			DEBUG("  arg[%d]: nil", i)
+		}
+	}
+
 	// Argument validation and processing
 	if len(args) == 1 {
 		// Use ResolveOperatorArgument to handle nested expressions
@@ -74,6 +84,12 @@ func (FileOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		DEBUG("using combined path '%s'", filename)
 
 	} else {
+		DEBUG("file operator error: expected 1 or 2 args, got %d", len(args))
+		for i, arg := range args {
+			if arg != nil {
+				DEBUG("  arg[%d] details: Type=%v, IsOperator=%v", i, arg.Type, arg.IsOperator())
+			}
+		}
 		return nil, fmt.Errorf("file operator requires one or two string arguments")
 	}
 

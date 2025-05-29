@@ -38,13 +38,13 @@ func (ParamOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	// since it runs in ParamPhase, nested operators might not be available
 	// We'll try to resolve but fall back to string representation if needed
 
-	var paramName string
+	var paramMessage string
 
 	// First, try to resolve as a nested expression
 	val, err := ResolveOperatorArgument(ev, args[0])
 	if err == nil && val != nil {
-		paramName = fmt.Sprintf("%v", val)
-		DEBUG("resolved param name to: %s", paramName)
+		paramMessage = fmt.Sprintf("%v", val)
+		DEBUG("resolved param message to: %s", paramMessage)
 	} else {
 		// Fall back to direct evaluation
 		DEBUG("failed to resolve with ResolveOperatorArgument, trying direct evaluation")
@@ -53,12 +53,12 @@ func (ParamOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 			DEBUG("direct evaluation also failed")
 			return nil, err
 		}
-		paramName = fmt.Sprintf("%v", v)
-		DEBUG("param name from direct evaluation: %s", paramName)
+		paramMessage = fmt.Sprintf("%v", v)
+		DEBUG("param message from direct evaluation: %s", paramMessage)
 	}
 
-	// Always return an error as param is meant to fail if not replaced
-	return nil, ansi.Errorf("@R{unresolved parameter} @c{%s}", paramName)
+	// Always return an error with the specified message
+	return nil, ansi.Errorf("@R{%s}", paramMessage)
 }
 
 func init() {

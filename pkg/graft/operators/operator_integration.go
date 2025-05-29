@@ -18,7 +18,25 @@ type OperatorRegistry = parser.OperatorRegistry
 
 // ParseOpcall delegates to parser package
 func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
-	return parser.ParseOpcall(phase, src)
+	// Try new parser first
+	result, err := parser.ParseOpcall(phase, src)
+	
+	// If the new parser fails or returns nil, fall back to original
+	if result == nil && parser.UseParser {
+		return graft.ParseOpcall(phase, src)
+	}
+	
+	// If we got an error but no result, also try the original parser
+	if result == nil && err != nil {
+		origResult, origErr := graft.ParseOpcall(phase, src)
+		if origResult != nil {
+			return origResult, origErr
+		}
+		// Return the original error if both parsers failed
+		return nil, err
+	}
+	
+	return result, err
 }
 
 // ParseOpcallOriginal is the original ParseOpcall implementation

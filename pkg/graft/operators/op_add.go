@@ -62,9 +62,7 @@ func (AddOperator) Run(ev *graft.Evaluator, args []*graft.Expr) (*graft.Response
 }
 
 func performAddition(left, right interface{}) (interface{}, error) {
-	// Implementation of addition logic here
-	// This is a placeholder - the actual logic should be moved from the original file
-	return nil, fmt.Errorf("addition not yet implemented")
+	return performArithmetic(left, right, "+")
 }
 
 func init() {

@@ -50,7 +50,7 @@ func TestDiff(t *testing.T) {
 	}
 
 	testPat := regexp.MustCompile(`^###+\s+(.*)\s*$`)
-	in, err := os.Open("tests/diff")
+	in, err := os.Open("../../tests/diff")
 	if err != nil {
 		panic(err)
 	}

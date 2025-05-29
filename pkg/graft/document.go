@@ -208,6 +208,30 @@ func (d *document) ToMap() map[interface{}]interface{} {
 	return d.data
 }
 
+// convertToJSONCompatible converts map[interface{}]interface{} to map[string]interface{}
+func convertToJSONCompatible(v interface{}) interface{} {
+	switch v := v.(type) {
+	case map[interface{}]interface{}:
+		m := make(map[string]interface{})
+		for k, val := range v {
+			key, ok := k.(string)
+			if !ok {
+				key = fmt.Sprintf("%v", k)
+			}
+			m[key] = convertToJSONCompatible(val)
+		}
+		return m
+	case []interface{}:
+		arr := make([]interface{}, len(v))
+		for i, val := range v {
+			arr[i] = convertToJSONCompatible(val)
+		}
+		return arr
+	default:
+		return v
+	}
+}
+
 // ToYAML converts the document to YAML bytes
 func (d *document) ToYAML() ([]byte, error) {
 	return yaml.Marshal(d.data)
@@ -215,7 +239,9 @@ func (d *document) ToYAML() ([]byte, error) {
 
 // ToJSON converts the document to JSON bytes
 func (d *document) ToJSON() ([]byte, error) {
-	return json.Marshal(d.data)
+	// Convert to JSON-compatible format first
+	jsonData := convertToJSONCompatible(d.data)
+	return json.Marshal(jsonData)
 }
 
 // RawData returns the underlying data structure

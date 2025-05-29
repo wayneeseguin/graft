@@ -37,6 +37,37 @@ func (EmptyOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	// Use ResolveOperatorArgument to handle nested expressions
 	val, err := ResolveOperatorArgument(ev, args[0])
 	if err != nil {
+		// If it's a reference that couldn't be found, check if the reference name is a type
+		if args[0].Type == Reference && args[0].Reference != nil {
+			refName := args[0].Reference.String()
+			DEBUG("reference '%s' couldn't be resolved, checking if it's a type name", refName)
+			
+			// Extract just the last part of the reference (e.g., "hash" from "$.hash")
+			parts := strings.Split(refName, ".")
+			typeName := parts[len(parts)-1]
+			
+			switch strings.ToLower(typeName) {
+			case "hash", "map":
+				DEBUG("treating unresolved reference 'hash' as type name")
+				return &Response{
+					Type:  Replace,
+					Value: map[interface{}]interface{}{},
+				}, nil
+			case "array", "list":
+				DEBUG("treating unresolved reference 'array' as type name")
+				return &Response{
+					Type:  Replace,
+					Value: []interface{}{},
+				}, nil
+			case "string":
+				DEBUG("treating unresolved reference 'string' as type name")
+				return &Response{
+					Type:  Replace,
+					Value: "",
+				}, nil
+			}
+		}
+		
 		DEBUG("failed to resolve expression to a concrete value")
 		DEBUG("error was: %s", err)
 		return nil, err

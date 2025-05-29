@@ -31,6 +31,11 @@ type Evaluator struct {
 	engine interface{} // Using interface{} to avoid circular dependency
 }
 
+// SetEngine sets the engine for the evaluator
+func (ev *Evaluator) SetEngine(engine interface{}) {
+	ev.engine = engine
+}
+
 func nameOfObj(o interface{}, def string) string {
 	for _, field := range tree.NameFields {
 		switch o.(type) {
@@ -54,6 +59,8 @@ func nameOfObj(o interface{}, def string) string {
 // DataFlow ...
 func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 	ev.Here = &tree.Cursor{}
+	
+	log.DEBUG("DataFlow: starting phase %v", phase)
 
 	all := map[string]*Opcall{}
 	locs := []*tree.Cursor{}
@@ -65,7 +72,6 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 
 	check = func(v interface{}) {
 		if s, ok := v.(string); ok {
-			log.DEBUG("evaluator check: examining string value '%s' at %s", s, ev.Here.String())
 			op, err := ParseOpcallCompat(phase, s)
 			if err != nil {
 				errors.Append(err)

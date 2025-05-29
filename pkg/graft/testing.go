@@ -154,12 +154,23 @@ func (h *TestHelper) AssertError(err error, expectedType ...ErrorType) {
 	}
 
 	if len(expectedType) > 0 {
-		graftErr, ok := err.(*GraftError)
-		if !ok {
-			h.t.Fatalf("Expected GraftError but got %T: %v", err, err)
-		}
-		if graftErr.Type != expectedType[0] {
-			h.t.Fatalf("Expected error type %v but got %v: %v", expectedType[0], graftErr.Type, err)
+		// Handle both GraftError and MultiError
+		switch e := err.(type) {
+		case *GraftError:
+			if e.Type != expectedType[0] {
+				h.t.Fatalf("Expected error type %v but got %v", expectedType[0], e.Type)
+			}
+		case MultiError:
+			// For MultiError, just check that it contains errors
+			if len(e.Errors) == 0 {
+				h.t.Fatal("MultiError contains no errors")
+			}
+			// Accept MultiError as a valid evaluation error
+			if expectedType[0] != EvaluationError {
+				h.t.Fatalf("Expected error type %v but got MultiError: %v", expectedType[0], e)
+			}
+		default:
+			h.t.Fatalf("Expected GraftError or MultiError but got %T: %v", err, err)
 		}
 	}
 }

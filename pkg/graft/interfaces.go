@@ -164,7 +164,11 @@ func (op *Opcall) Run(ev *Evaluator) (*Response, error) {
 	ev.Here = was
 
 	if err != nil {
-		return nil, fmt.Errorf("$.%s: %s", op.where, err)
+		if op.where != nil {
+			return nil, fmt.Errorf("$.%s: %s", op.where, err)
+		} else {
+			return nil, fmt.Errorf("$.<generated>: %s", err)
+		}
 	}
 	return r, nil
 }
@@ -309,6 +313,18 @@ func (e *Expr) Evaluate(tree interface{}) (interface{}, error) {
 	case OperatorCall:
 		// TODO: Implement operator call evaluation
 		return nil, fmt.Errorf("operator call evaluation not implemented")
+	case LogicalOr:
+		// Handle || operator - try left, if it fails or is nil, try right
+		if e.Left != nil {
+			left, err := e.Left.Evaluate(tree)
+			if err == nil && left != nil {
+				return left, nil
+			}
+		}
+		if e.Right != nil {
+			return e.Right.Evaluate(tree)
+		}
+		return nil, nil
 	default:
 		return nil, fmt.Errorf("unsupported expression type for evaluation: %d", e.Type)
 	}

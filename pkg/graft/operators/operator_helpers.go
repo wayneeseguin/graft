@@ -42,9 +42,10 @@ func ResolveOperatorArgument(ev *Evaluator, arg *Expr) (interface{}, error) {
 
 	case LogicalOr:
 		// Handle || as a fallback operator - if left fails, try right
+		// Note: nil is a valid concrete value and should NOT cause fallback
 		left, err := ResolveOperatorArgument(ev, arg.Left)
 		if err == nil {
-			// Left succeeded, return its value
+			// Left succeeded (even if nil), return its value
 			return left, nil
 		}
 		// Left failed, try right

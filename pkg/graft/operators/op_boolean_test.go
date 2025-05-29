@@ -86,52 +86,52 @@ func TestBooleanOperators(t *testing.T) {
 			})
 		})
 
-		Convey("Logical OR (||) operator", func() {
+		Convey("Fallback (||) operator", func() {
 			ev := &Evaluator{Tree: YAML(`{}`)}
-			op := BooleanOrOperator{}
+			op := FallbackOperator{}
 
-			Convey("returns true when any operand is truthy", func() {
+			Convey("returns first non-nil value", func() {
 				resp, err := op.Run(ev, []*Expr{
 					&Expr{Type: Literal, Literal: false},
 					&Expr{Type: Literal, Literal: true},
 				})
 				So(err, ShouldBeNil)
-				So(resp.Value, ShouldEqual, true)
+				So(resp.Value, ShouldEqual, false) // false is not nil, so return it
 
 				resp, err = op.Run(ev, []*Expr{
 					&Expr{Type: Literal, Literal: int64(0)},
 					&Expr{Type: Literal, Literal: "hello"},
 				})
 				So(err, ShouldBeNil)
-				So(resp.Value, ShouldEqual, true)
+				So(resp.Value, ShouldEqual, int64(0)) // 0 is not nil, so return it
 			})
 
-			Convey("returns false when both operands are falsy", func() {
+			Convey("returns second value when first is nil", func() {
 				resp, err := op.Run(ev, []*Expr{
-					&Expr{Type: Literal, Literal: false},
-					&Expr{Type: Literal, Literal: false},
+					&Expr{Type: Literal, Literal: nil},
+					&Expr{Type: Literal, Literal: "fallback"},
 				})
 				So(err, ShouldBeNil)
-				So(resp.Value, ShouldEqual, false)
+				So(resp.Value, ShouldEqual, "fallback")
 
 				resp, err = op.Run(ev, []*Expr{
-					&Expr{Type: Literal, Literal: int64(0)},
 					&Expr{Type: Literal, Literal: ""},
+					&Expr{Type: Literal, Literal: "default"},
 				})
 				So(err, ShouldBeNil)
-				So(resp.Value, ShouldEqual, false)
+				So(resp.Value, ShouldEqual, "") // empty string is not nil, so return it
 			})
 
-			Convey("short-circuits on first truthy value", func() {
+			Convey("short-circuits on first non-nil value", func() {
 				// This would error if evaluated
 				errorExpr := &Expr{Type: Reference, Reference: nil}
 
 				resp, err := op.Run(ev, []*Expr{
-					&Expr{Type: Literal, Literal: true},
+					&Expr{Type: Literal, Literal: "first"},
 					errorExpr,
 				})
 				So(err, ShouldBeNil) // No error because second operand not evaluated
-				So(resp.Value, ShouldEqual, true)
+				So(resp.Value, ShouldEqual, "first")
 			})
 		})
 	})

@@ -46,7 +46,7 @@ func TestCOWTree(t *testing.T) {
 		tree := newTestTree(nil)
 		
 		Convey("Set and Get operations", func() {
-			err := tree.Set("meta.name", "test-value")
+			err := tree.Set("test-value", "meta.name")
 			So(err, ShouldBeNil)
 			
 			value, err := tree.Get("meta", "name")
@@ -55,13 +55,13 @@ func TestCOWTree(t *testing.T) {
 		})
 		
 		Convey("Exists operation", func() {
-			tree.Set("key", "value")
+			tree.Set("value", "key")
 			So(tree.Exists("key"), ShouldBeTrue)
 			So(tree.Exists("nonexistent"), ShouldBeFalse)
 		})
 		
 		Convey("Delete operation", func() {
-			tree.Set("key", "value")
+			tree.Set("value", "key")
 			So(tree.Exists("key"), ShouldBeTrue)
 			
 			err := tree.Delete("key")
@@ -70,11 +70,11 @@ func TestCOWTree(t *testing.T) {
 		})
 		
 		Convey("Copy operation (COW semantics)", func() {
-			tree.Set("key", "original")
+			tree.Set("original", "key")
 			copied := tree.Copy()
 			
 			// Modify original
-			tree.Set("key", "modified")
+			tree.Set("modified", "key")
 			
 			// Copy should remain unchanged
 			value, err := copied.Get("key")

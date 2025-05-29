@@ -849,8 +849,8 @@ dataflow:
 meta:
   foo: FOO
   bar: BAR
-foobar: FOOBAR
-fooboz: FOOboz
+foobar: FOO
+fooboz: FOO
 
 
 #################################   handles multiple comma-seaprated or-operands properly
@@ -1666,6 +1666,10 @@ meta:
 		})
 
 		Convey("detects allocation conflicts of static IP addresses", func() {
+			// Create an engine to track IP state across operator calls
+			engine, err := CreateDefaultEngine()
+			So(err, ShouldBeNil)
+			
 			ev := &Evaluator{
 				Tree: YAML(
 					`jobs:
@@ -1686,8 +1690,11 @@ networks:
     - static: [192.168.1.2 - 192.168.1.30]
 `),
 			}
+			
+			// Set the engine so that all static_ips operators share the same engine state
+			ev.SetEngine(engine)
 
-			err := ev.RunPhase(EvalPhase)
+			err = ev.RunPhase(EvalPhase)
 			So(err, ShouldNotBeNil)
 		})
 

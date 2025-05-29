@@ -40,13 +40,18 @@ func (GrabOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 			return nil, err
 		}
 
-		if val == nil {
+		// For LogicalOr expressions where the fallback is nil, we should allow it
+		if val == nil && arg.Type != LogicalOr {
 			DEBUG("     [%d]: resolved to nil", i)
 			return nil, fmt.Errorf("grab operator argument resolved to nil")
 		}
 
-		// Check if this is a direct reference that should be dereferenced
-		if arg.Type == Reference {
+		// For LogicalOr expressions, the resolved value is already what we want
+		// Don't try to double-resolve it
+		if arg.Type == LogicalOr {
+			DEBUG("  arg[%d]: LogicalOr expression resolved to value (type: %T)", i, val)
+			vals = append(vals, val)
+		} else if arg.Type == Reference {
 			// Direct reference, resolve it normally
 			DEBUG("  arg[%d]: direct reference $.%s", i, arg.Reference)
 			resolved, err := arg.Reference.Resolve(ev.Tree)
@@ -55,8 +60,8 @@ func (GrabOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 				return nil, fmt.Errorf("Unable to resolve `%s`: %s", arg.Reference, err)
 			}
 			vals = append(vals, resolved)
-		} else if pathStr, ok := val.(string); ok && arg.Type != Literal {
-			// If the resolved value is a string from an expression (not a literal),
+		} else if pathStr, ok := val.(string); ok && arg.Type != Literal && arg.Type != EnvVar {
+			// If the resolved value is a string from an expression (not a literal or env var),
 			// it might be a reference path
 			cursor, err := tree.ParseCursor(pathStr)
 			if err == nil {

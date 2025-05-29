@@ -67,7 +67,8 @@ func OperatorFor(name string) Operator {
 	if op, exists := OpRegistry[name]; exists {
 		return op
 	}
-	return nil
+	// Return a NullOperator for unknown operators
+	return NullOperator{Missing: name}
 }
 
 // NullOperator is a placeholder operator for unknown operations
@@ -92,7 +93,38 @@ func (NullOperator) Dependencies(ev *Evaluator, args []*Expr, locs []*tree.Curso
 
 // Run executes the operator
 func (n NullOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
-	return nil, fmt.Errorf("unknown operator: %s", n.Missing)
+	// For unknown operators, return the original operator call string unchanged
+	// This allows the template to be processed again later or remain as-is
+	
+	// Reconstruct the original operator call
+	var argStrings []string
+	for _, arg := range args {
+		if arg.Type == Literal {
+			if s, ok := arg.Literal.(string); ok {
+				argStrings = append(argStrings, fmt.Sprintf(`"%s"`, s))
+			} else {
+				argStrings = append(argStrings, fmt.Sprintf("%v", arg.Literal))
+			}
+		} else {
+			// For non-literal args, use a placeholder
+			argStrings = append(argStrings, "...")
+		}
+	}
+	
+	var argsStr string
+	if len(argStrings) > 0 {
+		argsStr = " " + fmt.Sprintf("%v", argStrings[0])
+		for _, arg := range argStrings[1:] {
+			argsStr += " " + arg
+		}
+	}
+	
+	originalCall := fmt.Sprintf("(( %s%s ))", n.Missing, argsStr)
+	
+	return &Response{
+		Type:  Replace,
+		Value: originalCall,
+	}, nil
 }
 
 // NewOpcall creates a new operator call
@@ -116,9 +148,32 @@ func DefaultKeyGenerator() func() (string, error) {
 
 // Merge merges two data structures
 func Merge(dst, src interface{}) error {
-	// This is a simplified merge for backward compatibility
-	// The real implementation is in merge.go
-	// For now, just return nil error
+	// Deep merge implementation for maps
+	dstMap, dstOk := dst.(map[interface{}]interface{})
+	srcMap, srcOk := src.(map[interface{}]interface{})
+	
+	if !dstOk || !srcOk {
+		return fmt.Errorf("Merge: both arguments must be maps")
+	}
+	
+	// Deep merge all keys from src to dst
+	for k, srcVal := range srcMap {
+		if dstVal, exists := dstMap[k]; exists {
+			// If both are maps, merge recursively
+			if dstSubMap, dstIsMap := dstVal.(map[interface{}]interface{}); dstIsMap {
+				if srcSubMap, srcIsMap := srcVal.(map[interface{}]interface{}); srcIsMap {
+					err := Merge(dstSubMap, srcSubMap)
+					if err != nil {
+						return err
+					}
+					continue
+				}
+			}
+		}
+		// Otherwise just copy the value
+		dstMap[k] = srcVal
+	}
+	
 	return nil
 }
 

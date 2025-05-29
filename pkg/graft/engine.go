@@ -2,6 +2,7 @@ package graft
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"sync"
@@ -341,11 +342,25 @@ func (e *DefaultEngine) createEvaluator(t map[interface{}]interface{}) *Evaluato
 }
 
 func (e *DefaultEngine) evaluate(ctx context.Context, ev *Evaluator) error {
+	// Check context cancellation
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+	
 	// Set the engine on the evaluator
 	ev.engine = Engine(e)
 	
 	// Run evaluation phases
 	for _, phase := range []OperatorPhase{MergePhase, EvalPhase} {
+		// Check context cancellation before each phase
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		
 		if err := ev.RunPhase(phase); err != nil {
 			return err
 		}
@@ -358,17 +373,22 @@ func (e *DefaultEngine) evaluate(ctx context.Context, ev *Evaluator) error {
 
 // ParseYAML parses YAML data into a Document
 func (e *DefaultEngine) ParseYAML(data []byte) (Document, error) {
+	// Handle empty data
+	if len(data) == 0 {
+		return nil, nil
+	}
+	
 	// Enhanced parser is now always used through the standard path
 	
 	// Fall back to standard YAML parsing
 	var result map[interface{}]interface{}
 	err := yaml.Unmarshal(data, &result)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+		return nil, NewParseError("failed to parse YAML", err)
 	}
 	
 	if result == nil {
-		result = make(map[interface{}]interface{})
+		return nil, nil
 	}
 	
 	return NewDocument(result), nil
@@ -376,8 +396,28 @@ func (e *DefaultEngine) ParseYAML(data []byte) (Document, error) {
 
 // ParseJSON parses JSON data into a Document
 func (e *DefaultEngine) ParseJSON(data []byte) (Document, error) {
-	// Implementation will be added
-	return nil, fmt.Errorf("not implemented")
+	// Handle empty data
+	if len(data) == 0 {
+		return nil, nil
+	}
+	
+	var result map[string]interface{}
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return nil, NewParseError("failed to parse JSON", err)
+	}
+	
+	if result == nil {
+		return nil, nil
+	}
+	
+	// Convert to map[interface{}]interface{}
+	converted := make(map[interface{}]interface{})
+	for k, v := range result {
+		converted[k] = v
+	}
+	
+	return NewDocument(converted), nil
 }
 
 // ParseFile parses a file into a Document
@@ -517,6 +557,14 @@ func (e *DefaultEngine) WithAWSConfig(config AWSConfig) Engine {
 	return e
 }
 
+// UpdateConfig updates the engine configuration
+func (e *DefaultEngine) UpdateConfig(config EngineConfig) {
+	e.config = config
+	e.skipVault = config.SkipVault
+	e.skipAws = config.SkipAWS
+	e.useEnhancedParser = config.UseEnhancedParser
+}
+
 // GetOperatorState returns the operator state interface
 func (e *DefaultEngine) GetOperatorState() OperatorState {
 	// The engine itself implements OperatorState
@@ -525,6 +573,11 @@ func (e *DefaultEngine) GetOperatorState() OperatorState {
 
 // createEngineFromOptions creates an engine from EngineOptions (used by api.go)
 func createEngineFromOptions(opts *EngineOptions) (Engine, error) {
+	// Validate options
+	if opts.MaxConcurrency < 0 {
+		return nil, NewConfigurationError("concurrency must be non-negative")
+	}
+	
 	// Create engine config from options
 	config := EngineConfig{
 		VaultAddr:         opts.VaultAddress,

@@ -688,6 +688,47 @@ func (p *Parser) isAtEnd() bool {
 	return p.current >= len(p.tokens)
 }
 
+// parseLogicalOrExpression parses expressions that may contain || operators
+// This is specifically for parsing operator arguments that can contain ||
+func (p *Parser) parseLogicalOrExpression() (*Expr, error) {
+	left, err := p.parsePrimary()
+	if err != nil {
+		return nil, err
+	}
+	
+	// Check for || operator
+	for !p.isAtEnd() && p.currentToken().Type == TokenLogicalOr {
+		p.advance() // consume ||
+		
+		right, err := p.parsePrimary()
+		if err != nil {
+			return nil, err
+		}
+		
+		left = &Expr{
+			Type:  LogicalOr,
+			Left:  left,
+			Right: right,
+			Pos:   left.Pos,
+		}
+	}
+	
+	return left, nil
+}
+
+// isArgumentStart checks if the current token could start a new argument
+func (p *Parser) isArgumentStart() bool {
+	if p.isAtEnd() {
+		return false
+	}
+	token := p.currentToken()
+	switch token.Type {
+	case TokenLiteral, TokenReference, TokenEnvVar, TokenOpenParen:
+		return true
+	}
+	return false
+}
+
 func (p *Parser) consume(tokenType TokenType) bool {
 	if p.isAtEnd() || p.currentToken().Type != tokenType {
 		return false

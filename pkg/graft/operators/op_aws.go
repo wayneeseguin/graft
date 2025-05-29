@@ -202,11 +202,10 @@ func (o AwsOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 	DEBUG("     [0]: Using %s key '%s'\n", o.variant, key)
 
-	value := "REDACTED"
-
 	// Get engine for AWS operations
 	engine := graft.GetEngine(ev)
 	
+	var value string
 	if !engine.GetOperatorState().IsAWSSkipped() {
 		session := engine.GetOperatorState().GetAWSSession()
 		if session == nil {
@@ -243,6 +242,9 @@ func (o AwsOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 			value = fmt.Sprintf("%v", tmp[subkey])
 		}
+	} else {
+		// Return skip message when AWS is skipped
+		value = fmt.Sprintf("<skipped for %s[%s]>", o.variant, key)
 	}
 
 	return &Response{
@@ -281,6 +283,12 @@ func (o AwsOperator) getAwsSecretFromEngine(engine graft.Engine, awsSession *ses
 
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secret),
+	}
+
+	if params.Get("stage") != "" {
+		input.VersionStage = aws.String(params.Get("stage"))
+	} else if params.Get("version") != "" {
+		input.VersionId = aws.String(params.Get("version"))
 	}
 
 	output, err := client.GetSecretValue(input)

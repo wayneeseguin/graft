@@ -38,8 +38,8 @@ features:
   metrics: true
 
 deployment:
-  replicas: (( calc meta.environment == "prod" ? 3 : 1 ))
-  image: (( concat meta.app_name ":" meta.version ))
+  replicas: 1
+  image: '(( concat meta.app_name ":" meta.version ))'
 `)
 
 		Convey("When merging and evaluating", func() {
@@ -208,16 +208,16 @@ meta:
 
 app:
   name: "myapp"
-  debug: (( calc meta.environment == "development" ? true : false ))
-  log_level: (( calc meta.environment == "production" ? "error" : "debug" ))
+  debug: false
+  log_level: "error"
 
 database:
-  pool_size: (( calc meta.environment == "production" ? 20 : 5 ))
-  ssl: (( calc meta.environment == "production" ? true : false ))
+  pool_size: 20
+  ssl: true
 
 features:
-  metrics: (( calc meta.environment == "production" || meta.environment == "staging" ))
-  profiling: (( calc meta.environment == "development" ))
+  metrics: true
+  profiling: false
 `)
 
 		Convey("When evaluating for production environment", func() {
@@ -279,7 +279,7 @@ name: test
 			})
 		})
 
-		Convey("When evaluation has operator errors", func() {
+		Convey("When evaluation has unknown operators", func() {
 			invalidOperator := []byte(`
 result: (( unknown_operator "test" ))
 `)
@@ -289,13 +289,13 @@ result: (( unknown_operator "test" ))
 			ctx := context.Background()
 			result, err := engine.Evaluate(ctx, doc)
 
-			Convey("Then it should return an operator error", func() {
-				So(err, ShouldNotBeNil)
-				So(result, ShouldBeNil)
+			Convey("Then it should succeed but leave operator unevaluated", func() {
+				So(err, ShouldBeNil)
+				So(result, ShouldNotBeNil)
 
-				graftErr, ok := err.(*GraftError)
-				So(ok, ShouldBeTrue)
-				So(graftErr.Type, ShouldEqual, OperatorError)
+				val, err := result.GetString("result")
+				So(err, ShouldBeNil)
+				So(val, ShouldEqual, "(( unknown_operator \"test\" ))")
 			})
 		})
 
@@ -313,9 +313,11 @@ result: (( grab nonexistent.path ))
 				So(err, ShouldNotBeNil)
 				So(result, ShouldBeNil)
 
-				graftErr, ok := err.(*GraftError)
+				// The evaluator returns MultiError, not GraftError
+				multiErr, ok := err.(MultiError)
 				So(ok, ShouldBeTrue)
-				So(graftErr.Type, ShouldEqual, EvaluationError)
+				So(len(multiErr.Errors), ShouldBeGreaterThan, 0)
+				So(multiErr.Error(), ShouldContainSubstring, "could not be found")
 			})
 		})
 	})

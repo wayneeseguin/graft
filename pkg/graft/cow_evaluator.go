@@ -122,16 +122,21 @@ func (emh *EnhancedMigrationHelper) GetSnapshots() []*COWEvaluator {
 
 // UpdateFromEvaluator updates the COW tree with data from a traditional evaluator
 func (emh *EnhancedMigrationHelper) UpdateFromEvaluator(ev *Evaluator) error {
-	data := make(map[string]interface{})
+	// Convert the evaluator's tree to interface{} map
+	data := make(map[interface{}]interface{})
 	for k, v := range ev.Tree {
-		if keyStr, ok := k.(string); ok {
-			data[keyStr] = v
-		}
+		data[k] = v
 	}
 	
-	// TODO: Implement Replace method or use Set
-	// return emh.cowTree.Replace(data)
-	return fmt.Errorf("Replace method not implemented")
+	// Replace the entire COW tree with new data
+	emh.cowTree = NewCOWTree(data)
+	
+	// Re-wrap with COWEvaluator
+	emh.cowEval = &COWEvaluator{
+		cowTree: emh.cowTree,
+	}
+	
+	return nil
 }
 
 // ExportToEvaluator creates a traditional evaluator with current COW tree data

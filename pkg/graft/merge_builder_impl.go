@@ -290,14 +290,18 @@ func (m *mergeBuilderImpl) applyCherryPicking(doc Document) (Document, error) {
 
 // applyEvaluation runs operator evaluation on the document
 func (m *mergeBuilderImpl) applyEvaluation(doc Document) (Document, error) {
+	// Use the engine's evaluate method if available
+	if m.engine != nil {
+		return m.engine.Evaluate(m.ctx, doc)
+	}
+
+	// Fallback: create basic evaluator (this should not happen in practice)
 	data := doc.RawData().(map[interface{}]interface{})
 	
 	// Create evaluator
 	evaluator := &Evaluator{
 		Tree: data,
 	}
-	
-	// TODO: Set engine context when the interface supports it
 
 	// Run evaluation
 	err := evaluator.Run(nil, nil)

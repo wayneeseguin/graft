@@ -81,6 +81,11 @@ func EvaluateOperatorArgs(ev *Evaluator, args []*Expr) ([]interface{}, error) {
 	return values, nil
 }
 
+// DeepCopyMap creates a deep copy of a map
+func DeepCopyMap(m map[interface{}]interface{}) map[interface{}]interface{} {
+	return graft.DeepCopyMap(m)
+}
+
 // String pool for performance
 var stringPool = &sync.Pool{
 	New: func() interface{} {
