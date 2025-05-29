@@ -151,7 +151,7 @@ func (o VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	DEBUG("running (( vault ... )) operation at $.%s", ev.Here)
 	defer DEBUG("done with (( vault ... )) operation at $.%s\n", ev.Here)
 
-	// Get engine context
+	// Get engine
 	engine := graft.GetEngine(ev)
 
 	// syntax: (( vault "secret/path:key" ))
@@ -184,7 +184,7 @@ func (o VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	}
 
 	// Track vault references using engine context
-	engine.AddVaultRef(key, []string{ev.Here.String()})
+	engine.GetOperatorState().AddVaultRef(key, []string{ev.Here.String()})
 
 	// Perform the vault lookup
 	secret, err := o.performVaultLookup(engine, key)
@@ -261,12 +261,12 @@ func (VaultOperator) resolveVaultArgs(ev *Evaluator, args []*Expr) (string, erro
 }
 
 // performVaultLookup performs the actual vault lookup
-func (VaultOperator) performVaultLookup(engine graft.EngineContext, key string) (string, error) {
-	if engine.IsVaultSkipped() {
+func (VaultOperator) performVaultLookup(engine graft.Engine, key string) (string, error) {
+	if engine.GetOperatorState().IsVaultSkipped() {
 		return "REDACTED", nil
 	}
 
-	kv := engine.GetVaultClient()
+	kv := engine.GetOperatorState().GetVaultClient()
 	if kv == nil {
 		// For backward compatibility, try to initialize from environment
 		if SkipVault {
@@ -289,7 +289,7 @@ func (VaultOperator) performVaultLookup(engine graft.EngineContext, key string) 
 	}
 
 	// Check cache first
-	vaultCache := engine.GetVaultCache()
+	vaultCache := engine.GetOperatorState().GetVaultCache()
 	var fullSecret map[string]interface{}
 	var found bool
 	if fullSecret, found = vaultCache[leftPart]; found {
@@ -307,7 +307,7 @@ func (VaultOperator) performVaultLookup(engine graft.EngineContext, key string) 
 			}
 			return "", err
 		}
-		engine.SetVaultCache(leftPart, fullSecret)
+		engine.GetOperatorState().SetVaultCache(leftPart, fullSecret)
 	}
 
 	secret, err := extractSubkey(fullSecret, leftPart, rightPart)

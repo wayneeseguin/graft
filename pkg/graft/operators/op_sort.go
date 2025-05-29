@@ -65,8 +65,8 @@ func addToSortListIfNecessary(operator string, path string) {
 	}
 }
 
-// AddToSortListIfNecessaryWithEngine is the engine-context-aware version
-func AddToSortListIfNecessaryWithEngine(operator string, path string, engine graft.EngineContext) {
+// AddToSortListIfNecessaryWithEngine is the engine-aware version
+func AddToSortListIfNecessaryWithEngine(operator string, path string, engine graft.Engine) {
 	if opcall, err := ParseOpcall(MergePhase, operator); err == nil {
 		var byKey string
 		args := opcall.Args()
@@ -76,7 +76,7 @@ func AddToSortListIfNecessaryWithEngine(operator string, path string, engine gra
 
 		DEBUG("adding sort by '%s' of path '%s' to the list of paths to sort", byKey, path)
 		if engine != nil {
-			engine.AddPathToSort(path, byKey)
+			engine.GetOperatorState().AddPathToSort(path, byKey)
 		} else {
 			// Fallback to global state for backward compatibility
 			if _, ok := pathsToSort[path]; !ok {

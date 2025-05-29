@@ -3,6 +3,11 @@ package graft
 import (
 	"context"
 	"io"
+	
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
+	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	vaultkv "github.com/cloudfoundry-community/vaultkv"
 )
 
 // Document represents a YAML/JSON document in a more user-friendly format
@@ -88,11 +93,47 @@ type Engine interface {
 	RegisterOperator(name string, op Operator) error
 	UnregisterOperator(name string) error
 	ListOperators() []string
+	GetOperator(name string) (Operator, bool)
 	
 	// Configuration
 	WithLogger(logger Logger) Engine
 	WithVaultClient(client VaultClient) Engine
 	WithAWSConfig(config AWSConfig) Engine
+	
+	// State access for operators
+	GetOperatorState() OperatorState
+}
+
+// OperatorState provides state access for operators during evaluation
+type OperatorState interface {
+	// Vault operations
+	GetVaultClient() *vaultkv.KV
+	GetVaultCache() map[string]map[string]interface{}
+	SetVaultCache(path string, data map[string]interface{})
+	AddVaultRef(path string, keys []string)
+	IsVaultSkipped() bool
+	
+	// AWS operations
+	GetAWSSession() *session.Session
+	GetSecretsManagerClient() secretsmanageriface.SecretsManagerAPI
+	GetParameterStoreClient() ssmiface.SSMAPI
+	GetAWSSecretsCache() map[string]string
+	SetAWSSecretCache(key, value string)
+	GetAWSParamsCache() map[string]string
+	SetAWSParamCache(key, value string)
+	IsAWSSkipped() bool
+	
+	// Static IPs
+	GetUsedIPs() map[string]string
+	SetUsedIP(key, ip string)
+	
+	// Prune operations
+	AddKeyToPrune(key string)
+	GetKeysToPrune() []string
+	
+	// Sort operations
+	AddPathToSort(path, order string)
+	GetPathsToSort() map[string]string
 }
 
 // ArrayMergeStrategy defines how arrays are merged

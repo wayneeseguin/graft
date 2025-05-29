@@ -88,11 +88,11 @@ func (o VaultTryOperator) tryVaultPath(ev *Evaluator, pathExpr *Expr) (*Response
 		return nil, err
 	}
 
-	// Get engine context
+	// Get engine
 	engine := graft.GetEngine(ev)
 	
 	// Track this vault reference
-	engine.AddVaultRef(path, []string{ev.Here.String()})
+	engine.GetOperatorState().AddVaultRef(path, []string{ev.Here.String()})
 
 	// Use the shared vault infrastructure
 	vaultOp := VaultOperator{}

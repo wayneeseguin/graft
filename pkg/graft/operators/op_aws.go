@@ -204,11 +204,11 @@ func (o AwsOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 	value := "REDACTED"
 
-	// Get engine context for AWS operations
+	// Get engine for AWS operations
 	engine := graft.GetEngine(ev)
 	
-	if !engine.IsAWSSkipped() {
-		session := engine.GetAWSSession()
+	if !engine.GetOperatorState().IsAWSSkipped() {
+		session := engine.GetOperatorState().GetAWSSession()
 		if session == nil {
 			session, err = initializeAwsSession(os.Getenv("AWS_PROFILE"), os.Getenv("AWS_REGION"), os.Getenv("AWS_ROLE"))
 			if err != nil {
@@ -267,14 +267,14 @@ func parseAwsOpKey(key string) (string, url.Values, error) {
 	return split[0], values, nil
 }
 
-// getAwsSecretFromEngine fetches a secret using the engine context
-func (o AwsOperator) getAwsSecretFromEngine(engine graft.EngineContext, awsSession *session.Session, secret string, params url.Values) (string, error) {
-	cache := engine.GetAWSSecretsCache()
+// getAwsSecretFromEngine fetches a secret using the engine
+func (o AwsOperator) getAwsSecretFromEngine(engine graft.Engine, awsSession *session.Session, secret string, params url.Values) (string, error) {
+	cache := engine.GetOperatorState().GetAWSSecretsCache()
 	if val, cached := cache[secret]; cached {
 		return val, nil
 	}
 
-	client := engine.GetSecretsManagerClient()
+	client := engine.GetOperatorState().GetSecretsManagerClient()
 	if client == nil {
 		client = secretsmanager.New(awsSession)
 	}
@@ -289,18 +289,18 @@ func (o AwsOperator) getAwsSecretFromEngine(engine graft.EngineContext, awsSessi
 	}
 
 	value := aws.StringValue(output.SecretString)
-	engine.SetAWSSecretCache(secret, value)
+	engine.GetOperatorState().SetAWSSecretCache(secret, value)
 	return value, nil
 }
 
 // getAwsParamFromEngine fetches a parameter using the engine context  
-func (o AwsOperator) getAwsParamFromEngine(engine graft.EngineContext, awsSession *session.Session, param string) (string, error) {
-	cache := engine.GetAWSParamsCache()
+func (o AwsOperator) getAwsParamFromEngine(engine graft.Engine, awsSession *session.Session, param string) (string, error) {
+	cache := engine.GetOperatorState().GetAWSParamsCache()
 	if val, cached := cache[param]; cached {
 		return val, nil
 	}
 
-	client := engine.GetParameterStoreClient()
+	client := engine.GetOperatorState().GetParameterStoreClient()
 	if client == nil {
 		client = ssm.New(awsSession)
 	}
@@ -316,7 +316,7 @@ func (o AwsOperator) getAwsParamFromEngine(engine graft.EngineContext, awsSessio
 	}
 
 	value := aws.StringValue(output.Parameter.Value)
-	engine.SetAWSParamCache(param, value)
+	engine.GetOperatorState().SetAWSParamCache(param, value)
 	return value, nil
 }
 

@@ -3,6 +3,11 @@ package graft
 import (
 	"context"
 	"io"
+	
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
+	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	vaultkv "github.com/cloudfoundry-community/vaultkv"
 )
 
 // Mock implementations for testing
@@ -24,9 +29,11 @@ type MockEngine struct {
 	RegisterOperatorFunc   func(name string, op Operator) error
 	UnregisterOperatorFunc func(name string) error
 	ListOperatorsFunc      func() []string
-	WithLoggerFunc       func(logger Logger) Engine
-	WithVaultClientFunc  func(client VaultClient) Engine
+	GetOperatorFunc        func(name string) (Operator, bool)
+	WithLoggerFunc         func(logger Logger) Engine
+	WithVaultClientFunc    func(client VaultClient) Engine
 	WithAWSConfigFunc      func(config AWSConfig) Engine
+	GetOperatorStateFunc   func() OperatorState
 
 	// Call tracking
 	ParseYAMLCalls          [][]byte
@@ -43,9 +50,11 @@ type MockEngine struct {
 	RegisterOperatorCalls   []struct{ Name string; Op Operator }
 	UnregisterOperatorCalls []string
 	ListOperatorsCalls      int
-	WithLoggerCalls       []Logger
-	WithVaultClientCalls  []VaultClient
+	GetOperatorCalls        []string
+	WithLoggerCalls         []Logger
+	WithVaultClientCalls    []VaultClient
 	WithAWSConfigCalls      []AWSConfig
+	GetOperatorStateCalls   int
 }
 
 // NewMockEngine creates a new mock engine with sensible defaults
@@ -143,6 +152,11 @@ func (m *MockEngine) ListOperators() []string {
 	return m.ListOperatorsFunc()
 }
 
+func (m *MockEngine) GetOperator(name string) (Operator, bool) {
+	m.GetOperatorCalls = append(m.GetOperatorCalls, name)
+	return m.GetOperatorFunc(name)
+}
+
 func (m *MockEngine) WithLogger(logger Logger) Engine {
 	m.WithLoggerCalls = append(m.WithLoggerCalls, logger)
 	return m.WithLoggerFunc(logger)
@@ -156,6 +170,11 @@ func (m *MockEngine) WithVaultClient(client VaultClient) Engine {
 func (m *MockEngine) WithAWSConfig(config AWSConfig) Engine {
 	m.WithAWSConfigCalls = append(m.WithAWSConfigCalls, config)
 	return m.WithAWSConfigFunc(config)
+}
+
+func (m *MockEngine) GetOperatorState() OperatorState {
+	m.GetOperatorStateCalls++
+	return m.GetOperatorStateFunc()
 }
 
 // MockDocument provides a mock implementation of Document for testing
@@ -419,4 +438,112 @@ func (m *MockMergeBuilder) FallbackAppend() MergeBuilder {
 func (m *MockMergeBuilder) Execute() (Document, error) {
 	m.ExecuteCalls++
 	return m.ExecuteFunc()
+}
+
+// MockOperatorState provides a mock implementation of OperatorState for testing
+type MockOperatorState struct {
+	// Vault operations
+	GetVaultClientFunc    func() *vaultkv.KV
+	GetVaultCacheFunc     func() map[string]map[string]interface{}
+	SetVaultCacheFunc     func(path string, data map[string]interface{})
+	AddVaultRefFunc       func(path string, keys []string)
+	IsVaultSkippedFunc    func() bool
+	
+	// AWS operations
+	GetAWSSessionFunc         func() *session.Session
+	GetSecretsManagerClientFunc func() secretsmanageriface.SecretsManagerAPI
+	GetParameterStoreClientFunc func() ssmiface.SSMAPI
+	GetAWSSecretsCacheFunc    func() map[string]string
+	SetAWSSecretCacheFunc     func(key, value string)
+	GetAWSParamsCacheFunc     func() map[string]string
+	SetAWSParamCacheFunc      func(key, value string)
+	IsAWSSkippedFunc          func() bool
+	
+	// Static IPs
+	GetUsedIPsFunc func() map[string]string
+	SetUsedIPFunc  func(key, ip string)
+	
+	// Prune operations
+	AddKeyToPruneFunc   func(key string)
+	GetKeysToPruneFunc  func() []string
+	
+	// Sort operations
+	AddPathToSortFunc   func(path, order string)
+	GetPathsToSortFunc  func() map[string]string
+}
+
+func (m *MockOperatorState) GetVaultClient() *vaultkv.KV {
+	return m.GetVaultClientFunc()
+}
+
+func (m *MockOperatorState) GetVaultCache() map[string]map[string]interface{} {
+	return m.GetVaultCacheFunc()
+}
+
+func (m *MockOperatorState) SetVaultCache(path string, data map[string]interface{}) {
+	m.SetVaultCacheFunc(path, data)
+}
+
+func (m *MockOperatorState) AddVaultRef(path string, keys []string) {
+	m.AddVaultRefFunc(path, keys)
+}
+
+func (m *MockOperatorState) IsVaultSkipped() bool {
+	return m.IsVaultSkippedFunc()
+}
+
+func (m *MockOperatorState) GetAWSSession() *session.Session {
+	return m.GetAWSSessionFunc()
+}
+
+func (m *MockOperatorState) GetSecretsManagerClient() secretsmanageriface.SecretsManagerAPI {
+	return m.GetSecretsManagerClientFunc()
+}
+
+func (m *MockOperatorState) GetParameterStoreClient() ssmiface.SSMAPI {
+	return m.GetParameterStoreClientFunc()
+}
+
+func (m *MockOperatorState) GetAWSSecretsCache() map[string]string {
+	return m.GetAWSSecretsCacheFunc()
+}
+
+func (m *MockOperatorState) SetAWSSecretCache(key, value string) {
+	m.SetAWSSecretCacheFunc(key, value)
+}
+
+func (m *MockOperatorState) GetAWSParamsCache() map[string]string {
+	return m.GetAWSParamsCacheFunc()
+}
+
+func (m *MockOperatorState) SetAWSParamCache(key, value string) {
+	m.SetAWSParamCacheFunc(key, value)
+}
+
+func (m *MockOperatorState) IsAWSSkipped() bool {
+	return m.IsAWSSkippedFunc()
+}
+
+func (m *MockOperatorState) GetUsedIPs() map[string]string {
+	return m.GetUsedIPsFunc()
+}
+
+func (m *MockOperatorState) SetUsedIP(key, ip string) {
+	m.SetUsedIPFunc(key, ip)
+}
+
+func (m *MockOperatorState) AddKeyToPrune(key string) {
+	m.AddKeyToPruneFunc(key)
+}
+
+func (m *MockOperatorState) GetKeysToPrune() []string {
+	return m.GetKeysToPruneFunc()
+}
+
+func (m *MockOperatorState) AddPathToSort(path, order string) {
+	m.AddPathToSortFunc(path, order)
+}
+
+func (m *MockOperatorState) GetPathsToSort() map[string]string {
+	return m.GetPathsToSortFunc()
 }

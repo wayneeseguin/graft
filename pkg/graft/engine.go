@@ -341,8 +341,8 @@ func (e *DefaultEngine) createEvaluator(t map[interface{}]interface{}) *Evaluato
 }
 
 func (e *DefaultEngine) evaluate(ctx context.Context, ev *Evaluator) error {
-	// Set the engine context on the evaluator - use the EngineContext interface
-	ev.engine = EngineContext(e)
+	// Set the engine on the evaluator
+	ev.engine = Engine(e)
 	
 	// Run evaluation phases
 	for _, phase := range []OperatorPhase{MergePhase, EvalPhase} {
@@ -514,6 +514,12 @@ func (e *DefaultEngine) WithVaultClient(client VaultClient) Engine {
 // WithAWSConfig sets AWS configuration (returns new engine instance)
 func (e *DefaultEngine) WithAWSConfig(config AWSConfig) Engine {
 	// For now, return self as AWS config is not fully implemented yet
+	return e
+}
+
+// GetOperatorState returns the operator state interface
+func (e *DefaultEngine) GetOperatorState() OperatorState {
+	// The engine itself implements OperatorState
 	return e
 }
 

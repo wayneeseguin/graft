@@ -9,12 +9,12 @@ import (
 
 var keysToPrune []string
 
-func addToPruneListIfNecessary(engine graft.EngineContext, paths ...string) {
-	prunePaths := engine.GetKeysToPrune()
+func addToPruneListIfNecessary(engine graft.Engine, paths ...string) {
+	prunePaths := engine.GetOperatorState().GetKeysToPrune()
 	for _, path := range paths {
 		if !isIncluded(prunePaths, path) {
 			DEBUG("adding '%s' to the list of paths to prune", path)
-			engine.AddKeyToPrune(path)
+			engine.GetOperatorState().AddKeyToPrune(path)
 		}
 	}
 }

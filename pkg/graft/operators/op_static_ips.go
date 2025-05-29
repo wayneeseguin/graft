@@ -470,9 +470,9 @@ func (s StaticIPOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		ip := pool[offset]
 		DEBUG("     [%d]: checking to see if %s is already claimed", i, ip)
 		
-		// Get engine context for IP tracking
+		// Get engine for IP tracking
 		engine := graft.GetEngine(ev)
-		usedIPs := engine.GetUsedIPs()
+		usedIPs := engine.GetOperatorState().GetUsedIPs()
 		
 		if thief, taken := usedIPs[ip]; taken {
 			DEBUG("     [%d]: %s is in use by %s\n", i, ip, thief)
@@ -481,7 +481,7 @@ func (s StaticIPOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 		// claim this address for ourselves
 		DEBUG("     [%d]: claiming %s for job %s", i, ip, current)
-		engine.SetUsedIP(ip, current)
+		engine.GetOperatorState().SetUsedIP(ip, current)
 		ips = append(ips, ip)
 
 		DEBUG("")

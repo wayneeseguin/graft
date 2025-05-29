@@ -164,9 +164,9 @@ func TestMergeAllDocs(t *testing.T) {
 			}
 			files, err := openFiles([]string{"../../assets/merge/first.yml", "../../assets/merge/second.yml"})
 			So(err, ShouldBeNil)
-			ev, err := mergeAllDocs(files, mergeOpts{})
+			result, err := mergeAllDocs(files, mergeOpts{})
 			So(err, ShouldBeNil)
-			So(ev.Tree, ShouldResemble, expect)
+			So(result, ShouldResemble, expect)
 		})
 		Convey("Succeeds with valid files + json", func() {
 			expect := map[interface{}]interface{}{
@@ -203,9 +203,9 @@ func TestMergeAllDocs(t *testing.T) {
 			}
 			files, err := openFiles([]string{"../../assets/merge/first.json", "../../assets/merge/second.yml"})
 			So(err, ShouldBeNil)
-			ev, err := mergeAllDocs(files, mergeOpts{})
+			result, err := mergeAllDocs(files, mergeOpts{})
 			So(err, ShouldBeNil)
-			So(ev.Tree, ShouldResemble, expect)
+			So(result, ShouldResemble, expect)
 		})
 	})
 }
