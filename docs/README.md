@@ -45,7 +45,7 @@ Extensive examples demonstrating real-world usage of each operator.
 
 ## Migration from Old Documentation
 
-This new documentation structure replaces the previous `doc/` directory. Key improvements:
+This documentation structure provides comprehensive coverage of graft. Key improvements:
 
 1. **Better Organization** - Content is categorized by type (concepts, guides, reference)
 2. **Operator Categories** - Operators are grouped by function rather than one long list

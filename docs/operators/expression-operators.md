@@ -406,7 +406,7 @@ results:
 
 ## See Also
 
-- [Expression operators documentation](/doc/expression-operators.md)
+- [Comparison operators documentation](../concepts/nested-expressions.md)
 - [Expression examples](/examples/expression-operators/)
 - [Math operators](math-calculations.md)
 - [Data manipulation operators](data-manipulation.md)

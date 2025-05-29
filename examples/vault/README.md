@@ -49,4 +49,4 @@ GRAFT_SKIP_VAULT=1 graft merge basic.yml
 - Use `GRAFT_SKIP_VAULT=1` to skip vault lookups (returns "REDACTED")
 - Vault paths use format: `path/to/secret:key`
 - KV v2 secrets engine paths need `data/` after mount point
-- See [Vault documentation](../doc/pulling-creds-from-vault.md) for setup details
+- See [Vault documentation](../../docs/guides/vault-integration.md) for setup details

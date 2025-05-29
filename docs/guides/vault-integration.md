@@ -74,9 +74,11 @@ With KV v2, graft automatically handles the `/data/` path segment:
 password: (( vault "secret/myapp:password" ))
 ```
 
-## Default Values
+## Default Values and Multiple Paths
 
-As of v1.31.0, you can provide fallback values if secrets don't exist:
+As of v1.31.0, the vault operator supports default values using the logical OR (`||`) syntax. As of v2.0.0, the vault operator has been enhanced to support multiple vault paths natively.
+
+### Basic Default Values
 
 ```yaml
 # Literal default
@@ -85,8 +87,153 @@ username: (( vault "secret/db:username" || "admin" ))
 # Reference as default
 password: (( vault "secret/db:password" || grab defaults.password ))
 
-# Multiple fallbacks
-api_key: (( vault "secret/api:key" || vault "secret/backup:key" || "dev-key" ))
+# Environment variable as default
+api_key: (( vault "secret/api:key" || $DEFAULT_API_KEY ))
+
+# Nil as default for optional values
+feature_flag: (( vault "secret/features:new_feature" || nil ))
+```
+
+### Multiple Vault Paths
+
+The enhanced vault operator now supports multiple paths natively using different syntaxes:
+
+#### Semicolon-Separated Paths (Recommended)
+
+```yaml
+# Try production first, then staging, then use default
+password: (( vault "secret/prod:password; secret/staging:password" || "default-password" ))
+
+# With concatenation
+meta:
+  env: production
+  
+password: (( vault "secret/" meta.env ":password; secret/shared:password" || "default-password" ))
+```
+
+#### Multiple Arguments Syntax
+
+```yaml
+# Each argument is a separate path to try
+password: (( vault "secret/prod:password" "secret/staging:password" || "default-password" ))
+
+# Last argument as default (without ||)
+password: (( vault "secret/prod:password" "secret/staging:password" "default-password" ))
+```
+
+#### Legacy vault-try Operator
+
+The `vault-try` operator is still supported for backward compatibility but is now deprecated:
+
+```yaml
+# Old syntax (still works but shows deprecation warning)
+password: (( vault-try "secret/prod:password" "secret/staging:password" "default-password" ))
+
+# Recommended migration to new syntax
+password: (( vault "secret/prod:password; secret/staging:password" || "default-password" ))
+```
+
+### Known Limitations
+
+#### Nested Operators in Defaults
+
+Currently, nested operators within the default expression are not supported due to parser limitations:
+
+```yaml
+# This will NOT work as expected:
+password: (( vault "secret/myapp:password" || grab defaults.password ))
+password: (( vault "secret/myapp:password" || concat "prefix-" suffix ))
+```
+
+**Recommended Workaround**: Use intermediate variables:
+
+```yaml
+# For grab operator:
+defaults:
+  password: my-secure-default
+  
+# Create an intermediate variable
+default_from_grab: (( grab defaults.password ))
+password: (( vault "secret/myapp:password" || default_from_grab ))
+
+# For concat operator:
+prefix: "app-"
+suffix: "password"
+
+# Create an intermediate variable  
+default_from_concat: (( concat prefix suffix ))
+password: (( vault "secret/myapp:password" || default_from_concat ))
+```
+
+### Chained Vault Lookups
+
+```yaml
+# Multiple fallback vaults
+password: (( vault "secret/primary:password" || vault "secret/secondary:password" || "default" ))
+
+# For multiple paths, prefer semicolon syntax:
+password: (( vault "secret/primary:password; secret/secondary:password" || "default" ))
+```
+
+## Sub-Operators (New in v2.1.0)
+
+The vault operator now supports advanced sub-operators for even more powerful path construction:
+
+### Parentheses `()` for Grouping
+
+Use parentheses to control evaluation precedence:
+
+```yaml
+# Group expressions for clarity
+vault_secret: (( vault ("secret/" env ":password") ))
+
+# Complex grouping with references
+vault_secret: (( vault ("secret/" (grab meta.environment) "/db:pass") ))
+```
+
+### Bar `|` for Choice/Alternatives
+
+Use the bar operator to try multiple alternatives within vault paths:
+
+```yaml
+# Try different key names
+database_password: (( vault "secret/db:" ("password" | "pass" | "pwd") ))
+
+# Try different paths
+api_key: (( vault ("secret/prod/api:key" | "secret/staging/api:key") ))
+
+# Complex example with both grouping and choice
+vault_key: (( vault ( meta.vault_path meta.stub  ":" ("key1" | "key2" ) | meta.exodus_path "subpath:key1") || "default"))
+```
+
+### Sub-Operator Precedence
+
+1. **`()`** - Parentheses/grouping (highest)
+2. **`|`** - Choice alternatives 
+3. **Space** - Concatenation
+4. **`||`** - Logical OR defaults (lowest)
+
+### Sub-Operator Examples
+
+```yaml
+# Basic choice between key names
+database:
+  password: (( vault "secret/db:" ("password" | "pass") ))
+
+# Environment-specific with fallback
+api_key: (( vault ("secret/" env "/api:key" | "secret/default/api:key") ))
+
+# Migration scenarios
+app_secret: (( vault ("new-secrets/app:key" | "old-secrets/app:key" | "legacy/app:key") ))
+
+# Multi-tenant with shared fallback
+tenant_secret: (( vault ("secret/tenants/" tenant_id ":api_key" | "secret/shared:default_api_key") ))
+
+# KV version compatibility
+secret_value: (( vault ("secret/app:key" | "secret/data/app:key") ))
+```
+
+For more details and examples, see the [vault sub-operators documentation](../../examples/vault/sub-operators-README.md).
 ```
 
 ## Environment Variables

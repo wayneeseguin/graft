@@ -58,7 +58,7 @@ database:
   port: (( vault "secret/db:port" || 5432 ))
 ```
 
-See also: [vault examples](/examples/vault/), [vault defaults documentation](/doc/vault-defaults.md)
+See also: [vault examples](/examples/vault/), [vault integration guide](../guides/vault-integration.md)
 
 ## (( vault-try ))
 
