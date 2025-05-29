@@ -28,6 +28,222 @@ var VaultRefs = map[string][]string{}
 // Vault to be contacted and the keys substituted in.
 var SkipVault bool
 
+// vaultArgProcessor handles argument processing for vault operator with LogicalOr support
+type vaultArgProcessor struct {
+	args         []*Expr
+	hasDefault   bool
+	defaultExpr  *Expr
+	defaultIndex int
+}
+
+// newVaultArgProcessor creates a processor that extracts defaults from any position
+func newVaultArgProcessor(args []*Expr) *vaultArgProcessor {
+	processor := &vaultArgProcessor{
+		args:         make([]*Expr, len(args)),
+		hasDefault:   false,
+		defaultIndex: -1,
+	}
+
+	// Copy args and extract any LogicalOr
+	for i, arg := range args {
+		if arg.Type == LogicalOr {
+			processor.hasDefault = true
+			processor.defaultExpr = arg.Right
+			processor.defaultIndex = i
+			// Use the left side of LogicalOr for vault path
+			processor.args[i] = arg.Left
+		} else {
+			processor.args[i] = arg
+		}
+	}
+
+	return processor
+}
+
+// isVaultPathString checks if an expression looks like a vault path (contains colon)
+func isVaultPathString(ev *Evaluator, expr *Expr) bool {
+	// Try to resolve to string without error propagation
+	if expr.Type == Literal {
+		if str, ok := expr.Literal.(string); ok {
+			return strings.Contains(str, ":")
+		}
+	}
+	return false
+}
+
+// detectMultiplePathArgs checks if we have multiple vault path arguments
+func (p *vaultArgProcessor) detectMultiplePathArgs(ev *Evaluator) bool {
+	// If we have LogicalOr, we're in classic mode
+	if p.hasDefault {
+		return false
+	}
+	
+	// Check if we have multiple arguments that look like vault paths
+	pathCount := 0
+	for _, arg := range p.args {
+		if isVaultPathString(ev, arg) {
+			pathCount++
+		}
+	}
+	
+	return pathCount > 1
+}
+
+// resolveToString resolves an expression and converts it to a string
+func (p *vaultArgProcessor) resolveToString(ev *Evaluator, expr *Expr) (string, error) {
+	// Use ResolveOperatorArgument to support nested expressions
+	value, err := ResolveOperatorArgument(ev, expr)
+	if err != nil {
+		// Maintain backward compatibility with error messages
+		if expr.Type == Reference {
+			return "", fmt.Errorf("Unable to resolve `%s`: %s", expr.Reference, err)
+		}
+		return "", err
+	}
+
+	if value == nil {
+		return "", fmt.Errorf("cannot use nil as vault path component")
+	}
+
+	// Convert resolved value to string with vault-specific error messages
+	switch v := value.(type) {
+	case string:
+		return v, nil
+	case int, int64, float32, float64, bool:
+		return fmt.Sprintf("%v", v), nil
+	case map[interface{}]interface{}, map[string]interface{}:
+		if expr.Type == Reference {
+			return "", fmt.Errorf("$.%s is a map; only scalars are supported for vault paths", expr.Reference)
+		}
+		return "", fmt.Errorf("value is a map; only scalars are supported for vault paths")
+	case []interface{}:
+		if expr.Type == Reference {
+			return "", fmt.Errorf("$.%s is a list; only scalars are supported for vault paths", expr.Reference)
+		}
+		return "", fmt.Errorf("value is a list; only scalars are supported for vault paths")
+	default:
+		return fmt.Sprintf("%v", v), nil
+	}
+}
+
+// buildVaultPath resolves all arguments and concatenates them into a vault path
+func (p *vaultArgProcessor) buildVaultPath(ev *Evaluator) (string, error) {
+	parts := make([]string, 0, len(p.args))
+
+	for i, arg := range p.args {
+		DEBUG("  processing arg[%d] for concatenation", i)
+
+		part, err := p.resolveToString(ev, arg)
+		if err != nil {
+			DEBUG("    failed to resolve arg[%d]: %s", i, err)
+			return "", err
+		}
+
+		DEBUG("    resolved to: '%s'", part)
+		parts = append(parts, part)
+	}
+
+	path := strings.Join(parts, "")
+	DEBUG("  final concatenated path: '%s'", path)
+
+	return path, nil
+}
+
+// splitVaultPaths splits a path string by semicolons to support multiple vault paths
+func (p *vaultArgProcessor) splitVaultPaths(path string) []string {
+	// Check if the path contains semicolons for multiple paths
+	if !strings.Contains(path, ";") {
+		return []string{path}
+	}
+
+	// Split by semicolon and trim whitespace
+	rawPaths := strings.Split(path, ";")
+	paths := make([]string, 0, len(rawPaths))
+	
+	for _, p := range rawPaths {
+		trimmed := strings.TrimSpace(p)
+		if trimmed != "" {
+			paths = append(paths, trimmed)
+		}
+	}
+	
+	return paths
+}
+
+// buildVaultPaths builds and returns all vault paths to try
+func (p *vaultArgProcessor) buildVaultPaths(ev *Evaluator) ([]string, error) {
+	// Check if we have multiple path arguments (vault-try style)
+	if p.detectMultiplePathArgs(ev) && len(p.args) >= 2 {
+		// Multiple arguments mode - each arg is a separate path
+		// Last arg is the default unless there's a LogicalOr
+		paths := make([]string, 0)
+		
+		argsToProcess := p.args
+		if !p.hasDefault {
+			// Last argument might be a default value, check if it's a path
+			lastArg := p.args[len(p.args)-1]
+			if !isVaultPathString(ev, lastArg) {
+				// Last arg is not a path, treat it as default
+				argsToProcess = p.args[:len(p.args)-1]
+				p.hasDefault = true
+				p.defaultExpr = lastArg
+			}
+		}
+		
+		// Process each argument as a separate path
+		for i, arg := range argsToProcess {
+			path, err := p.resolveToString(ev, arg)
+			if err != nil {
+				DEBUG("  failed to resolve path arg[%d]: %s", i, err)
+				return nil, err
+			}
+			paths = append(paths, path)
+		}
+		
+		DEBUG("  vault paths to try (multi-arg mode): %v", paths)
+		return paths, nil
+	}
+	
+	// Single concatenated path mode (classic)
+	path, err := p.buildVaultPath(ev)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Then split it into multiple paths if needed (semicolon mode)
+	paths := p.splitVaultPaths(path)
+	
+	DEBUG("  vault paths to try: %v", paths)
+	return paths, nil
+}
+
+// evaluateDefault evaluates the default expression if one exists
+func (p *vaultArgProcessor) evaluateDefault(ev *Evaluator) (interface{}, error) {
+	if !p.hasDefault || p.defaultExpr == nil {
+		return nil, fmt.Errorf("no default value available")
+	}
+
+	DEBUG("  evaluating default expression")
+	// Use ResolveOperatorArgument to support nested expressions in defaults
+	value, err := ResolveOperatorArgument(ev, p.defaultExpr)
+	if err != nil {
+		return nil, fmt.Errorf("unable to evaluate default value: %s", err)
+	}
+
+	return value, nil
+}
+
+// isVaultNotFound checks if an error indicates a missing secret
+func isVaultNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	errMsg := err.Error()
+	return strings.Contains(errMsg, "not found") ||
+		strings.Contains(errMsg, "404") ||
+		strings.Contains(errMsg, "secret not found")
+}
+
 // The VaultOperator provides a means of injecting credentials and
 // other secrets from a Vault (vaultproject.io) Secure Key Storage
 // instance.
@@ -165,12 +381,12 @@ func (o VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	// Use the new argument processor
 	processor := newVaultArgProcessor(args)
 
-	// Build the vault path from all arguments
-	key, err := processor.buildVaultPath(ev)
+	// Build all vault paths from arguments
+	paths, err := processor.buildVaultPaths(ev)
 	if err != nil {
-		// Failed to build path, check if we have a default
+		// Failed to build paths, check if we have a default
 		if processor.hasDefault {
-			DEBUG("vault: failed to build path (%s), evaluating default value", err)
+			DEBUG("vault: failed to build paths (%s), evaluating default value", err)
 			defaultValue, evalErr := processor.evaluateDefault(ev)
 			if evalErr != nil {
 				return nil, fmt.Errorf("unable to evaluate default value: %s", evalErr)
@@ -183,33 +399,55 @@ func (o VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		return nil, err
 	}
 
-	// Track vault references using engine context
-	engine.GetOperatorState().AddVaultRef(key, []string{ev.Here.String()})
+	// Try each path in order
+	var lastErr error
+	for i, key := range paths {
+		DEBUG("vault: trying path %d of %d: %s", i+1, len(paths), key)
+		
+		// Track vault references using engine context
+		engine.GetOperatorState().AddVaultRef(key, []string{ev.Here.String()})
 
-	// Perform the vault lookup
-	secret, err := o.performVaultLookup(engine, key)
-	if err != nil {
-		// Check if we should try the default
-		if processor.hasDefault && isVaultNotFound(err) {
-			DEBUG("vault: secret not found, evaluating default value")
-			defaultValue, evalErr := processor.evaluateDefault(ev)
-			if evalErr != nil {
-				return nil, fmt.Errorf("unable to evaluate default value: %s", evalErr)
-			}
+		// Perform the vault lookup
+		secret, err := o.performVaultLookup(engine, key)
+		if err == nil {
+			// Success!
+			DEBUG("vault: path %d succeeded", i+1)
 			return &Response{
 				Type:  Replace,
-				Value: defaultValue,
+				Value: secret,
 			}, nil
 		}
-		// No default or not a "not found" error
-		return nil, err
+		
+		// Remember the last error
+		lastErr = err
+		DEBUG("vault: path %d failed: %s", i+1, err)
+		
+		// For non-404 errors on single path, fail immediately
+		if len(paths) == 1 && !isVaultNotFound(err) {
+			break
+		}
 	}
 
-	// Success!
-	return &Response{
-		Type:  Replace,
-		Value: secret,
-	}, nil
+	// All paths failed, check if we should try the default
+	if processor.hasDefault && (lastErr == nil || isVaultNotFound(lastErr)) {
+		DEBUG("vault: all paths failed, evaluating default value")
+		defaultValue, evalErr := processor.evaluateDefault(ev)
+		if evalErr != nil {
+			return nil, fmt.Errorf("unable to evaluate default value: %s", evalErr)
+		}
+		return &Response{
+			Type:  Replace,
+			Value: defaultValue,
+		}, nil
+	}
+
+	// Return the last error
+	if lastErr != nil {
+		return nil, lastErr
+	}
+	
+	// This shouldn't happen, but just in case
+	return nil, fmt.Errorf("vault operator failed to retrieve secret")
 }
 
 // resolveVaultArgs handles the resolution of vault arguments
@@ -317,8 +555,118 @@ func (VaultOperator) performVaultLookup(engine graft.Engine, key string) (string
 	return secret, nil
 }
 
+// VaultTryOperator is a deprecated alias for VaultOperator
+// It maintains backward compatibility but logs a deprecation warning
+type VaultTryOperator struct{}
+
+// Setup initializes the operator
+func (VaultTryOperator) Setup() error {
+	return nil
+}
+
+// Phase identifies when this operator runs
+func (VaultTryOperator) Phase() OperatorPhase {
+	return EvalPhase
+}
+
+// Dependencies returns the dependencies for this operator
+func (VaultTryOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+	return auto
+}
+
+// Run executes vault-try by maintaining its original behavior
+func (o VaultTryOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
+	DEBUG("running (( vault-try ... )) operation at $.%s", ev.Here)
+	DEBUG("WARNING: vault-try is deprecated. Consider using vault with semicolon-separated paths: (( vault \"path1:key; path2:key\" || \"default\" ))")
+	defer DEBUG("done with (( vault-try ... )) operation at $.%s\n", ev.Here)
+
+	// Minimum 2 arguments: at least one vault path and a default
+	if len(args) < 2 {
+		return nil, fmt.Errorf("vault-try operator requires at least 2 arguments (one or more vault paths, followed by a default value)")
+	}
+
+	// The last argument is always the default
+	vaultPaths := args[:len(args)-1]
+	defaultExpr := args[len(args)-1]
+
+	// Get engine
+	engine := graft.GetEngine(ev)
+
+	// Try each vault path in order
+	for i, pathExpr := range vaultPaths {
+		DEBUG("vault-try: attempting path %d of %d", i+1, len(vaultPaths))
+
+		// Resolve the path expression to a string
+		val, err := ResolveOperatorArgument(ev, pathExpr)
+		if err != nil {
+			DEBUG("vault-try: path %d failed to resolve: %s", i+1, err)
+			continue // Skip to next path
+		}
+
+		if val == nil {
+			DEBUG("vault-try: path %d resolved to nil", i+1)
+			continue // Skip to next path
+		}
+
+		// Convert to string
+		path, err := AsString(val)
+		if err != nil {
+			DEBUG("vault-try: path %d is not a string: %s", i+1, err)
+			continue // Skip to next path
+		}
+
+		if path == "" {
+			DEBUG("vault-try: path %d is empty", i+1)
+			continue // Skip to next path
+		}
+
+		// Validate path format (forgiving - just continue on malformed)
+		if !strings.Contains(path, ":") {
+			DEBUG("vault-try: path %d is malformed (no colon)", i+1)
+			continue // Skip to next path
+		}
+
+		parts := strings.Split(path, ":")
+		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+			DEBUG("vault-try: path %d is malformed", i+1)
+			continue // Skip to next path
+		}
+
+		// Track this vault reference
+		engine.GetOperatorState().AddVaultRef(path, []string{ev.Here.String()})
+
+		// Use the shared vault infrastructure
+		vaultOp := VaultOperator{}
+		secret, err := vaultOp.performVaultLookup(engine, path)
+		if err == nil {
+			// Success!
+			DEBUG("vault-try: path %d succeeded", i+1)
+			return &Response{
+				Type:  Replace,
+				Value: secret,
+			}, nil
+		}
+
+		// Log the error but continue to next path
+		DEBUG("vault-try: path %d failed: %s", i+1, err)
+	}
+
+	// All vault paths failed, use the default value
+	DEBUG("vault-try: all paths failed, evaluating default value")
+	defaultValue, err := ResolveOperatorArgument(ev, defaultExpr)
+	if err != nil {
+		return nil, fmt.Errorf("unable to evaluate default value: %s", err)
+	}
+
+	return &Response{
+		Type:  Replace,
+		Value: defaultValue,
+	}, nil
+}
+
 func init() {
 	RegisterOp("vault", VaultOperator{})
+	RegisterOp("vault-try", VaultTryOperator{})
 }
 
 /****** VAULT INTEGRATION ***********************************/

@@ -1,6 +1,8 @@
-# Vault Operator Default Values
+# Vault Operator Default Values and Multiple Paths
 
 As of graft v1.31.0, the vault operator supports default values using the logical OR (`||`) syntax. This allows you to specify fallback values when secrets are not found in Vault, preventing graft from failing when optional secrets are missing.
+
+As of graft v2.0.0, the vault operator has been enhanced to support multiple vault paths natively, providing a unified syntax that combines the functionality of both `vault` and `vault-try` operators.
 
 ## Basic Usage
 
@@ -52,27 +54,51 @@ password: (( vault "secret/" meta.env ":password" || "default-password" ))
 
 Default values work with concatenated vault paths.
 
-### Multiple Vault Paths (vault-try)
+### Multiple Vault Paths
 
-For trying multiple vault paths before falling back to a default, use the `vault-try` operator:
+The enhanced vault operator now supports multiple paths natively using two different syntaxes:
+
+#### Semicolon-Separated Paths (Recommended)
 
 ```yaml
 # Try production first, then staging, then use default
-password: (( vault-try "secret/prod:password" "secret/staging:password" "default-password" ))
+password: (( vault "secret/prod:password; secret/staging:password" || "default-password" ))
 
-# With references
-paths:
-  primary: secret/prod:password
-  secondary: secret/staging:password
+# With concatenation
+meta:
+  env: production
   
-password: (( vault-try paths.primary paths.secondary "fallback-password" ))
+password: (( vault "secret/" meta.env ":password; secret/shared:password" || "default-password" ))
 ```
 
-The `vault-try` operator:
-- Requires at least 2 arguments (minimum 1 path + 1 default)
-- Tries each vault path in order
-- Uses the last argument as the default if all paths fail
-- Falls back to default even for malformed paths (more forgiving than regular vault operator)
+#### Multiple Arguments Syntax
+
+```yaml
+# Each argument is a separate path to try
+password: (( vault "secret/prod:password" "secret/staging:password" || "default-password" ))
+
+# Last argument as default (without ||)
+password: (( vault "secret/prod:password" "secret/staging:password" "default-password" ))
+```
+
+#### Legacy vault-try Operator
+
+The `vault-try` operator is still supported for backward compatibility but is now deprecated:
+
+```yaml
+# Old syntax (still works but shows deprecation warning)
+password: (( vault-try "secret/prod:password" "secret/staging:password" "default-password" ))
+
+# Recommended migration to new syntax
+password: (( vault "secret/prod:password; secret/staging:password" || "default-password" ))
+```
+
+The enhanced vault operator:
+- Supports semicolon-separated paths for clean syntax
+- Allows multiple arguments similar to vault-try
+- Works with concatenation and references
+- Uses `||` for explicit default values
+- Falls back gracefully when paths are not found
 
 ## Known Limitations
 
@@ -149,10 +175,13 @@ password: (( vault "secret/myapp:password" || "default-password" ))
    port: (( vault "secret/myapp:port" || "5432" ))
    ```
 
-3. **Use vault-try for multiple paths**: When you have multiple possible vault paths, `vault-try` provides cleaner syntax:
+3. **Use semicolons for multiple paths**: When you have multiple possible vault paths, semicolon syntax is cleaner:
    ```yaml
-   # Cleaner than chained || operators
-   password: (( vault-try "secret/prod:pass" "secret/common:pass" "default" ))
+   # Clean and readable
+   password: (( vault "secret/prod:pass; secret/common:pass" || "default" ))
+   
+   # Also supports dynamic path building
+   password: (( vault "secret/" env ":pass; secret/common:pass" || "default" ))
    ```
 
 4. **Consider nil for optional values**: For truly optional configuration, nil might be more appropriate than a string default:
@@ -168,4 +197,4 @@ The vault operator with defaults will still fail in these cases:
 - Network/authentication errors when connecting to Vault
 - Invalid YAML in the default value expression
 
-Use `vault-try` if you want more forgiving behavior that falls back to the default even for malformed paths.
+The enhanced vault operator with multiple paths provides forgiving behavior - if one path is malformed, it will try the next path before falling back to the default.

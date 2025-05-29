@@ -1,0 +1,50 @@
+---
+# Enhanced Vault Operator Examples
+# This file demonstrates the new vault syntax with multiple paths
+
+meta:
+  environment: production
+  default_password: "changeme123"
+  team: platform
+
+# Example 1: Basic semicolon-separated paths
+database:
+  # Try production first, then staging, then development
+  password: (( vault "secret/prod/db:password; secret/staging/db:password; secret/dev/db:password" || "default-db-pass" ))
+  
+  # Multiple paths with dynamic concatenation
+  username: (( vault "secret/" meta.environment "/db:username; secret/shared/db:username" || "dbuser" ))
+
+# Example 2: Multiple arguments style (similar to vault-try)
+api:
+  # Each argument is a separate path
+  key: (( vault "secret/prod/api:key" "secret/dev/api:key" || "dev-api-key" ))
+  
+  # Can mix literals and references
+  secret: (( vault "secret/prod/api:secret" "secret/shared/api:secret" meta.default_password ))
+
+# Example 3: Complex path building with semicolons
+services:
+  redis:
+    # Build paths dynamically and provide fallbacks
+    password: (( vault "secret/" meta.environment "/" meta.team "/redis:password; secret/" meta.environment "/redis:password; secret/shared/redis:password" || "redis-default" ))
+    
+    # Can use grab for dynamic defaults
+    host: (( vault "secret/" meta.environment "/redis:host; secret/shared/redis:host" || grab meta.redis_default_host || "localhost" ))
+
+# Example 4: SSL/TLS certificates with fallback
+tls:
+  # Try environment-specific cert first, then wildcard
+  certificate: (( vault "secret/" meta.environment "/tls:cert; secret/wildcard/tls:cert" || "" ))
+  private_key: (( vault "secret/" meta.environment "/tls:key; secret/wildcard/tls:key" || "" ))
+
+# Example 5: Feature flags with defaults
+features:
+  # Use vault for feature flags with sensible defaults
+  enable_new_ui: (( vault "secret/features:new_ui; secret/features/default:new_ui" || false ))
+  enable_beta: (( vault "secret/features/" meta.environment ":beta" || false ))
+
+# Example 6: Migration scenarios
+migrations:
+  # Old path structure to new path structure
+  old_to_new: (( vault "secret/v2/config:value; secret/v1/config:value; secret/legacy/config:value" || "not-found" ))
