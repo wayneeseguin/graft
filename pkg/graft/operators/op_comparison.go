@@ -194,10 +194,11 @@ func toFloat64(v interface{}) (float64, bool) {
 
 // Register comparison operators
 func init() {
-	RegisterOp("==", &ComparisonOperator{op: "=="})
-	RegisterOp("!=", &ComparisonOperator{op: "!="})
-	RegisterOp("<", &ComparisonOperator{op: "<"})
-	RegisterOp(">", &ComparisonOperator{op: ">"})
-	RegisterOp("<=", &ComparisonOperator{op: "<="})
-	RegisterOp(">=", &ComparisonOperator{op: ">="})
+	// Use type-aware comparison operators
+	RegisterOp("==", NewTypeAwareEqualOperator())
+	RegisterOp("!=", NewTypeAwareNotEqualOperator())
+	RegisterOp("<", NewTypeAwareLessOperator())
+	RegisterOp(">", NewTypeAwareGreaterOperator())
+	RegisterOp("<=", NewTypeAwareLessOrEqualOperator())
+	RegisterOp(">=", NewTypeAwareGreaterOrEqualOperator())
 }

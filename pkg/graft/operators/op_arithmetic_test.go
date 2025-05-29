@@ -5,6 +5,8 @@ import (
 
 	"github.com/geofffranks/simpleyaml"
 	. "github.com/smartystreets/goconvey/convey"
+
+	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
 // testArithmetic is a helper function to test arithmetic operations
@@ -15,8 +17,8 @@ func testArithmetic(input string, key string, expected interface{}) {
 	data, err := y.Map()
 	So(err, ShouldBeNil)
 	
-	ev := &Evaluator{Tree: data}
-	err = ev.RunPhase(EvalPhase)
+	ev := &graft.Evaluator{Tree: data}
+	err = ev.RunPhase(graft.EvalPhase)
 	So(err, ShouldBeNil)
 	So(ev.Tree[key], ShouldEqual, expected)
 }
@@ -29,8 +31,8 @@ func testArithmeticError(input string, expectedError string) {
 	data, err := y.Map()
 	So(err, ShouldBeNil)
 	
-	ev := &Evaluator{Tree: data}
-	err = ev.RunPhase(EvalPhase)
+	ev := &graft.Evaluator{Tree: data}
+	err = ev.RunPhase(graft.EvalPhase)
 	So(err, ShouldNotBeNil)
 	So(err.Error(), ShouldContainSubstring, expectedError)
 }
@@ -109,8 +111,8 @@ complex: (( (base * multiplier) + addend ))
 				data, err = y.Map()
 				So(err, ShouldBeNil)
 
-				ev := &Evaluator{Tree: data}
-				err = ev.RunPhase(EvalPhase)
+				ev := &graft.Evaluator{Tree: data}
+				err = ev.RunPhase(graft.EvalPhase)
 				So(err, ShouldBeNil)
 				So(ev.Tree["result"], ShouldEqual, int64(15))
 				So(ev.Tree["complex"], ShouldEqual, int64(25))
@@ -320,8 +322,8 @@ result2: (( 2 + (3 * 4) ))
 				data, err = y.Map()
 				So(err, ShouldBeNil)
 
-				ev := &Evaluator{Tree: data}
-				err = ev.RunPhase(EvalPhase)
+				ev := &graft.Evaluator{Tree: data}
+				err = ev.RunPhase(graft.EvalPhase)
 				So(err, ShouldBeNil)
 				So(ev.Tree["result1"], ShouldEqual, int64(20)) // 5 * 4
 				So(ev.Tree["result2"], ShouldEqual, int64(14)) // 2 + 12
@@ -356,8 +358,8 @@ final: (( adjusted / 10 ))
 				data, err = y.Map()
 				So(err, ShouldBeNil)
 
-				ev := &Evaluator{Tree: data}
-				err = ev.RunPhase(EvalPhase)
+				ev := &graft.Evaluator{Tree: data}
+				err = ev.RunPhase(graft.EvalPhase)
 				So(err, ShouldBeNil)
 				So(ev.Tree["scaled"], ShouldEqual, int64(200))
 				So(ev.Tree["adjusted"], ShouldEqual, int64(250))
@@ -382,8 +384,8 @@ average: (( sum / 2 ))
 				data, err = y.Map()
 				So(err, ShouldBeNil)
 
-				ev := &Evaluator{Tree: data}
-				err = ev.RunPhase(EvalPhase)
+				ev := &graft.Evaluator{Tree: data}
+				err = ev.RunPhase(graft.EvalPhase)
 				So(err, ShouldBeNil)
 				So(ev.Tree["sum"], ShouldEqual, int64(30))
 				So(ev.Tree["product"], ShouldEqual, int64(200))

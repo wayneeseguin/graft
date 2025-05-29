@@ -24,10 +24,15 @@ func ParseOpcallCompat(phase OperatorPhase, src string) (*Opcall, error) {
 	
 	// Try original parser first
 	if opcall, err := ParseOpcall(phase, src); err == nil && opcall != nil {
-		return opcall, nil
+		// If the original parser returns a NullOperator, it might be an infix expression
+		// that the original parser couldn't handle
+		if _, isNull := opcall.Operator().(NullOperator); !isNull {
+			return opcall, nil
+		}
+		log.DEBUG("ParseOpcallCompat: original parser returned NullOperator, trying infix parser")
 	}
 	
-	// If original parser fails, try enhanced parser for simple infix expressions
+	// If original parser fails or returns NullOperator, try enhanced parser for simple infix expressions
 	return ParseOpcallInfix(phase, src)
 }
 

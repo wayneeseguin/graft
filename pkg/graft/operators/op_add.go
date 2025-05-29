@@ -1,70 +1,32 @@
 package operators
 
-import (
-	"fmt"
-
-	"github.com/starkandwayne/goutils/tree"
-
-	"github.com/wayneeseguin/graft/log"
-	"github.com/wayneeseguin/graft/pkg/graft"
-)
-
-// AddOperator implements the + operator
-type AddOperator struct{}
-
-// Setup ...
-func (AddOperator) Setup() error {
-	return nil
+// AddOperator implements the + operator with type awareness
+type AddOperator struct {
+	*ArithmeticOperatorBase
 }
 
-// Phase ...
-func (AddOperator) Phase() graft.OperatorPhase {
-	return graft.EvalPhase
+// NewAddOperator creates a new add operator (for backward compatibility)
+func NewAddOperator() AddOperator {
+	return AddOperator{
+		ArithmeticOperatorBase: NewArithmeticOperatorBase("+"),
+	}
 }
 
-// Dependencies ...
-func (AddOperator) Dependencies(_ *graft.Evaluator, _ []*graft.Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	return auto
-}
-
-// Run ...
-func (AddOperator) Run(ev *graft.Evaluator, args []*graft.Expr) (*graft.Response, error) {
-	log.DEBUG("running (( + ... )) operation at $.%s", ev.Here)
-	defer log.DEBUG("done with (( + ... )) operation at $.%s\n", ev.Here)
-
-	if len(args) != 2 {
-		return nil, fmt.Errorf("add operator requires exactly two arguments")
-	}
-
-	left, err := ResolveOperatorArgument(ev, args[0])
-	if err != nil {
-		return nil, err
-	}
-
-	right, err := ResolveOperatorArgument(ev, args[1])
-	if err != nil {
-		return nil, err
-	}
-
-	log.DEBUG("  [0] = %v", left)
-	log.DEBUG("  [1] = %v", right)
-
-	// Determine result type and perform addition
-	result, err := performAddition(left, right)
-	if err != nil {
-		return nil, err
-	}
-
-	return &graft.Response{
-		Type:  graft.Replace,
-		Value: result,
-	}, nil
-}
-
+// Legacy performAddition function for backward compatibility
 func performAddition(left, right interface{}) (interface{}, error) {
+	// First try type-aware addition
+	leftType := GetOperandType(left)
+	rightType := GetOperandType(right)
+	
+	handler := GetGlobalTypeRegistry().FindHandler(leftType, rightType)
+	if handler != nil {
+		return handler.Add(left, right)
+	}
+	
+	// Fall back to legacy arithmetic
 	return performArithmetic(left, right, "+")
 }
 
 func init() {
-	RegisterOp("+", AddOperator{})
+	RegisterOp("+", NewAddOperator())
 }
