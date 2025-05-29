@@ -34,6 +34,7 @@ type vaultArgProcessor struct {
 	hasDefault   bool
 	defaultExpr  *Expr
 	defaultIndex int
+	hasSubOps    bool // Track if sub-operators are used
 }
 
 // newVaultArgProcessor creates a processor that extracts defaults from any position
@@ -42,10 +43,20 @@ func newVaultArgProcessor(args []*Expr) *vaultArgProcessor {
 		args:         make([]*Expr, len(args)),
 		hasDefault:   false,
 		defaultIndex: -1,
+		hasSubOps:    false,
 	}
 
+	// Check for sub-operators and parse if needed
+	parsedArgs, hasSubOps, err := ParseVaultArgs(args)
+	if err != nil {
+		// If parsing fails, fall back to original args
+		parsedArgs = args
+		hasSubOps = false
+	}
+	processor.hasSubOps = hasSubOps
+
 	// Copy args and extract any LogicalOr
-	for i, arg := range args {
+	for i, arg := range parsedArgs {
 		if arg.Type == LogicalOr {
 			processor.hasDefault = true
 			processor.defaultExpr = arg.Right
@@ -91,6 +102,16 @@ func (p *vaultArgProcessor) detectMultiplePathArgs(ev *Evaluator) bool {
 
 // resolveToString resolves an expression and converts it to a string
 func (p *vaultArgProcessor) resolveToString(ev *Evaluator, expr *Expr) (string, error) {
+	// Check if we need to handle sub-operators
+	if p.hasSubOps {
+		result, err := p.resolveWithSubOperators(ev, expr)
+		if err != nil {
+			return "", err
+		}
+		// Convert result to string
+		return p.convertToString(result, expr)
+	}
+
 	// Use ResolveOperatorArgument to support nested expressions
 	value, err := ResolveOperatorArgument(ev, expr)
 	if err != nil {
@@ -106,24 +127,93 @@ func (p *vaultArgProcessor) resolveToString(ev *Evaluator, expr *Expr) (string, 
 	}
 
 	// Convert resolved value to string with vault-specific error messages
+	return p.convertToString(value, expr)
+}
+
+// convertToString converts a value to string with vault-specific error messages
+func (p *vaultArgProcessor) convertToString(value interface{}, expr *Expr) (string, error) {
+	if value == nil {
+		return "", fmt.Errorf("cannot use nil as vault path component")
+	}
+
 	switch v := value.(type) {
 	case string:
 		return v, nil
 	case int, int64, float32, float64, bool:
 		return fmt.Sprintf("%v", v), nil
 	case map[interface{}]interface{}, map[string]interface{}:
-		if expr.Type == Reference {
+		if expr != nil && expr.Type == Reference {
 			return "", fmt.Errorf("$.%s is a map; only scalars are supported for vault paths", expr.Reference)
 		}
 		return "", fmt.Errorf("value is a map; only scalars are supported for vault paths")
 	case []interface{}:
-		if expr.Type == Reference {
+		if expr != nil && expr.Type == Reference {
 			return "", fmt.Errorf("$.%s is a list; only scalars are supported for vault paths", expr.Reference)
 		}
 		return "", fmt.Errorf("value is a list; only scalars are supported for vault paths")
 	default:
 		return fmt.Sprintf("%v", v), nil
 	}
+}
+
+// resolveWithSubOperators resolves expressions with sub-operator support
+func (p *vaultArgProcessor) resolveWithSubOperators(ev *Evaluator, expr *Expr) (interface{}, error) {
+	if expr == nil {
+		return nil, fmt.Errorf("cannot resolve nil expression")
+	}
+
+	switch expr.Type {
+	case graft.VaultGroup:
+		// Resolve grouped expression
+		return p.resolveGroup(ev, expr)
+	case graft.VaultChoice:
+		// Resolve choice expression (try alternatives)
+		return p.resolveChoice(ev, expr)
+	default:
+		// Fall back to standard resolution
+		return ResolveOperatorArgument(ev, expr)
+	}
+}
+
+// resolveGroup resolves a grouped expression
+func (p *vaultArgProcessor) resolveGroup(ev *Evaluator, expr *Expr) (interface{}, error) {
+	if expr.Left == nil {
+		return nil, fmt.Errorf("empty group expression")
+	}
+
+	// Recursively resolve the inner expression
+	return p.resolveWithSubOperators(ev, expr.Left)
+}
+
+// resolveChoice resolves a choice expression (try alternatives)
+func (p *vaultArgProcessor) resolveChoice(ev *Evaluator, expr *Expr) (interface{}, error) {
+	if expr.Left == nil && expr.Right == nil {
+		return nil, fmt.Errorf("empty choice expression")
+	}
+
+	// Try left side first
+	if expr.Left != nil {
+		result, err := p.resolveWithSubOperators(ev, expr.Left)
+		if err == nil && result != nil {
+			// Left side succeeded
+			return result, nil
+		}
+		// Left side failed or returned nil, try right side
+		DEBUG("vault choice: left alternative failed (%v), trying right", err)
+	}
+
+	// Try right side
+	if expr.Right != nil {
+		result, err := p.resolveWithSubOperators(ev, expr.Right)
+		if err == nil && result != nil {
+			// Right side succeeded
+			return result, nil
+		}
+		DEBUG("vault choice: right alternative failed (%v)", err)
+	}
+
+	// Both sides failed
+	return nil, fmt.Errorf("all choice alternatives failed")
 }
 
 // buildVaultPath resolves all arguments and concatenates them into a vault path
@@ -374,11 +464,45 @@ func (o VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	// syntax: (( vault path.object "to concat with" other.object ))
 	// syntax: (( vault "secret/path:key" || "default" ))
 	// syntax: (( vault prefix "/" key ":password" || "default" ))
+	// syntax: (( vault ( meta.vault_path meta.stub  ":" ("key1" | "key2" ) | meta.exodus_path "subpath:key1") || "default"))
 	if len(args) < 1 {
 		return nil, fmt.Errorf("vault operator requires at least one argument")
 	}
 
-	// Use the new argument processor
+	// Detect if we need enhanced parsing for sub-operators
+	if o.needsEnhancedParsing(args) {
+		DEBUG("vault: using enhanced parsing with sub-operators")
+		return o.runWithSubOperators(ev, args, engine)
+	}
+
+	// Use classic implementation for backward compatibility
+	DEBUG("vault: using classic parsing")
+	return o.runClassic(ev, args, engine)
+}
+
+// needsEnhancedParsing checks if any arguments contain vault sub-operators
+func (o VaultOperator) needsEnhancedParsing(args []*Expr) bool {
+	for _, arg := range args {
+		if arg == nil {
+			continue
+		}
+		
+		switch arg.Type {
+		case graft.VaultGroup, graft.VaultChoice:
+			return true
+		case graft.Literal:
+			// Check if literal contains sub-operator syntax
+			if str, ok := arg.Literal.(string); ok && ContainsSubOperators(str) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// runClassic executes vault operator with classic logic (backward compatibility)
+func (o VaultOperator) runClassic(ev *Evaluator, args []*Expr, engine graft.Engine) (*Response, error) {
+	// Use the existing argument processor
 	processor := newVaultArgProcessor(args)
 
 	// Build all vault paths from arguments
@@ -399,6 +523,37 @@ func (o VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		return nil, err
 	}
 
+	return o.tryVaultPaths(ev, engine, paths, processor)
+}
+
+// runWithSubOperators executes vault operator with sub-operator support
+func (o VaultOperator) runWithSubOperators(ev *Evaluator, args []*Expr, engine graft.Engine) (*Response, error) {
+	// Use enhanced argument processor
+	processor := newVaultArgProcessor(args)
+
+	// Build all vault paths from arguments (with sub-operator support)
+	paths, err := processor.buildVaultPaths(ev)
+	if err != nil {
+		// Failed to build paths, check if we have a default
+		if processor.hasDefault {
+			DEBUG("vault: failed to build paths (%s), evaluating default value", err)
+			defaultValue, evalErr := processor.evaluateDefault(ev)
+			if evalErr != nil {
+				return nil, fmt.Errorf("unable to evaluate default value: %s", evalErr)
+			}
+			return &Response{
+				Type:  Replace,
+				Value: defaultValue,
+			}, nil
+		}
+		return nil, err
+	}
+
+	return o.tryVaultPaths(ev, engine, paths, processor)
+}
+
+// tryVaultPaths attempts to retrieve secrets from a list of vault paths
+func (o VaultOperator) tryVaultPaths(ev *Evaluator, engine graft.Engine, paths []string, processor *vaultArgProcessor) (*Response, error) {
 	// Try each path in order
 	var lastErr error
 	for i, key := range paths {

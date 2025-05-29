@@ -30,6 +30,7 @@ const (
 	TokenGreaterEqual // Future: >=
 	TokenQuestion    // Future: ? (for ternary)
 	TokenColon       // Future: : (for ternary)
+	TokenPipe        // | for vault choice sub-operator
 	TokenEOF
 	TokenUnknown
 )
@@ -84,6 +85,8 @@ func (t Token) String() string {
 		return "?"
 	case TokenColon:
 		return ":"
+	case TokenPipe:
+		return "|"
 	default:
 		return t.Value
 	}
@@ -189,7 +192,9 @@ func (t *Tokenizer) Tokenize() []Token {
 				t.advance() // consume second |
 				t.addTokenAt("||", TokenLogicalOr, startPos, startCol)
 			} else {
-				current.WriteByte(ch)
+				// Single pipe | for vault choice sub-operator
+				t.flushCurrent(&current)
+				t.addToken("|", TokenPipe)
 				t.advance()
 			}
 			
@@ -485,6 +490,7 @@ func TokenizeExpression(input string) []Token {
 var binaryOperatorPrecedence = map[TokenType]Precedence{
 	TokenLogicalOr:    PrecedenceOr,
 	TokenLogicalAnd:   PrecedenceAnd,
+	TokenPipe:         PrecedenceOr + 1, // Higher than || but lower than most operators
 	TokenEquals:       PrecedenceEquality,
 	TokenNotEquals:    PrecedenceEquality,
 	TokenLessThan:     PrecedenceComparison,
@@ -502,6 +508,7 @@ var binaryOperatorPrecedence = map[TokenType]Precedence{
 var operatorAssociativity = map[TokenType]Associativity{
 	TokenLogicalOr:    RightAssociative,
 	TokenLogicalAnd:   LeftAssociative,
+	TokenPipe:         LeftAssociative, // | associates left to right
 	TokenEquals:       LeftAssociative,
 	TokenNotEquals:    LeftAssociative,
 	TokenLessThan:     LeftAssociative,

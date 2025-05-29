@@ -88,6 +88,10 @@ const (
 	BoshVar
 	// OperatorCall represents a nested operator call
 	OperatorCall
+	// VaultGroup represents a () grouping expression for vault sub-operators
+	VaultGroup
+	// VaultChoice represents a | choice expression for vault sub-operators
+	VaultChoice
 )
 
 // Operator interface that all operators must implement

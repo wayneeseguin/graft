@@ -1,0 +1,164 @@
+---
+# Vault Sub-Operators Examples
+# Demonstrates the new paren () and bar | sub-operators for vault
+# Requires: export VAULT_ADDR='http://127.0.0.1:8200'
+#          export VAULT_TOKEN="your-token"
+
+# Meta data for dynamic vault paths
+meta:
+  vault_path: "secret/myapp"
+  stub: "prod"
+  exodus_path: "secret/exodus/myapp"
+  environment: "production"
+
+# Basic grouping examples with parentheses ()
+basic_grouping:
+  # Simple grouping for precedence control
+  simple_group: (( vault ("secret/app/" env ":password") ))
+  
+  # Grouping with references
+  dynamic_group: (( vault ("secret/" (grab meta.stub) "/db:pass") ))
+  
+  # Multiple grouped segments
+  complex_group: (( vault ("secret/" (grab meta.environment) "/" (grab meta.stub) ":key") ))
+
+# Choice examples with bar | operator
+choice_examples:
+  # Try different key names for the same secret
+  key_choice: (( vault "secret/db:" ("password" | "pass" | "pwd") ))
+  
+  # Try different secret paths
+  path_choice: (( vault ("secret/prod/db:pass" | "secret/staging/db:pass" | "secret/dev/db:pass") ))
+  
+  # Choice between different vault mount points
+  mount_choice: (( vault ("secret/data/app:key" | "kv/app:key" | "secrets/app:key") ))
+  
+  # Choice with environment-specific paths
+  env_choice: (( vault ("secret/" env "/app:key" | "secret/default/app:key") ))
+
+# Combined grouping and choice operators
+combined_examples:
+  # Group with choice inside
+  grouped_choice: (( vault ("secret/" (grab meta.stub) ":" ("password" | "pass")) ))
+  
+  # Choice between grouped expressions
+  choice_of_groups: (( vault (("secret/prod/" (grab meta.stub) ":key") | ("secret/dev/" (grab meta.stub) ":key")) ))
+  
+  # Complex nested example
+  nested_complex: (( vault ("secret/" ("prod" | "staging") "/" ("app" | "service") ":" ("password" | "pass")) ))
+
+# Complex example from requirements
+# This demonstrates the exact syntax requested:
+# (( vault ( meta.vault_path meta.stub  ":" ("key1" | "key2" ) | meta.exodus_path "subpath:key1") || "default"))
+requirements_example:
+  vault_key: (( vault ( meta.vault_path meta.stub  ":" ("key1" | "key2" ) | meta.exodus_path "subpath:key1") || "default"))
+
+# Breakdown of the complex example for clarity
+requirements_breakdown:
+  # Part 1: meta.vault_path meta.stub ":" ("key1" | "key2")
+  # This builds: "secret/myapp" + "prod" + ":" + ("key1" | "key2")
+  # Result: "secret/myappprod:key1" or "secret/myappprod:key2"
+  part1: (( vault meta.vault_path meta.stub ":" ("key1" | "key2") ))
+  
+  # Part 2: meta.exodus_path "subpath:key1"  
+  # This builds: "secret/exodus/myapp" + "subpath:key1"
+  # Result: "secret/exodus/myappsubpath:key1"
+  part2: (( vault meta.exodus_path "subpath:key1" ))
+  
+  # Combined with choice operator: part1 | part2
+  combined: (( vault ( meta.vault_path meta.stub ":" ("key1" | "key2" ) | meta.exodus_path "subpath:key1") ))
+  
+  # With default fallback
+  with_default: (( vault ( meta.vault_path meta.stub ":" ("key1" | "key2" ) | meta.exodus_path "subpath:key1") || "default" ))
+
+# Real-world use cases
+real_world_examples:
+  # Database connection with fallback keys
+  database:
+    # Try multiple key names, fallback to different environments
+    password: (( vault ("secret/" env "/db:" ("password" | "pass" | "pwd") | "secret/default/db:password") || "dev-password" ))
+    
+    # Choice between KV v1 and v2 paths
+    username: (( vault ("secret/db:username" | "secret/data/db:username") || "postgres" ))
+    
+    # Environment-specific with service fallback
+    host: (( vault ("secret/" env "/db:host" | "secret/shared/db:host") || "localhost" ))
+  
+  # API keys with multiple fallback strategies
+  api_keys:
+    # Try service-specific first, then shared
+    primary: (( vault ("secret/" env "/api/primary:key" | "secret/shared/api:primary_key") ))
+    
+    # Multiple providers with fallback
+    payment: (( vault ("secret/stripe:key" | "secret/paypal:key" | "secret/square:key") || "test-key" ))
+    
+    # Feature-flag dependent
+    analytics: (( vault ("secret/analytics:" ("prod_key" | "staging_key") | "secret/shared:analytics") || "" ))
+
+# Multi-tenant examples
+multi_tenant:
+  tenant: "customer1"
+  
+  # Tenant-specific secrets with shared fallback
+  tenant_secret: (( vault ("secret/tenants/" (grab multi_tenant.tenant) ":api_key" | "secret/shared:default_api_key") ))
+  
+  # Choice of tenant configurations
+  tenant_config: (( vault ("secret/tenants/" (grab multi_tenant.tenant) "/config:" ("primary" | "secondary") | "secret/default/config:primary") ))
+
+# Integration with existing operators
+integration_examples:
+  # Combining with grab operator
+  with_grab: (( vault ("secret/" (grab meta.environment) ":" ("key" | "secret")) ))
+  
+  # Combining with environment variables
+  with_env: (( vault ("secret/" $ENVIRONMENT ":" ("password" | "pass") | "secret/default:password") ))
+  
+  # Combining with concat operator  
+  with_concat: (( vault (concat "secret/" env "/" ("app" | "service") ":key") ))
+  
+  # Combining with ternary operator
+  with_ternary: (( vault (grab meta.environment == "prod" ? ("secret/prod:" ("key1" | "key2")) : "secret/dev:key") ))
+
+# Error handling and debugging
+error_handling:
+  # Graceful degradation
+  graceful: (( vault ("secret/prod:key" | "secret/staging:key" | "secret/dev:key") || "fallback-value" ))
+  
+  # Multiple mount points for migration scenarios
+  migration: (( vault ("new-secrets/app:key" | "old-secrets/app:key" | "legacy/app:key") ))
+  
+  # Service discovery patterns
+  service_discovery: (( vault ("secret/services/" env "/" ("api" | "web" | "worker") ":endpoint") || "http://localhost:8080" ))
+
+# Performance considerations
+performance_notes:
+  # Sub-operators evaluate lazily (short-circuit on first success)
+  # This is efficient: if first choice succeeds, others aren't tried
+  efficient: (( vault ("secret/cache/frequent:key" | "secret/db/expensive:key") ))
+  
+  # Order choices from most likely to least likely to succeed
+  optimized: (( vault ("secret/" env ":key" | "secret/default:key" | "secret/fallback:key") ))
+
+# Backwards compatibility verification
+backwards_compatible:
+  # All existing syntax continues to work unchanged
+  basic: (( vault "secret/app:password" ))
+  concat: (( vault "secret/" env "/app:password" ))
+  with_default: (( vault "secret/app:password" || "default" ))
+  nested_op: (( vault "secret/" (grab env) "/app:password" ))
+  semicolon: (( vault "secret/app:password;secret/fallback:password" ))
+  vault_try_style: (( vault "secret/app:password" "secret/fallback:password" "default" ))
+
+# Advanced patterns
+advanced_patterns:
+  # Conditional sub-operators based on environment
+  conditional: (( grab env == "prod" 
+    ? (vault ("secret/prod:" ("primary" | "secondary"))) 
+    : (vault ("secret/dev:" ("test" | "local"))) 
+  ))
+  
+  # Nested choices with different depths
+  deep_nesting: (( vault ("secret/" ("prod" | ("staging" | "dev")) "/" ("app" | "service") ":key") ))
+  
+  # Choice propagation through path segments
+  propagated: (( vault ("secret" | "kv") "/" ("v1" | "v2") "/" ("app" | "service") ":key" ))

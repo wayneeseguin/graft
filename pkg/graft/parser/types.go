@@ -158,6 +158,8 @@ const (
 	Literal = graft.Literal
 	EnvVar = graft.EnvVar
 	EvalPhase = graft.EvalPhase
+	VaultGroup = graft.VaultGroup
+	VaultChoice = graft.VaultChoice
 )
 
 // Precedence levels for operators
