@@ -40,10 +40,9 @@ func (GrabOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 			return nil, err
 		}
 
-		// For LogicalOr expressions where the fallback is nil, we should allow it
-		if val == nil && arg.Type != LogicalOr {
-			DEBUG("     [%d]: resolved to nil", i)
-			return nil, fmt.Errorf("grab operator argument resolved to nil")
+		// Allow nil values to pass through - they are valid values
+		if val == nil {
+			DEBUG("     [%d]: resolved to nil (allowed)", i)
 		}
 
 		// For LogicalOr expressions, the resolved value is already what we want
