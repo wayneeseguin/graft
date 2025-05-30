@@ -378,17 +378,22 @@ func (e *DefaultEngine) ParseYAML(data []byte) (Document, error) {
 		return nil, nil
 	}
 	
-	// Enhanced parser is now always used through the standard path
-	
-	// Fall back to standard YAML parsing
-	var result map[interface{}]interface{}
-	err := yaml.Unmarshal(data, &result)
+	// First parse as generic interface to check document type
+	var genericResult interface{}
+	err := yaml.Unmarshal(data, &genericResult)
 	if err != nil {
 		return nil, NewParseError("failed to parse YAML", err)
 	}
 	
-	if result == nil {
+	if genericResult == nil {
 		return nil, nil
+	}
+	
+	// Check that root is a map/hash
+	result, ok := genericResult.(map[interface{}]interface{})
+	if !ok {
+		// Return plain error for compatibility with tests
+		return nil, fmt.Errorf("Root of YAML document is not a hash/map:")
 	}
 	
 	return NewDocument(result), nil

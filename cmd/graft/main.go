@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"sort"
 
 	"github.com/cppforlife/go-patch/patch"
@@ -76,6 +77,56 @@ type mergeOpts struct {
 	Files          goptions.Remainder `goptions:"description='List of files to merge. To read STDIN, specify a filename of \\'-\\'.'"`
 }
 
+// checkForCycles detects circular references in the data structure
+func checkForCycles(root interface{}, maxDepth int) error {
+	visited := make(map[uintptr]bool)
+	
+	var check func(o interface{}, depth int) error
+	check = func(o interface{}, depth int) error {
+		if depth == 0 {
+			return ansi.Errorf("@*{Hit max recursion depth. You seem to have a self-referencing dataset}")
+		}
+
+		switch v := o.(type) {
+		case map[interface{}]interface{}:
+			// Check if we've seen this map before (circular reference)
+			ptr := reflect.ValueOf(v).Pointer()
+			if visited[ptr] {
+				return ansi.Errorf("@*{Hit max recursion depth. You seem to have a self-referencing dataset}")
+			}
+			visited[ptr] = true
+			
+			for _, val := range v {
+				if err := check(val, depth-1); err != nil {
+					return err
+				}
+			}
+			
+			delete(visited, ptr) // Remove after visiting children
+			
+		case []interface{}:
+			// Check if we've seen this slice before (circular reference)
+			ptr := reflect.ValueOf(v).Pointer()
+			if visited[ptr] {
+				return ansi.Errorf("@*{Hit max recursion depth. You seem to have a self-referencing dataset}")
+			}
+			visited[ptr] = true
+			
+			for _, val := range v {
+				if err := check(val, depth-1); err != nil {
+					return err
+				}
+			}
+			
+			delete(visited, ptr) // Remove after visiting children
+		}
+
+		return nil
+	}
+
+	return check(root, maxDepth)
+}
+
 func main() {
 	var options struct {
 		Debug   bool   `goptions:"-D, --debug, description='Enable debugging'"`
@@ -144,6 +195,14 @@ func main() {
 
 		log.TRACE("Converting the following data back to YML:")
 		log.TRACE("%#v", tree)
+		
+		// Check for cycles before attempting to marshal
+		if err := checkForCycles(tree, 4096); err != nil {
+			log.PrintfStdErr("%s\n", err.Error())
+			exit(2)
+			return
+		}
+		
 		merged, err := yaml.Marshal(tree)
 		if err != nil {
 			log.PrintfStdErr("Unable to convert merged result back to YAML: %s\nData:\n%#v", err.Error(), tree)
@@ -164,6 +223,14 @@ func main() {
 		for _, tree := range trees {
 			log.TRACE("Converting the following data back to YML:")
 			log.TRACE("%#v", tree)
+			
+			// Check for cycles before attempting to marshal
+			if err := checkForCycles(tree, 4096); err != nil {
+				log.PrintfStdErr("%s\n", err.Error())
+				exit(2)
+				return
+			}
+			
 			merged, err := yaml.Marshal(tree)
 			if err != nil {
 				log.PrintfStdErr("Unable to convert merged result back to YAML: %s\nData:\n%#v", err.Error(), tree)
@@ -541,6 +608,10 @@ func mergeAllDocs(files []YamlFile, options mergeOpts) (map[interface{}]interfac
 	// Apply merge options
 	if options.FallbackAppend {
 		mergeBuilder = mergeBuilder.WithArrayMergeStrategy(graft.AppendArrays)
+	}
+	
+	if options.SkipEval {
+		mergeBuilder = mergeBuilder.SkipEvaluation()
 	}
 	
 	// Execute merge

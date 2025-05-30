@@ -92,34 +92,64 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 		}
 	}
 
+	// Track visited nodes to prevent infinite loops
+	visited := make(map[uintptr]bool)
+	
 	scan = func(o interface{}) {
-		switch o.(type) {
+		switch v := o.(type) {
 		case map[interface{}]interface{}:
-			for k, v := range o.(map[interface{}]interface{}) {
+			// Check if we've seen this map before (circular reference)
+			ptr := reflect.ValueOf(v).Pointer()
+			if visited[ptr] {
+				return // Skip already visited nodes
+			}
+			visited[ptr] = true
+			
+			for k, val := range v {
 				ev.Here.Push(fmt.Sprintf("%v", k))
-				check(v)
+				check(val)
 				ev.Here.Pop()
 			}
+			
+			delete(visited, ptr) // Clean up after visiting
 
 		case map[string]interface{}:
-			for k, v := range o.(map[string]interface{}) {
+			// Check if we've seen this map before (circular reference)
+			ptr := reflect.ValueOf(v).Pointer()
+			if visited[ptr] {
+				return // Skip already visited nodes
+			}
+			visited[ptr] = true
+			
+			for k, val := range v {
 				ev.Here.Push(k)
-				check(v)
+				check(val)
 				ev.Here.Pop()
 			}
+			
+			delete(visited, ptr) // Clean up after visiting
 
 		case []interface{}:
-			for i, v := range o.([]interface{}) {
-				name := nameOfObj(v, fmt.Sprintf("%d", i))
+			// Check if we've seen this slice before (circular reference)
+			ptr := reflect.ValueOf(v).Pointer()
+			if visited[ptr] {
+				return // Skip already visited nodes
+			}
+			visited[ptr] = true
+			
+			for i, val := range v {
+				name := nameOfObj(val, fmt.Sprintf("%d", i))
 				op, _ := ParseOpcallCompat(phase, name)
 				if op == nil {
 					ev.Here.Push(name)
 				} else {
 					ev.Here.Push(fmt.Sprintf("%d", i))
 				}
-				check(v)
+				check(val)
 				ev.Here.Pop()
 			}
+			
+			delete(visited, ptr) // Clean up after visiting
 		}
 	}
 
