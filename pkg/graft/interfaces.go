@@ -314,10 +314,12 @@ func (e *Expr) Evaluate(tree interface{}) (interface{}, error) {
 		// TODO: Implement operator call evaluation
 		return nil, fmt.Errorf("operator call evaluation not implemented")
 	case LogicalOr:
-		// Handle || operator - try left, if it fails or is nil, try right
+		// Handle || operator - try left, if it fails try right
+		// Treat nil as a valid "found" value - only continue on error
 		if e.Left != nil {
 			left, err := e.Left.Evaluate(tree)
-			if err == nil && left != nil {
+			if err == nil {
+				// Return the value even if it's nil
 				return left, nil
 			}
 		}
