@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	
 	"github.com/starkandwayne/goutils/ansi"
 	"github.com/starkandwayne/goutils/tree"
@@ -72,6 +73,9 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 
 	check = func(v interface{}) {
 		if s, ok := v.(string); ok {
+			if strings.Contains(s, "grab base") {
+				log.DEBUG("evaluator.check: found string with 'grab base': %s", s)
+			}
 			op, err := ParseOpcallCompat(phase, s)
 			if err != nil {
 				errors.Append(err)

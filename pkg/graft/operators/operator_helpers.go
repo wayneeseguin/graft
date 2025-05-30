@@ -46,9 +46,11 @@ func ResolveOperatorArgument(ev *Evaluator, arg *Expr) (interface{}, error) {
 		left, err := ResolveOperatorArgument(ev, arg.Left)
 		if err == nil {
 			// Left succeeded (even if nil), return its value
+			DEBUG("LogicalOr: left side succeeded with value %v (type %T), stopping here", left, left)
 			return left, nil
 		}
 		// Left failed, try right
+		DEBUG("LogicalOr: left side failed with error %v, trying right side", err)
 		return ResolveOperatorArgument(ev, arg.Right)
 
 	default:

@@ -89,6 +89,11 @@ func evaluateOperatorCall(e *Expr, ev *Evaluator) (*Response, error) {
 		return nil, NewExprEvaluationError("not an operator call expression", e.Pos)
 	}
 	
+	// If we have a Call object, use it directly
+	if e.Call != nil {
+		return e.Call.Run(ev)
+	}
+	
 	opName := e.Op()
 	args := e.Args()
 	

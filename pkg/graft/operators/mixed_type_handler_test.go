@@ -357,7 +357,9 @@ func TestMixedTypeHelperFunctions(t *testing.T) {
 				So(compareNumbers(20, 10), ShouldEqual, 1)
 				So(compareNumbers(15, 15), ShouldEqual, 0)
 				So(compareNumbers(int64(10), 10.0), ShouldEqual, 0)
-				So(compareNumbers(float32(3.14), float64(3.14)), ShouldEqual, 0)
+				// float32(3.14) converted to float64 is slightly different than float64(3.14)
+				// due to precision differences, so it's actually greater
+				So(compareNumbers(float32(3.14), float64(3.14)), ShouldEqual, 1)
 			})
 		})
 		

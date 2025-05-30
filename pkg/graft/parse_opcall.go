@@ -19,6 +19,10 @@ func ParseOpcallCompat(phase OperatorPhase, src string) (*Opcall, error) {
 		return nil, nil
 	}
 	
+	if strings.Contains(src, "base + addend") || strings.Contains(src, "base * multiplier") {
+		log.DEBUG("ParseOpcallCompat: found expression with base: '%s'", src)
+	}
+	
 	log.DEBUG("ParseOpcallCompat: checking '%s' in phase %v", src, phase)
 	log.DEBUG("ParseOpcallCompat: OpRegistry has %d operators", len(OpRegistry))
 	
@@ -27,9 +31,12 @@ func ParseOpcallCompat(phase OperatorPhase, src string) (*Opcall, error) {
 		// If the original parser returns a NullOperator, it might be an infix expression
 		// that the original parser couldn't handle
 		if _, isNull := opcall.Operator().(NullOperator); !isNull {
+			log.DEBUG("ParseOpcallCompat: original parser succeeded with operator type %T", opcall.Operator())
 			return opcall, nil
 		}
 		log.DEBUG("ParseOpcallCompat: original parser returned NullOperator, trying infix parser")
+	} else {
+		log.DEBUG("ParseOpcallCompat: original parser failed or returned nil, trying infix parser")
 	}
 	
 	// If original parser fails or returns NullOperator, try enhanced parser for simple infix expressions
@@ -53,8 +60,10 @@ func ParseOpcallInfix(phase OperatorPhase, src string) (*Opcall, error) {
 		return opcall, nil
 	}
 	
-	// Fall back to original parser for prefix operators
-	return ParseOpcall(phase, src)
+	// If we can't parse it as an infix expression, return nil
+	// Don't fall back to ParseOpcall as it would create a loop
+	log.DEBUG("ParseOpcallInfix: failed to parse as infix expression")
+	return nil, nil
 }
 
 // isSimpleBinaryExpression checks if this looks like a simple binary expression
@@ -228,9 +237,38 @@ func parseExpression(expr string) (*Expr, error) {
 	
 	// Check if it's a nested operator expression
 	if strings.HasPrefix(expr, "((") && strings.HasSuffix(expr, "))") {
-		// This is a nested expression, we'll handle it during evaluation
+		// Parse the nested operator expression
+		nestedOpcall, err := ParseOpcallCompat(EvalPhase, expr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse nested operator: %v", err)
+		}
+		if nestedOpcall == nil {
+			// Not a valid operator expression, treat as literal
+			return &Expr{
+				Type:    Literal,
+				Literal: expr,
+			}, nil
+		}
+		
+		// Extract operator name from the opcall
+		opName := ""
+		if nestedOpcall.op != nil {
+			// Get the operator name via reflection or type assertion
+			// For now, extract from the source string
+			src := strings.TrimSpace(expr)
+			src = strings.TrimPrefix(src, "((")
+			src = strings.TrimSuffix(src, "))")
+			src = strings.TrimSpace(src)
+			parts := strings.Fields(src)
+			if len(parts) > 0 {
+				opName = parts[0]
+			}
+		}
+		
 		return &Expr{
-			Type: OperatorCall,
+			Type:     OperatorCall,
+			Operator: opName,
+			Call:     nestedOpcall,
 		}, nil
 	}
 	
@@ -383,6 +421,11 @@ func parseLiteral(s string) (*Expr, error) {
 func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 	// Basic implementation - this will be enhanced later
 	log.DEBUG("ParseOpcall: parsing '%s' for phase %v", src, phase)
+	if strings.Contains(src, "base + addend") {
+		log.DEBUG("ParseOpcall: found 'base + addend' expression")
+	}
+	
+	// Removed the early check for infix operators - let the regular parsing try first
 	
 	// Check if it's an operator expression
 	// Note: The first pattern's optional group (?:\s*\((.*)\))? will NOT match when there's a space
@@ -395,6 +438,7 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 		if !re.MatchString(src) {
 			continue
 		}
+		log.DEBUG("ParseOpcall: matched pattern %s", pattern)
 
 		m := re.FindStringSubmatch(src)
 		log.DEBUG("parsing `%s': looks like a (( %s ... )) operator", src, m[1])
@@ -433,6 +477,30 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 			op:   op,
 			args: args,
 		}, nil
+	}
+
+	// If we couldn't parse it as a standard operator but it looks like an operator expression,
+	// check if it might be an infix expression
+	trimmed := strings.TrimSpace(src)
+	if strings.HasPrefix(trimmed, "((") && strings.HasSuffix(trimmed, "))") {
+		inner := strings.TrimSpace(trimmed[2:len(trimmed)-2])
+		
+		// Check if it contains infix operators
+		// Look for operators with spaces around them
+		infixOps := []string{"+", "-", "*", "/", "%", "==", "!=", "<=", ">=", "<", ">", "||", "&&", "?"}
+		
+		for _, op := range infixOps {
+			// Check for operator with spaces
+			if strings.Contains(inner, " "+op+" ") {
+				log.DEBUG("ParseOpcall: detected potential infix expression with operator '%s' in '%s', returning NullOperator", op, inner)
+				// Return a NullOperator to signal ParseOpcallCompat to try infix parsing
+				return &Opcall{
+					src: src,
+					op: NullOperator{Missing: "__infix__"},
+					args: []*Expr{},
+				}, nil
+			}
+		}
 	}
 
 	return nil, nil
@@ -776,13 +844,17 @@ var operatorPrecedence = map[string]int{
 	"*":  7,  // multiplication
 	"/":  7,  // division
 	"%":  7,  // modulo
+	"!":  8,  // logical not (highest precedence, prefix operator)
 }
 
 // parseExpressionWithPrecedence parses expressions with proper operator precedence
 func parseExpressionWithPrecedence(phase OperatorPhase, content string) *Opcall {
+	log.DEBUG("parseExpressionWithPrecedence: parsing content '%s'", content)
+	
 	// Parse expression using precedence climbing algorithm
 	expr, err := parseExpressionPrecedence(content, 0)
 	if err != nil {
+		log.DEBUG("parseExpressionWithPrecedence: failed to parse: %v", err)
 		return nil
 	}
 	
@@ -801,10 +873,12 @@ type Token struct {
 
 // tokenizeExpression tokenizes an expression for parsing
 func tokenizeExpression(content string) ([]Token, error) {
+	log.DEBUG("tokenizeExpression: tokenizing '%s'", content)
 	var tokens []Token
 	var current strings.Builder
 	inQuotes := false
 	quoteChar := rune(0)
+	parenDepth := 0
 	pos := 0
 	
 	runes := []rune(content)
@@ -843,13 +917,25 @@ func tokenizeExpression(content string) ([]Token, error) {
 		
 		// Handle parentheses
 		if r == '(' {
-			flushToken()
-			tokens = append(tokens, Token{Type: "lparen", Value: "(", Pos: i})
+			if parenDepth == 0 {
+				flushToken()
+			}
+			parenDepth++
+			current.WriteRune(r)
 			continue
 		}
 		if r == ')' {
-			flushToken()
-			tokens = append(tokens, Token{Type: "rparen", Value: ")", Pos: i})
+			parenDepth--
+			current.WriteRune(r)
+			if parenDepth == 0 {
+				flushToken()
+			}
+			continue
+		}
+		
+		// If we're inside parentheses, keep everything together
+		if parenDepth > 0 {
+			current.WriteRune(r)
 			continue
 		}
 		
@@ -884,6 +970,13 @@ func tokenizeExpression(content string) ([]Token, error) {
 	}
 	
 	flushToken()
+	
+	// Debug log the tokens
+	log.DEBUG("tokenizeExpression: produced %d tokens", len(tokens))
+	for i, tok := range tokens {
+		log.DEBUG("  token[%d]: type=%s, value='%s', pos=%d", i, tok.Type, tok.Value, tok.Pos)
+	}
+	
 	return tokens, nil
 }
 
@@ -960,13 +1053,30 @@ func parseExpressionTokens(tokens *[]Token, pos *int, minPrec int) (*ExprNode, e
 	return left, nil
 }
 
-// parsePrimary parses primary expressions (operands, parenthesized expressions)
+// parsePrimary parses primary expressions (operands, parenthesized expressions, prefix operators)
 func parsePrimary(tokens *[]Token, pos *int) (*ExprNode, error) {
 	if *pos >= len(*tokens) {
 		return nil, fmt.Errorf("unexpected end of expression")
 	}
 	
 	token := (*tokens)[*pos]
+	
+	// Check for prefix operators (like !)
+	if token.Type == "operator" && token.Value == "!" {
+		*pos++ // consume '!'
+		
+		// Parse the operand after the prefix operator
+		operand, err := parsePrimary(tokens, pos)
+		if err != nil {
+			return nil, err
+		}
+		
+		return &ExprNode{
+			Type:  "operator",
+			Value: "!",
+			Left:  operand,
+		}, nil
+	}
 	
 	if token.Type == "operand" {
 		*pos++
@@ -1093,14 +1203,17 @@ func nodeToExpr(node *ExprNode) *Expr {
 	
 	if node.Type == "operand" {
 		// Parse the operand value
+		log.DEBUG("nodeToExpr: parsing operand '%s'", node.Value)
 		expr, err := parseExpression(node.Value)
 		if err != nil {
+			log.DEBUG("nodeToExpr: parseExpression failed: %v", err)
 			// If parsing fails, treat as string literal
 			return &Expr{
 				Type:    Literal,
 				Literal: node.Value,
 			}
 		}
+		log.DEBUG("nodeToExpr: parseExpression returned expr type=%v", expr.Type)
 		return expr
 	}
 	

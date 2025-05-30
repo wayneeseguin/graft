@@ -20,6 +20,7 @@ func NewNumericTypeHandler() *NumericTypeHandler {
 	handler.AddSupportedTypes(
 		TypePair{A: TypeInt, B: TypeInt},
 		TypePair{A: TypeInt, B: TypeFloat},
+		TypePair{A: TypeFloat, B: TypeInt},
 		TypePair{A: TypeFloat, B: TypeFloat},
 	)
 	
@@ -171,15 +172,21 @@ func (h *NumericTypeHandler) Modulo(a, b interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("cannot convert %v to numeric: %v", b, err)
 	}
 	
-	// Check if operands are integers
-	aInt, aIsInt := aNum.(int64)
-	if !aIsInt {
-		return nil, fmt.Errorf("left operand %v is not an integer", a)
+	// Convert to integers, truncating floats if necessary
+	var aInt, bInt int64
+	
+	switch v := aNum.(type) {
+	case int64:
+		aInt = v
+	case float64:
+		aInt = int64(v) // Truncate float to int
 	}
 	
-	bInt, bIsInt := bNum.(int64)
-	if !bIsInt {
-		return nil, fmt.Errorf("right operand %v is not an integer", b)
+	switch v := bNum.(type) {
+	case int64:
+		bInt = v
+	case float64:
+		bInt = int64(v) // Truncate float to int
 	}
 	
 	if bInt == 0 {

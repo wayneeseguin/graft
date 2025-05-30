@@ -1,6 +1,7 @@
 package operators
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/geofffranks/simpleyaml"
@@ -115,6 +116,11 @@ complex: (( (base * multiplier) + addend ))
 				err = ev.RunPhase(graft.EvalPhase)
 				So(err, ShouldBeNil)
 				So(ev.Tree["result"], ShouldEqual, int64(15))
+				// Debug output for complex
+				complexVal := ev.Tree["complex"]
+				if complexVal != int64(25) {
+					fmt.Printf("complex evaluated to: %q (type: %T), full length: %d\n", complexVal, complexVal, len(fmt.Sprintf("%v", complexVal)))
+				}
 				So(ev.Tree["complex"], ShouldEqual, int64(25))
 			})
 		})

@@ -267,9 +267,8 @@ result: (( param (concat meta.param_prefix meta.param_name) ))
 				ev := &Evaluator{Tree: data}
 				err = ev.RunPhase(ParamPhase)
 				So(err, ShouldNotBeNil)
-				So(err.Error(), ShouldContainSubstring, "unresolved parameter")
-				// Note: In ParamPhase, nested operators might not evaluate fully
-				// but the  param operator should still try to resolve what it can
+				So(err.Error(), ShouldContainSubstring, "missing_value")
+				// The param operator concatenates "missing_" + "value" and returns that as the error
 			})
 		})
 

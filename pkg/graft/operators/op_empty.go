@@ -51,7 +51,7 @@ func (EmptyOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 				DEBUG("treating unresolved reference 'hash' as type name")
 				return &Response{
 					Type:  Replace,
-					Value: map[interface{}]interface{}{},
+					Value: map[string]interface{}{},
 				}, nil
 			case "array", "list":
 				DEBUG("treating unresolved reference 'array' as type name")
@@ -83,7 +83,7 @@ func (EmptyOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 			DEBUG("returning empty hash")
 			return &Response{
 				Type:  Replace,
-				Value: map[interface{}]interface{}{},
+				Value: map[string]interface{}{},
 			}, nil
 
 		case "array", "list":

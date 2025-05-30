@@ -43,14 +43,7 @@ func (h *StringTypeHandler) Add(a, b interface{}) (interface{}, error) {
 
 // Subtract is not supported for strings
 func (h *StringTypeHandler) Subtract(a, b interface{}) (interface{}, error) {
-	// Return error message that matches test expectations
-	if _, ok := a.(string); ok {
-		return nil, fmt.Errorf("cannot use string in arithmetic operation")
-	}
-	if _, ok := b.(string); ok {
-		return nil, fmt.Errorf("cannot use string in arithmetic operation")
-	}
-	return nil, NotImplementedError("subtract", a, b)
+	return nil, fmt.Errorf("subtract operation not supported for string type")
 }
 
 // Multiply performs string repetition when multiplying by an integer
@@ -92,12 +85,12 @@ func (h *StringTypeHandler) Multiply(a, b interface{}) (interface{}, error) {
 
 // Divide is not supported for strings
 func (h *StringTypeHandler) Divide(a, b interface{}) (interface{}, error) {
-	return nil, NotImplementedError("divide", a, b)
+	return nil, fmt.Errorf("divide operation not supported for string type")
 }
 
 // Modulo is not supported for strings
 func (h *StringTypeHandler) Modulo(a, b interface{}) (interface{}, error) {
-	return nil, NotImplementedError("modulo", a, b)
+	return nil, fmt.Errorf("modulo operation not supported for string type")
 }
 
 // Equal performs string equality comparison
