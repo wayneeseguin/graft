@@ -40,7 +40,7 @@ func (DeferOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	components := []string{"(("} // Join these with spaces at the end
 
 	for _, arg := range args {
-		components = append(components, arg.String())
+		components = append(components, reconstructExpr(arg))
 	}
 	components = append(components, "))")
 
