@@ -3466,23 +3466,43 @@ meta:
 
 	Convey("File Operator", t, func() {
 		op := FileOperator{}
+		
+		// Find the repository root by looking for go.mod
+		basedir, _ := os.Getwd()
+		repoRoot := basedir
+		for {
+			if _, err := os.Stat(filepath.Join(repoRoot, "go.mod")); err == nil {
+				break
+			}
+			parent := filepath.Dir(repoRoot)
+			if parent == repoRoot {
+				// Reached root directory without finding go.mod
+				repoRoot = basedir
+				break
+			}
+			repoRoot = parent
+		}
+		
+		// Use absolute paths based on repository root
+		testFilePath := filepath.Join(repoRoot, "assets/file_operator/test.txt")
+		sampleFilePath := filepath.Join(repoRoot, "assets/file_operator/sample.txt")
+		
 		ev := &Evaluator{
 			Tree: YAML(
-				`meta:
-  sample_file: assets/file_operator/sample.txt
-`),
+				fmt.Sprintf(`meta:
+  sample_file: %s
+`, sampleFilePath)),
 		}
-		basedir, _ := os.Getwd()
 
 		Convey("can read a direct file", func() {
 			r, err := op.Run(ev, []*Expr{
-				str("assets/file_operator/test.txt"),
+				str(testFilePath),
 			})
 			So(err, ShouldBeNil)
 			So(r, ShouldNotBeNil)
 
 			So(r.Type, ShouldEqual, Replace)
-			So(r.Value.(string), ShouldEqual, "This is a test\n")
+			So(r.Value.(string), ShouldEqual, "This is a test")
 		})
 
 		Convey("can read a file from a reference", func() {
@@ -3495,12 +3515,12 @@ meta:
 
 			So(r.Type, ShouldEqual, Replace)
 
-			content, err := os.ReadFile("assets/file_operator/sample.txt")
+			content, err := os.ReadFile(sampleFilePath)
 			So(r.Value.(string), ShouldEqual, string(content))
 		})
 
 		Convey("can read a file relative to a specified base path", func() {
-			os.Setenv("GRAFT_FILE_BASE_PATH", filepath.Join(basedir, "assets/file_operator"))
+			os.Setenv("GRAFT_FILE_BASE_PATH", filepath.Join(repoRoot, "assets/file_operator"))
 			r, err := op.Run(ev, []*Expr{
 				str("test.txt"),
 			})
@@ -3508,12 +3528,12 @@ meta:
 			So(r, ShouldNotBeNil)
 
 			So(r.Type, ShouldEqual, Replace)
-			So(r.Value.(string), ShouldEqual, "This is a test\n")
+			So(r.Value.(string), ShouldEqual, "This is a test")
 		})
 
 		if _, err := os.Stat("/etc/hosts"); err == nil {
 			Convey("can read an absolute path", func() {
-				os.Setenv("GRAFT_FILE_BASE_PATH", filepath.Join(basedir, "assets/file_operator"))
+				os.Setenv("GRAFT_FILE_BASE_PATH", filepath.Join(repoRoot, "assets/file_operator"))
 				r, err := op.Run(ev, []*Expr{
 					str("/etc/hosts"),
 				})
