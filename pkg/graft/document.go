@@ -353,9 +353,94 @@ func (d *document) Prune(key string) Document {
 func (d *document) CherryPick(keys ...string) Document {
 	picked := make(map[interface{}]interface{})
 	
-	for _, key := range keys {
-		if val, exists := d.data[key]; exists {
-			picked[key] = deepCopy(val)
+	for _, keyPath := range keys {
+		// Check if this is a simple key or a path
+		if !strings.Contains(keyPath, ".") {
+			// Simple key - use the old behavior
+			if val, exists := d.data[keyPath]; exists {
+				picked[keyPath] = deepCopy(val)
+			}
+		} else {
+			// Path-based cherry-pick
+			segments := strings.Split(keyPath, ".")
+			
+			// Special handling for list entries (e.g., "list.two" or "list.1")
+			if len(segments) == 2 {
+				listKey := segments[0]
+				listItemKey := segments[1]
+				
+				// Get the list
+				if listVal, exists := d.data[listKey]; exists {
+					if list, ok := listVal.([]interface{}); ok {
+						var foundItem interface{}
+						
+						// First, try to parse as numeric index
+						if index, err := strconv.Atoi(listItemKey); err == nil {
+							// It's a numeric index
+							if index >= 0 && index < len(list) {
+								foundItem = list[index]
+							}
+						} else {
+							// Not a number, look for named item
+							for _, item := range list {
+								if itemMap, ok := item.(map[interface{}]interface{}); ok {
+									// Check common identifier fields
+									for _, idField := range []string{"key", "id", "name"} {
+										if idVal, hasId := itemMap[idField]; hasId {
+											if idStr, ok := idVal.(string); ok && idStr == listItemKey {
+												foundItem = item
+												break
+											}
+										}
+									}
+									if foundItem != nil {
+										break
+									}
+								}
+							}
+						}
+						
+						// If we found the item, add it to the picked document
+						if foundItem != nil {
+							// Check if we already have items for this list
+							if existingList, exists := picked[listKey]; exists {
+								if list, ok := existingList.([]interface{}); ok {
+									// Append to existing list
+									picked[listKey] = append(list, deepCopy(foundItem))
+								} else {
+									// Replace with new list
+									picked[listKey] = []interface{}{deepCopy(foundItem)}
+								}
+							} else {
+								// Create new list
+								picked[listKey] = []interface{}{deepCopy(foundItem)}
+							}
+						}
+					}
+				}
+			} else {
+				// For other paths, try to extract the value and reconstruct the path
+				val, err := d.Get(keyPath)
+				if err == nil && val != nil {
+					// Reconstruct the nested structure
+					current := picked
+					for i := 0; i < len(segments)-1; i++ {
+						if _, exists := current[segments[i]]; !exists {
+							current[segments[i]] = make(map[interface{}]interface{})
+						}
+						if m, ok := current[segments[i]].(map[interface{}]interface{}); ok {
+							current = m
+						} else {
+							// Can't continue if intermediate value is not a map
+							break
+						}
+					}
+					// Set the final value
+					if len(segments) > 0 {
+						current[segments[len(segments)-1]] = deepCopy(val)
+					}
+				}
+			}
 		}
 	}
 	

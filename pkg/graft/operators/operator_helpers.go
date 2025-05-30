@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"gopkg.in/yaml.v2"
 	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
@@ -32,8 +33,21 @@ func ResolveOperatorArgument(ev *Evaluator, arg *Expr) (interface{}, error) {
 		// Get environment variable value
 		val := os.Getenv(arg.Name)
 		if val == "" {
-			return nil, nil
+			// Return an error so LogicalOr can fall back to the next option
+			return nil, fmt.Errorf("environment variable '%s' is not set", arg.Name)
 		}
+		// Try to unmarshal the value as YAML if it looks like structured data
+		if val == "true" || val == "false" || val == "null" || 
+			(len(val) > 0 && (val[0] == '{' || val[0] == '[' || val[0] == '-')) {
+			var unmarshalled interface{}
+			if err := yaml.Unmarshal([]byte(val), &unmarshalled); err == nil {
+				// Only use unmarshalled value if it's not a string
+				if _, isString := unmarshalled.(string); !isString {
+					return unmarshalled, nil
+				}
+			}
+		}
+		// Return as string for plain strings or if unmarshalling fails
 		return val, nil
 
 	case OperatorCall:

@@ -3,6 +3,8 @@ package graft
 import (
 	"fmt"
 	"os"
+	
+	"gopkg.in/yaml.v2"
 )
 
 // EvaluateExpr evaluates an expression, including nested operator calls
@@ -31,6 +33,23 @@ func EvaluateExpr(e *Expr, ev *Evaluator) (*Response, error) {
 		
 	case EnvVar:
 		val := os.Getenv(e.Name)
+		// Try to unmarshal the value as YAML if it's not empty
+		// But only if it looks like it might be structured data (not a plain string)
+		if val != "" && (val == "true" || val == "false" || val == "null" || 
+			(len(val) > 0 && (val[0] == '{' || val[0] == '[' || val[0] == '-'))) {
+			var unmarshalled interface{}
+			if err := yaml.Unmarshal([]byte(val), &unmarshalled); err == nil {
+				// Only use unmarshalled value if it's not a string
+				// (to avoid changing multiline strings)
+				if _, isString := unmarshalled.(string); !isString {
+					return &Response{
+						Type:  Replace,
+						Value: unmarshalled,
+					}, nil
+				}
+			}
+		}
+		// Return as string for plain strings or if unmarshalling fails
 		return &Response{
 			Type:  Replace,
 			Value: val,

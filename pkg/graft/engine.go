@@ -201,11 +201,25 @@ func (e *DefaultEngine) SetVaultCache(path string, data map[string]interface{}) 
 func (e *DefaultEngine) AddVaultRef(path string, keys []string) {
 	e.vaultMutex.Lock()
 	defer e.vaultMutex.Unlock()
-	e.vaultRefs[path] = keys
+	
+	// Update internal vault refs
+	if e.vaultRefs[path] == nil {
+		e.vaultRefs[path] = []string{}
+	}
+	e.vaultRefs[path] = append(e.vaultRefs[path], keys...)
+	
+	// Also update global VaultRefs for backward compatibility with vaultinfo command
+	if SkipVault || e.skipVault {
+		if VaultRefs[path] == nil {
+			VaultRefs[path] = []string{}
+		}
+		VaultRefs[path] = append(VaultRefs[path], keys...)
+	}
 }
 
 func (e *DefaultEngine) IsVaultSkipped() bool {
-	return e.skipVault
+	// Check both the engine's skipVault and the global SkipVault for backward compatibility
+	return e.skipVault || SkipVault
 }
 
 func (e *DefaultEngine) GetAWSSession() *session.Session {
@@ -353,7 +367,7 @@ func (e *DefaultEngine) evaluate(ctx context.Context, ev *Evaluator) error {
 	ev.engine = Engine(e)
 	
 	// Run evaluation phases
-	for _, phase := range []OperatorPhase{MergePhase, EvalPhase} {
+	for _, phase := range []OperatorPhase{MergePhase, ParamPhase, EvalPhase} {
 		// Check context cancellation before each phase
 		select {
 		case <-ctx.Done():

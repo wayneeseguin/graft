@@ -319,6 +319,61 @@ func parseExpression(expr string) (*Expr, error) {
 		}
 	}
 	
+	// Check if it's a parenthesized expression like (3 * 4)
+	if strings.HasPrefix(expr, "(") && strings.HasSuffix(expr, ")") && len(expr) > 2 {
+		inner := strings.TrimSpace(expr[1:len(expr)-1])
+		
+		// Check if the inner content looks like an infix expression
+		// Look for operators with spaces around them
+		infixOps := []string{"+", "-", "*", "/", "%", "==", "!=", "<=", ">=", "<", ">", "||", "&&"}
+		hasInfixOp := false
+		for _, op := range infixOps {
+			if strings.Contains(inner, " "+op+" ") {
+				hasInfixOp = true
+				break
+			}
+		}
+		
+		if hasInfixOp {
+			// This is a parenthesized infix expression, parse it as an operator expression
+			log.DEBUG("parseExpression: found parenthesized infix expression: %s", inner)
+			nestedOpcall, err := ParseOpcallCompat(EvalPhase, "(( " + inner + " ))")
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse parenthesized expression: %v", err)
+			}
+			if nestedOpcall == nil {
+				// If parsing failed, treat as literal
+				return &Expr{
+					Type:    Literal,
+					Literal: expr,
+				}, nil
+			}
+			
+			// Extract operator name from the opcall (this is a bit hacky but works for now)
+			opName := "expr" // default name
+			if nestedOpcall.op != nil {
+				// Try to get operator name via type assertion
+				switch op := nestedOpcall.op.(type) {
+				case interface{ String() string }:
+					opName = op.String()
+				default:
+					// Use type name
+					typeName := fmt.Sprintf("%T", op)
+					if idx := strings.LastIndex(typeName, "."); idx >= 0 {
+						typeName = typeName[idx+1:]
+					}
+					opName = strings.TrimSuffix(typeName, "Operator")
+				}
+			}
+			
+			return &Expr{
+				Type:     OperatorCall,
+				Operator: opName,
+				Call:     nestedOpcall,
+			}, nil
+		}
+	}
+	
 	// Try to parse as literal first (nil, booleans, numbers, strings)
 	if literalExpr, err := parseLiteral(expr); err == nil {
 		// If it parsed as a literal, check if it's a special keyword
@@ -858,6 +913,11 @@ func parseExpressionWithPrecedence(phase OperatorPhase, content string) *Opcall 
 		return nil
 	}
 	
+	if expr == nil {
+		log.DEBUG("parseExpressionWithPrecedence: parseExpressionPrecedence returned nil")
+		return nil
+	}
+	
 	log.DEBUG("parseExpressionWithPrecedence: parsed expression tree with root operator '%s'", expr.Value)
 	
 	// Convert expression to Opcall
@@ -871,6 +931,11 @@ type Token struct {
 	Pos   int         // position in original string
 }
 
+// TokenizeExpressionForTest is a wrapper for testing
+func TokenizeExpressionForTest(content string) ([]Token, error) {
+	return tokenizeExpression(content)
+}
+
 // tokenizeExpression tokenizes an expression for parsing
 func tokenizeExpression(content string) ([]Token, error) {
 	log.DEBUG("tokenizeExpression: tokenizing '%s'", content)
@@ -878,7 +943,6 @@ func tokenizeExpression(content string) ([]Token, error) {
 	var current strings.Builder
 	inQuotes := false
 	quoteChar := rune(0)
-	parenDepth := 0
 	pos := 0
 	
 	runes := []rune(content)
@@ -915,27 +979,64 @@ func tokenizeExpression(content string) ([]Token, error) {
 			continue
 		}
 		
-		// Handle parentheses
+		// Handle parentheses - check for parenthesized operator calls first
 		if r == '(' {
-			if parenDepth == 0 {
-				flushToken()
+			flushToken()
+			
+			// Look ahead to see if this is a parenthesized operator call like (grab base)
+			// Find the matching closing parenthesis
+			parenCount := 1
+			j := i + 1
+			for j < len(runes) && parenCount > 0 {
+				if runes[j] == '(' {
+					parenCount++
+				} else if runes[j] == ')' {
+					parenCount--
+				}
+				j++
 			}
-			parenDepth++
-			current.WriteRune(r)
+			
+			if parenCount == 0 {
+				// We found the matching closing paren
+				parenContent := string(runes[i+1 : j-1]) // content between parens
+				
+				// Check if this looks like an operator call: "operator args"
+				parenContent = strings.TrimSpace(parenContent)
+				if parenContent != "" {
+					// Check if it starts with an identifier (potential operator name)
+					parts := strings.Fields(parenContent)
+					if len(parts) > 0 {
+						// Check if the first part looks like an operator name
+						firstPart := parts[0]
+						isOperatorName := regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]*$`).MatchString(firstPart)
+						
+						// Also check if this contains arithmetic operators, which means it's an expression, not an operator call
+						hasArithmeticOp := false
+						for _, op := range []string{"+", "-", "*", "/", "%", "==", "!=", "<=", ">=", "<", ">", "||", "&&"} {
+							if strings.Contains(parenContent, " "+op+" ") {
+								hasArithmeticOp = true
+								break
+							}
+						}
+						
+						if isOperatorName && !hasArithmeticOp {
+							// This looks like a parenthesized operator call, treat as single operand
+							fullExpr := string(runes[i:j])
+							tokens = append(tokens, Token{Type: "operand", Value: fullExpr, Pos: i})
+							i = j - 1 // Skip past the entire parenthesized expression
+							continue
+						}
+					}
+				}
+			}
+			
+			// Not a parenthesized operator call, treat as regular parenthesis
+			tokens = append(tokens, Token{Type: "lparen", Value: "(", Pos: i})
 			continue
 		}
 		if r == ')' {
-			parenDepth--
-			current.WriteRune(r)
-			if parenDepth == 0 {
-				flushToken()
-			}
-			continue
-		}
-		
-		// If we're inside parentheses, keep everything together
-		if parenDepth > 0 {
-			current.WriteRune(r)
+			flushToken()
+			tokens = append(tokens, Token{Type: "rparen", Value: ")", Pos: i})
 			continue
 		}
 		
@@ -1158,8 +1259,12 @@ func exprToOpcall(phase OperatorPhase, node *ExprNode) *Opcall {
 	
 	if node.Type == "operator" {
 		op := OpRegistry[node.Value]
-		if op == nil || op.Phase() != phase {
-			log.DEBUG("exprToOpcall: operator '%s' not found or wrong phase", node.Value)
+		if op == nil {
+			log.DEBUG("exprToOpcall: operator '%s' not found in registry", node.Value)
+			return nil
+		}
+		if op.Phase() != phase {
+			log.DEBUG("exprToOpcall: operator '%s' wrong phase (got %v, expected %v)", node.Value, op.Phase(), phase)
 			return nil
 		}
 		

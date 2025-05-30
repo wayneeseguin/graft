@@ -57,7 +57,7 @@ func (h *StringTypeHandler) Multiply(a, b interface{}) (interface{}, error) {
 			if bInt == 0 {
 				return "", nil
 			}
-			if bInt > 1000000 {
+			if bInt > 10000 {
 				return nil, fmt.Errorf("string repetition count too large: %d", bInt)
 			}
 			return strings.Repeat(aStr, int(bInt)), nil
