@@ -114,8 +114,32 @@ func (m *mergeBuilderImpl) Execute() (Document, error) {
 
 	// Handle single document case
 	if len(m.docs) == 1 {
-		result := m.docs[0].Clone()
-		return m.applyPostProcessing(result)
+		// For single documents, we need to validate arrays even without merging
+		// to match legacy behavior for Issue #172
+		data := m.docs[0].RawData().(map[interface{}]interface{})
+		
+		// Always process through merger for consistency with legacy behavior
+		mergerInstance := &merger.Merger{
+			AppendByDefault: m.fallbackAppend,
+		}
+		
+		// Create an empty base and merge our document into it
+		// This triggers the array validation logic
+		base := make(map[interface{}]interface{})
+		err := mergerInstance.Merge(base, data)
+		if err != nil {
+			// Convert merger.MultiError to graft.MultiError for consistent error formatting
+			if mergerMultiErr, ok := err.(merger.MultiError); ok {
+				graftMultiErr := &MultiError{}
+				for _, e := range mergerMultiErr.Errors {
+					graftMultiErr.Append(e)
+				}
+				return nil, graftMultiErr
+			}
+			return nil, err
+		}
+		
+		return m.applyPostProcessing(NewDocument(base))
 	}
 
 	// Merge multiple documents
@@ -160,14 +184,30 @@ func (m *mergeBuilderImpl) mergeDocuments() (Document, error) {
 func (m *mergeBuilderImpl) mergeInto(base, overlay map[interface{}]interface{}) error {
 	// For complex merging with array operators, use the legacy merger
 	// Array operators are processed even when evaluation is skipped
-	if m.hasArrayOperators(overlay) {
-		result, err := merger.Merge(base, overlay)
+	if m.hasArrayOperators(overlay) || m.hasArraysWithMaps(overlay) {
+		mergerInstance := &merger.Merger{
+			AppendByDefault: m.fallbackAppend,
+		}
+		
+		// Create a copy of base to merge into
+		baseCopy := deepCopyMap(base)
+		
+		// Perform the merge
+		err := mergerInstance.Merge(baseCopy, overlay)
 		if err != nil {
+			// Convert merger.MultiError to graft.MultiError for consistent error formatting
+			if mergerMultiErr, ok := err.(merger.MultiError); ok {
+				graftMultiErr := &MultiError{}
+				for _, e := range mergerMultiErr.Errors {
+					graftMultiErr.Append(e)
+				}
+				return graftMultiErr
+			}
 			return err
 		}
 		
 		// Copy result back to base
-		for key, value := range result {
+		for key, value := range baseCopy {
 			base[key] = value
 		}
 		return nil
@@ -295,6 +335,20 @@ func (m *mergeBuilderImpl) arrayHasOperators(array []interface{}) bool {
 				strings.Contains(str, "(( inline ))") ||
 				strings.Contains(str, "(( merge ))") {
 				return true
+			}
+		}
+	}
+	return false
+}
+
+// hasArraysWithMaps checks if a map contains arrays with map elements (for merge-by-key detection)
+func (m *mergeBuilderImpl) hasArraysWithMaps(data map[interface{}]interface{}) bool {
+	for _, value := range data {
+		if array, ok := value.([]interface{}); ok {
+			for _, item := range array {
+				if _, isMap := item.(map[interface{}]interface{}); isMap {
+					return true
+				}
 			}
 		}
 	}

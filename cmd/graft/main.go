@@ -617,6 +617,10 @@ func mergeAllDocs(files []YamlFile, options mergeOpts) (map[interface{}]interfac
 	// Execute merge
 	merged, err := mergeBuilder.Execute()
 	if err != nil {
+		// Check if this is a MultiError from the merger (Issue #172)
+		if strings.Contains(err.Error(), "error(s) detected:") {
+			return nil, err
+		}
 		return nil, ansi.Errorf("@R{Merge failed}: %s", err.Error())
 	}
 
