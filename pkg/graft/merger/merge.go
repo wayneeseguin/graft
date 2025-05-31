@@ -187,12 +187,33 @@ func (m *Merger) mergeMap(orig map[interface{}]interface{}, n map[interface{}]in
 			m.Errors.Append(ansi.Errorf("@m{%s}: @R{inappropriate use of} @c{(( merge ))} @R{operator outside of a list} (this is @G{graft}, after all)", path))
 		}
 
+		// Debug logging
+		log.DEBUG("%s: val = %v (type: %T)", path, val, val)
+
+		// Handle null values - delete the key if the new value is nil
+		if val == nil {
+			log.DEBUG("%s: removing key due to null value", path)
+			delete(orig, k)
+			continue
+		}
+
 		if _, exists := orig[k]; exists {
 			log.DEBUG("%s: found upstream, merging it", path)
-			orig[k] = m.MergeObj(orig[k], val, path)
+			result := m.MergeObj(orig[k], val, path)
+			// If MergeObj returns nil, delete the key
+			if result == nil {
+				log.DEBUG("%s: removing key due to null merge result", path)
+				delete(orig, k)
+			} else {
+				orig[k] = result
+			}
 		} else {
 			log.DEBUG("%s: not found upstream, adding it", path)
-			orig[k] = m.MergeObj(nil, deepCopy(val), path)
+			result := m.MergeObj(nil, deepCopy(val), path)
+			// Only add if not nil
+			if result != nil {
+				orig[k] = result
+			}
 		}
 	}
 }

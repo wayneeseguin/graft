@@ -20,7 +20,7 @@ func TestRemainingOperators(t *testing.T) {
 
 		// Debug: check if null operator exists
 		nullOp := OperatorFor("null")
-		if _, isNull := nullOp.(NullOperator); isNull {
+		if _, isNull := nullOp.(NullOperator); !isNull {
 			t.Logf("Warning: null operator not found")
 		} else {
 			t.Logf("null operator registered: %T", nullOp)

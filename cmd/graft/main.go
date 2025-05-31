@@ -17,6 +17,7 @@ import (
 
 	"github.com/wayneeseguin/graft/log"
 	"github.com/wayneeseguin/graft/pkg/graft"
+	_ "github.com/wayneeseguin/graft/pkg/graft/operators" // Register operators
 
 	"strings"
 
@@ -73,6 +74,7 @@ type mergeOpts struct {
 	FallbackAppend bool               `goptions:"--fallback-append, description='Default merge normally tries to key merge, then inline. This flag says do an append instead of an inline.'"`
 	EnableGoPatch  bool               `goptions:"--go-patch, description='Enable the use of go-patch when parsing files to be merged'"`
 	MultiDoc       bool               `goptions:"--multi-doc, -m, description='Treat multi-doc yaml as multiple files.'"`
+	DataflowOrder  string             `goptions:"--dataflow-order, description='Order of operations in dataflow output: alphabetical (default) or insertion'"`
 	Help           bool               `goptions:"--help, -h"`
 	Files          goptions.Remainder `goptions:"description='List of files to merge. To read STDIN, specify a filename of \\'-\\'.'"`
 }
@@ -562,8 +564,21 @@ func readFile(file *YamlFile) ([]byte, error) {
 }
 
 func mergeAllDocs(files []YamlFile, options mergeOpts) (map[interface{}]interface{}, error) {
-	// Create engine with default settings
-	engine, err := graft.CreateDefaultEngine()
+	// Create engine with settings from options
+	engineOpts := []graft.EngineOption{
+		graft.WithCache(true, 1000),
+		graft.WithConcurrency(10),
+		graft.WithEnhancedParser(true),
+	}
+	
+	// Set dataflow order if specified (default to alphabetical if not set)
+	dataflowOrder := options.DataflowOrder
+	if dataflowOrder == "" {
+		dataflowOrder = "alphabetical"
+	}
+	engineOpts = append(engineOpts, graft.WithDataflowOrder(dataflowOrder))
+	
+	engine, err := graft.NewEngine(engineOpts...)
 	if err != nil {
 		return nil, ansi.Errorf("@R{Failed to create graft engine}: %s", err.Error())
 	}

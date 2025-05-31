@@ -291,7 +291,7 @@ func parseExpression(expr string) (*Expr, error) {
 		log.DEBUG("parseExpression: found function-style operator call: %s(%s)", opName, argsStr)
 		
 		// Parse the nested operator call
-		nestedOpcall, err := ParseOpcall(EvalPhase, fmt.Sprintf("(( %s %s ))", opName, argsStr))
+		nestedOpcall, err := ParseOpcallCompat(EvalPhase, fmt.Sprintf("(( %s %s ))", opName, argsStr))
 		if err != nil {
 			return nil, err
 		}
@@ -313,8 +313,9 @@ func parseExpression(expr string) (*Expr, error) {
 		log.DEBUG("parseExpression: found paren-style operator call: (%s %s)", opName, argsStr)
 		
 		// Parse the nested operator call
-		nestedOpcall, err := ParseOpcall(EvalPhase, fmt.Sprintf("(( %s %s ))", opName, argsStr))
+		nestedOpcall, err := ParseOpcallCompat(EvalPhase, fmt.Sprintf("(( %s %s ))", opName, argsStr))
 		if err != nil {
+			log.DEBUG("parseExpression: ParseOpcallCompat failed: %v", err)
 			return nil, err
 		}
 		
@@ -546,7 +547,7 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 	// between operator and parentheses, so "file (concat...)" will fall through to second pattern
 	for _, pattern := range []string{
 		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*)\((.*)\)\s*\)\)$`, // (( op(x,y,z) )) - no space between op and (
-		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*)\s+\((.*)\)\s*\)\)$`, // (( op (x,y,z) )) - space between op and (
+		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*)\s+(\(.*\))\s*\)\)$`, // (( op (x,y,z) )) - space between op and (
 		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*)(?:\s+(.*))?\s*\)\)$`,     // (( op x y z ))
 	} {
 		re := regexp.MustCompile(pattern)
@@ -627,15 +628,15 @@ func parseArgs(phase OperatorPhase, src string) ([]*Expr, error) {
 		return []*Expr{}, nil
 	}
 
+	log.DEBUG("parseArgs: parsing arguments: '%s'", src)
+
 	// Handle arguments with different separators
 	args := []*Expr{}
 	
 	// Check if the entire argument list is wrapped in parentheses
 	src = strings.TrimSpace(src)
-	if strings.HasPrefix(src, "(") && strings.HasSuffix(src, ")") && len(src) > 2 {
-		// Remove outer parentheses
-		src = strings.TrimSpace(src[1:len(src)-1])
-	}
+	// Don't strip parentheses if they might be part of a nested expression
+	// We'll let tokenizeRespectingQuotes handle parentheses properly
 	
 	// Handle comma-separated arguments for operators like concat
 	parts := splitRespectingQuotes(src, ",")
@@ -899,8 +900,30 @@ func parseSingleExpression(s string) (*Expr, error) {
 	
 	// Check if it's a function-style expression: (op args)
 	if strings.HasPrefix(s, "(") && strings.HasSuffix(s, ")") && len(s) > 2 {
-		// This looks like a nested operator call
-		// Parse it as an expression
+		// Check if this looks like an operator expression
+		inner := strings.TrimSpace(s[1:len(s)-1])
+		parts := strings.Fields(inner)
+		if len(parts) > 0 {
+			// Check if the first part is a known operator
+			if _, isOp := OpRegistry[parts[0]]; isOp {
+				// This is a nested operator call without (( ))
+				// We need to wrap it in (( )) for ParseOpcallCompat
+				wrappedExpr := fmt.Sprintf("(( %s ))", inner)
+				opcall, err := ParseOpcallCompat(EvalPhase, wrappedExpr)
+				if err != nil {
+					return nil, err
+				}
+				if opcall != nil {
+					return &Expr{
+						Type:     OperatorCall,
+						Operator: parts[0],
+						Call:     opcall,
+					}, nil
+				}
+			}
+		}
+		
+		// Otherwise try to parse it as a general expression
 		return parseExpression(s)
 	}
 	

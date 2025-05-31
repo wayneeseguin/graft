@@ -119,9 +119,9 @@ func (m *mergeBuilderImpl) Execute() (Document, error) {
 		data := m.docs[0].RawData().(map[interface{}]interface{})
 		
 		// Check if we need to use the merger:
-		// 1. If skipEvaluation is false and there are array operators
+		// 1. If there are array operators (always process during merge phase)
 		// 2. If there are arrays with maps (for validation warnings)
-		useArrayOperators := !m.skipEvaluation && m.hasArrayOperators(data)
+		useArrayOperators := m.hasArrayOperators(data)
 		hasArraysWithMaps := m.hasArraysWithMaps(data)
 		
 		if useArrayOperators || hasArraysWithMaps {
@@ -195,10 +195,10 @@ func (m *mergeBuilderImpl) mergeDocuments() (Document, error) {
 // mergeInto merges overlay data into base data using legacy merger when needed
 func (m *mergeBuilderImpl) mergeInto(base, overlay map[interface{}]interface{}) error {
 	// Use legacy merger for:
-	// 1. Array operators (only if evaluation is enabled)
+	// 1. Array operators (always process during merge phase)
 	// 2. Arrays with maps (always, to get merge key warnings)
-	useArrayOperators := !m.skipEvaluation && m.hasArrayOperators(overlay)
-	hasArraysWithMaps := m.hasArraysWithMaps(overlay)
+	useArrayOperators := m.hasArrayOperators(base) || m.hasArrayOperators(overlay)
+	hasArraysWithMaps := m.hasArraysWithMaps(base) || m.hasArraysWithMaps(overlay)
 	
 	if useArrayOperators || hasArraysWithMaps {
 		mergerInstance := &merger.Merger{
@@ -244,7 +244,12 @@ func (m *mergeBuilderImpl) mergeInto(base, overlay map[interface{}]interface{}) 
 		if err != nil {
 			return err
 		}
-		base[key] = merged
+		// If merge returns nil, delete the key
+		if merged == nil {
+			delete(base, key)
+		} else {
+			base[key] = merged
+		}
 	}
 	
 	return nil
@@ -252,9 +257,9 @@ func (m *mergeBuilderImpl) mergeInto(base, overlay map[interface{}]interface{}) 
 
 // mergeValues merges two values based on their types
 func (m *mergeBuilderImpl) mergeValues(base, overlay interface{}) (interface{}, error) {
-	// If overlay is nil, keep base
+	// If overlay is nil, it means delete the key
 	if overlay == nil {
-		return base, nil
+		return nil, nil
 	}
 
 	// If base is nil, use overlay
@@ -280,14 +285,27 @@ func (m *mergeBuilderImpl) mergeValues(base, overlay interface{}) (interface{}, 
 	overlayArray, overlayIsArray := overlay.([]interface{})
 	
 	if baseIsArray && overlayIsArray {
-		if m.fallbackAppend {
+		switch m.arrayStrategy {
+		case AppendArrays:
 			// Append arrays
 			result := make([]interface{}, len(baseArray)+len(overlayArray))
 			copy(result, baseArray)
 			copy(result[len(baseArray):], overlayArray)
 			return result, nil
-		} else {
-			// Replace arrays (default behavior)
+		case PrependArrays:
+			// Prepend arrays
+			result := make([]interface{}, len(overlayArray)+len(baseArray))
+			copy(result, overlayArray)
+			copy(result[len(overlayArray):], baseArray)
+			return result, nil
+		case ReplaceArrays:
+			// Replace arrays
+			return deepCopyValue(overlayArray), nil
+		case InlineArrays:
+			fallthrough
+		default:
+			// Inline merge (default) - but for simple merge without operators,
+			// we should just replace unless it has identifiable elements
 			return deepCopyValue(overlayArray), nil
 		}
 	}

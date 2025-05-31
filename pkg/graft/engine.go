@@ -81,6 +81,9 @@ type EngineConfig struct {
 	CacheSize        int
 	EnableParallel   bool
 	MaxWorkers       int
+	
+	// Dataflow configuration
+	DataflowOrder    string // "alphabetical" (default) or "insertion"
 }
 
 // EngineMetrics tracks engine performance metrics
@@ -352,6 +355,7 @@ func (e *DefaultEngine) createEvaluator(t map[interface{}]interface{}) *Evaluato
 		Deps: map[string][]tree.Cursor{},
 		Here: here,
 		engine: e,
+		DataflowOrder: e.config.DataflowOrder,
 	}
 }
 
@@ -607,6 +611,7 @@ func createEngineFromOptions(opts *EngineOptions) (Engine, error) {
 		CacheSize:         opts.CacheSize,
 		EnableParallel:    opts.MaxConcurrency > 1,
 		MaxWorkers:        opts.MaxConcurrency,
+		DataflowOrder:     opts.DataflowOrder,
 	}
 	
 	// Create the engine

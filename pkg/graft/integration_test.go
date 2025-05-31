@@ -102,17 +102,18 @@ middleware:
 
 		overrideConfig := []byte(`
 services:
+  - (( replace ))
   - name: "cache"
     port: 6379
 
 middleware:
   - name: cors
-    replace: all
+    enabled: true
   - metrics
   - tracing
 `)
 
-		Convey("When merging with default array behavior", func() {
+		Convey("When merging with explicit replace operator", func() {
 			baseDoc, err := engine.ParseYAML(baseConfig)
 			So(err, ShouldBeNil)
 
@@ -123,7 +124,46 @@ middleware:
 			result, err := engine.Merge(ctx, baseDoc, overrideDoc).Execute()
 			So(err, ShouldBeNil)
 
-			Convey("Then arrays should be replaced", func() {
+			Convey("Then services array should be replaced", func() {
+				services, err := result.GetSlice("services")
+				So(err, ShouldBeNil)
+				So(len(services), ShouldEqual, 1)
+				
+				service := services[0].(map[interface{}]interface{})
+				So(service["name"], ShouldEqual, "cache")
+				So(service["port"], ShouldEqual, 6379)
+			})
+			
+			Convey("And middleware array should be replaced due to mixed types", func() {
+				// When arrays contain mixed types (strings and objects), graft replaces
+				// instead of merging because it can't match simple strings to objects
+				middleware, err := result.GetSlice("middleware")
+				So(err, ShouldBeNil)
+				So(len(middleware), ShouldEqual, 3) // cors, metrics, tracing
+				
+				// Verify the content
+				corsMiddleware := middleware[0].(map[interface{}]interface{})
+				So(corsMiddleware["name"], ShouldEqual, "cors")
+				So(corsMiddleware["enabled"], ShouldEqual, true)
+				So(middleware[1], ShouldEqual, "metrics")
+				So(middleware[2], ShouldEqual, "tracing")
+			})
+		})
+		
+		Convey("When merging with ReplaceArrays strategy", func() {
+			baseDoc, err := engine.ParseYAML(baseConfig)
+			So(err, ShouldBeNil)
+
+			overrideDoc, err := engine.ParseYAML(overrideConfig)
+			So(err, ShouldBeNil)
+
+			ctx := context.Background()
+			result, err := engine.Merge(ctx, baseDoc, overrideDoc).
+				WithArrayMergeStrategy(ReplaceArrays).
+				Execute()
+			So(err, ShouldBeNil)
+
+			Convey("Then both arrays should be replaced", func() {
 				services, err := result.GetSlice("services")
 				So(err, ShouldBeNil)
 				So(len(services), ShouldEqual, 1)

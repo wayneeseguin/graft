@@ -189,6 +189,7 @@ type EngineOptions struct {
 	VaultToken         string
 	DebugLogging       bool
 	AWSRegion          string
+	DataflowOrder      string // "alphabetical" (default) or "insertion"
 }
 
 // EngineOption is a functional option for configuring an engine
@@ -274,6 +275,14 @@ func WithDebugLogging(enabled bool) EngineOption {
 func WithAWSRegion(region string) EngineOption {
 	return func(opts *EngineOptions) {
 		opts.AWSRegion = region
+	}
+}
+
+// WithDataflowOrder sets the order of operations in dataflow output
+// Valid values are "alphabetical" (default) or "insertion"
+func WithDataflowOrder(order string) EngineOption {
+	return func(opts *EngineOptions) {
+		opts.DataflowOrder = order
 	}
 }
 

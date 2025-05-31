@@ -544,14 +544,14 @@ online:    (( grab meta.online || false ))
 
 ---
 dataflow:
-- pi:        (( grab math.CONSTANTS.pi || 3.14159 ))
-- env:       (( grab meta.env || "sandbox" ))
-- nice:      (( grab meta.nice || -5 ))
 - delta:     (( grab meta.delta || .001 ))
 - domain:    (( grab meta.domain || "default-domain" ))
-- online:    (( grab meta.online || false ))
-- secure:    (( grab meta.secure || true ))
+- env:       (( grab meta.env || "sandbox" ))
 - instances: (( grab meta.size || 42 ))
+- nice:      (( grab meta.nice || -5 ))
+- online:    (( grab meta.online || false ))
+- pi:        (( grab math.CONSTANTS.pi || 3.14159 ))
+- secure:    (( grab meta.secure || true ))
 
 ---
 meta:
@@ -663,9 +663,9 @@ site:   (( grab meta.site || null ))
 
 ---
 dataflow:
+- domain: (( grab meta.domain || nil ))
 - env:    (( grab meta.env || ~ ))
 - site:   (( grab meta.site || null ))
-- domain: (( grab meta.domain || nil ))
 
 ---
 domain: ~
@@ -768,8 +768,8 @@ bar: (( grab meta.xyzzy || "bar?" || meta.boz ))
 
 ---
 dataflow:
-- meta.boz: (( grab meta.foo ))
 - meta.bar: (( grab meta.foo ))
+- meta.boz: (( grab meta.foo ))
 - bar: (( grab meta.xyzzy || "bar?" || meta.boz ))
 - foo: (( grab meta.bar || "foo?" || meta.boz ))
 
@@ -1541,12 +1541,12 @@ sq:   (( concat test "a\'b" ))
 
 ---
 dataflow:
+- back: (( concat test "a\\b" ))
 - cr:   (( concat test "a\rb" ))
 - dq:   (( concat test "a\"b" ))
 - nl:   (( concat test "a\nb" ))
 - sq:   (( concat test "a\'b" ))
 - tab:  (( concat test "a\tb" ))
-- back: (( concat test "a\\b" ))
 
 ---
 test: ""

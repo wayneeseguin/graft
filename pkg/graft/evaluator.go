@@ -30,6 +30,11 @@ type Evaluator struct {
 	
 	// Reference to the engine (for accessing registries and state)
 	engine interface{} // Using interface{} to avoid circular dependency
+	
+	// DataflowOrder controls the ordering of operations in dataflow output
+	// "alphabetical" (default) - sort operations alphabetically by path
+	// "insertion" - maintain the order operations were discovered
+	DataflowOrder string
 }
 
 // SetEngine sets the engine for the evaluator
@@ -64,6 +69,7 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 	log.DEBUG("DataFlow: starting phase %v", phase)
 
 	all := map[string]*Opcall{}
+	insertionOrder := []string{} // Track insertion order
 	locs := []*tree.Cursor{}
 	errors := MultiError{Errors: []error{}}
 
@@ -85,6 +91,9 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 					op.canonical = canon
 				} else {
 					op.canonical = op.where
+				}
+				if _, exists := all[op.canonical.String()]; !exists {
+					insertionOrder = append(insertionOrder, op.canonical.String())
 				}
 				all[op.canonical.String()] = op
 				log.TRACE("found an operation at %s: %s", op.where.String(), op.src)
@@ -340,7 +349,13 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 		all = newAll
 		// add in any dependencies of things cherry-picked
 		for _, ops := range g {
+			if _, exists := all[ops[0].canonical.String()]; !exists {
+				insertionOrder = append(insertionOrder, ops[0].canonical.String())
+			}
 			all[ops[0].canonical.String()] = ops[0]
+			if _, exists := all[ops[1].canonical.String()]; !exists {
+				insertionOrder = append(insertionOrder, ops[1].canonical.String())
+			}
 			all[ops[1].canonical.String()] = ops[1]
 		}
 	}
@@ -349,46 +364,19 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 		log.TRACE("data flow -- g[%d] is { %s:%s, %s:%s }\n", i, node[0].where, node[0].src, node[1].where, node[1].src)
 	}
 
-	// construct a sorted list of keys in $all, so that we
-	// can reliably generate the same DFA every time
-	// Sort by dependency order first (dependencies should come before dependents),
-	// then by alphabetical order for deterministic behavior
+	// construct a list of keys in $all
+	// Order depends on DataflowOrder setting
 	var sortedKeys []string
-	for k := range all {
-		sortedKeys = append(sortedKeys, k)
+	if ev.DataflowOrder == "insertion" {
+		// Use the tracked insertion order
+		sortedKeys = insertionOrder
+	} else {
+		// Default to alphabetical order for deterministic output
+		for k := range all {
+			sortedKeys = append(sortedKeys, k)
+		}
+		sort.Strings(sortedKeys)
 	}
-	
-	// Custom sort: prioritize nodes that others depend on (shorter paths first, then alphabetical)
-	sort.Slice(sortedKeys, func(i, j int) bool {
-		keyI, keyJ := sortedKeys[i], sortedKeys[j]
-		
-		// Check if keyI is a dependency of keyJ or vice versa
-		nodeI, nodeJ := all[keyI], all[keyJ]
-		
-		// Count how many nodes depend on each
-		dependentsI, dependentsJ := 0, 0
-		for _, pair := range g {
-			if pair[0] == nodeI {
-				dependentsI++
-			}
-			if pair[0] == nodeJ {
-				dependentsJ++
-			}
-		}
-		
-		// If one has more dependents, it should come first
-		if dependentsI != dependentsJ {
-			return dependentsI > dependentsJ
-		}
-		
-		// Otherwise, sort by path length (shorter paths first, as they're often dependencies)
-		if len(keyI) != len(keyJ) {
-			return len(keyI) < len(keyJ)
-		}
-		
-		// Finally, sort alphabetically for deterministic behavior
-		return keyI < keyJ
-	})
 
 	// find all nodes in g that are free (no further dependencies)
 	freeNodes := func(g [][]*Opcall) []*Opcall {
