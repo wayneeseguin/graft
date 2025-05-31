@@ -23,10 +23,43 @@ func (JoinOperator) Phase() OperatorPhase {
 }
 
 // Dependencies returns the nodes that (( join ... )) requires to be resolved
-func (JoinOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	// For the  version, we can't pre-calculate all dependencies
-	// because nested expressions might compute paths dynamically
-	return auto
+func (JoinOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+	deps := make([]*tree.Cursor, 0, len(auto))
+	deps = append(deps, auto...)
+
+	// Skip the first argument (separator) and process the rest
+	for i := 1; i < len(args); i++ {
+		arg := args[i]
+		if arg == nil {
+			continue
+		}
+		
+		// For reference arguments, we need to check if they point to lists
+		// and expand them to individual element dependencies
+		if arg.Type == Reference && arg.Reference != nil {
+			// Try to resolve to see if it's a list
+			val, err := arg.Reference.Resolve(ev.Tree)
+			if err == nil && val != nil {
+				switch v := val.(type) {
+				case []interface{}:
+					// It's a list, add dependencies for each element
+					for idx := range v {
+						elemCursor := arg.Reference.Copy()
+						elemCursor.Push(fmt.Sprintf("%d", idx))
+						deps = append(deps, elemCursor)
+					}
+				default:
+					// Not a list, just add the reference itself
+					deps = append(deps, arg.Reference)
+				}
+			} else {
+				// Couldn't resolve, add the reference as-is
+				deps = append(deps, arg.Reference)
+			}
+		}
+	}
+
+	return deps
 }
 
 // Run ...
@@ -64,6 +97,10 @@ func (JoinOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 			val, err := ResolveOperatorArgument(ev, arg)
 			if err != nil {
 				DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
+				// Maintain backward compatibility with error messages
+				if arg.Type == Reference {
+					return nil, ansi.Errorf("Unable to resolve @c{`%s`}: %s", arg.Reference, err)
+				}
 				return nil, err
 			}
 
