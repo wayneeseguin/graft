@@ -75,6 +75,19 @@ func registerDefaultOperators(engine *graft.DefaultEngine) {
 	// Advanced operations
 	engine.RegisterOperator("inject", &operators.InjectOperator{})
 	engine.RegisterOperator("cartesian-product", &operators.CartesianProductOperator{})
+
+	// Boolean operators
+	engine.RegisterOperator("&&", operators.NewTypeAwareAndOperator())
+	engine.RegisterOperator("||", operators.NewTypeAwareOrOperator())
+	engine.RegisterOperator("!", operators.NewTypeAwareNotOperator())
+
+	// Comparison operators
+	engine.RegisterOperator("==", operators.NewTypeAwareEqualOperator())
+	engine.RegisterOperator("!=", operators.NewTypeAwareNotEqualOperator())
+	engine.RegisterOperator("<", operators.NewTypeAwareLessOperator())
+	engine.RegisterOperator(">", operators.NewTypeAwareGreaterOperator())
+	engine.RegisterOperator("<=", operators.NewTypeAwareLessOrEqualOperator())
+	engine.RegisterOperator(">=", operators.NewTypeAwareGreaterOrEqualOperator())
 }
 
 // NewMinimalEngine creates an engine with only essential operators

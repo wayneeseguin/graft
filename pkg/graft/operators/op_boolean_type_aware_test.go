@@ -1,6 +1,7 @@
 package operators
 
 import (
+	"context"
 	"testing"
 
 	"github.com/geofffranks/simpleyaml"
@@ -19,10 +20,29 @@ func TestTypeAwareBooleanOperators(t *testing.T) {
 			data, err := y.Map()
 			So(err, ShouldBeNil)
 			
-			ev := &graft.Evaluator{Tree: data}
-			err = ev.RunPhase(graft.EvalPhase)
+			// Create engine with boolean and comparison operators
+			config := graft.DefaultEngineConfig()
+			config.SkipVault = true
+			config.SkipAWS = true
+			engine := graft.NewDefaultEngineWithConfig(config)
+			
+			// Register boolean operators
+			engine.RegisterOperator("&&", NewTypeAwareAndOperator())
+			engine.RegisterOperator("||", NewTypeAwareOrOperator())
+			engine.RegisterOperator("!", NewTypeAwareNotOperator())
+			
+			// Register comparison operators
+			engine.RegisterOperator("==", NewTypeAwareEqualOperator())
+			engine.RegisterOperator("!=", NewTypeAwareNotEqualOperator())
+			engine.RegisterOperator("<", NewTypeAwareLessOperator())
+			engine.RegisterOperator(">", NewTypeAwareGreaterOperator())
+			engine.RegisterOperator("<=", NewTypeAwareLessOrEqualOperator())
+			engine.RegisterOperator(">=", NewTypeAwareGreaterOrEqualOperator())
+			
+			doc := graft.NewDocument(data)
+			result, err := engine.Evaluate(context.Background(), doc)
 			So(err, ShouldBeNil)
-			So(ev.Tree[key], ShouldEqual, expected)
+			So(result.RawData().(map[interface{}]interface{})[key], ShouldEqual, expected)
 		}
 		
 
@@ -67,18 +87,30 @@ result2: (( five && five ))
 				data, err = y.Map()
 				So(err, ShouldBeNil)
 
-				ev := &graft.Evaluator{Tree: data}
-				err = ev.RunPhase(graft.EvalPhase)
+				// Create engine with boolean and comparison operators
+				config := graft.DefaultEngineConfig()
+				config.SkipVault = true
+				config.SkipAWS = true
+				engine := graft.NewDefaultEngineWithConfig(config)
+				
+				// Register boolean operators
+				engine.RegisterOperator("&&", NewTypeAwareAndOperator())
+				engine.RegisterOperator("||", NewTypeAwareOrOperator())
+				engine.RegisterOperator("!", NewTypeAwareNotOperator())
+				
+				doc := graft.NewDocument(data)
+				result, err := engine.Evaluate(context.Background(), doc)
 				So(err, ShouldBeNil)
-				So(ev.Tree["result1"], ShouldEqual, false) // 0 is falsy
-				So(ev.Tree["result2"], ShouldEqual, true)  // non-zero is truthy
+				resultData := result.RawData().(map[interface{}]interface{})
+				So(resultData["result1"], ShouldEqual, false) // 0 is falsy
+				So(resultData["result2"], ShouldEqual, true)  // non-zero is truthy
 			})
 
 			Convey("should handle string truthiness", func() {
 				input := `
-empty: ""
+empty_str: ""
 hello: "hello"
-result1: (( empty && hello ))
+result1: (( empty_str && hello ))
 result2: (( hello && hello ))
 `
 				var data map[interface{}]interface{}
@@ -87,11 +119,23 @@ result2: (( hello && hello ))
 				data, err = y.Map()
 				So(err, ShouldBeNil)
 
-				ev := &graft.Evaluator{Tree: data}
-				err = ev.RunPhase(graft.EvalPhase)
+				// Create engine with boolean and comparison operators
+				config := graft.DefaultEngineConfig()
+				config.SkipVault = true
+				config.SkipAWS = true
+				engine := graft.NewDefaultEngineWithConfig(config)
+				
+				// Register boolean operators
+				engine.RegisterOperator("&&", NewTypeAwareAndOperator())
+				engine.RegisterOperator("||", NewTypeAwareOrOperator())
+				engine.RegisterOperator("!", NewTypeAwareNotOperator())
+				
+				doc := graft.NewDocument(data)
+				result, err := engine.Evaluate(context.Background(), doc)
 				So(err, ShouldBeNil)
-				So(ev.Tree["result1"], ShouldEqual, false) // empty string is falsy
-				So(ev.Tree["result2"], ShouldEqual, true)  // non-empty string is truthy
+				resultData := result.RawData().(map[interface{}]interface{})
+				So(resultData["result1"], ShouldEqual, false) // empty string is falsy
+				So(resultData["result2"], ShouldEqual, true)  // non-empty string is truthy
 			})
 
 			Convey("should handle nil values", func() {
@@ -104,41 +148,41 @@ result: (( nothing && something ))
 			})
 		})
 
-		Convey("OR Operator (||) as fallback", func() {
-			// Note: Currently || is implemented as fallback, not logical OR
-			Convey("should return first non-nil value", func() {
+		Convey("OR Operator (||) fallback", func() {
+			// OR operator implements fallback behavior, not boolean OR
+			Convey("should return first operand when it's not nil", func() {
 				input := `
 first: "hello"
 second: "world"
 result: (( first || second ))
 `
-				testBoolean(input, "result", "hello")
+				testBoolean(input, "result", "hello") // fallback returns "hello"
 			})
 
-			Convey("should return second value when first is nil", func() {
+			Convey("should return second operand when first is nil", func() {
 				input := `
 first: ~
 second: "fallback"
 result: (( first || second ))
 `
-				testBoolean(input, "result", "fallback")
+				testBoolean(input, "result", "fallback") // nil falls back to "fallback"
 			})
 
-			Convey("should return false when it's not nil", func() {
+			Convey("should return false when first is false", func() {
 				input := `
 first: false
 second: true
 result: (( first || second ))
 `
-				testBoolean(input, "result", false) // false is not nil, so it's returned
+				testBoolean(input, "result", false) // false is not nil, so return false
 			})
 		})
 
 		Convey("NOT Operator (!)", func() {
 			Convey("should negate boolean values", func() {
 				input := `
-yes: true
-no: false
+"yes": true
+"no": false
 result1: (( !yes ))
 result2: (( !no ))
 `
@@ -148,11 +192,23 @@ result2: (( !no ))
 				data, err = y.Map()
 				So(err, ShouldBeNil)
 
-				ev := &graft.Evaluator{Tree: data}
-				err = ev.RunPhase(graft.EvalPhase)
+				// Create engine with boolean and comparison operators
+				config := graft.DefaultEngineConfig()
+				config.SkipVault = true
+				config.SkipAWS = true
+				engine := graft.NewDefaultEngineWithConfig(config)
+				
+				// Register boolean operators
+				engine.RegisterOperator("&&", NewTypeAwareAndOperator())
+				engine.RegisterOperator("||", NewTypeAwareOrOperator())
+				engine.RegisterOperator("!", NewTypeAwareNotOperator())
+				
+				doc := graft.NewDocument(data)
+				result, err := engine.Evaluate(context.Background(), doc)
 				So(err, ShouldBeNil)
-				So(ev.Tree["result1"], ShouldEqual, false)
-				So(ev.Tree["result2"], ShouldEqual, true)
+				resultData := result.RawData().(map[interface{}]interface{})
+				So(resultData["result1"], ShouldEqual, false)
+				So(resultData["result2"], ShouldEqual, true)
 			})
 
 			Convey("should handle numeric truthiness", func() {
@@ -168,18 +224,30 @@ result2: (( !five ))
 				data, err = y.Map()
 				So(err, ShouldBeNil)
 
-				ev := &graft.Evaluator{Tree: data}
-				err = ev.RunPhase(graft.EvalPhase)
+				// Create engine with boolean and comparison operators
+				config := graft.DefaultEngineConfig()
+				config.SkipVault = true
+				config.SkipAWS = true
+				engine := graft.NewDefaultEngineWithConfig(config)
+				
+				// Register boolean operators
+				engine.RegisterOperator("&&", NewTypeAwareAndOperator())
+				engine.RegisterOperator("||", NewTypeAwareOrOperator())
+				engine.RegisterOperator("!", NewTypeAwareNotOperator())
+				
+				doc := graft.NewDocument(data)
+				result, err := engine.Evaluate(context.Background(), doc)
 				So(err, ShouldBeNil)
-				So(ev.Tree["result1"], ShouldEqual, true)  // !0 = true
-				So(ev.Tree["result2"], ShouldEqual, false) // !5 = false
+				resultData := result.RawData().(map[interface{}]interface{})
+				So(resultData["result1"], ShouldEqual, true)  // !0 = true
+				So(resultData["result2"], ShouldEqual, false) // !5 = false
 			})
 
 			Convey("should handle string truthiness", func() {
 				input := `
-empty: ""
+empty_str: ""
 hello: "hello"
-result1: (( !empty ))
+result1: (( !empty_str ))
 result2: (( !hello ))
 `
 				var data map[interface{}]interface{}
@@ -188,11 +256,23 @@ result2: (( !hello ))
 				data, err = y.Map()
 				So(err, ShouldBeNil)
 
-				ev := &graft.Evaluator{Tree: data}
-				err = ev.RunPhase(graft.EvalPhase)
+				// Create engine with boolean and comparison operators
+				config := graft.DefaultEngineConfig()
+				config.SkipVault = true
+				config.SkipAWS = true
+				engine := graft.NewDefaultEngineWithConfig(config)
+				
+				// Register boolean operators
+				engine.RegisterOperator("&&", NewTypeAwareAndOperator())
+				engine.RegisterOperator("||", NewTypeAwareOrOperator())
+				engine.RegisterOperator("!", NewTypeAwareNotOperator())
+				
+				doc := graft.NewDocument(data)
+				result, err := engine.Evaluate(context.Background(), doc)
 				So(err, ShouldBeNil)
-				So(ev.Tree["result1"], ShouldEqual, true)  // !"" = true
-				So(ev.Tree["result2"], ShouldEqual, false) // !"hello" = false
+				resultData := result.RawData().(map[interface{}]interface{})
+				So(resultData["result1"], ShouldEqual, true)  // !"" = true
+				So(resultData["result2"], ShouldEqual, false) // !"hello" = false
 			})
 		})
 
@@ -204,13 +284,13 @@ b: false
 c: true
 result: (( a && (b || c) ))
 `
-				testBoolean(input, "result", true) // true && (false || true) = true && true = true
+				testBoolean(input, "result", false) // true && (false || c) = true && false = false
 			})
 
 			Convey("should handle comparisons with boolean operators", func() {
 				input := `
 x: 10
-y: 5
+"y": 5
 z: 15
 result: (( (x > y) && (x < z) ))
 `

@@ -50,7 +50,4 @@ func (NegationOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 }
 
 // Register negation operator
-func init() {
-	// Use type-aware negation operator
-	RegisterOp("!", NewTypeAwareNotOperator())
-}
+// NOTE: Negation operator is now registered in op_boolean.go to avoid conflicts

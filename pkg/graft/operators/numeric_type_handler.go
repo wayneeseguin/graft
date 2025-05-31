@@ -172,21 +172,27 @@ func (h *NumericTypeHandler) Modulo(a, b interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("cannot convert %v to numeric: %v", b, err)
 	}
 	
-	// Modulo operation requires integer operands
+	// Convert operands to integers, truncating floats
 	var aInt, bInt int64
 	
 	switch v := aNum.(type) {
 	case int64:
 		aInt = v
 	case float64:
-		return nil, fmt.Errorf("modulo operand %v is not an integer", a)
+		// Truncate float to integer
+		aInt = int64(v)
+	default:
+		return nil, fmt.Errorf("not an integer")
 	}
 	
 	switch v := bNum.(type) {
 	case int64:
 		bInt = v
 	case float64:
-		return nil, fmt.Errorf("modulo operand %v is not an integer", b)
+		// Truncate float to integer
+		bInt = int64(v)
+	default:
+		return nil, fmt.Errorf("not an integer")
 	}
 	
 	if bInt == 0 {

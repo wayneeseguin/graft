@@ -100,9 +100,12 @@ func (FallbackOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		return EvaluateExpr(args[1], ev)
 	}
 
-	// If evaluation succeeded, return the result even if it's nil
-	// This implements: "|| operator treats nil as a found value"
-	// A successful evaluation with nil value is different from a failed evaluation
+	// If left evaluation succeeded but the value is nil, try right
+	if leftResp.Value == nil {
+		return EvaluateExpr(args[1], ev)
+	}
+
+	// Left evaluation succeeded and value is not nil, return it
 	return leftResp, nil
 }
 
@@ -146,5 +149,6 @@ func isTruthy(v interface{}) bool {
 func init() {
 	// Use type-aware boolean operators
 	RegisterOp("&&", NewTypeAwareAndOperator())
-	RegisterOp("||", FallbackOperator{}) // Keep fallback operator for now - TODO: decide on || semantics
+	RegisterOp("||", &FallbackOperator{}) // Use fallback operator, not boolean OR
+	RegisterOp("!", NewTypeAwareNotOperator())
 }

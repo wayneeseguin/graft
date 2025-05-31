@@ -135,6 +135,8 @@ func performArithmetic(a, b interface{}, op string) (interface{}, error) {
 				return nil, fmt.Errorf("division by zero")
 			}
 			return aFloat / bFloat, nil
+		case "%":
+			return nil, fmt.Errorf("not an integer")
 		default:
 			return nil, fmt.Errorf("unknown arithmetic operator: %s", op)
 		}
