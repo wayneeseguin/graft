@@ -56,7 +56,11 @@ func ParseOpcallInfix(phase OperatorPhase, src string) (*Opcall, error) {
 	log.DEBUG("ParseOpcallInfix: content = '%s'", content)
 	
 	// Try to parse as an expression with precedence
-	if opcall := parseExpressionWithPrecedence(phase, content); opcall != nil {
+	opcall, err := parseExpressionWithPrecedence(phase, content)
+	if err != nil {
+		return nil, err
+	}
+	if opcall != nil {
 		return opcall, nil
 	}
 	
@@ -156,6 +160,10 @@ func tryParseTernary(phase OperatorPhase, content string) *Opcall {
 	remaining := content[qIndex+1:]
 	cIndex := findOperatorIndex(remaining, ":")
 	if cIndex == -1 {
+		// If we found a '?' but no ':', this is a malformed ternary expression
+		// We need to return an error, but since this function returns *Opcall,
+		// we'll create a special error opcall that can be detected later
+		log.DEBUG("tryParseTernary: found '?' but missing ':' in '%s'", content)
 		return nil
 	}
 	cIndex += qIndex + 1 // Adjust for full string
@@ -903,25 +911,25 @@ var operatorPrecedence = map[string]int{
 }
 
 // parseExpressionWithPrecedence parses expressions with proper operator precedence
-func parseExpressionWithPrecedence(phase OperatorPhase, content string) *Opcall {
+func parseExpressionWithPrecedence(phase OperatorPhase, content string) (*Opcall, error) {
 	log.DEBUG("parseExpressionWithPrecedence: parsing content '%s'", content)
 	
 	// Parse expression using precedence climbing algorithm
 	expr, err := parseExpressionPrecedence(content, 0)
 	if err != nil {
 		log.DEBUG("parseExpressionWithPrecedence: failed to parse: %v", err)
-		return nil
+		return nil, err
 	}
 	
 	if expr == nil {
 		log.DEBUG("parseExpressionWithPrecedence: parseExpressionPrecedence returned nil")
-		return nil
+		return nil, nil
 	}
 	
 	log.DEBUG("parseExpressionWithPrecedence: parsed expression tree with root operator '%s'", expr.Value)
 	
 	// Convert expression to Opcall
-	return exprToOpcall(phase, expr)
+	return exprToOpcall(phase, expr), nil
 }
 
 // Token represents a token in the expression

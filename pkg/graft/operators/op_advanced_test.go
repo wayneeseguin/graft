@@ -8,6 +8,9 @@ import (
 )
 
 func TestAdvancedOperatorIntegration(t *testing.T) {
+	// Enable debug logging temporarily for this test
+	//log.DebugOn = true
+	//defer func() { log.DebugOn = false }()
 	YAML := func(s string) map[interface{}]interface{} {
 		y, err := simpleyaml.NewYaml([]byte(s))
 		So(err, ShouldBeNil)

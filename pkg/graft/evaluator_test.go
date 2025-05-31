@@ -816,10 +816,10 @@ e: (( grab c.value ))
 
 ---
 dataflow:
-- b.squad.value: (( grab c.value ))
-- e:         (( grab c.value ))
 - a:         (( grab b.squad.value ))
+- b.squad.value: (( grab c.value ))
 - d:         (( grab b.squad.value ))
+- e:         (( grab c.value ))
 
 ---
 a: VALUE
@@ -1056,9 +1056,9 @@ meta:
 
 ---
 dataflow:
+- meta.gotcha: (( grab meta.third.0 ))
 - meta.second: (( grab meta.first ))
 - meta.third:  (( grab meta.second ))
-- meta.gotcha: (( grab meta.third.0 ))
 
 # (the key point here is that meta.third.0 doesn't exist in the tree until we start
 # evaluating, but we still need to get the order correct; we should have a dep on
@@ -1480,8 +1480,8 @@ z:
 output: (( join " " z ))
 ---
 dataflow:
-- z.0: (( grab greeting ))
 - output: (( join " " z ))
+- z.0: (( grab greeting ))
 ---
 greeting: hello
 output: hello world
@@ -1500,9 +1500,9 @@ z:
 output: (( join " " z ))
 ---
 dataflow:
+- output: (( join " " z ))
 - z.0: (( grab greeting ))
 - z.1: (( grab greeting2 ))
-- output: (( join " " z ))
 ---
 greeting: hello
 greeting2: world
@@ -1652,6 +1652,10 @@ meta:
 		})
 
 		Convey("detects indirect cycles created through operand data flow", func() {
+			// Create an engine to ensure operators are registered
+			engine, err := CreateDefaultEngine()
+			So(err, ShouldBeNil)
+			
 			ev := &Evaluator{
 				Tree: YAML(`
 meta:
@@ -1660,8 +1664,9 @@ meta:
   baz: (( grab meta.enoent || meta.foo ))
 `),
 			}
+			ev.SetEngine(engine)
 
-			_, err := ev.DataFlow(EvalPhase)
+			_, err = ev.DataFlow(EvalPhase)
 			So(err, ShouldNotBeNil)
 		})
 

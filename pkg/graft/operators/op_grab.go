@@ -21,8 +21,18 @@ func (GrabOperator) Phase() OperatorPhase {
 }
 
 // Dependencies ...
-func (GrabOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	return auto
+func (GrabOperator) Dependencies(ev *Evaluator, args []*Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
+	deps := make([]*tree.Cursor, 0, len(auto))
+	deps = append(deps, auto...)
+
+	for _, arg := range args {
+		if arg != nil {
+			argDeps := arg.Dependencies(ev, locs)
+			deps = append(deps, argDeps...)
+		}
+	}
+
+	return deps
 }
 
 // Run ...
