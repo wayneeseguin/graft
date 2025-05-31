@@ -118,28 +118,40 @@ func (m *mergeBuilderImpl) Execute() (Document, error) {
 		// to match legacy behavior for Issue #172
 		data := m.docs[0].RawData().(map[interface{}]interface{})
 		
-		// Always process through merger for consistency with legacy behavior
-		mergerInstance := &merger.Merger{
-			AppendByDefault: m.fallbackAppend,
-		}
+		// Check if we need to use the merger:
+		// 1. If skipEvaluation is false and there are array operators
+		// 2. If there are arrays with maps (for validation warnings)
+		useArrayOperators := !m.skipEvaluation && m.hasArrayOperators(data)
+		hasArraysWithMaps := m.hasArraysWithMaps(data)
 		
-		// Create an empty base and merge our document into it
-		// This triggers the array validation logic
-		base := make(map[interface{}]interface{})
-		err := mergerInstance.Merge(base, data)
-		if err != nil {
-			// Convert merger.MultiError to graft.MultiError for consistent error formatting
-			if mergerMultiErr, ok := err.(merger.MultiError); ok {
-				graftMultiErr := &MultiError{}
-				for _, e := range mergerMultiErr.Errors {
-					graftMultiErr.Append(e)
-				}
-				return nil, graftMultiErr
+		if useArrayOperators || hasArraysWithMaps {
+			// Process through merger for validation and/or array operators
+			mergerInstance := &merger.Merger{
+				AppendByDefault: m.fallbackAppend,
 			}
-			return nil, err
+			
+			// Create an empty base and merge our document into it
+			// This triggers the array validation logic
+			base := make(map[interface{}]interface{})
+			err := mergerInstance.Merge(base, data)
+			if err != nil {
+				// Convert merger.MultiError to graft.MultiError for consistent error formatting
+				if mergerMultiErr, ok := err.(merger.MultiError); ok {
+					graftMultiErr := &MultiError{}
+					for _, e := range mergerMultiErr.Errors {
+						graftMultiErr.Append(e)
+					}
+					return nil, graftMultiErr
+				}
+				return nil, err
+			}
+			
+			return m.applyPostProcessing(NewDocument(base))
 		}
 		
-		return m.applyPostProcessing(NewDocument(base))
+		// No special processing needed, just clone
+		result := m.docs[0].Clone()
+		return m.applyPostProcessing(result)
 	}
 
 	// Merge multiple documents
@@ -182,9 +194,13 @@ func (m *mergeBuilderImpl) mergeDocuments() (Document, error) {
 
 // mergeInto merges overlay data into base data using legacy merger when needed
 func (m *mergeBuilderImpl) mergeInto(base, overlay map[interface{}]interface{}) error {
-	// For complex merging with array operators, use the legacy merger
-	// Array operators are processed even when evaluation is skipped
-	if m.hasArrayOperators(overlay) || m.hasArraysWithMaps(overlay) {
+	// Use legacy merger for:
+	// 1. Array operators (only if evaluation is enabled)
+	// 2. Arrays with maps (always, to get merge key warnings)
+	useArrayOperators := !m.skipEvaluation && m.hasArrayOperators(overlay)
+	hasArraysWithMaps := m.hasArraysWithMaps(overlay)
+	
+	if useArrayOperators || hasArraysWithMaps {
 		mergerInstance := &merger.Merger{
 			AppendByDefault: m.fallbackAppend,
 		}
