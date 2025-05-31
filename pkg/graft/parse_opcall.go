@@ -546,6 +546,7 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 	// between operator and parentheses, so "file (concat...)" will fall through to second pattern
 	for _, pattern := range []string{
 		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*)\((.*)\)\s*\)\)$`, // (( op(x,y,z) )) - no space between op and (
+		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*)\s+\((.*)\)\s*\)\)$`, // (( op (x,y,z) )) - space between op and (
 		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*)(?:\s+(.*))?\s*\)\)$`,     // (( op x y z ))
 	} {
 		re := regexp.MustCompile(pattern)
@@ -628,6 +629,13 @@ func parseArgs(phase OperatorPhase, src string) ([]*Expr, error) {
 
 	// Handle arguments with different separators
 	args := []*Expr{}
+	
+	// Check if the entire argument list is wrapped in parentheses
+	src = strings.TrimSpace(src)
+	if strings.HasPrefix(src, "(") && strings.HasSuffix(src, ")") && len(src) > 2 {
+		// Remove outer parentheses
+		src = strings.TrimSpace(src[1:len(src)-1])
+	}
 	
 	// Handle comma-separated arguments for operators like concat
 	parts := splitRespectingQuotes(src, ",")
