@@ -640,6 +640,16 @@ func parseArgs(phase OperatorPhase, src string) ([]*Expr, error) {
 			
 			// Check if this part has || operator
 			if strings.Contains(part, "||") {
+				// Check for invalid syntax: || at the end with nothing after
+				if strings.HasSuffix(strings.TrimSpace(part), "||") {
+					// Extract what comes before ||
+					beforeOr := strings.TrimSpace(part[:strings.LastIndex(part, "||")])
+					if beforeOr != "" {
+						return nil, fmt.Errorf("unexpected token '%s' after expression", beforeOr)
+					}
+					return nil, fmt.Errorf("unexpected end of expression")
+				}
+				
 				subParts := splitRespectingQuotes(part, "||")
 				if len(subParts) > 1 {
 					// Build a LogicalOr expression for this argument
@@ -647,6 +657,9 @@ func parseArgs(phase OperatorPhase, src string) ([]*Expr, error) {
 					
 					for i := len(subParts) - 1; i >= 0; i-- {
 						subPart := strings.TrimSpace(subParts[i])
+						if subPart == "" {
+							return nil, fmt.Errorf("unexpected end of expression")
+						}
 						parsedExpr, err := parseSingleExpression(subPart)
 						if err != nil {
 							return nil, err
@@ -685,8 +698,36 @@ func parseArgs(phase OperatorPhase, src string) ([]*Expr, error) {
 	for i < len(parts) {
 		part := parts[i]
 		
+		// Check for standalone || operator (invalid syntax)
+		if part == "||" {
+			// Check if this is at the beginning (nothing before ||)
+			if i == 0 {
+				return nil, fmt.Errorf("unexpected end of expression")
+			}
+			// Check if this is at the end (nothing after ||)
+			if i == len(parts)-1 {
+				// Get what came before ||
+				beforeOr := strings.TrimSpace(parts[i-1])
+				return nil, fmt.Errorf("unexpected token '%s' after expression", beforeOr)
+			}
+			// Check for || || (double ||)
+			if i+1 < len(parts) && parts[i+1] == "||" {
+				// Get what came before the first ||
+				if i > 0 {
+					beforeOr := strings.TrimSpace(parts[i-1])
+					return nil, fmt.Errorf("unexpected token '%s' after expression", beforeOr)
+				}
+				return nil, fmt.Errorf("unexpected end of expression")
+			}
+		}
+		
 		// Check if this is the start of a || expression
 		if i+2 < len(parts) && parts[i+1] == "||" {
+			// Check if the right side is another || (invalid syntax)
+			if parts[i+2] == "||" {
+				return nil, fmt.Errorf("unexpected token '%s' after expression", part)
+			}
+			
 			// Build LogicalOr expression
 			left, err := parseSingleExpression(part)
 			if err != nil {
@@ -824,7 +865,7 @@ func parseSingleExpression(s string) (*Expr, error) {
 	} else {
 		// Try int first
 		if i, err := strconv.ParseInt(s, 10, 64); err == nil {
-			return &Expr{Type: Literal, Literal: int(i)}, nil
+			return &Expr{Type: Literal, Literal: i}, nil
 		}
 		// Try float
 		if f, err := strconv.ParseFloat(s, 64); err == nil {
@@ -835,7 +876,7 @@ func parseSingleExpression(s string) (*Expr, error) {
 	// Try to parse as negative number
 	if strings.HasPrefix(s, "-") && len(s) > 1 {
 		if i, err := strconv.ParseInt(s, 10, 64); err == nil {
-			return &Expr{Type: Literal, Literal: int(i)}, nil
+			return &Expr{Type: Literal, Literal: i}, nil
 		}
 		if f, err := strconv.ParseFloat(s, 64); err == nil {
 			return &Expr{Type: Literal, Literal: f}, nil
