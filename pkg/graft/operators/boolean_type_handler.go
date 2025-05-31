@@ -11,7 +11,8 @@ func NewBooleanTypeHandler() *BooleanTypeHandler {
 		BaseTypeHandler: NewBaseTypeHandler(80), // Medium-high priority
 	}
 	
-	// Support boolean-boolean operations and boolean with other types
+	// Support boolean operations with mixed types for logical operations
+	// Equality will use strict checking, but logical operations use truthiness
 	handler.AddSupportedTypes(
 		TypePair{A: TypeBool, B: TypeBool},
 		TypePair{A: TypeBool, B: TypeInt},
@@ -63,7 +64,7 @@ func (h *BooleanTypeHandler) Modulo(a, b interface{}) (interface{}, error) {
 	return nil, NotImplementedError("modulo", a, b)
 }
 
-// Equal performs boolean equality comparison
+// Equal performs boolean equality comparison with strict type checking
 func (h *BooleanTypeHandler) Equal(a, b interface{}) (bool, error) {
 	aBool, aOk := toBool(a)
 	bBool, bOk := toBool(b)
@@ -72,12 +73,10 @@ func (h *BooleanTypeHandler) Equal(a, b interface{}) (bool, error) {
 		return aBool == bBool, nil
 	}
 	
-	// If one is bool and other isn't, check truthiness equality
-	if aOk {
-		return aBool == isTruthy(b), nil
-	}
-	if bOk {
-		return isTruthy(a) == bBool, nil
+	// For strict type checking, booleans are only equal to other booleans
+	// Return false for different types (no truthiness conversion for equality)
+	if aOk || bOk {
+		return false, nil
 	}
 	
 	return false, NotImplementedError("equal", a, b)
@@ -127,14 +126,6 @@ func (h *BooleanTypeHandler) GreaterOrEqual(a, b interface{}) (bool, error) {
 	return !less, err
 }
 
-// CanHandle checks if this handler can handle the given type combination
-func (h *BooleanTypeHandler) CanHandle(aType, bType OperandType) bool {
-	// Handle boolean with any type for truthiness operations
-	if aType == TypeBool || bType == TypeBool {
-		return true
-	}
-	return h.BaseTypeHandler.CanHandle(aType, bType)
-}
 
 // toBool converts a value to boolean if possible
 func toBool(val interface{}) (bool, bool) {

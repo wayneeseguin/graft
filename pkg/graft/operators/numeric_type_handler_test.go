@@ -166,16 +166,16 @@ func TestNumericTypeHandler(t *testing.T) {
 				So(result, ShouldEqual, int64(1))
 			})
 			
-			Convey("float % int (truncated)", func() {
-				result, err := handler.Modulo(10.7, int64(3))
-				So(err, ShouldBeNil)
-				So(result, ShouldEqual, int64(1))
+			Convey("float % int (error)", func() {
+				_, err := handler.Modulo(10.7, int64(3))
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "not an integer")
 			})
 			
-			Convey("int % float (truncated)", func() {
-				result, err := handler.Modulo(int64(10), 3.7)
-				So(err, ShouldBeNil)
-				So(result, ShouldEqual, int64(1))
+			Convey("int % float (error)", func() {
+				_, err := handler.Modulo(int64(10), 3.7)
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "not an integer")
 			})
 			
 			Convey("modulo by zero", func() {

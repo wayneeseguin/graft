@@ -170,9 +170,11 @@ func (h *MixedTypeHandler) Less(a, b interface{}) (bool, error) {
 		}
 	}
 	
-	// Try string comparison as fallback
-	if canCoerceToString(a) && canCoerceToString(b) {
-		return toString(a) < toString(b), nil
+	// Try string comparison only if both are actually strings or string-like
+	aStr, aIsStr := a.(string)
+	bStr, bIsStr := b.(string)
+	if aIsStr && bIsStr {
+		return aStr < bStr, nil
 	}
 	
 	return false, NotImplementedError("less", a, b)
@@ -200,9 +202,11 @@ func (h *MixedTypeHandler) Greater(a, b interface{}) (bool, error) {
 		}
 	}
 	
-	// Try string comparison as fallback
-	if canCoerceToString(a) && canCoerceToString(b) {
-		return toString(a) > toString(b), nil
+	// Try string comparison only if both are actually strings or string-like
+	aStr, aIsStr := a.(string)
+	bStr, bIsStr := b.(string)
+	if aIsStr && bIsStr {
+		return aStr > bStr, nil
 	}
 	
 	return false, NotImplementedError("greater", a, b)

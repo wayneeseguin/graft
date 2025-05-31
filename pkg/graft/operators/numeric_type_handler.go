@@ -40,6 +40,22 @@ func toFloat(val interface{}) float64 {
 	}
 }
 
+// toInteger converts a numeric value to int64, handling floats that represent whole numbers
+func toInteger(val interface{}) (int64, error) {
+	switch v := val.(type) {
+	case int64:
+		return v, nil
+	case float64:
+		// Check if the float represents a whole number
+		if v == math.Trunc(v) && v >= math.MinInt64 && v <= math.MaxInt64 {
+			return int64(v), nil
+		}
+		return 0, fmt.Errorf("float %v is not a whole number or out of int64 range", v)
+	default:
+		return 0, fmt.Errorf("cannot convert %T to integer", val)
+	}
+}
+
 // Add performs addition on numeric types
 func (h *NumericTypeHandler) Add(a, b interface{}) (interface{}, error) {
 	aNum, err := toNumeric(a)
@@ -172,26 +188,14 @@ func (h *NumericTypeHandler) Modulo(a, b interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("cannot convert %v to numeric: %v", b, err)
 	}
 	
-	// Convert operands to integers, truncating floats
-	var aInt, bInt int64
-	
-	switch v := aNum.(type) {
-	case int64:
-		aInt = v
-	case float64:
-		// Truncate float to integer
-		aInt = int64(v)
-	default:
+	// Convert operands to integers, handling floats that represent whole numbers
+	aInt, err := toInteger(aNum)
+	if err != nil {
 		return nil, fmt.Errorf("not an integer")
 	}
 	
-	switch v := bNum.(type) {
-	case int64:
-		bInt = v
-	case float64:
-		// Truncate float to integer
-		bInt = int64(v)
-	default:
+	bInt, err := toInteger(bNum)
+	if err != nil {
 		return nil, fmt.Errorf("not an integer")
 	}
 	

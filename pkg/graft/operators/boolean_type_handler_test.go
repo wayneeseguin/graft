@@ -17,9 +17,9 @@ func TestBooleanTypeHandler(t *testing.T) {
 			So(handler.CanHandle(TypeBool, TypeNull), ShouldBeTrue)
 			So(handler.CanHandle(TypeInt, TypeBool), ShouldBeTrue)
 			
-			// Should handle any type with bool
-			So(handler.CanHandle(TypeBool, TypeFloat), ShouldBeTrue)
-			So(handler.CanHandle(TypeMap, TypeBool), ShouldBeTrue)
+			// Should NOT handle types not explicitly supported
+			So(handler.CanHandle(TypeBool, TypeFloat), ShouldBeFalse)
+			So(handler.CanHandle(TypeMap, TypeBool), ShouldBeFalse)
 		})
 		
 		Convey("Addition (logical OR)", func() {
@@ -99,22 +99,22 @@ func TestBooleanTypeHandler(t *testing.T) {
 				So(err, ShouldBeNil)
 				So(result, ShouldBeFalse)
 				
-				// Bool vs truthy values
+				// Bool vs non-bool values (strict type checking)
 				result, err = handler.Equal(true, int64(1))
 				So(err, ShouldBeNil)
-				So(result, ShouldBeTrue) // 1 is truthy
+				So(result, ShouldBeFalse) // Different types, not equal
 				
 				result, err = handler.Equal(false, int64(0))
 				So(err, ShouldBeNil)
-				So(result, ShouldBeTrue) // 0 is falsy
+				So(result, ShouldBeFalse) // Different types, not equal
 				
 				result, err = handler.Equal(true, "hello")
 				So(err, ShouldBeNil)
-				So(result, ShouldBeTrue) // non-empty string is truthy
+				So(result, ShouldBeFalse) // Different types, not equal
 				
 				result, err = handler.Equal(false, "")
 				So(err, ShouldBeNil)
-				So(result, ShouldBeTrue) // empty string is falsy
+				So(result, ShouldBeFalse) // Different types, not equal
 			})
 			
 			Convey("NotEqual", func() {
