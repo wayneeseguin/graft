@@ -165,8 +165,40 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 	var g [][]*Opcall
 	for _, a := range all {
 		for _, path := range a.Dependencies(ev, locs) {
+			// First try the path as-is
 			if b, found := all[path.String()]; found {
 				g = append(g, []*Opcall{b, a})
+			} else {
+				// If not found, try to resolve to canonical path
+				if canon, err := path.Canonical(ev.Tree); err == nil {
+					if b, found := all[canon.String()]; found {
+						g = append(g, []*Opcall{b, a})
+					}
+				} else {
+					// If still not found, check parent paths for operators
+					// This handles cases like meta.third.0 depending on meta.third
+					parent := path.Copy()
+					for len(parent.Nodes) > 0 {
+						parent.Pop()
+						if len(parent.Nodes) == 0 {
+							break
+						}
+						
+						// Try parent path as-is
+						if b, found := all[parent.String()]; found {
+							g = append(g, []*Opcall{b, a})
+							break
+						}
+						
+						// Try canonical parent path
+						if canon, err := parent.Canonical(ev.Tree); err == nil {
+							if b, found := all[canon.String()]; found {
+								g = append(g, []*Opcall{b, a})
+								break
+							}
+						}
+					}
+				}
 			}
 		}
 	}

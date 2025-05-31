@@ -816,10 +816,10 @@ e: (( grab c.value ))
 
 ---
 dataflow:
+- b.squad.value: (( grab c.value ))
+- e:         (( grab c.value ))
 - a:         (( grab b.squad.value ))
 - d:         (( grab b.squad.value ))
-- e:         (( grab c.value ))
-- b.squad.value: (( grab c.value ))
 
 ---
 a: VALUE
@@ -849,8 +849,8 @@ dataflow:
 meta:
   foo: FOO
   bar: BAR
-foobar: FOO
-fooboz: FOO
+foobar: FOOBAR
+fooboz: FOOboz
 
 
 #################################   handles multiple comma-seaprated or-operands properly
@@ -1057,8 +1057,8 @@ meta:
 ---
 dataflow:
 - meta.second: (( grab meta.first ))
-- meta.gotcha: (( grab meta.third.0 ))
 - meta.third:  (( grab meta.second ))
+- meta.gotcha: (( grab meta.third.0 ))
 
 # (the key point here is that meta.third.0 doesn't exist in the tree until we start
 # evaluating, but we still need to get the order correct; we should have a dep on
@@ -1183,8 +1183,8 @@ properties:
 
 ---
 dataflow:
-- properties.api_servers:       (( grab jobs.api_z1.networks.net1.static_ips ))
 - jobs.api_z1.networks.net1.static_ips: (( static_ips(0, 1, 2) ))
+- properties.api_servers:       (( grab jobs.api_z1.networks.net1.static_ips ))
 
 ---
 jobs:

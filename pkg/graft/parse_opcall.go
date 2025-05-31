@@ -425,6 +425,54 @@ func isReference(s string) bool {
 	return regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`).MatchString(s)
 }
 
+// unescapeString processes escape sequences in a string
+func unescapeString(s string) string {
+	// Handle common escape sequences
+	result := strings.Builder{}
+	escaped := false
+	
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		
+		if escaped {
+			switch ch {
+			case 'n':
+				result.WriteByte('\n')
+			case 'r':
+				result.WriteByte('\r')
+			case 't':
+				result.WriteByte('\t')
+			case '\\':
+				result.WriteByte('\\')
+			case '"':
+				result.WriteByte('"')
+			case '\'':
+				result.WriteByte('\'')
+			default:
+				// If it's not a recognized escape sequence, include the backslash
+				result.WriteByte('\\')
+				result.WriteByte(ch)
+			}
+			escaped = false
+			continue
+		}
+		
+		if ch == '\\' {
+			escaped = true
+			continue
+		}
+		
+		result.WriteByte(ch)
+	}
+	
+	// If we ended with a backslash, include it
+	if escaped {
+		result.WriteByte('\\')
+	}
+	
+	return result.String()
+}
+
 // parseLiteral parses a literal value (string, number, boolean, nil)
 func parseLiteral(s string) (*Expr, error) {
 	log.DEBUG("parseLiteral: parsing '%s'", s)
@@ -453,9 +501,12 @@ func parseLiteral(s string) (*Expr, error) {
 	
 	// Handle quoted strings
 	if len(s) >= 2 && ((s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '\'' && s[len(s)-1] == '\'')) {
+		// Remove quotes and process escape sequences
+		unquoted := s[1 : len(s)-1]
+		unescaped := unescapeString(unquoted)
 		return &Expr{
 			Type:    Literal,
-			Literal: s[1 : len(s)-1], // Remove quotes
+			Literal: unescaped,
 		}, nil
 	}
 	
@@ -758,7 +809,10 @@ func parseSingleExpression(s string) (*Expr, error) {
 	// Check for quoted string
 	if (strings.HasPrefix(s, "\"") && strings.HasSuffix(s, "\"") && len(s) >= 2) ||
 	   (strings.HasPrefix(s, "'") && strings.HasSuffix(s, "'") && len(s) >= 2) {
-		return &Expr{Type: Literal, Literal: s[1:len(s)-1]}, nil
+		// Remove quotes and process escape sequences
+		unquoted := s[1:len(s)-1]
+		unescaped := unescapeString(unquoted)
+		return &Expr{Type: Literal, Literal: unescaped}, nil
 	}
 	
 	// Try to parse as number

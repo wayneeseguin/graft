@@ -4685,14 +4685,57 @@ meta:
 			So(r, ShouldBeNil)
 		})
 
-		Convey("throws an error when referenced entry is not a list or literal", func() {
+		Convey("can join referenced map entries as key:value pairs", func() {
 			r, err := op.Run(ev, []*Expr{
 				str(","),
 				ref("meta.somestanza"),
 			})
-			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "referenced entry is not a list or string")
-			So(r, ShouldBeNil)
+			So(err, ShouldBeNil)
+			So(r, ShouldNotBeNil)
+			
+			So(r.Type, ShouldEqual, Replace)
+			So(r.Value.(string), ShouldEqual, "foo:bar,wom:bat")
+		})
+
+		Convey("can join maps with different separators", func() {
+			r, err := op.Run(ev, []*Expr{
+				str(" | "),
+				ref("meta.somestanza"),
+			})
+			So(err, ShouldBeNil)
+			So(r, ShouldNotBeNil)
+			
+			So(r.Type, ShouldEqual, Replace)
+			So(r.Value.(string), ShouldEqual, "foo:bar | wom:bat")
+		})
+
+		Convey("can join multiple maps and literals together", func() {
+			r, err := op.Run(ev, []*Expr{
+				str(","),
+				str("prefix"),
+				ref("meta.somestanza"),
+				str("suffix"),
+			})
+			So(err, ShouldBeNil)
+			So(r, ShouldNotBeNil)
+			
+			So(r.Type, ShouldEqual, Replace)
+			So(r.Value.(string), ShouldEqual, "prefix,foo:bar,wom:bat,suffix")
+		})
+
+		Convey("can join maps and lists together", func() {
+			r, err := op.Run(ev, []*Expr{
+				str(","),
+				ref("meta.somestanza"),
+				ref("meta.authorities"),
+			})
+			So(err, ShouldBeNil)
+			So(r, ShouldNotBeNil)
+			
+			So(r.Type, ShouldEqual, Replace)
+			// meta.somestanza produces "foo:bar,wom:bat"
+			// meta.authorities is a list that should append its items
+			So(r.Value.(string), ShouldEqual, "foo:bar,wom:bat,password.write,clients.write,clients.read,scim.write,scim.read,uaa.admin,clients.secret")
 		})
 
 		Convey("throws an error when referenced list contains non-string entries", func() {

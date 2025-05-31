@@ -2,6 +2,7 @@ package operators
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/starkandwayne/goutils/ansi"
@@ -49,20 +50,14 @@ func (JoinOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 	for i, arg := range args {
 		if i == 0 { // argument #0: separator
-			// Use ResolveOperatorArgument to handle nested expressions
-			sep, err := ResolveOperatorArgument(ev, arg)
-			if err != nil {
-				DEBUG("     [%d]: resolution failed\n    error: %s", i, err)
-				return nil, err
+			// The separator must be a literal
+			if arg.Type != Literal {
+				DEBUG("     [%d]: separator is not a literal", i)
+				return nil, ansi.Errorf("join operator only accepts literal argument for the separator")
 			}
 
-			if sep == nil {
-				DEBUG("     [%d]: separator resolved to nil", i)
-				return nil, fmt.Errorf("join operator separator cannot be nil")
-			}
-
-			DEBUG("     [%d]: list separator will be: %v", i, sep)
-			separator = fmt.Sprintf("%v", sep)
+			DEBUG("     [%d]: list separator will be: %v", i, arg.Literal)
+			separator = fmt.Sprintf("%v", arg.Literal)
 
 		} else { // argument #1..n: list, literal, or expression
 			// Use ResolveOperatorArgument to handle nested expressions
@@ -95,9 +90,35 @@ func (JoinOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 					}
 				}
 
-			case map[interface{}]interface{}, map[string]interface{}:
-				DEBUG("     [%d]: resolved to a map (not a list or a literal)", i)
-				return nil, ansi.Errorf("join operator cannot join maps, only lists and literals")
+			case map[interface{}]interface{}:
+				DEBUG("     [%d]: resolved to a map", i)
+				// Sort keys for consistent output
+				keys := make([]string, 0, len(v))
+				for k := range v {
+					keys = append(keys, fmt.Sprintf("%v", k))
+				}
+				sort.Strings(keys)
+				
+				// Join key:value pairs
+				for _, k := range keys {
+					pair := fmt.Sprintf("%s:%v", k, v[k])
+					*list = append(*list, pair)
+				}
+				
+			case map[string]interface{}:
+				DEBUG("     [%d]: resolved to a map", i)
+				// Sort keys for consistent output
+				keys := make([]string, 0, len(v))
+				for k := range v {
+					keys = append(keys, k)
+				}
+				sort.Strings(keys)
+				
+				// Join key:value pairs
+				for _, k := range keys {
+					pair := fmt.Sprintf("%s:%v", k, v[k])
+					*list = append(*list, pair)
+				}
 
 			default:
 				DEBUG("     [%d]: resolved to a literal value", i)

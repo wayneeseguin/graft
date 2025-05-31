@@ -1,0 +1,39 @@
+---
+# Example demonstrating map joining with the join operator
+
+metadata:
+  environment_vars:
+    NODE_ENV: production
+    API_KEY: secret123
+    LOG_LEVEL: info
+  
+  database_config:
+    host: localhost
+    port: 5432
+    username: dbuser
+    
+  service_ports:
+    web: 8080
+    api: 9090
+    metrics: 9091
+
+# Join map entries as key:value pairs with comma separator
+env_string: (( join ", " metadata.environment_vars ))
+# Result: "API_KEY:secret123, LOG_LEVEL:info, NODE_ENV:production" (sorted by key)
+
+# Join with custom separator
+db_connection: (( join " | " metadata.database_config ))
+# Result: "host:localhost | port:5432 | username:dbuser"
+
+# Join multiple sources including maps and literals
+full_config: (( join "; " "CONFIG_START" metadata.service_ports "CONFIG_END" ))
+# Result: "CONFIG_START; api:9090; metrics:9091; web:8080; CONFIG_END"
+
+# Mix maps with lists
+mixed_data:
+  servers:
+    - server1.example.com
+    - server2.example.com
+  
+combined: (( join ", " mixed_data.service_ports mixed_data.servers ))
+# Result: "api:9090, metrics:9091, web:8080, server1.example.com, server2.example.com"
