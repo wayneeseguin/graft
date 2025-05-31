@@ -319,11 +319,44 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 
 	// construct a sorted list of keys in $all, so that we
 	// can reliably generate the same DFA every time
+	// Sort by dependency order first (dependencies should come before dependents),
+	// then by alphabetical order for deterministic behavior
 	var sortedKeys []string
 	for k := range all {
 		sortedKeys = append(sortedKeys, k)
 	}
-	sort.Strings(sortedKeys)
+	
+	// Custom sort: prioritize nodes that others depend on (shorter paths first, then alphabetical)
+	sort.Slice(sortedKeys, func(i, j int) bool {
+		keyI, keyJ := sortedKeys[i], sortedKeys[j]
+		
+		// Check if keyI is a dependency of keyJ or vice versa
+		nodeI, nodeJ := all[keyI], all[keyJ]
+		
+		// Count how many nodes depend on each
+		dependentsI, dependentsJ := 0, 0
+		for _, pair := range g {
+			if pair[0] == nodeI {
+				dependentsI++
+			}
+			if pair[0] == nodeJ {
+				dependentsJ++
+			}
+		}
+		
+		// If one has more dependents, it should come first
+		if dependentsI != dependentsJ {
+			return dependentsI > dependentsJ
+		}
+		
+		// Otherwise, sort by path length (shorter paths first, as they're often dependencies)
+		if len(keyI) != len(keyJ) {
+			return len(keyI) < len(keyJ)
+		}
+		
+		// Finally, sort alphabetically for deterministic behavior
+		return keyI < keyJ
+	})
 
 	// find all nodes in g that are free (no further dependencies)
 	freeNodes := func(g [][]*Opcall) []*Opcall {

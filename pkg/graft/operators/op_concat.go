@@ -80,21 +80,6 @@ func (ConcatOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		*l = append(*l, stringVal)
 	}
 
-	// Escape the result for shell safety if needed
-	out := GetStringSlice()
-	defer PutStringSlice(out)
-	for _, s := range *l {
-		if len(s) == 0 {
-			*out = append(*out, "''")
-		} else if strings.Contains(s, "'") {
-			*out = append(*out, fmt.Sprintf(`"%s"`, strings.Replace(s, `"`, `\"`, -1)))
-		} else if strings.ContainsAny(s, " \t\n\"$") {
-			*out = append(*out, fmt.Sprintf("'%s'", s))
-		} else {
-			*out = append(*out, s)
-		}
-	}
-
 	DEBUG("  result: %s", ansi.Sprintf("@c{%s}", strings.Join(*l, "")))
 	return &Response{
 		Type:  Replace,

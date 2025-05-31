@@ -544,14 +544,14 @@ online:    (( grab meta.online || false ))
 
 ---
 dataflow:
+- pi:        (( grab math.CONSTANTS.pi || 3.14159 ))
+- env:       (( grab meta.env || "sandbox" ))
+- nice:      (( grab meta.nice || -5 ))
 - delta:     (( grab meta.delta || .001 ))
 - domain:    (( grab meta.domain || "default-domain" ))
-- env:       (( grab meta.env || "sandbox" ))
-- instances: (( grab meta.size || 42 ))
-- nice:      (( grab meta.nice || -5 ))
 - online:    (( grab meta.online || false ))
-- pi:        (( grab math.CONSTANTS.pi || 3.14159 ))
 - secure:    (( grab meta.secure || true ))
+- instances: (( grab meta.size || 42 ))
 
 ---
 meta:
@@ -663,9 +663,9 @@ site:   (( grab meta.site || null ))
 
 ---
 dataflow:
-- domain: (( grab meta.domain || nil ))
 - env:    (( grab meta.env || ~ ))
 - site:   (( grab meta.site || null ))
+- domain: (( grab meta.domain || nil ))
 
 ---
 domain: ~
@@ -768,8 +768,8 @@ bar: (( grab meta.xyzzy || "bar?" || meta.boz ))
 
 ---
 dataflow:
-- meta.bar: (( grab meta.foo ))
 - meta.boz: (( grab meta.foo ))
+- meta.bar: (( grab meta.foo ))
 - bar: (( grab meta.xyzzy || "bar?" || meta.boz ))
 - foo: (( grab meta.bar || "foo?" || meta.boz ))
 
@@ -817,9 +817,9 @@ e: (( grab c.value ))
 ---
 dataflow:
 - a:         (( grab b.squad.value ))
-- b.squad.value: (( grab c.value ))
 - d:         (( grab b.squad.value ))
 - e:         (( grab c.value ))
+- b.squad.value: (( grab c.value ))
 
 ---
 a: VALUE
@@ -1056,8 +1056,8 @@ meta:
 
 ---
 dataflow:
-- meta.gotcha: (( grab meta.third.0 ))
 - meta.second: (( grab meta.first ))
+- meta.gotcha: (( grab meta.third.0 ))
 - meta.third:  (( grab meta.second ))
 
 # (the key point here is that meta.third.0 doesn't exist in the tree until we start
@@ -1183,8 +1183,8 @@ properties:
 
 ---
 dataflow:
-- jobs.api_z1.networks.net1.static_ips: (( static_ips(0, 1, 2) ))
 - properties.api_servers:       (( grab jobs.api_z1.networks.net1.static_ips ))
+- jobs.api_z1.networks.net1.static_ips: (( static_ips(0, 1, 2) ))
 
 ---
 jobs:
@@ -1480,8 +1480,8 @@ z:
 output: (( join " " z ))
 ---
 dataflow:
-- output: (( join " " z ))
 - z.0: (( grab greeting ))
+- output: (( join " " z ))
 ---
 greeting: hello
 output: hello world
@@ -1500,9 +1500,9 @@ z:
 output: (( join " " z ))
 ---
 dataflow:
-- output: (( join " " z ))
 - z.0: (( grab greeting ))
 - z.1: (( grab greeting2 ))
+- output: (( join " " z ))
 ---
 greeting: hello
 greeting2: world
@@ -1541,12 +1541,12 @@ sq:   (( concat test "a\'b" ))
 
 ---
 dataflow:
-- back: (( concat test "a\\b" ))
 - cr:   (( concat test "a\rb" ))
 - dq:   (( concat test "a\"b" ))
 - nl:   (( concat test "a\nb" ))
 - sq:   (( concat test "a\'b" ))
 - tab:  (( concat test "a\tb" ))
+- back: (( concat test "a\\b" ))
 
 ---
 test: ""
