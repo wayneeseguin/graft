@@ -194,13 +194,14 @@ func (m *mergeBuilderImpl) mergeDocuments() (Document, error) {
 
 // mergeInto merges overlay data into base data using legacy merger when needed
 func (m *mergeBuilderImpl) mergeInto(base, overlay map[interface{}]interface{}) error {
-	// Use legacy merger for:
-	// 1. Array operators (always process during merge phase)
-	// 2. Arrays with maps (always, to get merge key warnings)
-	useArrayOperators := m.hasArrayOperators(base) || m.hasArrayOperators(overlay)
-	hasArraysWithMaps := m.hasArraysWithMaps(base) || m.hasArraysWithMaps(overlay)
-	
-	if useArrayOperators || hasArraysWithMaps {
+	// Always use the legacy merger to ensure array operators are processed correctly
+	// The legacy merger handles:
+	// 1. Array operators (append, prepend, replace, inline, merge)
+	// 2. Array merge semantics
+	// 3. Map merging
+	// 4. Named-entry array merging
+	// We can't use simple merging because it doesn't understand array merge directives
+	if true {
 		mergerInstance := &merger.Merger{
 			AppendByDefault: m.fallbackAppend,
 		}
@@ -350,8 +351,14 @@ func (m *mergeBuilderImpl) mergeArraysWithOperators(base, overlay []interface{})
 // hasArrayOperators checks if a map contains arrays with merge operators
 func (m *mergeBuilderImpl) hasArrayOperators(data map[interface{}]interface{}) bool {
 	for _, value := range data {
-		if array, ok := value.([]interface{}); ok {
-			if m.arrayHasOperators(array) {
+		switch v := value.(type) {
+		case []interface{}:
+			if m.arrayHasOperators(v) {
+				return true
+			}
+		case map[interface{}]interface{}:
+			// Recursively check nested maps
+			if m.hasArrayOperators(v) {
 				return true
 			}
 		}
@@ -378,11 +385,17 @@ func (m *mergeBuilderImpl) arrayHasOperators(array []interface{}) bool {
 // hasArraysWithMaps checks if a map contains arrays with map elements (for merge-by-key detection)
 func (m *mergeBuilderImpl) hasArraysWithMaps(data map[interface{}]interface{}) bool {
 	for _, value := range data {
-		if array, ok := value.([]interface{}); ok {
-			for _, item := range array {
+		switch v := value.(type) {
+		case []interface{}:
+			for _, item := range v {
 				if _, isMap := item.(map[interface{}]interface{}); isMap {
 					return true
 				}
+			}
+		case map[interface{}]interface{}:
+			// Recursively check nested maps
+			if m.hasArraysWithMaps(v) {
+				return true
 			}
 		}
 	}

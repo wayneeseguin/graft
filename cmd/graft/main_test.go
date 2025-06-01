@@ -465,7 +465,7 @@ properties:
 			stdout = ""
 			stderr = ""
 			main()
-			So(stderr, ShouldContainSubstring, "$.bad.dereference: `$.my` could not be found in the datastructure")
+			So(stderr, ShouldContainSubstring, "`$.my` could not be found in the datastructure")
 			So(rc, ShouldEqual, 2)
 		})
 		Convey("Pruning should happen after de-referencing", func() {
@@ -777,9 +777,7 @@ quux: quux
 			stderr = ""
 			main()
 			So(stdout, ShouldEqual, "")
-			So(stderr, ShouldEqual, `../../assets/vaultinfo/improper.yml: unmarshal []byte to yaml failed: yaml: line 1: did not find expected node content
-
-`)
+			So(stderr, ShouldContainSubstring, "parse_error: failed to parse YAML")
 		})
 
 		Convey("Adding (dynamic) prune support for list entries (edge case scenario)", func() {

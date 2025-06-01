@@ -753,19 +753,13 @@ func (ev *Evaluator) RunOp(op *Opcall) error {
 				log.DEBUG("  %s is not set, using the injected value", path)
 				m[k] = v
 			} else {
-				// Check if existing value is a map - if so, merge. Otherwise, keep existing
-				if _, isMap := m[k].(map[interface{}]interface{}); isMap {
-					log.DEBUG("  %s is set (map), merging the injected value", path)
-					merger := &merger.Merger{AppendByDefault: true}
-					merged := merger.MergeObj(m[k], v, path)
-					if err := merger.Error(); err != nil {
-						return err
-					}
-					m[k] = merged
-				} else {
-					log.DEBUG("  %s is set (non-map), keeping existing value", path)
-					// Keep existing value, don't overwrite with injected value
+				// Check type of existing and injected values for proper merging
+				merger := &merger.Merger{AppendByDefault: true}
+				merged := merger.MergeObj(v, m[k], path)
+				if err := merger.Error(); err != nil {
+					return err
 				}
+				m[k] = merged
 			}
 		}
 	}
