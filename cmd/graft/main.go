@@ -636,14 +636,14 @@ func mergeAllDocs(files []YamlFile, options mergeOpts) (map[interface{}]interfac
 			_, parseErr := parseYAML(data)
 			if isArrayError(parseErr) {
 				log.DEBUG("Detected root of document as an array. Attempting go-patch parsing")
-				_, err := parseGoPatch(data)
+				ops, err := parseGoPatch(data)
 				if err != nil {
 					return nil, ansi.Errorf("@m{%s}: @R{%s}\n", file.Path, err.Error())
 				}
-				// For go-patch, we need to apply it after merging other docs
-				// Store it for later application
-				// TODO: Properly integrate go-patch with new API
-				return nil, ansi.Errorf("@R{go-patch support needs to be reimplemented with new API}")
+				// Create a go-patch document
+				doc := graft.NewGoPatchDocument(ops)
+				docs = append(docs, doc)
+				continue
 			}
 		}
 

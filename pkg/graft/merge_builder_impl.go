@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cppforlife/go-patch/patch"
 	"github.com/wayneeseguin/graft/pkg/graft/merger"
 )
 
@@ -21,6 +22,7 @@ type mergeBuilderImpl struct {
 	arrayStrategy    ArrayMergeStrategy
 	error            error // Stores any error from construction
 	mergeMetadata    *merger.MergeMetadata // Accumulated metadata from merges
+	patchOps         []patch.Ops // Store parsed go-patch operations
 }
 
 // WithPrune adds keys to remove from the final output
@@ -166,12 +168,30 @@ func (m *mergeBuilderImpl) Execute() (Document, error) {
 
 // mergeDocuments performs the actual document merging
 func (m *mergeBuilderImpl) mergeDocuments() (Document, error) {
+	// Separate regular documents from go-patch documents
+	var regularDocs []Document
+	for _, doc := range m.docs {
+		if IsGoPatchDocument(doc) {
+			// Extract and store go-patch operations
+			if ops, ok := GetGoPatchOps(doc); ok {
+				m.patchOps = append(m.patchOps, ops)
+			}
+		} else {
+			regularDocs = append(regularDocs, doc)
+		}
+	}
+
+	// If no regular documents, start with empty
+	if len(regularDocs) == 0 {
+		return NewDocument(make(map[interface{}]interface{})), nil
+	}
+
 	// Start with the first document as base
-	baseData := m.docs[0].RawData().(map[interface{}]interface{})
+	baseData := regularDocs[0].RawData().(map[interface{}]interface{})
 	result := deepCopyMap(baseData)
 
 	// Merge subsequent documents
-	for i := 1; i < len(m.docs); i++ {
+	for i := 1; i < len(regularDocs); i++ {
 		// Check context cancellation during merge
 		select {
 		case <-m.ctx.Done():
@@ -179,7 +199,7 @@ func (m *mergeBuilderImpl) mergeDocuments() (Document, error) {
 		default:
 		}
 
-		overlayData := m.docs[i].RawData().(map[interface{}]interface{})
+		overlayData := regularDocs[i].RawData().(map[interface{}]interface{})
 		err := m.mergeInto(result, overlayData)
 		if err != nil {
 			// Check if this is a detailed merger error that should be preserved
@@ -436,6 +456,15 @@ func isMergerError(err error) bool {
 func (m *mergeBuilderImpl) applyPostProcessing(doc Document) (Document, error) {
 	result := doc
 
+	// Apply go-patch operations first (before evaluation)
+	if len(m.patchOps) > 0 {
+		patched, err := m.applyGoPatch(result)
+		if err != nil {
+			return nil, err
+		}
+		result = patched
+	}
+
 	// Apply pruning
 	if len(m.pruneKeys) > 0 {
 		pruned, err := m.applyPruning(result)
@@ -476,6 +505,39 @@ func (m *mergeBuilderImpl) applyPostProcessing(doc Document) (Document, error) {
 	}
 
 	return result, nil
+}
+
+// applyGoPatch applies go-patch operations to the document
+func (m *mergeBuilderImpl) applyGoPatch(doc Document) (Document, error) {
+	// Get the raw data
+	data := doc.RawData()
+	
+	// Apply each set of patch operations in order
+	for _, ops := range m.patchOps {
+		var err error
+		data, err = ops.Apply(data)
+		if err != nil {
+			// For now, we don't have file information here
+			// The error format matches what the go-patch library returns
+			return nil, err
+		}
+	}
+	
+	// Ensure the result is a map
+	resultMap, ok := data.(map[interface{}]interface{})
+	if !ok {
+		// Try to convert if it's map[string]interface{}
+		if strMap, ok := data.(map[string]interface{}); ok {
+			resultMap = make(map[interface{}]interface{})
+			for k, v := range strMap {
+				resultMap[k] = v
+			}
+		} else {
+			return nil, fmt.Errorf("go-patch operations resulted in non-map data")
+		}
+	}
+	
+	return NewDocument(resultMap), nil
 }
 
 // applyPruning removes specified keys from the document

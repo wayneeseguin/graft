@@ -445,8 +445,13 @@ func (d *document) CherryPick(keys ...string) Document {
 	picked := make(map[interface{}]interface{})
 	errors := []error{}
 	
-	// Track list items separately to preserve order
-	listItems := make(map[string][]interface{})
+	// Track list items with their indices for sorting
+	type listItemEntry struct {
+		listKey string
+		index   int
+		item    interface{}
+	}
+	listItems := make([]listItemEntry, 0)
 	
 	for _, keyPath := range keys {
 		// Check if this is a simple key or a path
@@ -474,20 +479,23 @@ func (d *document) CherryPick(keys ...string) Document {
 						var foundItem interface{}
 						
 						// First, try to parse as numeric index
+						itemIndex := -1
 						if index, err := strconv.Atoi(listItemKey); err == nil {
 							// It's a numeric index
 							if index >= 0 && index < len(list) {
 								foundItem = list[index]
+								itemIndex = index
 							}
 						} else {
 							// Not a number, look for named item
-							for _, item := range list {
+							for idx, item := range list {
 								if itemMap, ok := item.(map[interface{}]interface{}); ok {
 									// Check common identifier fields
 									for _, idField := range []string{"key", "id", "name"} {
 										if idVal, hasId := itemMap[idField]; hasId {
 											if idStr, ok := idVal.(string); ok && idStr == listItemKey {
 												foundItem = item
+												itemIndex = idx
 												break
 											}
 										}
@@ -499,9 +507,13 @@ func (d *document) CherryPick(keys ...string) Document {
 							}
 						}
 						
-						// If we found the item, track it in order
-						if foundItem != nil {
-							listItems[listKey] = append(listItems[listKey], deepCopy(foundItem))
+						// If we found the item, track it with its index
+						if foundItem != nil && itemIndex >= 0 {
+							listItems = append(listItems, listItemEntry{
+								listKey: listKey,
+								index:   itemIndex,
+								item:    deepCopy(foundItem),
+							})
 						}
 					}
 				}
@@ -531,11 +543,24 @@ func (d *document) CherryPick(keys ...string) Document {
 		}
 	}
 	
-	// Add all collected list items to the picked document
-	for listKey, items := range listItems {
-		if len(items) > 0 {
-			picked[listKey] = items
+	// Sort list items by index in descending order (higher indices first)
+	for i := 0; i < len(listItems)-1; i++ {
+		for j := i + 1; j < len(listItems); j++ {
+			if listItems[i].listKey == listItems[j].listKey && listItems[i].index < listItems[j].index {
+				listItems[i], listItems[j] = listItems[j], listItems[i]
+			}
 		}
+	}
+	
+	// Group sorted items by list key
+	listsByKey := make(map[string][]interface{})
+	for _, entry := range listItems {
+		listsByKey[entry.listKey] = append(listsByKey[entry.listKey], entry.item)
+	}
+	
+	// Add all collected list items to the picked document
+	for listKey, items := range listsByKey {
+		picked[listKey] = items
 	}
 	
 	return NewDocument(picked)
