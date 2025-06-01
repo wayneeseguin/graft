@@ -350,6 +350,8 @@ func (d *document) Prune(key string) Document {
 		current := cloned.data
 		
 		// Navigate to the parent of the key to remove
+		var lastList []interface{}
+		var lastListKey string
 		for i := 0; i < len(segments)-1; i++ {
 			segment := segments[i]
 			
@@ -364,14 +366,39 @@ func (d *document) Prune(key string) Document {
 				}
 				current[segment] = newMap
 				current = newMap
+			case []interface{}:
+				// Handle list navigation
+				if i == len(segments)-2 {
+					// Next segment should be the index to remove
+					lastList = v
+					lastListKey = segment
+				} else {
+					// Can't navigate through lists except at the end
+					return cloned
+				}
 			default:
-				// Path doesn't exist or leads through a non-map
+				// Path doesn't exist or leads through a non-map/list
 				return cloned
 			}
 		}
 		
 		// Remove the final key
-		delete(current, segments[len(segments)-1])
+		finalSegment := segments[len(segments)-1]
+		if lastList != nil {
+			// Remove from list by index
+			if index, err := strconv.Atoi(finalSegment); err == nil {
+				if index >= 0 && index < len(lastList) {
+					// Create new list without the element at index
+					newList := make([]interface{}, 0, len(lastList)-1)
+					newList = append(newList, lastList[:index]...)
+					newList = append(newList, lastList[index+1:]...)
+					current[lastListKey] = newList
+				}
+			}
+		} else {
+			// Remove from map
+			delete(current, finalSegment)
+		}
 	} else {
 		// Simple key - remove from top level
 		delete(cloned.data, key)
@@ -383,6 +410,10 @@ func (d *document) Prune(key string) Document {
 // CherryPick creates a new document with only the specified keys
 func (d *document) CherryPick(keys ...string) Document {
 	picked := make(map[interface{}]interface{})
+	errors := []error{}
+	
+	// Track list items separately to preserve order
+	listItems := make(map[string][]interface{})
 	
 	for _, keyPath := range keys {
 		// Check if this is a simple key or a path
@@ -390,6 +421,10 @@ func (d *document) CherryPick(keys ...string) Document {
 			// Simple key - use the old behavior
 			if val, exists := d.data[keyPath]; exists {
 				picked[keyPath] = deepCopy(val)
+			} else {
+				// Path not found - we need to handle this error
+				// For now, we'll track it but can't return it since Document interface doesn't support errors
+				errors = append(errors, fmt.Errorf("`$.%s` could not be found in the datastructure", keyPath))
 			}
 		} else {
 			// Path-based cherry-pick
@@ -431,21 +466,9 @@ func (d *document) CherryPick(keys ...string) Document {
 							}
 						}
 						
-						// If we found the item, add it to the picked document
+						// If we found the item, track it in order
 						if foundItem != nil {
-							// Check if we already have items for this list
-							if existingList, exists := picked[listKey]; exists {
-								if list, ok := existingList.([]interface{}); ok {
-									// Append to existing list
-									picked[listKey] = append(list, deepCopy(foundItem))
-								} else {
-									// Replace with new list
-									picked[listKey] = []interface{}{deepCopy(foundItem)}
-								}
-							} else {
-								// Create new list
-								picked[listKey] = []interface{}{deepCopy(foundItem)}
-							}
+							listItems[listKey] = append(listItems[listKey], deepCopy(foundItem))
 						}
 					}
 				}
@@ -472,6 +495,13 @@ func (d *document) CherryPick(keys ...string) Document {
 					}
 				}
 			}
+		}
+	}
+	
+	// Add all collected list items to the picked document
+	for listKey, items := range listItems {
+		if len(items) > 0 {
+			picked[listKey] = items
 		}
 	}
 	

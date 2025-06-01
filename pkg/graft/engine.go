@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -382,6 +383,20 @@ func (e *DefaultEngine) evaluate(ctx context.Context, ev *Evaluator) error {
 		if err := ev.RunPhase(phase); err != nil {
 			return err
 		}
+	}
+	
+	// Post-processing: apply operator-level pruning
+	prunePaths := e.GetKeysToPrune()
+	if len(prunePaths) > 0 {
+		// Convert tree paths to Document paths and remove them
+		doc := NewDocument(ev.Tree)
+		for _, path := range prunePaths {
+			// Remove the "$." prefix if present
+			cleanPath := strings.TrimPrefix(path, "$.")
+			doc = doc.Prune(cleanPath)
+		}
+		// Update the evaluator tree with the pruned document
+		ev.Tree = doc.RawData().(map[interface{}]interface{})
 	}
 	
 	return nil

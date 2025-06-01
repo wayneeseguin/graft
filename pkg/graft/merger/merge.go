@@ -241,6 +241,7 @@ func (m *Merger) MergeObj(orig interface{}, n interface{}, node string) interfac
 	case origOk && pruneRx.MatchString(origString):
 		log.DEBUG("%s: a (( prune )) operator is about to be replaced, check if its path needs to be saved", node)
 		//addToPruneListIfNecessary(strings.Replace(node, "$.", "", -1))
+		return orig
 
 	case newOk && pruneRx.MatchString(newString) && orig != nil:
 		log.DEBUG("%s: a (( prune )) operator is about to replace existing content, check if its path needs to be saved", node)

@@ -18,6 +18,7 @@ import (
 	"github.com/wayneeseguin/graft/log"
 	"github.com/wayneeseguin/graft/pkg/graft"
 	_ "github.com/wayneeseguin/graft/pkg/graft/operators" // Register operators
+	"github.com/starkandwayne/goutils/tree"
 
 	"strings"
 
@@ -563,6 +564,43 @@ func readFile(file *YamlFile) ([]byte, error) {
 	return data, nil
 }
 
+// validatePath checks if a path exists in the data structure
+func validatePath(data map[interface{}]interface{}, path string) error {
+	// Use graft's tree package to parse and resolve the path
+	cursor, err := tree.ParseCursor(path)
+	if err != nil {
+		return err
+	}
+	
+	_, err = cursor.Resolve(data)
+	if err != nil {
+		// Check if the error is due to a missing parent path
+		// Walk through the path segments to find where it fails
+		parts := strings.Split(path, ".")
+		failedPath := ""
+		
+		for i, part := range parts {
+			if i == 0 {
+				failedPath = part
+			} else {
+				failedPath = strings.Join(parts[:i+1], ".")
+			}
+			
+			// Try to resolve up to this point
+			partialCursor, _ := tree.ParseCursor(failedPath)
+			if _, resolveErr := partialCursor.Resolve(data); resolveErr != nil {
+				// This is where it failed, report this path
+				return ansi.Errorf("1 error(s) detected:\n - `$.%s` could not be found in the datastructure\n\n", failedPath)
+			}
+		}
+		
+		// If we couldn't find where it failed, report the full path
+		return ansi.Errorf("1 error(s) detected:\n - `$.%s` could not be found in the datastructure\n\n", path)
+	}
+	
+	return nil
+}
+
 func mergeAllDocs(files []YamlFile, options mergeOpts) (map[interface{}]interface{}, error) {
 	// Create engine with settings from options
 	engineOpts := []graft.EngineOption{
@@ -658,6 +696,13 @@ func mergeAllDocs(files []YamlFile, options mergeOpts) (map[interface{}]interfac
 	}
 	
 	if len(options.CherryPick) > 0 {
+		// Validate cherry-pick paths exist before extraction
+		data := result.GetData().(map[interface{}]interface{})
+		for _, path := range options.CherryPick {
+			if err := validatePath(data, path); err != nil {
+				return nil, err
+			}
+		}
 		result = result.CherryPick(options.CherryPick...)
 	}
 
