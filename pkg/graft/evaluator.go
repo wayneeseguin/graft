@@ -748,6 +748,7 @@ func (ev *Evaluator) RunOp(op *Opcall) error {
 
 		for k, v := range resp.Value.(map[interface{}]interface{}) {
 			path := fmt.Sprintf("%s.%s", parent, k)
+			log.DEBUG("Inject: parent=%s, k=%s, path=%s", parent, k, path)
 			_, set := m[k]
 			if !set {
 				log.DEBUG("  %s is not set, using the injected value", path)
@@ -810,6 +811,7 @@ func (ev *Evaluator) Run(prune []string, picks []string) error {
 
 	// post-processing: prune
 	addToPruneListIfNecessary(prune...)
+	log.DEBUG("Final prune list contains %d paths: %v", len(keysToPrune), keysToPrune)
 	errors.Append(ev.Prune(keysToPrune))
 	keysToPrune = nil
 

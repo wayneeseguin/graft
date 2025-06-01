@@ -20,6 +20,7 @@ type mergeBuilderImpl struct {
 	fallbackAppend   bool
 	arrayStrategy    ArrayMergeStrategy
 	error            error // Stores any error from construction
+	mergeMetadata    *merger.MergeMetadata // Accumulated metadata from merges
 }
 
 // WithPrune adds keys to remove from the final output
@@ -221,6 +222,22 @@ func (m *mergeBuilderImpl) mergeInto(base, overlay map[interface{}]interface{}) 
 				return graftMultiErr
 			}
 			return err
+		}
+		
+		// Collect metadata from the merge
+		metadata := mergerInstance.GetMetadata()
+		if metadata != nil && (len(metadata.PrunePaths) > 0 || len(metadata.SortPaths) > 0) {
+			if m.mergeMetadata == nil {
+				m.mergeMetadata = &merger.MergeMetadata{
+					SortPaths: make(map[string]string),
+				}
+			}
+			// Accumulate prune paths
+			m.mergeMetadata.PrunePaths = append(m.mergeMetadata.PrunePaths, metadata.PrunePaths...)
+			// Merge sort paths
+			for k, v := range metadata.SortPaths {
+				m.mergeMetadata.SortPaths[k] = v
+			}
 		}
 		
 		// Copy result back to base
@@ -437,6 +454,18 @@ func (m *mergeBuilderImpl) applyPostProcessing(doc Document) (Document, error) {
 		result = cherryPicked
 	}
 
+	// Pass merge metadata to engine before evaluation
+	if m.mergeMetadata != nil && m.engine != nil {
+		// Add prune paths to engine state
+		for _, path := range m.mergeMetadata.PrunePaths {
+			m.engine.GetOperatorState().AddKeyToPrune(path)
+		}
+		// Add sort paths to engine state
+		for path, order := range m.mergeMetadata.SortPaths {
+			m.engine.GetOperatorState().AddPathToSort(path, order)
+		}
+	}
+	
 	// Apply evaluation if not skipped
 	if !m.skipEvaluation {
 		evaluated, err := m.applyEvaluation(result)

@@ -2,6 +2,8 @@ package graft
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 	"github.com/wayneeseguin/graft/log"
 	"github.com/starkandwayne/goutils/tree"
 )
@@ -146,6 +148,35 @@ func DefaultKeyGenerator() func() (string, error) {
 	}
 }
 
+// isPruneOperator checks if a value represents a prune operator
+func isPruneOperator(val interface{}) bool {
+	if str, ok := val.(string); ok {
+		// Match patterns like "(( prune ))" with optional whitespace
+		matched, _ := regexp.MatchString(`^\s*\(\(\s*prune\s*\)\)\s*$`, str)
+		if matched {
+			DEBUG("isPruneOperator: detected prune operator: %q", str)
+		}
+		return matched
+	}
+	
+	// Also check for Opcall structures that represent prune operations
+	if opcall, ok := val.(*Opcall); ok {
+		if opcall != nil && opcall.op != nil {
+			// Check if this is a prune operator
+			if _, isPrune := opcall.op.(interface{ String() string }); isPrune {
+				// This is a more complex check - for now, just check the source
+				if strings.Contains(opcall.src, "prune") {
+					DEBUG("isPruneOperator: detected prune opcall: %v", opcall.src)
+					return true
+				}
+			}
+		}
+	}
+	
+	DEBUG("isPruneOperator: not a prune operator: %T %v", val, val)
+	return false
+}
+
 // Merge merges two data structures
 func Merge(dst, src interface{}) error {
 	// Deep merge implementation for maps
@@ -159,6 +190,12 @@ func Merge(dst, src interface{}) error {
 	// Deep merge all keys from src to dst
 	for k, srcVal := range srcMap {
 		if dstVal, exists := dstMap[k]; exists {
+			// If destination has a prune operator, preserve it (prune takes precedence)
+			if isPruneOperator(dstVal) {
+				DEBUG("Merge: preserving prune operator at key %v", k)
+				continue
+			}
+			
 			// If both are maps, merge recursively
 			if dstSubMap, dstIsMap := dstVal.(map[interface{}]interface{}); dstIsMap {
 				if srcSubMap, srcIsMap := srcVal.(map[interface{}]interface{}); srcIsMap {

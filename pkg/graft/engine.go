@@ -7,6 +7,8 @@ import (
 	"io"
 	"strings"
 	"sync"
+	
+	"github.com/wayneeseguin/graft/log"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
@@ -387,12 +389,14 @@ func (e *DefaultEngine) evaluate(ctx context.Context, ev *Evaluator) error {
 	
 	// Post-processing: apply operator-level pruning
 	prunePaths := e.GetKeysToPrune()
+	log.DEBUG("Engine: Found %d prune paths to process: %v", len(prunePaths), prunePaths)
 	if len(prunePaths) > 0 {
 		// Convert tree paths to Document paths and remove them
 		doc := NewDocument(ev.Tree)
 		for _, path := range prunePaths {
 			// Remove the "$." prefix if present
 			cleanPath := strings.TrimPrefix(path, "$.")
+			log.DEBUG("Engine: Pruning path '%s' (cleaned: '%s')", path, cleanPath)
 			doc = doc.Prune(cleanPath)
 		}
 		// Update the evaluator tree with the pruned document

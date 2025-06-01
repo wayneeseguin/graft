@@ -89,12 +89,21 @@ func (e *MultiError) Count() int {
 	return len(e.Errors)
 }
 
+// MergeMetadata contains information about special operators encountered during merge
+type MergeMetadata struct {
+	PrunePaths []string          // Paths that should be pruned
+	SortPaths  map[string]string // Paths that should be sorted -> sort order
+}
+
 // Merger ...
 type Merger struct {
 	AppendByDefault bool
 
 	Errors MultiError
 	depth  int
+	
+	// Metadata about operations encountered during merge
+	metadata MergeMetadata
 }
 
 // ModificationDefinition encapsulates the details of an array modification:
@@ -123,12 +132,36 @@ func Merge(l ...map[interface{}]interface{}) (map[interface{}]interface{}, error
 	return root, m.Error()
 }
 
+// MergeWithMetadata performs merge and returns metadata about operations encountered
+func MergeWithMetadata(l ...map[interface{}]interface{}) (map[interface{}]interface{}, error, *MergeMetadata) {
+	m := &Merger{
+		metadata: MergeMetadata{
+			SortPaths: make(map[string]string),
+		},
+	}
+	root := map[interface{}]interface{}{}
+	for _, next := range l {
+		m.Merge(root, next)
+	}
+	return root, m.Error(), &m.metadata
+}
+
 // Error ...
 func (m *Merger) Error() error {
 	if m.Errors.Count() > 0 {
 		return m.Errors
 	}
 	return nil
+}
+
+// GetMetadata returns the metadata collected during merge
+func (m *Merger) GetMetadata() *MergeMetadata {
+	return &m.metadata
+}
+
+// SetMetadata sets the metadata for the merger
+func (m *Merger) SetMetadata(metadata *MergeMetadata) {
+	m.metadata = *metadata
 }
 
 func getDefaultIdentifierKey() string {
@@ -237,24 +270,27 @@ func (m *Merger) MergeObj(orig interface{}, n interface{}, node string) interfac
 	// common requirement is that both original and new object values are strings
 	origString, origOk := orig.(string)
 	newString, newOk := n.(string)
+	log.DEBUG("MergeObj at %s: orig=%T(%v) new=%T(%v)", node, orig, orig, n, n)
 	switch {
 	case origOk && pruneRx.MatchString(origString):
 		log.DEBUG("%s: a (( prune )) operator is about to be replaced, check if its path needs to be saved", node)
-		//addToPruneListIfNecessary(strings.Replace(node, "$.", "", -1))
+		log.DEBUG("MergeObj: PRESERVING prune operator: orig=%q, new=%v", origString, n)
+		m.addToPruneListIfNecessary(node)
 		return orig
 
 	case newOk && pruneRx.MatchString(newString) && orig != nil:
 		log.DEBUG("%s: a (( prune )) operator is about to replace existing content, check if its path needs to be saved", node)
-		//addToPruneListIfNecessary(strings.Replace(node, "$.", "", -1))
-		return orig
+		log.DEBUG("MergeObj: NEW prune operator replacing content: new=%q, orig=%v", newString, orig)
+		m.addToPruneListIfNecessary(node)
+		return newString  // Preserve the prune operator for evaluation phase
 
 	case origOk && sortRx.MatchString(origString):
 		log.DEBUG("%s: a (( sort )) operator is about to be replaced, check if its path needs to be saved", node)
-		//addToSortListIfNecessary(origString, strings.Replace(node, "$.", "", -1))
+		m.addToSortListIfNecessary(origString, node)
 
 	case newOk && sortRx.MatchString(newString) && orig != nil:
 		log.DEBUG("%s: a (( sort )) operator is about to replace existing content, check if its path needs to be saved", node)
-		//addToSortListIfNecessary(newString, strings.Replace(node, "$.", "", -1))
+		m.addToSortListIfNecessary(newString, node)
 		return orig
 	}
 
@@ -824,4 +860,41 @@ func deleteIndexFromList(orig []interface{}, idx int) []interface{} {
 	copy(tmp, orig)
 
 	return append(tmp[:idx], tmp[idx+1:]...)
+}
+
+// addToPruneListIfNecessary adds a path to the prune list if not already present
+func (m *Merger) addToPruneListIfNecessary(path string) {
+	// Remove "$." prefix if present
+	cleanPath := strings.TrimPrefix(path, "$.")
+	
+	// Check if already in list
+	for _, p := range m.metadata.PrunePaths {
+		if p == cleanPath {
+			return
+		}
+	}
+	
+	log.DEBUG("merger: adding '%s' to the list of paths to prune", cleanPath)
+	m.metadata.PrunePaths = append(m.metadata.PrunePaths, cleanPath)
+}
+
+// addToSortListIfNecessary adds a path to the sort list with its sort order
+func (m *Merger) addToSortListIfNecessary(operator, path string) {
+	// Extract sort order from operator if present
+	sortRx := regexp.MustCompile(`^\s*\Q((\E\s*sort(?:\s+by\s+(.*?))?\s*\Q))\E$`)
+	matches := sortRx.FindStringSubmatch(operator)
+	
+	sortKey := ""
+	if len(matches) > 1 && matches[1] != "" {
+		sortKey = strings.TrimSpace(matches[1])
+	}
+	
+	// Remove "$." prefix if present
+	cleanPath := strings.TrimPrefix(path, "$.")
+	
+	log.DEBUG("merger: adding '%s' to the list of paths to sort (by: %s)", cleanPath, sortKey)
+	if m.metadata.SortPaths == nil {
+		m.metadata.SortPaths = make(map[string]string)
+	}
+	m.metadata.SortPaths[cleanPath] = sortKey
 }

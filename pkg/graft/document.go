@@ -373,8 +373,41 @@ func (d *document) Prune(key string) Document {
 					lastList = v
 					lastListKey = segment
 				} else {
-					// Can't navigate through lists except at the end
-					return cloned
+					// Try to navigate through the list by finding a named element
+					nextSegment := segments[i+1]
+					found := false
+					
+					// Try numeric index first
+					if index, err := strconv.Atoi(nextSegment); err == nil {
+						if index >= 0 && index < len(v) {
+							if elem, ok := v[index].(map[interface{}]interface{}); ok {
+								current = elem
+								found = true
+								i++ // Skip the index segment since we processed it
+							}
+						}
+					}
+					
+					// If numeric index didn't work, try to find by name field
+					if !found {
+						for _, item := range v {
+							if elem, ok := item.(map[interface{}]interface{}); ok {
+								if name, exists := elem["name"]; exists {
+									if nameStr, ok := name.(string); ok && nameStr == nextSegment {
+										current = elem
+										found = true
+										i++ // Skip the name segment since we processed it
+										break
+									}
+								}
+							}
+						}
+					}
+					
+					if !found {
+						// Can't find the named element in the list
+						return cloned
+					}
 				}
 			default:
 				// Path doesn't exist or leads through a non-map/list
