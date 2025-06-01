@@ -343,8 +343,39 @@ func (d *document) Prune(key string) Document {
 	// Clone the document to avoid modifying the original
 	cloned := d.Clone().(*document)
 	
-	// Remove the key
-	delete(cloned.data, key)
+	// Check if this is a path or a simple key
+	if strings.Contains(key, ".") {
+		// Handle nested path
+		segments := strings.Split(key, ".")
+		current := cloned.data
+		
+		// Navigate to the parent of the key to remove
+		for i := 0; i < len(segments)-1; i++ {
+			segment := segments[i]
+			
+			switch v := current[segment].(type) {
+			case map[interface{}]interface{}:
+				current = v
+			case map[string]interface{}:
+				// Convert to map[interface{}]interface{} for consistency
+				newMap := make(map[interface{}]interface{})
+				for k, val := range v {
+					newMap[k] = val
+				}
+				current[segment] = newMap
+				current = newMap
+			default:
+				// Path doesn't exist or leads through a non-map
+				return cloned
+			}
+		}
+		
+		// Remove the final key
+		delete(current, segments[len(segments)-1])
+	} else {
+		// Simple key - remove from top level
+		delete(cloned.data, key)
+	}
 	
 	return cloned
 }

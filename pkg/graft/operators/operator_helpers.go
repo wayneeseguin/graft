@@ -27,7 +27,11 @@ func ResolveOperatorArgument(ev *Evaluator, arg *Expr) (interface{}, error) {
 		DEBUG("ResolveOperatorArgument: after env expansion: %s", arg.Reference.String())
 		val, err := arg.Reference.Resolve(ev.Tree)
 		DEBUG("ResolveOperatorArgument: reference %s resolved to %v (type %T)", arg.Reference.String(), val, val)
-		return val, err
+		if err != nil {
+			// Format the error message to match the expected format
+			return nil, fmt.Errorf("Unable to resolve `%s`: %s", arg.Reference.String(), err)
+		}
+		return val, nil
 
 	case EnvVar:
 		// Get environment variable value

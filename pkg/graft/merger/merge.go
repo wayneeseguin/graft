@@ -304,6 +304,7 @@ func (m *Merger) MergeObj(orig interface{}, n interface{}, node string) interfac
 func (m *Merger) mergeArray(orig []interface{}, n []interface{}, node string) []interface{} {
 	modificationDefinitions := getArrayModifications(n, isSimpleList(orig))
 	log.DEBUG("%s: performing %d modification operations against list", node, len(modificationDefinitions))
+	log.DEBUG("%s: original list has %d items, new list has %d items", node, len(orig), len(n))
 
 	// Create a copy of orig for the (multiple) modifications that are about to happen
 	result := make([]interface{}, len(orig))
@@ -312,13 +313,19 @@ func (m *Merger) mergeArray(orig []interface{}, n []interface{}, node string) []
 	// Process the modifications definitions that were found in the new list
 	for i, modificationDefinition := range modificationDefinitions {
 		log.DEBUG("  #%d %#v", i, modificationDefinition)
+		log.DEBUG("  modification: op=%v, key=%v, name=%v, index=%v, list_len=%d", 
+			modificationDefinition.listOp, modificationDefinition.key, modificationDefinition.name, 
+			modificationDefinition.index, len(modificationDefinition.list))
 
 		// insert/delete operations will use a list index later in this loop block
 		var idx int
 
 		// Special tag for default behavior. Cannot be invoked explicitly by users
 		if modificationDefinition.listOp == listOpMergeDefault {
-			result = m.mergeArrayDefault(orig, modificationDefinitions[0].list, node)
+			// Skip default merge if the list is empty (all entries were operators)
+			if len(modificationDefinitions[0].list) > 0 {
+				result = m.mergeArrayDefault(orig, modificationDefinitions[0].list, node)
+			}
 			continue
 		}
 

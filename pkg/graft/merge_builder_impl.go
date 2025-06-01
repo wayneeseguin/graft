@@ -460,8 +460,8 @@ func (m *mergeBuilderImpl) applyCherryPicking(doc Document) (Document, error) {
 	for _, key := range m.cherryPickKeys {
 		value, err := m.extractKey(data, key)
 		if err != nil {
-			// Log warning but continue - key might not exist
-			continue
+			// Cherry-picking should validate that all requested keys exist
+			return nil, err
 		}
 		err = m.setKey(result, key, value)
 		if err != nil {
@@ -536,20 +536,87 @@ func (m *mergeBuilderImpl) removeKey(data map[interface{}]interface{}, keyPath s
 }
 
 func (m *mergeBuilderImpl) extractKey(data map[interface{}]interface{}, keyPath string) (interface{}, error) {
-	// Simple implementation - for full implementation would need path parsing
-	if simpleKey := keyPath; simpleKey != "" {
-		if value, exists := data[simpleKey]; exists {
-			return deepCopyValue(value), nil
+	// Handle nested paths like "config.enabled"
+	if keyPath == "" {
+		return nil, NewValidationError("empty key path")
+	}
+	
+	// Split path by dots
+	parts := strings.Split(keyPath, ".")
+	
+	// Navigate through the structure
+	var current interface{} = data
+	for i, part := range parts {
+		switch v := current.(type) {
+		case map[interface{}]interface{}:
+			value, exists := v[part]
+			if !exists {
+				return nil, NewValidationError(fmt.Sprintf("key not found: %s (missing segment '%s')", keyPath, part))
+			}
+			current = value
+		case map[string]interface{}:
+			value, exists := v[part]
+			if !exists {
+				return nil, NewValidationError(fmt.Sprintf("key not found: %s (missing segment '%s')", keyPath, part))
+			}
+			current = value
+		default:
+			if i < len(parts)-1 {
+				// Still have more path segments but current value is not a map
+				return nil, NewValidationError(fmt.Sprintf("cannot navigate path '%s' at segment %d: '%s' is not a map", keyPath, i, parts[i-1]))
+			}
 		}
 	}
-	return nil, NewValidationError("key not found: " + keyPath)
+	
+	return deepCopyValue(current), nil
 }
 
 func (m *mergeBuilderImpl) setKey(data map[interface{}]interface{}, keyPath string, value interface{}) error {
-	// Simple implementation - for full implementation would need path parsing
-	if simpleKey := keyPath; simpleKey != "" {
-		data[simpleKey] = value
+	// Handle nested paths like "config.enabled"
+	if keyPath == "" {
+		return NewValidationError("empty key path")
 	}
+	
+	// Split path by dots
+	parts := strings.Split(keyPath, ".")
+	
+	// For simple keys, just set directly
+	if len(parts) == 1 {
+		data[keyPath] = value
+		return nil
+	}
+	
+	// Navigate to the parent map and set the final key
+	current := data
+	for i := 0; i < len(parts)-1; i++ {
+		part := parts[i]
+		
+		if next, exists := current[part]; exists {
+			switch v := next.(type) {
+			case map[interface{}]interface{}:
+				current = v
+			case map[string]interface{}:
+				// Convert to map[interface{}]interface{} for consistency
+				newMap := make(map[interface{}]interface{})
+				for k, val := range v {
+					newMap[k] = val
+				}
+				current[part] = newMap
+				current = newMap
+			default:
+				return NewValidationError(fmt.Sprintf("cannot set path '%s': segment '%s' is not a map", keyPath, part))
+			}
+		} else {
+			// Create intermediate maps as needed
+			newMap := make(map[interface{}]interface{})
+			current[part] = newMap
+			current = newMap
+		}
+	}
+	
+	// Set the final value
+	finalKey := parts[len(parts)-1]
+	current[finalKey] = value
 	return nil
 }
 

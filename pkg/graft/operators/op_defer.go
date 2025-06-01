@@ -22,7 +22,9 @@ func (DeferOperator) Phase() OperatorPhase {
 
 // Dependencies ...
 func (DeferOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
-	return auto
+	// Defer operator should not track dependencies since it's generating a string
+	// representation of an expression, not evaluating it
+	return []*tree.Cursor{}
 }
 
 // Run ...
@@ -32,6 +34,12 @@ func (DeferOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 	if len(args) == 0 {
 		return nil, fmt.Errorf("Defer has no arguments - what are you deferring?")
+	}
+
+	// Debug: log the arguments we received
+	DEBUG("defer received %d arguments:", len(args))
+	for i, arg := range args {
+		DEBUG("  arg[%d]: type=%v, value=%v", i, arg.Type, arg)
 	}
 
 	// The defer operator's purpose is to preserve the expression for later evaluation
