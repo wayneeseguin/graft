@@ -40,7 +40,7 @@ func TestEvaluator(t *testing.T) {
 		convey := func() {
 			if test != "" {
 				Convey(test, func() {
-					ev := &Evaluator{Tree: YAML(input)}
+					ev := &Evaluator{Tree: YAML(input), DataflowOrder: "insertion"}
 
 					ops, err := ev.DataFlow(phase)
 					So(err, ShouldBeNil)

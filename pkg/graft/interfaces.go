@@ -212,6 +212,27 @@ func (e *Expr) Args() []*Expr {
 	return nil
 }
 
+// containsLiteral checks if an expression contains a literal value
+// that would cause a LogicalOr to short-circuit
+func containsLiteral(e *Expr) bool {
+	if e == nil {
+		return false
+	}
+	
+	switch e.Type {
+	case Literal:
+		// Any non-nil literal will cause short-circuit
+		return e.Literal != nil
+	case LogicalOr:
+		// For nested OR, only check left side to see if it will short-circuit
+		// Don't recursively check the right side
+		return containsLiteral(e.Left)
+	default:
+		// Other expression types don't contain literals that would short-circuit
+		return false
+	}
+}
+
 // Dependencies returns the dependencies for this expression
 func (e *Expr) Dependencies(ev *Evaluator, locs []*tree.Cursor) []*tree.Cursor {
 	deps := []*tree.Cursor{}
@@ -225,9 +246,32 @@ func (e *Expr) Dependencies(ev *Evaluator, locs []*tree.Cursor) []*tree.Cursor {
 		if e.Call != nil {
 			deps = append(deps, e.Call.Dependencies(ev, locs)...)
 		}
+	case LogicalOr:
+		// For LogicalOr (||), we need sophisticated handling:
+		// 1. Left side is always evaluated (unconditional dependency)
+		// 2. Right side is only evaluated if left side fails
+		// 3. If left contains a literal, right side will never be evaluated
+		
+		if e.Left != nil {
+			deps = append(deps, e.Left.Dependencies(ev, locs)...)
+			
+			// Check if left side will always short-circuit (contains a literal)
+			if containsLiteral(e.Left) {
+				// Left side has a literal, so right side will never be evaluated
+				// Don't include right side dependencies
+				return deps
+			}
+		}
+		
+		// The right side is conditional - only evaluated if left side fails
+		// Include it for cycle detection, but only if left side might fail
+		if e.Right != nil {
+			deps = append(deps, e.Right.Dependencies(ev, locs)...)
+		}
+		return deps
 	}
 	
-	// Check left and right expressions
+	// Check left and right expressions for other expression types
 	if e.Left != nil {
 		deps = append(deps, e.Left.Dependencies(ev, locs)...)
 	}
