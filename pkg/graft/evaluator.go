@@ -35,6 +35,24 @@ type Evaluator struct {
 	// "alphabetical" (default) - sort operations alphabetically by path
 	// "insertion" - maintain the order operations were discovered
 	DataflowOrder string
+	
+	// CherryPickPaths contains the paths to cherry-pick during evaluation.
+	// When set, only operators under these paths and their dependencies will be evaluated.
+	// This enables selective evaluation, significantly improving performance for large documents
+	// when only specific parts are needed.
+	//
+	// Selective Evaluation Behavior:
+	// - Only operators whose paths match or are under cherry-pick paths are evaluated
+	// - Dependencies of cherry-picked operators are automatically included (transitive)
+	// - Path matching supports both exact indices and named array entries
+	// - Empty cherry-pick paths means evaluate everything (default behavior)
+	//
+	// Example: If cherry-picking "services.web", these operators will be evaluated:
+	//   - services.web.port: (( grab defaults.port ))     // Under cherry-pick path
+	//   - defaults.port: 8080                             // Dependency of above
+	// But this won't be evaluated:
+	//   - services.api.port: (( grab defaults.api_port )) // Not under cherry-pick path
+	CherryPickPaths []string
 }
 
 // SetEngine sets the engine for the evaluator
@@ -167,6 +185,14 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 	}
 
 	scan(ev.Tree)
+
+	// Filter operators if cherry-pick paths are specified
+	// Apply selective evaluation if cherry-pick paths are specified
+	// This filters operators to only those under cherry-picked paths and their dependencies
+	if len(ev.CherryPickPaths) > 0 {
+		log.DEBUG("DataFlow: Filtering operators for cherry-pick paths: %v", ev.CherryPickPaths)
+		all = ev.filterOperatorsForCherryPick(all)
+	}
 
 	// construct the data flow graph, where a -> b means 'b' calls or requires 'a'
 	// represent the graph as list of adjancies, where [a,b] = a -> b
@@ -826,4 +852,209 @@ func (ev *Evaluator) Run(prune []string, picks []string) error {
 		return errors
 	}
 	return nil
+}
+
+// isUnderPath checks if an operator path is under a cherry-pick path.
+// This is the core of selective evaluation - it determines whether an operator
+// should be evaluated based on cherry-pick paths.
+//
+// The function handles special cases like:
+// - Named array entries (e.g., "jobs.web" matching "jobs.0")
+// - Exact path matches
+// - Nested paths (e.g., "a.b.c" is under "a.b")
+func (ev *Evaluator) isUnderPath(opPath, cherryPath string) bool {
+	// Handle empty paths
+	if opPath == "" || cherryPath == "" {
+		return false
+	}
+	
+	// Parse both paths into cursors
+	opCursor, err := tree.ParseCursor(opPath)
+	if err != nil {
+		return false
+	}
+	cherryCursor, err := tree.ParseCursor(cherryPath)
+	if err != nil {
+		return false
+	}
+	
+	// Check if either cursor has no nodes
+	if len(opCursor.Nodes) == 0 || len(cherryCursor.Nodes) == 0 {
+		return false
+	}
+	
+	// Check if opCursor starts with cherryCursor
+	if len(opCursor.Nodes) < len(cherryCursor.Nodes) {
+		return false
+	}
+	
+	// Compare each segment with context
+	currentPath := &tree.Cursor{}
+	for i, cherryNode := range cherryCursor.Nodes {
+		if !ev.segmentsMatchWithContext(opCursor.Nodes[i], cherryNode, currentPath) {
+			return false
+		}
+		// Build up the current path as we go
+		currentPath.Push(opCursor.Nodes[i])
+	}
+	
+	return true
+}
+
+// segmentsMatchWithContext compares two path segments with access to the data structure
+func (ev *Evaluator) segmentsMatchWithContext(opSegment, cherrySegment string, currentPath *tree.Cursor) bool {
+	// Direct string comparison first
+	if opSegment == cherrySegment {
+		return true
+	}
+	
+	// Check if both are numeric indices
+	opIdx, opErr := strconv.Atoi(opSegment)
+	cherryIdx, cherryErr := strconv.Atoi(cherrySegment)
+	
+	// Both are numeric - they should match exactly
+	if opErr == nil && cherryErr == nil {
+		return opIdx == cherryIdx
+	}
+	
+	// One is numeric and one is not - check if they refer to the same array element
+	if (opErr == nil) != (cherryErr == nil) {
+		// Try to resolve the current path to get the actual array
+		if len(currentPath.Nodes) > 0 {
+			obj, err := currentPath.Resolve(ev.Tree)
+			if err == nil {
+				switch arr := obj.(type) {
+				case []interface{}:
+					// If we have a numeric index and a name, check if they match
+					if opErr == nil {
+						// opSegment is numeric, cherrySegment is a name
+						if opIdx >= 0 && opIdx < len(arr) {
+							// Check if the element at this index has the expected name
+							if elem, ok := arr[opIdx].(map[interface{}]interface{}); ok {
+								// Check common name fields
+								for _, nameField := range tree.NameFields {
+									if name, exists := elem[nameField]; exists {
+										if nameStr, ok := name.(string); ok && nameStr == cherrySegment {
+											return true
+										}
+									}
+								}
+							}
+						}
+					} else {
+						// cherrySegment is numeric, opSegment is a name
+						if cherryIdx >= 0 && cherryIdx < len(arr) {
+							// Check if the element at the cherry index has the op name
+							if elem, ok := arr[cherryIdx].(map[interface{}]interface{}); ok {
+								for _, nameField := range tree.NameFields {
+									if name, exists := elem[nameField]; exists {
+										if nameStr, ok := name.(string); ok && nameStr == opSegment {
+											return true
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	return false
+}
+
+// segmentsMatch compares two path segments without context (for backward compatibility)
+func (ev *Evaluator) segmentsMatch(opSegment, cherrySegment string) bool {
+	// Direct string comparison
+	return opSegment == cherrySegment
+}
+
+// filterOperatorsForCherryPick filters operators to only those needed for cherry-picked paths.
+// This implements the selective evaluation strategy:
+// 
+// 1. First identifies all operators under cherry-picked paths
+// 2. Then recursively collects all their dependencies (transitive closure)
+// 3. Returns only the operators that are needed for evaluation
+//
+// This significantly reduces the number of operators evaluated in large documents,
+// improving performance when only specific sections are needed.
+func (ev *Evaluator) filterOperatorsForCherryPick(all map[string]*Opcall) map[string]*Opcall {
+	if len(ev.CherryPickPaths) == 0 {
+		return all // No filtering needed
+	}
+	
+	needed := make(map[string]bool)
+	result := make(map[string]*Opcall)
+	
+	log.DEBUG("filterOperatorsForCherryPick: Filtering operators for cherry-pick paths: %v", ev.CherryPickPaths)
+	
+	// Step 1: Mark operators under cherry-picked paths
+	for path := range all {
+		for _, cherryPath := range ev.CherryPickPaths {
+			if ev.isUnderPath(path, cherryPath) {
+				needed[path] = true
+				log.DEBUG("filterOperatorsForCherryPick: Operator at %s is under cherry-pick path %s", path, cherryPath)
+				break
+			}
+		}
+	}
+	
+	// If no operators were found under cherry-pick paths, include all operators
+	// This handles cases where cherry-pick paths don't contain operators directly
+	if len(needed) == 0 {
+		log.DEBUG("filterOperatorsForCherryPick: No operators found under cherry-pick paths, including all")
+		return all
+	}
+	
+	// Step 2: Collect transitive dependencies - but only check operators in the dependency list
+	// We need to look at what the needed operators depend on, not what depends on them
+	changed := true
+	iterations := 0
+	maxIterations := 100 // Prevent infinite loops
+	
+	for changed && iterations < maxIterations {
+		changed = false
+		iterations++
+		
+		// Create a snapshot of currently needed paths to iterate over
+		currentNeeded := make([]string, 0, len(needed))
+		for path := range needed {
+			currentNeeded = append(currentNeeded, path)
+		}
+		
+		// For each needed operator, add its dependencies
+		for _, path := range currentNeeded {
+			if op, exists := all[path]; exists {
+				// Get dependencies for this operator
+				deps := op.Dependencies(ev, nil)
+				for _, dep := range deps {
+					// Try to resolve the dependency to a canonical path
+					depPath := dep.String()
+					
+					// Check if this dependency corresponds to an operator
+					if _, isOp := all[depPath]; isOp && !needed[depPath] {
+						needed[depPath] = true
+						changed = true
+						log.DEBUG("filterOperatorsForCherryPick: Added operator dependency %s for operator at %s", depPath, path)
+					}
+				}
+			}
+		}
+	}
+	
+	if iterations >= maxIterations {
+		log.DEBUG("filterOperatorsForCherryPick: Warning - reached maximum iterations while collecting dependencies")
+	}
+	
+	// Step 3: Build filtered result
+	for path, op := range all {
+		if needed[path] {
+			result[path] = op
+		}
+	}
+	
+	log.DEBUG("filterOperatorsForCherryPick: Filtered from %d to %d operators", len(all), len(result))
+	
+	return result
 }

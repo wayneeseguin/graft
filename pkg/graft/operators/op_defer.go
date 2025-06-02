@@ -47,8 +47,16 @@ func (DeferOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 	components := []string{"(("} // Join these with spaces at the end
 
-	for _, arg := range args {
-		components = append(components, reconstructExpr(arg))
+	// Special handling for when defer receives multiple arguments but the second is a LogicalOr
+	// This happens when parseArgs splits "grab this || that" into ["grab", LogicalOr(this, that)]
+	if len(args) == 2 && args[1].Type == LogicalOr {
+		// Reconstruct as a single expression
+		components = append(components, reconstructExpr(args[0]))
+		components = append(components, reconstructExpr(args[1]))
+	} else {
+		for _, arg := range args {
+			components = append(components, reconstructExpr(arg))
+		}
 	}
 	components = append(components, "))")
 

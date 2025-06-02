@@ -55,10 +55,24 @@ func (PruneOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	engine := graft.GetEngine(ev)
 	addToPruneListIfNecessary(engine, fmt.Sprintf("%s", ev.Here))
 
-	// simply replace it with nil (will be pruned at the end anyway)
+	// Get the current value at this location
+	val, err := ev.Here.Resolve(ev.Tree)
+	if err != nil {
+		DEBUG("  failed to resolve current value: %s", err)
+		// If we can't resolve the current value, just return a nil replacement
+		return &Response{
+			Type:  Replace,
+			Value: nil,
+		}, nil
+	}
+	
+	DEBUG("  current value at %s: %T(%v)", ev.Here, val, val)
+	
+	// Return the current value unchanged - just mark it for pruning at the end
+	// This allows other operators to still reference the value
 	return &Response{
 		Type:  Replace,
-		Value: nil,
+		Value: val,
 	}, nil
 }
 

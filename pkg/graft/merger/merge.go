@@ -223,30 +223,19 @@ func (m *Merger) mergeMap(orig map[interface{}]interface{}, n map[interface{}]in
 		// Debug logging
 		log.DEBUG("%s: val = %v (type: %T)", path, val, val)
 
-		// Handle null values - delete the key if the new value is nil
-		if val == nil {
-			log.DEBUG("%s: removing key due to null value", path)
-			delete(orig, k)
-			continue
-		}
+		// Note: We don't skip nil values here - in YAML, null is a valid value
+		// that should be preserved, not cause key deletion
 
 		if _, exists := orig[k]; exists {
 			log.DEBUG("%s: found upstream, merging it", path)
 			result := m.MergeObj(orig[k], val, path)
-			// If MergeObj returns nil, delete the key
-			if result == nil {
-				log.DEBUG("%s: removing key due to null merge result", path)
-				delete(orig, k)
-			} else {
-				orig[k] = result
-			}
+			// Always set the result, even if nil (null is a valid YAML value)
+			orig[k] = result
 		} else {
 			log.DEBUG("%s: not found upstream, adding it", path)
 			result := m.MergeObj(nil, deepCopy(val), path)
-			// Only add if not nil
-			if result != nil {
-				orig[k] = result
-			}
+			// Always add the result, even if nil (null is a valid YAML value)
+			orig[k] = result
 		}
 	}
 }
@@ -274,9 +263,9 @@ func (m *Merger) MergeObj(orig interface{}, n interface{}, node string) interfac
 	switch {
 	case origOk && pruneRx.MatchString(origString):
 		log.DEBUG("%s: a (( prune )) operator is about to be replaced, check if its path needs to be saved", node)
-		log.DEBUG("MergeObj: PRESERVING prune operator: orig=%q, new=%v", origString, n)
+		log.DEBUG("MergeObj: prune operator being replaced: orig=%q, new=%v", origString, n)
 		m.addToPruneListIfNecessary(node)
-		return orig
+		return n  // Return the new value, not the prune operator
 
 	case newOk && pruneRx.MatchString(newString) && orig != nil:
 		log.DEBUG("%s: a (( prune )) operator is about to replace existing content, check if its path needs to be saved", node)
@@ -599,7 +588,6 @@ func (m *Merger) mergeArrayInline(orig []interface{}, n []interface{}, node stri
 func (m *Merger) mergeArrayByKey(orig []interface{}, n []interface{}, node string, key string) []interface{} {
 	merged := make([]interface{}, 0, len(orig)+len(n))
 	newMap := make(map[interface{}]interface{})
-	pruneRx := regexp.MustCompile(`^\s*\Q((\E\s*prune\s*\Q))\E`)
 	
 	for _, o := range n {
 		obj := o.(map[interface{}]interface{})
@@ -618,23 +606,8 @@ func (m *Merger) mergeArrayByKey(orig []interface{}, n []interface{}, node strin
 			mergedItem = m.MergeObj(nil, obj, path)
 		}
 		
-		// Check for prune operators in values
-		isPruned := false
-		if mapItem, ok := mergedItem.(map[interface{}]interface{}); ok {
-			for _, v := range mapItem {
-				if str, ok := v.(string); ok && pruneRx.MatchString(str) {
-					// The entire entry should be pruned
-					isPruned = true
-					log.DEBUG("%s: pruning list entry", path)
-					m.addToPruneListIfNecessary(path)
-					break
-				}
-			}
-		}
-		
-		if !isPruned {
-			merged = append(merged, mergedItem)
-		}
+		// Don't check for prune operators here - they should be handled at the field level
+		merged = append(merged, mergedItem)
 	}
 
 	i := 0
@@ -645,23 +618,8 @@ func (m *Merger) mergeArrayByKey(orig []interface{}, n []interface{}, node strin
 			log.DEBUG("%s: appending new data to merged array", path)
 			mergedItem := m.MergeObj(nil, obj, path)
 			
-			// Check for prune operators in values
-			isPruned := false
-			if mapItem, ok := mergedItem.(map[interface{}]interface{}); ok {
-				for _, v := range mapItem {
-					if str, ok := v.(string); ok && pruneRx.MatchString(str) {
-						// The entire entry should be pruned
-						isPruned = true
-						log.DEBUG("%s: pruning list entry", path)
-						m.addToPruneListIfNecessary(path)
-						break
-					}
-				}
-			}
-			
-			if !isPruned {
-				merged = append(merged, mergedItem)
-			}
+			// Don't check for prune operators here - they should be handled at the field level
+			merged = append(merged, mergedItem)
 			i++
 		}
 	}

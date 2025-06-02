@@ -514,6 +514,12 @@ func (e *DefaultEngine) Evaluate(ctx context.Context, doc Document) (Document, e
 	// Create evaluator
 	ev := e.createEvaluator(data)
 	
+	// Extract cherry-pick paths from context if present
+	if cherryPickPaths := GetCherryPickPaths(ctx); cherryPickPaths != nil && len(cherryPickPaths) > 0 {
+		ev.CherryPickPaths = cherryPickPaths
+		ev.Only = cherryPickPaths // Also set the original field for backward compatibility
+	}
+	
 	// Run evaluation
 	err := e.evaluate(ctx, ev)
 	if err != nil {

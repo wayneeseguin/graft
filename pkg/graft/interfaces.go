@@ -1,6 +1,7 @@
 package graft
 
 import (
+	"context"
 	"fmt"
 	"github.com/starkandwayne/goutils/tree"
 )
@@ -330,4 +331,25 @@ func (e *Expr) Evaluate(tree interface{}) (interface{}, error) {
 	default:
 		return nil, fmt.Errorf("unsupported expression type for evaluation: %d", e.Type)
 	}
+}
+
+// cherryPickPathsKey is the context key for cherry-pick paths
+// This allows cherry-pick paths to be passed through the evaluation pipeline
+// without modifying all method signatures.
+type cherryPickPathsKey struct{}
+
+// WithCherryPickPaths adds cherry-pick paths to the context.
+// This is used by MergeBuilder to pass cherry-pick paths to the evaluator
+// enabling selective evaluation of operators.
+func WithCherryPickPaths(ctx context.Context, paths []string) context.Context {
+	return context.WithValue(ctx, cherryPickPathsKey{}, paths)
+}
+
+// GetCherryPickPaths extracts cherry-pick paths from the context.
+// Used by the engine to retrieve cherry-pick paths and set them on the evaluator.
+func GetCherryPickPaths(ctx context.Context) []string {
+	if paths, ok := ctx.Value(cherryPickPathsKey{}).([]string); ok {
+		return paths
+	}
+	return nil
 }

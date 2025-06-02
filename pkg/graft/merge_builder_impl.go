@@ -474,15 +474,6 @@ func (m *mergeBuilderImpl) applyPostProcessing(doc Document) (Document, error) {
 		result = pruned
 	}
 
-	// Apply cherry-picking
-	if len(m.cherryPickKeys) > 0 {
-		cherryPicked, err := m.applyCherryPicking(result)
-		if err != nil {
-			return nil, err
-		}
-		result = cherryPicked
-	}
-
 	// Pass merge metadata to engine before evaluation
 	if m.mergeMetadata != nil && m.engine != nil {
 		// Add prune paths to engine state
@@ -502,6 +493,15 @@ func (m *mergeBuilderImpl) applyPostProcessing(doc Document) (Document, error) {
 			return nil, err
 		}
 		result = evaluated
+	}
+
+	// Apply cherry-picking AFTER evaluation
+	if len(m.cherryPickKeys) > 0 {
+		cherryPicked, err := m.applyCherryPicking(result)
+		if err != nil {
+			return nil, err
+		}
+		result = cherryPicked
 	}
 
 	return result, nil
@@ -580,6 +580,12 @@ func (m *mergeBuilderImpl) applyCherryPicking(doc Document) (Document, error) {
 func (m *mergeBuilderImpl) applyEvaluation(doc Document) (Document, error) {
 	// Use the engine's evaluate method if available
 	if m.engine != nil {
+		// If we have cherry-pick keys, pass them to the engine for evaluation
+		if len(m.cherryPickKeys) > 0 {
+			// Create a context with cherry-pick keys using the helper function
+			evalCtx := WithCherryPickPaths(m.ctx, m.cherryPickKeys)
+			return m.engine.Evaluate(evalCtx, doc)
+		}
 		return m.engine.Evaluate(m.ctx, doc)
 	}
 
@@ -591,8 +597,8 @@ func (m *mergeBuilderImpl) applyEvaluation(doc Document) (Document, error) {
 		Tree: data,
 	}
 
-	// Run evaluation
-	err := evaluator.Run(nil, nil)
+	// Run evaluation - pass cherry-pick keys as the "picks" parameter
+	err := evaluator.Run(nil, m.cherryPickKeys)
 	if err != nil {
 		return nil, NewEvaluationError("", "failed to evaluate merged document", err)
 	}
