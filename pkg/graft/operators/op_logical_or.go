@@ -7,7 +7,7 @@ import (
 )
 
 // LogicalOrOperator implements true logical OR (not fallback)
-// This is separate from FallbackOperator which implements fallback/coalesce behavior
+// This is separate from OrElseOperator which implements fallback/coalesce behavior
 type LogicalOrOperator struct{}
 
 // Setup initializes the operator
@@ -64,5 +64,5 @@ func (LogicalOrOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 }
 
 // Note: We don't register this operator in init() yet to avoid conflicts
-// with the existing FallbackOperator. This will be done when we refactor
+// with the existing OrElseOperator. This will be done when we refactor
 // the operator registration.

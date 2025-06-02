@@ -147,6 +147,7 @@ func DefaultEngineConfig() EngineConfig {
 		CacheSize:         10000,
 		EnableParallel:    false,
 		MaxWorkers:        4,
+		DataflowOrder:     "alphabetical", // Default to alphabetical ordering
 	}
 }
 
@@ -401,6 +402,38 @@ func (e *DefaultEngine) evaluate(ctx context.Context, ev *Evaluator) error {
 		}
 		// Update the evaluator tree with the pruned document
 		ev.Tree = doc.RawData().(map[interface{}]interface{})
+	}
+	
+	// Post-processing: apply sort operations
+	sortPaths := e.GetPathsToSort()
+	log.DEBUG("Engine: Found %d sort paths to process: %v", len(sortPaths), sortPaths)
+	if len(sortPaths) > 0 {
+		for path, sortKey := range sortPaths {
+			// Remove the "$." prefix if present
+			cleanPath := strings.TrimPrefix(path, "$.")
+			log.DEBUG("Engine: Sorting path '%s' by key '%s'", cleanPath, sortKey)
+			
+			// Navigate to the list at the path
+			value, err := getValueAtPath(ev.Tree, cleanPath)
+			if err != nil {
+				log.DEBUG("Engine: Failed to get value at path '%s': %v", cleanPath, err)
+				continue
+			}
+			
+			// Check if it's a list
+			if list, ok := value.([]interface{}); ok {
+				// Sort the list in place
+				err := SortList(cleanPath, list, sortKey)
+				if err != nil {
+					log.DEBUG("Engine: Failed to sort list at path '%s': %v", cleanPath, err)
+					// Don't fail the whole evaluation, just log the error
+					continue
+				}
+				log.DEBUG("Engine: Successfully sorted list at path '%s'", cleanPath)
+			} else {
+				log.DEBUG("Engine: Value at path '%s' is not a list, skipping sort", cleanPath)
+			}
+		}
 	}
 	
 	return nil

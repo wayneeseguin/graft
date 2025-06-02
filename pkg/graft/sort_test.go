@@ -14,14 +14,19 @@ func TestSort(t *testing.T) {
 	// Disable ANSI colors for testing
 	ansi.Color(false)
 	
-	Convey("that the actual Run function of the sort operator is dead code", t, func() {
+	Convey("that the sort operator returns the current value during evaluation", t, func() {
 		op := &operators.SortOperator{}
-		ev := &graft.Evaluator{Here: &tree.Cursor{Nodes: []string{"foobar"}}}
+		testData := map[interface{}]interface{}{"foobar": []interface{}{3, 1, 2}}
+		ev := &graft.Evaluator{
+			Here: &tree.Cursor{Nodes: []string{"foobar"}},
+			Tree: testData,
+		}
 
 		resp, err := op.Run(ev, []*graft.Expr{})
-		So(resp, ShouldBeNil)
-		So(err, ShouldNotBeNil)
-		So(err.Error(), ShouldResemble, "orphaned (( sort )) operator at $.foobar, no list exists at that path")
+		So(err, ShouldBeNil)
+		So(resp, ShouldNotBeNil)
+		So(resp.Type, ShouldEqual, graft.Replace)
+		So(resp.Value, ShouldResemble, []interface{}{3, 1, 2}) // Value should be unchanged during evaluation
 	})
 
 	Convey("that sorting an empty list returns an empty list", t, func() {

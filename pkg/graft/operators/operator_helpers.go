@@ -59,7 +59,7 @@ func ResolveOperatorArgument(ev *Evaluator, arg *Expr) (interface{}, error) {
 		return evaluateNestedOperator(ev, arg)
 
 	case LogicalOr:
-		// Handle || as a fallback operator - if left fails, try right
+		// Handle || as an or-else operator - if left fails, try right
 		// Note: nil is a valid concrete value and should NOT cause fallback
 		left, err := ResolveOperatorArgument(ev, arg.Left)
 		if err == nil {

@@ -43,7 +43,17 @@ func (SortOperator) Dependencies(_ *Evaluator, _ []*Expr, _ []*tree.Cursor, auto
 
 // Run ...
 func (SortOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
-	return nil, fmt.Errorf("orphaned (( sort )) operator at $.%s, no list exists at that path", ev.Here)
+	// The sort operator is handled as a post-processing step after evaluation,
+	// so during evaluation it just returns the current value unchanged.
+	// The actual sorting happens in the engine's evaluate method.
+	val, err := ev.Here.Resolve(ev.Tree)
+	if err != nil {
+		return nil, err
+	}
+	return &Response{
+		Type:  Replace,
+		Value: val,
+	}, nil
 }
 
 func init() {

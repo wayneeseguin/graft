@@ -133,13 +133,13 @@ func TestOperatorPrecedenceTable(t *testing.T) {
 			{`(( 2 + 3 > 4 ))`, true, "arithmetic before comparison (greater than)"},
 			{`(( 5 * 2 <= 10 ))`, true, "arithmetic before comparison (less equal)"},
 
-			// Boolean precedence (|| is fallback in Graft, not boolean OR)
+			// Boolean precedence (|| is or-else in Graft, not boolean OR)
 			{`(( true || false && false ))`, true, "&& before ||"},
-			{`(( false && true || true ))`, false, "&& before || (with false)"}, // fallback returns left value
+			{`(( false && true || true ))`, false, "&& before || (with false)"}, // or-else returns left value
 
 			// Comparison and boolean
 			{`(( 5 > 3 && 2 < 4 ))`, true, "comparison before boolean"},
-			{`(( 1 == 1 || 2 != 2 ))`, true, "equality before boolean (with OR)"}, // 1==1 is true, fallback returns it
+			{`(( 1 == 1 || 2 != 2 ))`, true, "equality before boolean (with OR)"}, // 1==1 is true, or-else returns it
 
 			// Ternary lowest precedence
 			{`(( true || false ? "yes" : "no" ))`, "yes", "boolean before ternary"},
@@ -209,10 +209,10 @@ empty_map: {}
 		})
 
 		Convey("empty value handling", func() {
-			// Empty string with fallback
+			// Empty string with or-else
 			result, err := parseAndEvaluateExpression(ev, `(( empty_string || "default" ))`)
 			So(err, ShouldBeNil)
-			So(result, ShouldEqual, "") // Fallback operator returns the value, not boolean
+			So(result, ShouldEqual, "") // OrElse operator returns the value, not boolean
 
 			// Zero is falsy
 			result, err = parseAndEvaluateExpression(ev, `(( zero && true ))`)

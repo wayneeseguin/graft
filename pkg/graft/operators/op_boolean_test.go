@@ -86,9 +86,9 @@ func TestBooleanOperators(t *testing.T) {
 			})
 		})
 
-		Convey("Fallback (||) operator", func() {
+		Convey("OrElse (||) operator", func() {
 			ev := &Evaluator{Tree: YAML(`{}`)}
-			op := FallbackOperator{}
+			op := OrElseOperator{}
 
 			Convey("returns first non-nil value", func() {
 				resp, err := op.Run(ev, []*Expr{
@@ -187,7 +187,7 @@ empty: ""
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, true)
 
-			// Test fallback (|| is fallback, not boolean OR)
+			// Test or-else (|| is or-else, not boolean OR)
 			result, err = parseAndEvaluateExpression(ev, `(( debug || name == "test" ))`)
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, false) // debug evaluates to false, so that's returned
@@ -202,7 +202,7 @@ empty: ""
 			// && has higher precedence than ||
 			result, err := parseAndEvaluateExpression(ev, `(( debug || enabled && count > 0 ))`)
 			So(err, ShouldBeNil)
-			So(result, ShouldEqual, false) // || is fallback, so returns debug's value (false)
+			So(result, ShouldEqual, false) // || is or-else, so returns debug's value (false)
 		})
 	})
 }

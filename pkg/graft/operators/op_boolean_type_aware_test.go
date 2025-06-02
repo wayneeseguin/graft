@@ -148,15 +148,15 @@ result: (( nothing && something ))
 			})
 		})
 
-		Convey("OR Operator (||) fallback", func() {
-			// OR operator implements fallback behavior, not boolean OR
+		Convey("OR Operator (||) or-else", func() {
+			// OR operator implements or-else behavior, not boolean OR
 			Convey("should return first operand when it's not nil", func() {
 				input := `
 first: "hello"
 second: "world"
 result: (( first || second ))
 `
-				testBoolean(input, "result", "hello") // fallback returns "hello"
+				testBoolean(input, "result", "hello") // or-else returns "hello"
 			})
 
 			Convey("should return second operand when first is nil", func() {

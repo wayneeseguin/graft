@@ -667,6 +667,16 @@ func mergeAllDocs(files []YamlFile, options mergeOpts) (map[interface{}]interfac
 		mergeBuilder = mergeBuilder.SkipEvaluation()
 	}
 	
+	// Apply cherry-pick keys at the builder level
+	if len(options.CherryPick) > 0 {
+		mergeBuilder = mergeBuilder.WithCherryPick(options.CherryPick...)
+	}
+	
+	// Apply prune keys at the builder level
+	if len(options.Prune) > 0 {
+		mergeBuilder = mergeBuilder.WithPrune(options.Prune...)
+	}
+	
 	// Execute merge
 	merged, err := mergeBuilder.Execute()
 	if err != nil {
@@ -677,38 +687,9 @@ func mergeAllDocs(files []YamlFile, options mergeOpts) (map[interface{}]interfac
 		return nil, ansi.Errorf("@R{Merge failed}: %s", err.Error())
 	}
 
-	// Evaluate operators unless skipped
-	var result graft.Document
-	if !options.SkipEval {
-		result, err = engine.Evaluate(nil, merged)
-		if err != nil {
-			return nil, ansi.Errorf("@R{Evaluation failed}: %s", err.Error())
-		}
-	} else {
-		result = merged
-	}
-
-	// Apply pruning and cherry-picking
-	if len(options.Prune) > 0 {
-		for _, key := range options.Prune {
-			result = result.Prune(key)
-		}
-	}
-	
-	if len(options.CherryPick) > 0 {
-		// Validate cherry-pick paths exist before extraction
-		data := result.GetData().(map[interface{}]interface{})
-		for _, path := range options.CherryPick {
-			if err := validatePath(data, path); err != nil {
-				return nil, err
-			}
-		}
-		result = result.CherryPick(options.CherryPick...)
-	}
-
 	// Get the raw data for backward compatibility
 	// The CLI expects a map[interface{}]interface{}
-	return result.GetData().(map[interface{}]interface{}), nil
+	return merged.GetData().(map[interface{}]interface{}), nil
 }
 
 func diffFiles(paths []string) (string, bool, error) {
