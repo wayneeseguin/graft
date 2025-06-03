@@ -1,0 +1,58 @@
+# Enhanced NATS Operator Features
+# Demonstrates all the enhanced features added in the implementation
+
+meta:
+  # TTL-based caching with custom expiration
+  cached_config: (( nats "kv:config/database" {
+    url: "nats://localhost:4222"
+    cache_ttl: "30m"  # Cache for 30 minutes
+  } ))
+  
+  # Streaming support for large objects
+  large_deployment: (( nats "obj:deployments/production.yaml" {
+    url: "nats://cluster.example.com:4222"
+    streaming_threshold: 5242880  # 5MB threshold
+    timeout: "60s"
+  } ))
+  
+  # Audit logging for security compliance
+  secrets: (( nats "kv:secrets/api_keys" {
+    url: "nats://secure.example.com:4222"
+    audit_logging: true
+    tls: true
+    cert_file: "/etc/ssl/certs/client.crt"
+    key_file: "/etc/ssl/private/client.key"
+  } ))
+
+# Enhanced reliability configuration
+production:
+  critical_data: (( nats "kv:production/critical" {
+    url: "nats://prod-cluster.example.com:4222"
+    timeout: "30s"
+    retries: 15
+    retry_interval: "3s"
+    retry_backoff: 2.5
+    max_retry_interval: "120s"
+    cache_ttl: "5m"
+    audit_logging: true
+    streaming_threshold: 10485760  # 10MB
+    tls: true
+    cert_file: "/etc/ssl/certs/prod-client.crt"
+    key_file: "/etc/ssl/private/prod-client.key"
+    ca_file: "/etc/ssl/certs/prod-ca.crt"
+  } ))
+
+# Metrics and observability - accessed via GetNatsMetrics()
+# Available metrics include:
+# - operation counts and timing
+# - cache hit rates
+# - error rates
+# - connection pool status
+# - operator uptime
+
+# Performance optimizations automatically enabled:
+# - Connection pooling with 5-minute idle timeout
+# - Thread-safe TTL caching
+# - Automatic cleanup of expired cache entries
+# - Streaming for large objects
+# - Retry logic with exponential backoff

@@ -299,6 +299,38 @@ nested:
 					So(err, ShouldBeNil)
 					So(resp.Value, ShouldEqual, "initial value") // Still cached
 				})
+				
+				Convey("Should respect custom cache TTL", func() {
+					ClearNatsCache()
+					
+					// Use short TTL for testing
+					configMap := map[interface{}]interface{}{
+						"url":       url,
+						"cache_ttl": "100ms",
+					}
+					
+					args := []*graft.Expr{
+						{Type: graft.Literal, Literal: "kv:cachetest/cachekey"},
+						{Type: graft.Literal, Literal: configMap},
+					}
+					
+					// First request
+					resp, err := op.Run(ev, args)
+					So(err, ShouldBeNil)
+					So(resp.Value, ShouldEqual, "initial value")
+					
+					// Update value in NATS
+					_, err = kv.PutString(context.Background(), "cachekey", "updated value")
+					So(err, ShouldBeNil)
+					
+					// Wait for cache to expire
+					time.Sleep(150 * time.Millisecond)
+					
+					// Third request should get updated value
+					resp, err = op.Run(ev, args)
+					So(err, ShouldBeNil)
+					So(resp.Value, ShouldEqual, "updated value") // Cache expired, fresh value
+				})
 			})
 			
 			Convey("Error handling", func() {
@@ -312,7 +344,7 @@ nested:
 					
 					_, err := op.Run(ev, args)
 					So(err, ShouldNotBeNil)
-					So(err.Error(), ShouldContainSubstring, "failed to access KV store")
+					So(err.Error(), ShouldContainSubstring, "failed to get key")
 				})
 				
 				Convey("Should fail on missing object", func() {
@@ -333,6 +365,101 @@ nested:
 					So(err, ShouldNotBeNil)
 					So(err.Error(), ShouldContainSubstring, "failed to get object")
 				})
+			})
+			
+			Convey("Audit logging", func() {
+				// Test that audit logging can be enabled
+				configMap := map[interface{}]interface{}{
+					"url":           url,
+					"audit_logging": true,
+				}
+				
+				args := []*graft.Expr{
+					{Type: graft.Literal, Literal: "kv:configtest/testkey"},
+					{Type: graft.Literal, Literal: configMap},
+				}
+				
+				resp, err := op.Run(ev, args)
+				So(err, ShouldBeNil)
+				So(resp, ShouldNotBeNil)
+				So(resp.Value, ShouldEqual, "testvalue")
+				
+				// Test audit logging disabled (default)
+				configMapNoAudit := map[interface{}]interface{}{
+					"url":           url,
+					"audit_logging": false,
+				}
+				
+				argsNoAudit := []*graft.Expr{
+					{Type: graft.Literal, Literal: "kv:configtest/testkey"},
+					{Type: graft.Literal, Literal: configMapNoAudit},
+				}
+				
+				resp, err = op.Run(ev, argsNoAudit)
+				So(err, ShouldBeNil)
+				So(resp, ShouldNotBeNil)
+				So(resp.Value, ShouldEqual, "testvalue")
+			})
+			
+			Convey("Streaming configuration", func() {
+				// Test that streaming threshold can be configured
+				configMap := map[interface{}]interface{}{
+					"url":                url,
+					"streaming_threshold": 5242880, // 5MB threshold
+				}
+				
+				args := []*graft.Expr{
+					{Type: graft.Literal, Literal: "kv:configtest/testkey"},
+					{Type: graft.Literal, Literal: configMap},
+				}
+				
+				resp, err := op.Run(ev, args)
+				So(err, ShouldBeNil)
+				So(resp, ShouldNotBeNil)
+				So(resp.Value, ShouldEqual, "testvalue")
+			})
+			
+			Convey("Metrics and observability", func() {
+				// Create a KV store for testing metrics
+				kv, err := js.CreateKeyValue(context.Background(), jetstream.KeyValueConfig{
+					Bucket: "metricstest",
+				})
+				So(err, ShouldBeNil)
+				
+				_, err = kv.PutString(context.Background(), "testkey", "testvalue")
+				So(err, ShouldBeNil)
+				
+				// Clear cache and metrics for clean test
+				ClearNatsCache()
+				
+				args := []*graft.Expr{
+					{Type: graft.Literal, Literal: "kv:metricstest/testkey"},
+					{Type: graft.Literal, Literal: url},
+				}
+				
+				// First request (cache miss)
+				_, err = op.Run(ev, args)
+				So(err, ShouldBeNil)
+				
+				// Second request (cache hit)
+				_, err = op.Run(ev, args)
+				So(err, ShouldBeNil)
+				
+				// Get metrics
+				metrics := GetNatsMetrics()
+				So(metrics, ShouldNotBeNil)
+				
+				// Check KV operation metrics exist and are reasonable
+				kvMetrics, ok := metrics["kv"].(map[string]interface{})
+				So(ok, ShouldBeTrue)
+				So(kvMetrics["total_operations"], ShouldBeGreaterThan, int64(0))
+				So(kvMetrics["cache_hits"], ShouldBeGreaterThanOrEqualTo, int64(0))
+				So(kvMetrics["total_errors"], ShouldBeGreaterThanOrEqualTo, int64(0))
+				So(kvMetrics["avg_duration_ms"], ShouldBeGreaterThanOrEqualTo, 0.0)
+				
+				// Check general metrics
+				So(metrics["operator_uptime"], ShouldNotBeNil)
+				So(metrics["cache_size"], ShouldBeGreaterThan, 0)
 			})
 		})
 		

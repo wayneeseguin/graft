@@ -415,6 +415,48 @@ database:
   static_ips: (( static_ips 0 10 (grab network.subnets) ))
 ```
 
+### Advanced Configuration:
+
+```yaml
+# Enhanced configuration with all available options
+reliable_config: (( nats "kv:config/critical" {
+  url: "nats://cluster.example.com:4222"
+  timeout: "15s"
+  retries: 10
+  retry_interval: "2s"
+  retry_backoff: 2.0
+  max_retry_interval: "60s"
+  cache_ttl: "10m"
+  streaming_threshold: 5242880
+  audit_logging: true
+} ))
+
+# Full TLS configuration with client certificates
+secure_config: (( nats "obj:secrets/app.yaml" {
+  url: "tls://secure.nats.example.com:4222"
+  timeout: "20s"
+  retries: 5
+  tls: true
+  cert_file: "/etc/ssl/certs/client.crt"
+  key_file: "/etc/ssl/private/client.key"
+  ca_file: "/etc/ssl/certs/ca.crt"
+  insecure_skip_verify: false
+} ))
+```
+
+### Enhanced Performance Features:
+- **Connection Pooling**: Automatic connection reuse with reference counting and 5-minute idle timeout
+- **TTL-based Caching**: Configurable cache expiration with thread-safe implementation
+- **Streaming Support**: Memory-efficient handling of large objects with configurable thresholds
+- **Retry Logic**: Exponential backoff with configurable intervals and maximum retry limits
+- **Automatic Cleanup**: Background cleanup of idle connections and expired cache entries
+
+### Security and Observability:
+- **Audit Logging**: Optional audit trail for sensitive data access (configurable via `audit_logging`)
+- **Metrics Collection**: Built-in metrics for operations, cache performance, and error rates
+- **TLS Support**: Full certificate-based authentication with CA validation
+- **Memory Safety**: Streaming prevents excessive memory usage for large objects
+
 ### Caching:
 The NATS operator caches fetched values for the duration of the graft execution to improve performance.
 

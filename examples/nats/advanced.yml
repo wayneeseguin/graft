@@ -1,4 +1,9 @@
 # Advanced NATS operator usage examples
+# Demonstrates advanced features including:
+# - Connection pooling and retry logic
+# - TLS support with client certificates
+# - Dynamic path construction
+# - Environment-specific configuration
 
 meta:
   app_name: myservice
@@ -86,3 +91,62 @@ features:
   enable_new_ui: (( grab flags.new_ui || false ))
   enable_beta_api: (( grab flags.beta_api || false ))
   enable_analytics: (( grab flags.analytics || true ))
+
+# Advanced configuration with retry logic and TLS
+secure_services:
+  # Database config with retry logic
+  database: (( nats "kv:config/database" {
+    url: "nats://secure.example.com:4222"
+    timeout: "10s"
+    retries: 5
+    retry_interval: "2s"
+    retry_backoff: 1.5
+    max_retry_interval: "30s"
+  } ))
+  
+  # TLS configuration for secure connections
+  secrets: (( nats "obj:secrets/app_secrets.yaml" {
+    url: "tls://secure.nats.example.com:4222"
+    timeout: "15s"
+    retries: 3
+    tls: true
+    cert_file: "/etc/ssl/certs/client.crt"
+    key_file: "/etc/ssl/private/client.key"
+    ca_file: "/etc/ssl/certs/ca.crt"
+    insecure_skip_verify: false
+  } ))
+  
+  # Connection pooling demonstration
+  # Multiple NATS calls to the same server will reuse connections
+  cache_config: (( nats "kv:config/cache_settings" "nats://localhost:4222" ))
+  logging_config: (( nats "kv:config/log_settings" "nats://localhost:4222" ))
+
+# Environment-specific reliability settings
+reliability:
+  production:
+    # High retry count for production reliability
+    cluster_config: (( nats "kv:prod/cluster" {
+      url: "nats://prod-cluster.example.com:4222"
+      retries: 10
+      retry_interval: "5s"
+      retry_backoff: 2.0
+      max_retry_interval: "60s"
+    } ))
+    
+    # Critical configuration with maximum resilience
+    critical_settings: (( nats "kv:prod/critical" {
+      url: "nats://prod-cluster.example.com:4222"
+      timeout: "30s"
+      retries: 15
+      retry_interval: "3s"
+      retry_backoff: 2.5
+      max_retry_interval: "120s"
+    } ))
+  
+  development:
+    # Lower retry for faster development feedback
+    cluster_config: (( nats "kv:dev/cluster" {
+      url: "nats://dev.example.com:4222"
+      retries: 2
+      retry_interval: "1s"
+    } ))

@@ -2,9 +2,12 @@ package operators
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/geofffranks/yaml"
@@ -15,17 +18,72 @@ import (
 	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
-// natsConnection holds a shared NATS connection
-var natsConnection *nats.Conn
+// TTL cache structures
+type cacheItem struct {
+	value     interface{}
+	expiresAt time.Time
+}
 
-// natsJetStream holds a shared JetStream context
-var natsJetStream jetstream.JetStream
+type ttlCache struct {
+	mu    sync.RWMutex
+	items map[string]*cacheItem
+}
 
-// natsKVCache caches values from NATS KV stores
-var natsKVCache = make(map[string]interface{})
+// Metrics structures for observability
+type operationStats struct {
+	count         int64
+	totalDuration time.Duration
+	errors        int64
+	cacheHits     int64
+	lastAccess    time.Time
+}
 
-// natsObjCache caches values from NATS Object stores
-var natsObjCache = make(map[string]interface{})
+type operatorMetrics struct {
+	mu           sync.RWMutex
+	operations   map[string]*operationStats
+	startTime    time.Time
+}
+
+// Connection pool for NATS connections
+type natsConnectionPool struct {
+	mu          sync.RWMutex
+	connections map[string]*pooledConnection
+	stopCleanup chan struct{}
+}
+
+type pooledConnection struct {
+	conn      *nats.Conn
+	js        jetstream.JetStream
+	lastUsed  time.Time
+	refCount  int
+}
+
+var (
+	// Global connection pool
+	natsPool = &natsConnectionPool{
+		connections: make(map[string]*pooledConnection),
+		stopCleanup: make(chan struct{}),
+	}
+	
+	// Connection pool settings
+	poolMaxIdleTime = 5 * time.Minute
+	poolCleanupInterval = 1 * time.Minute
+	
+	// TTL-based cache for NATS values
+	natsCache = &ttlCache{
+		items: make(map[string]*cacheItem),
+	}
+	
+	// Cache settings
+	defaultCacheTTL = 5 * time.Minute
+	cacheCleanupInterval = 1 * time.Minute
+	
+	// Metrics and observability
+	natsMetrics = &operatorMetrics{
+		operations:   make(map[string]*operationStats),
+		startTime:    time.Now(),
+	}
+)
 
 // SkipNats toggles whether NatsOperator will attempt to connect to NATS
 // When true will always return "REDACTED"
@@ -35,14 +93,22 @@ var SkipNats bool
 // It will fetch values from NATS JetStream KV or Object stores
 type NatsOperator struct{}
 
-// natsConfig holds connection configuration
+// natsConfig holds connection configuration with enhanced retry and TLS options
 type natsConfig struct {
-	URL      string
-	Timeout  time.Duration
-	Retries  int
-	TLS      bool
-	CertFile string
-	KeyFile  string
+	URL                string
+	Timeout            time.Duration
+	Retries            int
+	RetryInterval      time.Duration
+	RetryBackoff       float64
+	MaxRetryInterval   time.Duration
+	TLS                bool
+	CertFile           string
+	KeyFile            string
+	CAFile             string
+	InsecureSkipVerify bool
+	CacheTTL           time.Duration
+	StreamingThreshold int64 // Size threshold for streaming objects (bytes)
+	AuditLogging       bool  // Enable audit logging for access
 }
 
 // parseNatsPath extracts store type (kv/obj) and path from the argument
@@ -68,10 +134,16 @@ func parseNatsPath(path string) (storeType, storePath string, err error) {
 // parseNatsConfig extracts configuration from arguments
 func parseNatsConfig(ev *graft.Evaluator, args []*graft.Expr) (*natsConfig, error) {
 	config := &natsConfig{
-		URL:     nats.DefaultURL,
-		Timeout: 5 * time.Second,
-		Retries: 3,
-		TLS:     false,
+		URL:                nats.DefaultURL,
+		Timeout:            5 * time.Second,
+		Retries:            3,
+		RetryInterval:      1 * time.Second,
+		RetryBackoff:       2.0,
+		MaxRetryInterval:   30 * time.Second,
+		TLS:                false,
+		CacheTTL:           defaultCacheTTL,
+		StreamingThreshold: 10 * 1024 * 1024, // 10MB default
+		AuditLogging:       false,             // Disabled by default
 	}
 	
 	// If we have a second argument, it could be URL string or config map
@@ -122,6 +194,60 @@ func parseNatsConfig(ev *graft.Evaluator, args []*graft.Expr) (*natsConfig, erro
 					config.KeyFile = keyStr
 				}
 			}
+			if ca, ok := v["ca_file"]; ok {
+				if caStr, ok := ca.(string); ok {
+					config.CAFile = caStr
+				}
+			}
+			if insecure, ok := v["insecure_skip_verify"]; ok {
+				if insecureBool, ok := insecure.(bool); ok {
+					config.InsecureSkipVerify = insecureBool
+				}
+			}
+			if cacheTTL, ok := v["cache_ttl"]; ok {
+				if ttlStr, ok := cacheTTL.(string); ok {
+					if d, err := time.ParseDuration(ttlStr); err == nil {
+						config.CacheTTL = d
+					}
+				}
+			}
+			if streamingThreshold, ok := v["streaming_threshold"]; ok {
+				switch st := streamingThreshold.(type) {
+				case int:
+					config.StreamingThreshold = int64(st)
+				case int64:
+					config.StreamingThreshold = st
+				case float64:
+					config.StreamingThreshold = int64(st)
+				}
+			}
+			if auditLogging, ok := v["audit_logging"]; ok {
+				if auditBool, ok := auditLogging.(bool); ok {
+					config.AuditLogging = auditBool
+				}
+			}
+			if retryInterval, ok := v["retry_interval"]; ok {
+				if intervalStr, ok := retryInterval.(string); ok {
+					if d, err := time.ParseDuration(intervalStr); err == nil {
+						config.RetryInterval = d
+					}
+				}
+			}
+			if retryBackoff, ok := v["retry_backoff"]; ok {
+				switch b := retryBackoff.(type) {
+				case float64:
+					config.RetryBackoff = b
+				case int:
+					config.RetryBackoff = float64(b)
+				}
+			}
+			if maxRetryInterval, ok := v["max_retry_interval"]; ok {
+				if intervalStr, ok := maxRetryInterval.(string); ok {
+					if d, err := time.ParseDuration(intervalStr); err == nil {
+						config.MaxRetryInterval = d
+					}
+				}
+			}
 		default:
 			return nil, fmt.Errorf("second argument must be URL string or configuration map")
 		}
@@ -130,44 +256,190 @@ func parseNatsConfig(ev *graft.Evaluator, args []*graft.Expr) (*natsConfig, erro
 	return config, nil
 }
 
-// connectToNats establishes or reuses a NATS connection
-func connectToNats(config *natsConfig) error {
-	if natsConnection != nil && natsConnection.IsConnected() {
-		return nil
+// init starts the connection pool cleanup goroutine
+
+// cleanupLoop periodically removes idle connections
+func (p *natsConnectionPool) cleanupLoop() {
+	ticker := time.NewTicker(poolCleanupInterval)
+	defer ticker.Stop()
+	
+	for {
+		select {
+		case <-ticker.C:
+			p.cleanup()
+		case <-p.stopCleanup:
+			return
+		}
+	}
+}
+
+// cleanup removes idle connections from the pool
+func (p *natsConnectionPool) cleanup() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	
+	now := time.Now()
+	for key, pc := range p.connections {
+		if pc.refCount == 0 && now.Sub(pc.lastUsed) > poolMaxIdleTime {
+			pc.conn.Close()
+			delete(p.connections, key)
+			DEBUG("closed idle NATS connection to %s", key)
+		}
+	}
+}
+
+// getConnection retrieves or creates a pooled connection
+func (p *natsConnectionPool) getConnection(config *natsConfig) (*pooledConnection, error) {
+	key := config.URL
+	
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	
+	// Check if we have an existing connection
+	if pc, ok := p.connections[key]; ok {
+		if pc.conn.IsConnected() {
+			pc.refCount++
+			pc.lastUsed = time.Now()
+			return pc, nil
+		}
+		// Connection is dead, remove it
+		delete(p.connections, key)
 	}
 	
-	opts := []nats.Option{
-		nats.Timeout(config.Timeout),
-		nats.MaxReconnects(config.Retries),
-	}
-	
-	if config.TLS {
-		// TODO: Add TLS configuration in Phase 3
-		opts = append(opts, nats.Secure())
-	}
-	
-	var err error
-	natsConnection, err = nats.Connect(config.URL, opts...)
+	// Create new connection with retry logic
+	conn, js, err := createNatsConnectionWithRetry(config)
 	if err != nil {
-		return fmt.Errorf("failed to connect to NATS: %v", err)
+		return nil, err
+	}
+	
+	pc := &pooledConnection{
+		conn:     conn,
+		js:       js,
+		lastUsed: time.Now(),
+		refCount: 1,
+	}
+	
+	p.connections[key] = pc
+	DEBUG("created new NATS connection to %s", key)
+	
+	return pc, nil
+}
+
+// releaseConnection decrements the reference count
+func (p *natsConnectionPool) releaseConnection(config *natsConfig) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	
+	key := config.URL
+	if pc, ok := p.connections[key]; ok {
+		pc.refCount--
+		pc.lastUsed = time.Now()
+	}
+}
+
+// createNatsConnectionWithRetry creates a NATS connection with retry logic
+func createNatsConnectionWithRetry(config *natsConfig) (*nats.Conn, jetstream.JetStream, error) {
+	opts := buildConnectionOptions(config)
+	
+	var conn *nats.Conn
+	var err error
+	
+	retryInterval := config.RetryInterval
+	for attempt := 0; attempt <= config.Retries; attempt++ {
+		if attempt > 0 {
+			DEBUG("retrying NATS connection (attempt %d/%d) after %v", attempt, config.Retries, retryInterval)
+			time.Sleep(retryInterval)
+			
+			// Apply backoff
+			if config.RetryBackoff > 1 {
+				retryInterval = time.Duration(float64(retryInterval) * config.RetryBackoff)
+				if config.MaxRetryInterval > 0 && retryInterval > config.MaxRetryInterval {
+					retryInterval = config.MaxRetryInterval
+				}
+			}
+		}
+		
+		conn, err = nats.Connect(config.URL, opts...)
+		if err == nil {
+			break
+		}
+		
+		DEBUG("failed to connect to NATS: %v", err)
+	}
+	
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to connect to NATS after %d attempts: %v", config.Retries+1, err)
 	}
 	
 	// Create JetStream context
-	natsJetStream, err = jetstream.New(natsConnection)
+	js, err := jetstream.New(conn)
 	if err != nil {
-		natsConnection.Close()
-		natsConnection = nil
-		return fmt.Errorf("failed to create JetStream context: %v", err)
+		conn.Close()
+		return nil, nil, fmt.Errorf("failed to create JetStream context: %v", err)
 	}
 	
-	return nil
+	return conn, js, nil
 }
 
-// fetchFromKV retrieves a value from a NATS KV store
-func fetchFromKV(storePath string) (interface{}, error) {
-	// Check cache first
+// buildConnectionOptions builds NATS connection options with enhanced TLS support
+func buildConnectionOptions(config *natsConfig) []nats.Option {
+	opts := []nats.Option{
+		nats.Timeout(config.Timeout),
+		nats.MaxReconnects(config.Retries),
+		nats.ReconnectWait(config.RetryInterval),
+		nats.DisconnectErrHandler(func(nc *nats.Conn, err error) {
+			if err != nil {
+				DEBUG("NATS disconnected: %v", err)
+			}
+		}),
+		nats.ReconnectHandler(func(nc *nats.Conn) {
+			DEBUG("NATS reconnected to %s", nc.ConnectedUrl())
+		}),
+		nats.ErrorHandler(func(nc *nats.Conn, sub *nats.Subscription, err error) {
+			DEBUG("NATS error: %v", err)
+		}),
+	}
+	
+	// TLS configuration
+	if config.TLS {
+		tlsConfig := &tls.Config{
+			InsecureSkipVerify: config.InsecureSkipVerify,
+		}
+		
+		if config.CertFile != "" && config.KeyFile != "" {
+			cert, err := tls.LoadX509KeyPair(config.CertFile, config.KeyFile)
+			if err == nil {
+				tlsConfig.Certificates = []tls.Certificate{cert}
+			} else {
+				DEBUG("failed to load client certificates: %v", err)
+			}
+		}
+		
+		if config.CAFile != "" {
+			opts = append(opts, nats.RootCAs(config.CAFile))
+		}
+		
+		opts = append(opts, nats.Secure(tlsConfig))
+	}
+	
+	return opts
+}
+
+// fetchFromKV retrieves a value from a NATS KV store with retry logic
+func fetchFromKV(js jetstream.JetStream, storePath string, config *natsConfig) (interface{}, error) {
+	startTime := time.Now()
+	operationType := "kv"
+	
+	// Audit logging
+	if config.AuditLogging {
+		DEBUG("AUDIT: Accessing KV store: %s", storePath)
+	}
+	
+	// Check TTL cache first
 	cacheKey := fmt.Sprintf("kv:%s", storePath)
-	if val, ok := natsKVCache[cacheKey]; ok {
+	if val, ok := natsCache.get(cacheKey); ok {
+		duration := time.Since(startTime)
+		natsMetrics.recordOperation(operationType, duration, false, true)
 		return val, nil
 	}
 	
@@ -178,40 +450,84 @@ func fetchFromKV(storePath string) (interface{}, error) {
 	}
 	storeName, key := parts[0], parts[1]
 	
-	// Get KV store
-	kv, err := natsJetStream.KeyValue(context.Background(), storeName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to access KV store '%s': %v", storeName, err)
-	}
-	
-	// Get the entry
-	entry, err := kv.Get(context.Background(), key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get key '%s' from store '%s': %v", key, storeName, err)
-	}
-	
-	// Determine the value type and process accordingly
-	value := entry.Value()
-	
-	// Try to parse as YAML first (could be embedded YAML in KV)
 	var result interface{}
-	err = yaml.Unmarshal(value, &result)
-	if err != nil {
-		// If YAML parsing fails, treat as string
-		result = string(value)
+	var err error
+	
+	retryInterval := config.RetryInterval
+	for attempt := 0; attempt <= config.Retries; attempt++ {
+		if attempt > 0 {
+			DEBUG("retrying KV fetch (attempt %d/%d) after %v", attempt, config.Retries, retryInterval)
+			time.Sleep(retryInterval)
+			
+			// Apply backoff
+			if config.RetryBackoff > 1 {
+				retryInterval = time.Duration(float64(retryInterval) * config.RetryBackoff)
+				if config.MaxRetryInterval > 0 && retryInterval > config.MaxRetryInterval {
+					retryInterval = config.MaxRetryInterval
+				}
+			}
+		}
+		
+		// Get KV store
+		kv, err := js.KeyValue(context.Background(), storeName)
+		if err != nil {
+			continue
+		}
+		
+		// Get the entry
+		entry, err := kv.Get(context.Background(), key)
+		if err != nil {
+			continue
+		}
+		
+		// Determine the value type and process accordingly
+		value := entry.Value()
+		
+		// Try to parse as YAML first (could be embedded YAML in KV)
+		err = yaml.Unmarshal(value, &result)
+		if err != nil {
+			// If YAML parsing fails, treat as string
+			result = string(value)
+		}
+		
+		// Cache the result with TTL
+		natsCache.set(cacheKey, result, config.CacheTTL)
+		
+		// Audit logging for successful KV access
+		if config.AuditLogging {
+			DEBUG("AUDIT: Successfully retrieved KV data from %s", storePath)
+		}
+		
+		duration := time.Since(startTime)
+		natsMetrics.recordOperation(operationType, duration, false, false)
+		return result, nil
 	}
 	
-	// Cache the result
-	natsKVCache[cacheKey] = result
+	// Audit logging for failed KV access
+	if config.AuditLogging {
+		DEBUG("AUDIT: Failed to retrieve KV data from %s after %d attempts", storePath, config.Retries+1)
+	}
 	
-	return result, nil
+	duration := time.Since(startTime)
+	natsMetrics.recordOperation(operationType, duration, true, false)
+	return nil, fmt.Errorf("failed to get key '%s' from store '%s' after %d attempts: %v", key, storeName, config.Retries+1, err)
 }
 
-// fetchFromObject retrieves a value from a NATS Object store
-func fetchFromObject(storePath string) (interface{}, error) {
-	// Check cache first
+// fetchFromObject retrieves a value from a NATS Object store with retry logic
+func fetchFromObject(js jetstream.JetStream, storePath string, config *natsConfig) (interface{}, error) {
+	startTime := time.Now()
+	operationType := "obj"
+	
+	// Audit logging
+	if config.AuditLogging {
+		DEBUG("AUDIT: Accessing Object store: %s", storePath)
+	}
+	
+	// Check TTL cache first
 	cacheKey := fmt.Sprintf("obj:%s", storePath)
-	if val, ok := natsObjCache[cacheKey]; ok {
+	if val, ok := natsCache.get(cacheKey); ok {
+		duration := time.Since(startTime)
+		natsMetrics.recordOperation(operationType, duration, false, true)
 		return val, nil
 	}
 	
@@ -222,56 +538,91 @@ func fetchFromObject(storePath string) (interface{}, error) {
 	}
 	bucketName, objectName := parts[0], parts[1]
 	
-	// Get Object store
-	obj, err := natsJetStream.ObjectStore(context.Background(), bucketName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to access Object store '%s': %v", bucketName, err)
-	}
-	
-	// Get the object info first to check content type
-	info, err := obj.GetInfo(context.Background(), objectName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get object info for '%s' from bucket '%s': %v", objectName, bucketName, err)
-	}
-	
-	// Get the object data
-	data, err := obj.GetBytes(context.Background(), objectName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get object '%s' from bucket '%s': %v", objectName, bucketName, err)
-	}
-	
-	// Process based on content type from headers
 	var result interface{}
-	contentType := ""
-	if info.Headers != nil {
-		contentType = info.Headers.Get("Content-Type")
+	var err error
+	
+	retryInterval := config.RetryInterval
+	for attempt := 0; attempt <= config.Retries; attempt++ {
+		if attempt > 0 {
+			DEBUG("retrying Object fetch (attempt %d/%d) after %v", attempt, config.Retries, retryInterval)
+			time.Sleep(retryInterval)
+			
+			// Apply backoff
+			if config.RetryBackoff > 1 {
+				retryInterval = time.Duration(float64(retryInterval) * config.RetryBackoff)
+				if config.MaxRetryInterval > 0 && retryInterval > config.MaxRetryInterval {
+					retryInterval = config.MaxRetryInterval
+				}
+			}
+		}
+		
+		// Get Object store
+		obj, err := js.ObjectStore(context.Background(), bucketName)
+		if err != nil {
+			continue
+		}
+		
+		// Get the object info first to check content type
+		info, err := obj.GetInfo(context.Background(), objectName)
+		if err != nil {
+			continue
+		}
+		
+		// Get the object data using streaming for large objects
+		data, err := streamLargeObject(obj, objectName, config.StreamingThreshold)
+		if err != nil {
+			DEBUG("streaming error for object %s: %v", objectName, err)
+			continue
+		}
+		
+		// Process based on content type from headers
+		contentType := ""
+		if info.Headers != nil {
+			contentType = info.Headers.Get("Content-Type")
+		}
+		
+		switch contentType {
+		case "text/yaml", "text/x-yaml", "application/x-yaml", "application/yaml":
+			// Parse as YAML
+			err = yaml.Unmarshal(data, &result)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse YAML from object '%s': %v", objectName, err)
+			}
+		case "application/json", "text/json":
+			// Parse as JSON (YAML parser handles JSON too)
+			err = yaml.Unmarshal(data, &result)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse JSON from object '%s': %v", objectName, err)
+			}
+		case "text/plain", "":
+			// Return as string if text or no content type
+			result = string(data)
+		default:
+			// For any other content type, base64 encode
+			result = base64.StdEncoding.EncodeToString(data)
+		}
+		
+		// Cache the result with TTL
+		natsCache.set(cacheKey, result, config.CacheTTL)
+		
+		// Audit logging for successful Object access
+		if config.AuditLogging {
+			DEBUG("AUDIT: Successfully retrieved Object data from %s (content-type: %s)", storePath, contentType)
+		}
+		
+		duration := time.Since(startTime)
+		natsMetrics.recordOperation(operationType, duration, false, false)
+		return result, nil
 	}
 	
-	switch contentType {
-	case "text/yaml", "text/x-yaml", "application/x-yaml", "application/yaml":
-		// Parse as YAML
-		err = yaml.Unmarshal(data, &result)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse YAML from object '%s': %v", objectName, err)
-		}
-	case "application/json", "text/json":
-		// Parse as JSON (YAML parser handles JSON too)
-		err = yaml.Unmarshal(data, &result)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse JSON from object '%s': %v", objectName, err)
-		}
-	case "text/plain", "":
-		// Return as string if text or no content type
-		result = string(data)
-	default:
-		// For any other content type, base64 encode
-		result = base64.StdEncoding.EncodeToString(data)
+	// Audit logging for failed Object access
+	if config.AuditLogging {
+		DEBUG("AUDIT: Failed to retrieve Object data from %s after %d attempts", storePath, config.Retries+1)
 	}
 	
-	// Cache the result
-	natsObjCache[cacheKey] = result
-	
-	return result, nil
+	duration := time.Since(startTime)
+	natsMetrics.recordOperation(operationType, duration, true, false)
+	return nil, fmt.Errorf("failed to get object '%s' from bucket '%s' after %d attempts: %v", objectName, bucketName, config.Retries+1, err)
 }
 
 // Setup initializes the NATS operator
@@ -329,19 +680,20 @@ func (n NatsOperator) Run(ev *graft.Evaluator, args []*graft.Expr) (*graft.Respo
 		return nil, err
 	}
 	
-	// Connect to NATS
-	err = connectToNats(config)
+	// Get connection from pool
+	pc, err := natsPool.getConnection(config)
 	if err != nil {
 		return nil, err
 	}
+	defer natsPool.releaseConnection(config)
 	
 	// Fetch the value based on store type
 	var value interface{}
 	switch storeType {
 	case "kv":
-		value, err = fetchFromKV(storePath)
+		value, err = fetchFromKV(pc.js, storePath, config)
 	case "obj":
-		value, err = fetchFromObject(storePath)
+		value, err = fetchFromObject(pc.js, storePath, config)
 	}
 	
 	if err != nil {
@@ -356,10 +708,184 @@ func (n NatsOperator) Run(ev *graft.Evaluator, args []*graft.Expr) (*graft.Respo
 
 // ClearNatsCache clears the NATS cache (useful for testing)
 func ClearNatsCache() {
-	natsKVCache = make(map[string]interface{})
-	natsObjCache = make(map[string]interface{})
+	natsCache.clear()
+}
+
+// TTL cache methods
+func (c *ttlCache) get(key string) (interface{}, bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	
+	item, exists := c.items[key]
+	if !exists {
+		return nil, false
+	}
+	
+	if time.Now().After(item.expiresAt) {
+		// Item expired, remove it
+		c.mu.RUnlock()
+		c.mu.Lock()
+		delete(c.items, key)
+		c.mu.Unlock()
+		c.mu.RLock()
+		return nil, false
+	}
+	
+	return item.value, true
+}
+
+func (c *ttlCache) set(key string, value interface{}, ttl time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
+	c.items[key] = &cacheItem{
+		value:     value,
+		expiresAt: time.Now().Add(ttl),
+	}
+}
+
+func (c *ttlCache) cleanup() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
+	now := time.Now()
+	for key, item := range c.items {
+		if now.After(item.expiresAt) {
+			delete(c.items, key)
+		}
+	}
+}
+
+func (c *ttlCache) clear() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.items = make(map[string]*cacheItem)
+}
+
+// Metrics methods
+func (m *operatorMetrics) recordOperation(operationType string, duration time.Duration, isError bool, isCacheHit bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	
+	stats, exists := m.operations[operationType]
+	if !exists {
+		stats = &operationStats{}
+		m.operations[operationType] = stats
+	}
+	
+	stats.count++
+	stats.totalDuration += duration
+	stats.lastAccess = time.Now()
+	
+	if isError {
+		stats.errors++
+	}
+	if isCacheHit {
+		stats.cacheHits++
+	}
+}
+
+func (m *operatorMetrics) getStats() map[string]operationStats {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	
+	result := make(map[string]operationStats)
+	for key, stats := range m.operations {
+		result[key] = *stats
+	}
+	return result
+}
+
+// GetNatsMetrics returns current NATS operator metrics
+func GetNatsMetrics() map[string]interface{} {
+	stats := natsMetrics.getStats()
+	result := make(map[string]interface{})
+	
+	for opType, opStats := range stats {
+		avgDuration := float64(0)
+		if opStats.count > 0 {
+			avgDuration = float64(opStats.totalDuration) / float64(opStats.count) / float64(time.Millisecond)
+		}
+		
+		cacheHitRate := float64(0)
+		if opStats.count > 0 {
+			cacheHitRate = float64(opStats.cacheHits) / float64(opStats.count) * 100
+		}
+		
+		result[opType] = map[string]interface{}{
+			"total_operations":    opStats.count,
+			"total_errors":        opStats.errors,
+			"cache_hits":          opStats.cacheHits,
+			"cache_hit_rate_pct":  cacheHitRate,
+			"avg_duration_ms":     avgDuration,
+			"last_access":         opStats.lastAccess,
+		}
+	}
+	
+	natsMetrics.mu.RLock()
+	uptime := time.Since(natsMetrics.startTime)
+	natsMetrics.mu.RUnlock()
+	
+	result["operator_uptime"] = uptime.String()
+	result["cache_size"] = len(natsCache.items)
+	result["pool_connections"] = len(natsPool.connections)
+	
+	return result
+}
+
+// streamLargeObject handles streaming of large objects to reduce memory usage
+func streamLargeObject(obj jetstream.ObjectStore, objectName string, maxSize int64) ([]byte, error) {
+	// Get object info first to check size
+	info, err := obj.GetInfo(context.Background(), objectName)
+	if err != nil {
+		return nil, err
+	}
+	
+	if int64(info.Size) <= maxSize {
+		// Object is small enough, use normal method
+		return obj.GetBytes(context.Background(), objectName)
+	}
+	
+	// Object is large, use streaming approach
+	reader, err := obj.Get(context.Background(), objectName)
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+	
+	// Use a buffer to read in chunks
+	var result []byte
+	buffer := make([]byte, 64*1024) // 64KB chunks
+	
+	for {
+		n, err := reader.Read(buffer)
+		if n > 0 {
+			result = append(result, buffer[:n]...)
+		}
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+		
+		// Safety check to prevent excessive memory usage
+		if int64(len(result)) > maxSize*2 {
+			return nil, fmt.Errorf("object too large for processing: %d bytes", len(result))
+		}
+	}
+	
+	return result, nil
 }
 
 func init() {
+	go natsPool.cleanupLoop()
+	go func() {
+		ticker := time.NewTicker(cacheCleanupInterval)
+		defer ticker.Stop()
+		for range ticker.C {
+			natsCache.cleanup()
+		}
+	}()
 	RegisterOp("nats", NatsOperator{})
 }

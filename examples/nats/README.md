@@ -71,6 +71,9 @@ graft merge environment-config.yml
 
 # Binary asset handling
 graft merge binary-data.yml
+
+# Advanced features (TLS, retry logic, connection pooling)
+graft merge advanced.yml
 ```
 
 ## Advanced Features
@@ -85,6 +88,32 @@ services:
     config: (( nats (( concat "kv:services/" name "/config" )) ))
 ```
 
+### Retry Logic and Reliability
+
+```yaml
+# Configure retry behavior for production reliability
+critical_config: (( nats "kv:prod/critical" {
+  url: "nats://prod-cluster.example.com:4222"
+  retries: 10
+  retry_interval: "5s"
+  retry_backoff: 2.0
+  max_retry_interval: "60s"
+} ))
+```
+
+### TLS and Security
+
+```yaml
+# Full TLS configuration with client certificates
+secure_data: (( nats "obj:secrets/config.yaml" {
+  url: "tls://secure.nats.example.com:4222"
+  tls: true
+  cert_file: "/etc/ssl/certs/client.crt"
+  key_file: "/etc/ssl/private/client.key"
+  ca_file: "/etc/ssl/certs/ca.crt"
+} ))
+```
+
 ### Error Handling with Defaults
 
 ```yaml
@@ -92,6 +121,8 @@ services:
 database_url: (( nats "kv:config/db_url" || "postgres://localhost:5432/default" ))
 ```
 
-### Caching
+### Performance Features
 
-The NATS operator caches fetched values to improve performance. The cache is maintained for the duration of the graft execution.
+- **Connection Pooling**: Automatic connection reuse across multiple operator calls
+- **Caching**: Values cached for the duration of graft execution
+- **Automatic Cleanup**: Idle connections cleaned up after 5 minutes
