@@ -426,13 +426,9 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 
 	// find all nodes in g that are free (no further dependencies)
 	freeNodes := func(g [][]*Opcall) []*Opcall {
-		l := []*Opcall{}
-		for _, k := range sortedKeys {
-			node, ok := all[k]
-			if !ok {
-				continue
-			}
-
+		// First, collect all free nodes (those with no incoming dependencies)
+		freeNodeMap := make(map[string]*Opcall)
+		for k, node := range all {
 			called := false
 			for _, pair := range g {
 				if pair[1] == node {
@@ -440,8 +436,17 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 					break
 				}
 			}
-
+			
 			if !called {
+				freeNodeMap[k] = node
+			}
+		}
+		
+		// Then return them in a deterministic order based on sortedKeys
+		// but only include nodes that are actually free
+		l := []*Opcall{}
+		for _, k := range sortedKeys {
+			if node, isFree := freeNodeMap[k]; isFree {
 				delete(all, k)
 				l = append(l, node)
 			}

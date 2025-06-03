@@ -15,6 +15,8 @@ import (
 
 func TestEvaluator(t *testing.T) {
 	SilenceWarnings(true)
+	// Enable debug logging for dependency analysis
+	// log.DebugOn = true
 	YAML := func(s string) map[interface{}]interface{} {
 		y, err := simpleyaml.NewYaml([]byte(s))
 		So(err, ShouldBeNil)
@@ -41,6 +43,11 @@ func TestEvaluator(t *testing.T) {
 			if test != "" {
 				Convey(test, func() {
 					ev := &Evaluator{Tree: YAML(input), DataflowOrder: "insertion"}
+					
+					// Create and set an engine to ensure operators are registered
+					engine, err := CreateDefaultEngine()
+					So(err, ShouldBeNil)
+					ev.SetEngine(engine)
 
 					ops, err := ev.DataFlow(phase)
 					So(err, ShouldBeNil)
