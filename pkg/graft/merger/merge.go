@@ -274,21 +274,38 @@ func (m *Merger) MergeObj(orig interface{}, n interface{}, node string) interfac
 		if len(pathParts) > 0 {
 			lastPart := pathParts[len(pathParts)-1]
 			if _, err := strconv.Atoi(lastPart); err == nil {
-				// This is an array index - mark for deletion
-				log.DEBUG("MergeObj: In array context, prune operator at index, marking for deletion")
-				m.addToPruneListIfNecessary(node)
-				// Return a special marker that array merge can recognize
+				// This is an array index - don't mark for deletion during merge
+				// Let the evaluation phase handle it
+				log.DEBUG("MergeObj: In array context, prune operator at index")
+				// Don't add to prune list: m.addToPruneListIfNecessary(node)
+				// Return the prune operator for evaluation
 				return "(( prune ))"
 			}
 		}
 		
-		// For non-array contexts (regular map keys), the prune operator
-		// should be treated as a regular string value during merge.
-		// The actual pruning happens during the evaluation phase via the op_prune operator.
-		// This ensures that when --skip-eval is used, the prune operator
-		// remains in the output as a string.
-		log.DEBUG("%s: prune operator found in new value, treating as regular string", node)
-		return newString
+		// For non-array contexts (regular map keys), when a prune operator
+		// is replacing existing content, we need to decide whether to:
+		// 1. Preserve the original value (if it might be referenced by other operators)
+		// 2. Return the prune operator (for standard evaluation)
+		//
+		// Special case: if there's no original content (orig == nil), 
+		// return the prune operator for evaluation
+		if orig != nil {
+			// Check if the original value is complex (map or array)
+			// Complex values might be referenced by grab/inject operators
+			switch orig.(type) {
+			case map[interface{}]interface{}, []interface{}:
+				log.DEBUG("%s: prune operator replacing complex content, marking for prune but preserving original value", node)
+				m.addToPruneListIfNecessary(node)
+				return orig  // Keep original value for other operators to reference
+			default:
+				log.DEBUG("%s: prune operator replacing simple content, treating as regular string", node)
+				return newString  // Return prune operator for evaluation
+			}
+		} else {
+			log.DEBUG("%s: prune operator with no original content, returning operator for evaluation", node)
+			return newString  // Return prune operator for evaluation
+		}
 
 	case origOk && sortRx.MatchString(origString):
 		log.DEBUG("%s: a (( sort )) operator is about to be replaced, check if its path needs to be saved", node)
@@ -504,6 +521,7 @@ func (m *Merger) mergeArray(orig []interface{}, n []interface{}, node string) []
 // the array
 func (m *Merger) mergeArrayDefault(orig []interface{}, n []interface{}, node string) []interface{} {
 	log.DEBUG("%s: performing index-based array merge", node)
+	log.DEBUG("%s: mergeArrayDefault - orig len=%d, new len=%d", node, len(orig), len(n))
 	var err error
 	key := getDefaultIdentifierKey()
 
@@ -530,6 +548,7 @@ func (m *Merger) mergeArrayDefault(orig []interface{}, n []interface{}, node str
 }
 
 func (m *Merger) mergeArrayInline(orig []interface{}, n []interface{}, node string) []interface{} {
+	log.DEBUG("%s: mergeArrayInline - orig=%v (len=%d), new=%v (len=%d)", node, orig, len(orig), n, len(n))
 	pruneRx := regexp.MustCompile(`^\s*\Q((\E\s*prune\s*\Q))\E`)
 	
 	// First, scan the new array to identify which indices have prune operators
@@ -546,22 +565,25 @@ func (m *Merger) mergeArrayInline(orig []interface{}, n []interface{}, node stri
 	
 	// When we have prune operators, we need to handle the merge differently
 	if len(prunedIndices) > 0 {
-		// First, add all elements from the original array that are NOT being pruned
+		log.DEBUG("%s: handling array merge with %d prune operators, orig len=%d, new len=%d", node, len(prunedIndices), len(orig), len(n))
+		// Process all elements, but skip those marked for pruning
 		for i := 0; i < len(orig); i++ {
+			log.DEBUG("%s: processing original element at index %d", node, i)
 			// Check if this index is being pruned by the new array
 			if i < len(n) && prunedIndices[i] {
-				log.DEBUG("%s: pruning list entry at index %d", node, i)
-				m.addToPruneListIfNecessary(fmt.Sprintf("%s.%d", node, i))
+				log.DEBUG("%s: skipping element at index %d due to prune operator", node, i)
+				// Skip this element entirely - it's being pruned
 				continue
 			}
 			
 			// If there's a corresponding element in the new array (and it's not a prune), merge them
 			if i < len(n) && !prunedIndices[i] {
-				path := fmt.Sprintf("%s.%d", node, i)
+				path := fmt.Sprintf("%s.%d", node, len(merged))
 				mergedItem := m.MergeObj(orig[i], n[i], path)
 				merged = append(merged, mergedItem)
 			} else {
 				// No corresponding element in new array, keep the original
+				log.DEBUG("%s: keeping original element at index %d (no corresponding new element)", node, i)
 				merged = append(merged, orig[i])
 			}
 		}

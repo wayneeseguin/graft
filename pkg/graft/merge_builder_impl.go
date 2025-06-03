@@ -266,12 +266,13 @@ func (m *mergeBuilderImpl) mergeInto(base, overlay map[interface{}]interface{}) 
 	// Use it when:
 	// 1. There are array operators in the overlay AND we're not skipping evaluation
 	// 2. There are arrays with maps (for merge-by-key behavior)
-	// 3. There are prune operators (they need special handling during merge)
+	// 3. There are prune operators in either base or overlay (they need special handling during merge)
 	// Note: When skipEvaluation is true, we need to preserve operators in the output,
 	// so we use a custom merge approach for arrays with operators
 	needLegacyMerger := (!m.skipEvaluation && m.hasArrayOperators(overlay)) || 
 		m.hasArraysWithMaps(overlay) || 
 		m.hasPruneOperators(overlay) ||
+		m.hasPruneOperators(base) ||  // Also check base for prune operators
 		m.hasSortOperators(overlay)
 	
 	if needLegacyMerger {
@@ -512,6 +513,19 @@ func (m *mergeBuilderImpl) hasPruneOperators(data map[interface{}]interface{}) b
 			// Recursively check nested maps
 			if m.hasPruneOperators(v) {
 				return true
+			}
+		case []interface{}:
+			// Check arrays for prune operators
+			for _, item := range v {
+				if str, ok := item.(string); ok && strings.TrimSpace(str) == "(( prune ))" {
+					return true
+				}
+				// Also check if array contains maps with prune operators
+				if mapItem, ok := item.(map[interface{}]interface{}); ok {
+					if m.hasPruneOperators(mapItem) {
+						return true
+					}
+				}
 			}
 		}
 	}

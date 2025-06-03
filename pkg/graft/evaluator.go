@@ -136,8 +136,20 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 			}
 			visited[ptr] = true
 			
-			for k, val := range v {
-				ev.Here.Push(fmt.Sprintf("%v", k))
+			// Sort keys for deterministic iteration order (for reproducible tests)
+			keys := make([]string, 0, len(v))
+			keyToInterface := make(map[string]interface{})
+			for k := range v {
+				keyStr := fmt.Sprintf("%v", k)
+				keys = append(keys, keyStr)
+				keyToInterface[keyStr] = k
+			}
+			sort.Strings(keys)
+			
+			for _, keyStr := range keys {
+				originalKey := keyToInterface[keyStr]
+				val := v[originalKey]
+				ev.Here.Push(keyStr)
 				check(val)
 				ev.Here.Pop()
 			}
@@ -152,7 +164,15 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 			}
 			visited[ptr] = true
 			
-			for k, val := range v {
+			// Sort keys for deterministic iteration order (for reproducible tests)
+			keys := make([]string, 0, len(v))
+			for k := range v {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			
+			for _, k := range keys {
+				val := v[k]
 				ev.Here.Push(k)
 				check(val)
 				ev.Here.Pop()

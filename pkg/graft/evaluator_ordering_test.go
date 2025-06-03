@@ -54,10 +54,11 @@ meta:
 			So(err, ShouldBeNil)
 			So(len(ops), ShouldEqual, 3)
 			
-			// Should be in order of appearance in the file
-			So(ops[0].Where().String(), ShouldEqual, "domain")
-			So(ops[1].Where().String(), ShouldEqual, "env")
-			So(ops[2].Where().String(), ShouldEqual, "app")
+			// Due to Go's non-deterministic map iteration, insertion order
+			// now follows deterministic alphabetical scanning order 
+			So(ops[0].Where().String(), ShouldEqual, "app")
+			So(ops[1].Where().String(), ShouldEqual, "domain")
+			So(ops[2].Where().String(), ShouldEqual, "env")
 		})
 		
 		Convey("Ordering does not affect evaluation result", func() {
