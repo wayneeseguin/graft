@@ -204,6 +204,20 @@ func TestEngine_Evaluate(t *testing.T) {
 		engine, err := NewEngine()
 		So(err, ShouldBeNil)
 		
+		// Save original operators
+		originalConcat := OpRegistry["concat"]
+		originalGrab := OpRegistry["grab"]
+		
+		// Restore original operators when test completes
+		defer func() {
+			if originalConcat != nil {
+				OpRegistry["concat"] = originalConcat
+			}
+			if originalGrab != nil {
+				OpRegistry["grab"] = originalGrab
+			}
+		}()
+		
 		// Register test operators
 		OpRegistry["concat"] = TestConcatOperator{}
 		OpRegistry["grab"] = TestGrabOperator{}
@@ -315,6 +329,16 @@ func TestEngine_Context(t *testing.T) {
 	Convey("Given an Engine instance", t, func() {
 		engine, err := NewEngine()
 		So(err, ShouldBeNil)
+		
+		// Save original operator
+		originalConcat := OpRegistry["concat"]
+		
+		// Restore original operator when test completes
+		defer func() {
+			if originalConcat != nil {
+				OpRegistry["concat"] = originalConcat
+			}
+		}()
 		
 		// Register test operators
 		OpRegistry["concat"] = TestConcatOperator{}
