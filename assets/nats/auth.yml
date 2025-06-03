@@ -1,0 +1,18 @@
+# Authentication examples
+
+# Basic authentication in URL
+authenticated:
+  value: (( nats "kv:secure/data" "nats://user:password@localhost:4222" ))
+  
+# TLS configuration
+tls_connection:
+  data: (( nats "kv:encrypted/secrets" {
+    url: "nats://secure-nats:4222",
+    tls: true,
+    cert_file: "/path/to/client-cert.pem",
+    key_file: "/path/to/client-key.pem"
+  } ))
+  
+# Token authentication (in URL)
+token_auth:
+  config: (( nats "obj:protected/config.yaml" "nats://mytoken@localhost:4222" ))

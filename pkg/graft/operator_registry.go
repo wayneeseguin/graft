@@ -267,6 +267,13 @@ var OperatorInfoRegistry = map[string]OperatorInfo{
 		MaxArgs:    -1,
 		Phase:      EvalPhase,
 	},
+	"nats": {
+		Name:       "nats",
+		Precedence: PrecedenceCall,
+		MinArgs:    1,
+		MaxArgs:    2, // path and optional config
+		Phase:      EvalPhase,
+	},
 	// Arithmetic operators
 	"+": {
 		Name:          "+",

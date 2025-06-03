@@ -1,0 +1,12 @@
+# Simple KV fetch examples
+database:
+  host: (( nats "kv:config/db_host" ))
+  port: (( nats "kv:config/db_port" ))
+  
+# With connection URL
+api:
+  key: (( nats "kv:secrets/api_key" "nats://localhost:4222" ))
+  
+# With configuration object
+service:
+  token: (( nats "kv:auth/service_token" { url: "nats://prod-nats:4222", timeout: "10s", retries: 5 } ))

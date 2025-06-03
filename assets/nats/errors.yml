@@ -1,0 +1,22 @@
+# Error scenario examples
+
+# Invalid path format
+invalid_path: (( nats "invalid-format" ))
+
+# Unknown store type
+unknown_store: (( nats "unknown:store/key" ))
+
+# Missing KV store
+missing_kv_store: (( nats "kv:nonexistent/key" ))
+
+# Missing key in existing store
+missing_key: (( nats "kv:config/nonexistent_key" ))
+
+# Missing object bucket
+missing_bucket: (( nats "obj:nonexistent/file.yaml" ))
+
+# Missing object in existing bucket
+missing_object: (( nats "obj:assets/missing.png" ))
+
+# Invalid configuration
+bad_config: (( nats "kv:store/key" "not-a-valid-config" ))

@@ -1,0 +1,16 @@
+# YAML object embedding examples
+app_config: (( nats "obj:configs/app.yaml" ))
+
+# Multiple environment configs
+environments:
+  dev:
+    config: (( nats "obj:configs/dev.yaml" ))
+  staging:
+    config: (( nats "obj:configs/staging.yaml" ))
+  production:
+    config: (( nats "obj:configs/prod.yaml" { url: "nats://prod-nats:4222", tls: true } ))
+    
+# Template loading
+deployment:
+  template: (( nats "obj:templates/deployment.yaml" ))
+  values: (( nats "obj:templates/values.yaml" ))

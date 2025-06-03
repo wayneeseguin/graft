@@ -1,0 +1,18 @@
+# Binary object handling examples
+assets:
+  # Binary files will be automatically base64 encoded
+  logo: (( nats "obj:assets/logo.png" ))
+  favicon: (( nats "obj:assets/favicon.ico" ))
+  
+  # Text files remain as text
+  stylesheet: (( nats "obj:assets/main.css" ))
+  javascript: (( nats "obj:assets/app.js" ))
+  
+  # Mixed content
+  resources:
+    images:
+      banner: (( nats "obj:images/banner.jpg" ))
+      background: (( nats "obj:images/bg.svg" ))
+    fonts:
+      - (( nats "obj:fonts/roboto.woff2" ))
+      - (( nats "obj:fonts/opensans.ttf" ))

@@ -1,0 +1,21 @@
+# Basic NATS operator example
+# This example demonstrates fetching values from NATS KV stores
+
+application:
+  name: myapp
+  
+  # Fetch database configuration from NATS KV store
+  database:
+    host: (( nats "kv:config/db_host" ))
+    port: (( nats "kv:config/db_port" ))
+    name: (( nats "kv:config/db_name" ))
+    
+  # Fetch API configuration
+  api:
+    endpoint: (( nats "kv:config/api_endpoint" ))
+    timeout: (( nats "kv:config/api_timeout" ))
+    
+  # Fetch secrets (consider using vault operator for sensitive data)
+  credentials:
+    username: (( nats "kv:credentials/app_user" ))
+    password: (( nats "kv:credentials/app_pass" ))

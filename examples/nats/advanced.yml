@@ -1,0 +1,88 @@
+# Advanced NATS operator usage examples
+
+meta:
+  app_name: myservice
+  environment: production
+  region: us-east-1
+
+# Dynamic path construction
+services:
+  - name: api-gateway
+    # Construct path dynamically: kv:services/api-gateway/config
+    config: (( nats (( concat "kv:services/" name "/config" )) ))
+    secrets: (( nats (( concat "kv:services/" name "/secrets" )) ))
+    
+  - name: auth-service
+    config: (( nats (( concat "kv:services/" name "/config" )) ))
+    secrets: (( nats (( concat "kv:services/" name "/secrets" )) ))
+    
+  - name: data-processor
+    config: (( nats (( concat "kv:services/" name "/config" )) ))
+    secrets: (( nats (( concat "kv:services/" name "/secrets" )) ))
+
+# Region-specific configuration
+regional_config:
+  # Construct path: obj:regions/us-east-1/config.yaml
+  settings: (( nats (( concat "obj:regions/" meta.region "/config.yaml" )) ))
+  
+  # Load region-specific assets
+  assets: (( nats (( concat "obj:regions/" meta.region "/assets.yaml" )) ))
+
+# Conditional NATS server selection based on environment
+nats_servers:
+  dev: "nats://dev.nats.local:4222"
+  staging: "nats://staging.nats.local:4222"
+  production: "nats://prod.nats.local:4222"
+
+# Use environment-specific NATS server
+infrastructure:
+  load_balancer:
+    config: (( nats "kv:infra/lb_config" (( grab (( concat "nats_servers." meta.environment )) )) ))
+  
+  monitoring:
+    settings: (( nats "obj:monitoring/grafana.yaml" {
+      url: (( grab (( concat "nats_servers." meta.environment )) )),
+      timeout: "30s",
+      retries: 10
+    } ))
+
+# Combining with other operators
+deployment:
+  # Fetch base configuration from NATS
+  base: (( nats "obj:deployments/base.yaml" ))
+  
+  # Override with environment-specific values
+  replicas: (( grab base.replicas || 3 ))
+  
+  # Calculate resources based on NATS-fetched values
+  resources:
+    cpu: (( calc (( grab base.resources.cpu )) " * 2" ))
+    memory: (( concat (( grab base.resources.memory_gb )) "Gi" ))
+    
+  # Use static IPs with NATS-fetched network configuration
+  network: (( nats "obj:networks/production.yaml" ))
+  static_ips: (( static_ips 0 10 (( grab network.subnets )) ))
+
+# Multi-stage data loading
+data_pipeline:
+  # Stage 1: Load pipeline configuration
+  config: (( nats "obj:pipelines/etl-config.yaml" ))
+  
+  # Stage 2: Load stage-specific settings based on config
+  stages:
+    - name: extract
+      settings: (( nats (( concat "kv:pipeline/stages/" name )) ))
+    - name: transform
+      settings: (( nats (( concat "kv:pipeline/stages/" name )) ))
+    - name: load
+      settings: (( nats (( concat "kv:pipeline/stages/" name )) ))
+
+# Feature flags from NATS
+features:
+  # Fetch all feature flags as a YAML object
+  flags: (( nats "obj:features/flags.yaml" ))
+  
+  # Individual feature checks
+  enable_new_ui: (( grab flags.new_ui || false ))
+  enable_beta_api: (( grab flags.beta_api || false ))
+  enable_analytics: (( grab flags.analytics || true ))

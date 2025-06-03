@@ -1,0 +1,37 @@
+# Multi-environment configuration using NATS
+# This example shows how to load different configurations based on environment
+
+meta:
+  environment: production  # Change this to dev/staging/production
+
+# Common configuration
+common:
+  app_name: "MyApplication"
+  version: "1.0.0"
+
+# Environment-specific configuration loaded from NATS
+environment_config: (( nats (( concat "obj:configs/" meta.environment ".yaml" )) ))
+
+# Merge common and environment-specific settings
+application:
+  name: (( grab common.app_name ))
+  version: (( grab common.version ))
+  
+  # These come from the environment-specific YAML file in NATS
+  database: (( grab environment_config.database ))
+  features: (( grab environment_config.features ))
+  logging: (( grab environment_config.logging ))
+  
+# Different NATS servers per environment
+nats_config:
+  dev:
+    url: "nats://dev-nats:4222"
+  staging:
+    url: "nats://staging-nats:4222"
+  production:
+    url: "nats://prod-nats:4222"
+    tls: true
+    
+# Fetch secrets with environment-specific NATS connection
+secrets:
+  api_key: (( nats "kv:secrets/api_key" (( grab (( concat "nats_config." meta.environment )) )) ))

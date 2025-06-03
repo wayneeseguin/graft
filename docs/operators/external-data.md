@@ -300,6 +300,126 @@ final_config:
 
 See also: [load examples](/examples/load/)
 
+## (( nats ))
+
+Usage: `(( nats "STORE_TYPE:PATH" [CONNECTION_CONFIG] ))`
+
+The `(( nats ))` operator retrieves values from [NATS JetStream](https://docs.nats.io/jetstream) Key-Value (KV) stores and Object stores. It intelligently handles different data types and provides seamless integration with graft's YAML processing.
+
+### Store Types:
+- `kv:` - Key-Value store for simple key-value pairs
+- `obj:` - Object store for files and larger data
+
+### Connection Configuration:
+Can be a URL string or configuration map:
+```yaml
+# Simple URL
+value: (( nats "kv:store/key" "nats://localhost:4222" ))
+
+# Configuration map
+value: (( nats "kv:store/key" {
+  url: "nats://user:pass@localhost:4222",
+  timeout: "10s",
+  retries: 5,
+  tls: true,
+  cert_file: "/path/to/cert.pem",
+  key_file: "/path/to/key.pem"
+} ))
+```
+
+### Key-Value Store Examples:
+
+```yaml
+# Simple value retrieval
+database:
+  host: (( nats "kv:config/db_host" ))
+  port: (( nats "kv:config/db_port" ))
+
+# With connection URL
+api:
+  key: (( nats "kv:secrets/api_key" "nats://localhost:4222" ))
+
+# Dynamic path construction
+services:
+  - name: api
+    config: (( nats (concat "kv:services/" name "/config") ))
+  - name: worker
+    config: (( nats (concat "kv:services/" name "/config") ))
+
+# YAML data in KV (automatically parsed)
+# If KV contains: 'foo: bar\nnested:\n  key: value'
+config: (( nats "kv:app/config" ))
+# Result: {foo: bar, nested: {key: value}}
+```
+
+### Object Store Examples:
+
+```yaml
+# YAML/JSON files (automatically parsed)
+app_config: (( nats "obj:configs/app.yaml" ))
+settings: (( nats "obj:configs/settings.json" ))
+
+# Text files (returned as strings)
+readme: (( nats "obj:docs/README.md" ))
+license: (( nats "obj:docs/LICENSE" ))
+
+# Binary files (automatically base64 encoded)
+assets:
+  logo: (( nats "obj:assets/logo.png" ))
+  favicon: (( nats "obj:assets/favicon.ico" ))
+
+# Multi-environment setup
+environments:
+  dev:
+    config: (( nats "obj:configs/dev.yaml" ))
+  staging:
+    config: (( nats "obj:configs/staging.yaml" ))
+  production:
+    config: (( nats "obj:configs/prod.yaml" {
+      url: "nats://prod-nats:4222",
+      tls: true
+    } ))
+```
+
+### Content Type Handling:
+Object store automatically handles content types:
+- `text/yaml`, `application/yaml` - Parsed as YAML structure
+- `application/json` - Parsed as JSON (converted to YAML)
+- `text/plain`, no content type - Returned as string
+- Other types - Base64 encoded
+
+### Advanced Examples:
+
+```yaml
+# TLS configuration
+secure_data: (( nats "kv:secure/data" {
+  url: "nats://secure-nats:4222",
+  tls: true,
+  cert_file: "/etc/nats/client.crt",
+  key_file: "/etc/nats/client.key"
+} ))
+
+# Token authentication
+protected: (( nats "obj:protected/config.yaml" "nats://mytoken@localhost:4222" ))
+
+# Combining with other operators
+database:
+  # Fetch config from NATS
+  config: (( nats "obj:database/config.yaml" ))
+  
+  # Override with vault secret
+  password: (( vault "secret/db:password" || grab config.password ))
+  
+  # Use static IPs from NATS network config
+  network: (( nats "obj:networks/production.yaml" ))
+  static_ips: (( static_ips 0 10 (grab network.subnets) ))
+```
+
+### Caching:
+The NATS operator caches fetched values for the duration of the graft execution to improve performance.
+
+See also: [nats examples](/examples/nats/)
+
 ## Common Patterns
 
 ### Multi-Source Configuration

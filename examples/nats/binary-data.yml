@@ -1,0 +1,42 @@
+# Binary data handling with NATS Object Store
+# This example demonstrates how binary files are automatically base64 encoded
+
+web_assets:
+  # Images (binary) - automatically base64 encoded
+  images:
+    logo: (( nats "obj:assets/logo.png" ))
+    favicon: (( nats "obj:assets/favicon.ico" ))
+    banner: (( nats "obj:assets/banner.jpg" ))
+    
+  # Text files - returned as strings
+  styles:
+    main: (( nats "obj:assets/css/main.css" ))
+    theme: (( nats "obj:assets/css/theme.css" ))
+    
+  scripts:
+    app: (( nats "obj:assets/js/app.js" ))
+    vendor: (( nats "obj:assets/js/vendor.js" ))
+    
+  # Fonts (binary) - automatically base64 encoded
+  fonts:
+    - name: "Roboto"
+      data: (( nats "obj:assets/fonts/roboto.woff2" ))
+    - name: "OpenSans"
+      data: (( nats "obj:assets/fonts/opensans.ttf" ))
+      
+# Configuration templates (YAML files are parsed)
+templates:
+  kubernetes:
+    deployment: (( nats "obj:templates/k8s/deployment.yaml" ))
+    service: (( nats "obj:templates/k8s/service.yaml" ))
+    configmap: (( nats "obj:templates/k8s/configmap.yaml" ))
+    
+# Mixed content example
+documentation:
+  # Markdown files as text
+  readme: (( nats "obj:docs/README.md" ))
+  api_docs: (( nats "obj:docs/api.md" ))
+  
+  # PDF files as base64
+  user_manual: (( nats "obj:docs/user-manual.pdf" ))
+  admin_guide: (( nats "obj:docs/admin-guide.pdf" ))

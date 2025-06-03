@@ -10,6 +10,7 @@ A concise reference for all graft operators, organized by category.
 | `concat` | Join strings | `(( concat "Hello " name ))` |
 | `\|\|` | Fallback/default | `(( grab config.port \|\| 8080 ))` |
 | `vault` | Vault secret | `(( vault "secret/path:key" ))` |
+| `nats` | NATS KV/Object | `(( nats "kv:config/value" ))` |
 
 ## String Operations
 
@@ -34,6 +35,7 @@ A concise reference for all graft operators, organized by category.
 | `vault-try` | `(( vault-try "path1" "path2" \|\| "default" ))` | Try multiple paths |
 | `awsparam` | `(( awsparam "/app/config" ))` | AWS SSM Parameter |
 | `awssecret` | `(( awssecret "db-creds?key=password" ))` | AWS Secrets Manager |
+| `nats` | `(( nats "kv:store/key" ))` | NATS KV/Object store |
 
 ## List Operations
 
