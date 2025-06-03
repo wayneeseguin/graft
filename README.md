@@ -36,8 +36,6 @@ YAML <── graft <───┤
 
 > **Note**: graft supports additional operators including boolean logic (`&&`, `||`), comparisons (`==`, `!=`, `<`, `>`, `<=`, `>=`), ternary operator (`? :`), and negation (`!`).
 
-[![Slack][slack-badge]][slack-channel] ( We'll be in `#graft`)
-
 ## Introducing graft
 
 `graft` is a general purpose YAML & JSON merging tool.
@@ -148,8 +146,6 @@ to audit what credentials your configs are retrieving for a system..
 Licensed under [the MIT License][license]
 
 
-[slack-channel]:        https://cloudfoundry.slack.com/messages/graft/
-[slack-badge]:          http://slack.cloudfoundry.org/badge.svg
 [dry-definition]:       https://en.wikipedia.org/wiki/Don%27t_repeat_yourself
 [releases]:             https://github.com/wayneeseguin/graft/releases/
 [operator-docs]:        https://github.com/wayneeseguin/graft/blob/master/docs/operators/README.md
@@ -166,3 +162,4 @@ Licensed under [the MIT License][license]
 [operator-api]:         https://github.com/wayneeseguin/graft/blob/master/docs/development/operator-api.md
 [license]:              https://github.com/wayneeseguin/graft/blob/master/LICENSE
 [install-go]:           https://golang.org/doc/install
+
