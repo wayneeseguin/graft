@@ -1,3 +1,7 @@
+# Graft
+
+Grafting YAML Trees for plentiful fruits 🤪
+
 ```
                                        ┌── 🍃 (simple value)
                              ┌── 🌿 ───┤
@@ -42,6 +46,10 @@ It is designed to be an intuitive utility for merging YAML/JSON templates togeth
 to generate complicated YAML/JSON config files in a repeatable fashion. It can be used
 to stitch together some generic/top level definitions for the config and pull in overrides
 for site-specific configurations to [DRY][dry-definition] your configs up as much as possible.
+
+## Origins
+
+Graft was originally forked from the Geoff Franks's absolutely amazing work, the [Spruce](https://github.com/geofffranks/spruce/tree/main) tool in order to add a few features. After much refactoring and grafting of new features it grew to become it's own tool with a different focus and use cases. It still passes all of the original Spruce tests and as such should be considered a superset of Spruce.
 
 ## How do I get started?
 
