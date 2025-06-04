@@ -1,0 +1,47 @@
+# Small documents profile - optimized for many small YAML files
+version: "1.0"
+profile: "small_docs"
+
+engine:
+  dataflow_order: "breadth-first"
+  output_format: "yaml"
+  color_output: true
+  
+  parser:
+    strict_yaml: false
+    preserve_tags: true
+    max_document_size: 1048576  # 1MB
+
+performance:
+  enable_caching: true
+  enable_parallel: true
+  
+  cache:
+    expression_cache_size: 50000  # Larger cache for many small docs
+    operator_cache_size: 25000
+    file_cache_size: 1000
+    ttl: "10m"
+    enable_warmup: true
+  
+  concurrency:
+    max_workers: 0  # auto-detect
+    queue_size: 5000  # Larger queue
+    batch_size: 50   # Larger batches
+    enable_adaptive: true
+  
+  memory:
+    gc_percent: 200  # Less frequent GC
+    enable_pooling: true
+    string_interning: true  # Enable for small repeated strings
+  
+  io:
+    connection_timeout: "30s"
+    request_timeout: "60s"
+    max_retries: 3
+    enable_deduplication: true
+
+logging:
+  level: "info"
+  format: "text"
+  output: "stderr"
+  enable_color: true

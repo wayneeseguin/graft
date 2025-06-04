@@ -1,0 +1,47 @@
+# Large documents profile - optimized for large YAML files
+version: "1.0"
+profile: "large_docs"
+
+engine:
+  dataflow_order: "breadth-first"
+  output_format: "yaml"
+  color_output: true
+  
+  parser:
+    strict_yaml: false
+    preserve_tags: true
+    max_document_size: 104857600  # 100MB
+
+performance:
+  enable_caching: true
+  enable_parallel: false  # Single threaded for large docs
+  
+  cache:
+    expression_cache_size: 1000   # Smaller cache
+    operator_cache_size: 500
+    file_cache_size: 10
+    ttl: "2m"
+    enable_warmup: false
+  
+  concurrency:
+    max_workers: 1    # Single worker
+    queue_size: 100   # Smaller queue
+    batch_size: 1     # Process one at a time
+    enable_adaptive: false
+  
+  memory:
+    gc_percent: 50    # More frequent GC
+    enable_pooling: true
+    string_interning: false
+  
+  io:
+    connection_timeout: "60s"     # Longer timeouts
+    request_timeout: "120s"
+    max_retries: 5
+    enable_deduplication: true
+
+logging:
+  level: "info"
+  format: "text"
+  output: "stderr"
+  enable_color: true

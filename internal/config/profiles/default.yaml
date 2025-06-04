@@ -1,0 +1,55 @@
+# Default configuration profile - balanced for general use
+version: "1.0"
+profile: "default"
+
+engine:
+  dataflow_order: "breadth-first"
+  output_format: "yaml"
+  color_output: true
+  strict_mode: false
+  
+  vault:
+    timeout: "30s"
+    skip_verify: false
+  
+  parser:
+    strict_yaml: false
+    preserve_tags: true
+    max_document_size: 10485760  # 10MB
+
+performance:
+  enable_caching: true
+  enable_parallel: true
+  
+  cache:
+    expression_cache_size: 10000
+    operator_cache_size: 5000
+    file_cache_size: 100
+    ttl: "5m"
+    enable_warmup: false
+  
+  concurrency:
+    max_workers: 0  # auto-detect
+    queue_size: 1000
+    batch_size: 10
+    enable_adaptive: true
+  
+  memory:
+    max_heap_size: 0  # unlimited
+    gc_percent: 100
+    enable_pooling: true
+    string_interning: false
+  
+  io:
+    connection_timeout: "30s"
+    request_timeout: "60s"
+    max_retries: 3
+    enable_deduplication: true
+
+logging:
+  level: "info"
+  format: "text"
+  output: "stderr"
+  enable_color: true
+
+features: {}
