@@ -50,10 +50,12 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 	// But skip if the expression contains arithmetic/comparison operators
 	// EXCEPT for defer which needs special handling to preserve || in arguments
 	isDeferOp := strings.HasPrefix(inner, "defer ")
-	if isDeferOp || !strings.ContainsAny(inner, "+-*/%<>=!&|?:") {
+	// Check if the expression contains special chars outside of quoted strings
+	hasSpecialCharsOutsideQuotes := hasSpecialCharsOutsideQuotes(inner)
+	if isDeferOp || !hasSpecialCharsOutsideQuotes {
 		patterns := []string{
-			`^([a-zA-Z][a-zA-Z0-9_-]*)\s*$`,         // op (no args)
-			`^([a-zA-Z][a-zA-Z0-9_-]*)\s+(.*)$`,     // op args
+			`^([a-zA-Z][a-zA-Z0-9_@-]*)\s*$`,         // op (no args) - includes @ for targets
+			`^([a-zA-Z][a-zA-Z0-9_@-]*)\s+(.*)$`,     // op args - includes @ for targets
 		}
 		
 		for _, pattern := range patterns {
@@ -66,10 +68,17 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 				}
 				
 				// Check if it's a valid operator
-				op := OperatorFor(opname)
+				// For operators with targets (e.g., vault@production), extract base operator name
+				baseOpName := opname
+				if strings.Contains(opname, "@") {
+					parts := strings.SplitN(opname, "@", 2)
+					baseOpName = parts[0]
+				}
+				
+				op := OperatorFor(baseOpName)
 				if op == nil {
 					// Unknown operator - skip
-					return nil, nil
+						return nil, nil
 				}
 				if _, ok := op.(*NullOperator); ok && argStr == "" {
 					// Not a real operator with no arguments - might be BOSH variable
@@ -135,10 +144,17 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 			DEBUG("ParseOpcall:   arg[%d]: type=%v, value=%v", i, arg.Type, arg.String())
 		}
 		
-		op := OperatorFor(opname)
+		// For operators with targets (e.g., vault@production), extract base operator name
+		baseOpName := opname
+		if strings.Contains(opname, "@") {
+			parts := strings.SplitN(opname, "@", 2)
+			baseOpName = parts[0]
+		}
+		
+		op := OperatorFor(baseOpName)
 		if op == nil {
 			// Unknown operator
-			DEBUG("ParseOpcall: unknown operator '%s'", opname)
+			DEBUG("ParseOpcall: unknown operator '%s'", baseOpName)
 			return nil, nil
 		}
 		if _, ok := op.(*NullOperator); ok {
@@ -495,4 +511,47 @@ func splitLegacyArgs(src string) []string {
 	}
 	
 	return tokens
+}
+
+// hasSpecialCharsOutsideQuotes checks if special characters exist outside of quoted strings
+func hasSpecialCharsOutsideQuotes(s string) bool {
+	inQuotes := false
+	escaped := false
+	
+	for i, ch := range s {
+		if escaped {
+			escaped = false
+			continue
+		}
+		
+		if ch == '\\' {
+			escaped = true
+			continue
+		}
+		
+		if ch == '"' {
+			inQuotes = !inQuotes
+			continue
+		}
+		
+		if !inQuotes {
+			// Check for special chars outside quotes
+			if strings.ContainsRune("+-*/%<>=!&|?:", ch) {
+				// Special case: don't consider : in operator@target as special
+				// Check if this is part of an operator name with @ before it
+				if ch == ':' && i > 0 {
+					// Look back to see if this might be part of operator:modifier syntax
+					beforeColon := s[:i]
+					// Simple heuristic: if there's an @ before the : without spaces between,
+					// it's likely vault@target:modifier syntax
+					if strings.Contains(beforeColon, "@") && !strings.Contains(beforeColon, " ") {
+						continue
+					}
+				}
+				return true
+			}
+		}
+	}
+	
+	return false
 }

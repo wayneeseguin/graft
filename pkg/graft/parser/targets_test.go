@@ -3,6 +3,7 @@ package parser
 import (
 	"testing"
 	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
 // mockOperator is a simple mock for testing
@@ -19,14 +20,16 @@ func (m *mockOperator) Phase() OperatorPhase { return EvalPhase }
 
 func TestTokenizeTargetSyntax(t *testing.T) {
 	// Register test operators in global registry for tokenization
-	OpRegistry["vault"] = &mockOperator{}
-	OpRegistry["nats"] = &mockOperator{}
-	OpRegistry["aws"] = &mockOperator{}
+	graft.OpRegistry["vault"] = &mockOperator{}
+	graft.OpRegistry["nats"] = &mockOperator{}
+	graft.OpRegistry["awsparam"] = &mockOperator{}
+	graft.OpRegistry["awssecret"] = &mockOperator{}
 	defer func() {
 		// Clean up
-		delete(OpRegistry, "vault")
-		delete(OpRegistry, "nats") 
-		delete(OpRegistry, "aws")
+		delete(graft.OpRegistry, "vault")
+		delete(graft.OpRegistry, "nats") 
+		delete(graft.OpRegistry, "awsparam")
+		delete(graft.OpRegistry, "awssecret")
 	}()
 	
 	// Test tokenization of @ symbol
@@ -68,14 +71,16 @@ func TestTokenizeTargetSyntax(t *testing.T) {
 
 func TestParseOperatorWithTarget(t *testing.T) {
 	// Register test operators in global registry for parsing
-	OpRegistry["vault"] = &mockOperator{}
-	OpRegistry["nats"] = &mockOperator{}
-	OpRegistry["aws"] = &mockOperator{}
+	graft.OpRegistry["vault"] = &mockOperator{}
+	graft.OpRegistry["nats"] = &mockOperator{}
+	graft.OpRegistry["awsparam"] = &mockOperator{}
+	graft.OpRegistry["awssecret"] = &mockOperator{}
 	defer func() {
 		// Clean up
-		delete(OpRegistry, "vault")
-		delete(OpRegistry, "nats") 
-		delete(OpRegistry, "aws")
+		delete(graft.OpRegistry, "vault")
+		delete(graft.OpRegistry, "nats") 
+		delete(graft.OpRegistry, "awsparam")
+		delete(graft.OpRegistry, "awssecret")
 	}()
 	
 	// Test parsing operator@target expressions  
@@ -96,7 +101,7 @@ func TestParseOperatorWithTarget(t *testing.T) {
 			shouldSucceed: true,
 		},
 		{
-			input:        "(( aws@prod \"parameter-name\" ))",
+			input:        "(( awsparam@prod \"parameter-name\" ))",
 			shouldSucceed: true,
 		},
 	}

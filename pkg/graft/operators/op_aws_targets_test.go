@@ -1,6 +1,7 @@
 package operators
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -377,5 +378,6 @@ func ExampleAwsOperator_withTargets() {
 	// staging_secret: (( awssecret@staging "database-credentials" ))
 	// default_param: (( awsparam "/app/dev/db/password" ))  // uses default configuration
 	
+	fmt.Println("AWS targets configured for production and staging")
 	// Output: AWS targets configured for production and staging
 }

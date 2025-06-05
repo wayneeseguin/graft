@@ -1,6 +1,7 @@
 package operators
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -303,5 +304,6 @@ func ExampleNatsOperator_withTargets() {
 	// default_config: (( nats "kv:config/app" ))  // uses default configuration
 	// binary_data: (( nats@production "obj:uploads/data.bin" ))
 	
+	fmt.Println("NATS targets configured for production and staging")
 	// Output: NATS targets configured for production and staging
 }

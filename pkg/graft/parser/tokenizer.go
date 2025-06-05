@@ -435,8 +435,8 @@ func (t *Tokenizer) classifyToken(value string) TokenType {
 	
 	// Check if it's an operator with target (e.g., "vault@production")
 	if strings.Contains(value, "@") {
-		parts := strings.Split(value, "@")
-		if len(parts) > 1 && IsRegisteredOperator(parts[0]) {
+		parts := strings.SplitN(value, "@", 2)
+		if len(parts) == 2 && IsRegisteredOperator(parts[0]) {
 			return TokenOperator
 		}
 	}
