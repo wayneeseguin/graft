@@ -1,0 +1,330 @@
+# Development Workflow Example
+# This demonstrates using targets for local development and testing
+
+meta:
+  environment: development
+  developer: (( grab $USER || "developer" ))
+  feature_branch: (( grab $FEATURE_BRANCH || "main" ))
+
+# Local Development Services
+local_services:
+  # LocalStack for AWS development
+  aws:
+    # Use LocalStack target for all AWS services
+    endpoint: (( awsparam@localstack "/endpoint" || "http://localhost:4566" ))
+    region: (( awsparam@localstack "/region" || "us-east-1" ))
+    
+    # S3 buckets (created automatically by LocalStack)
+    s3:
+      buckets:
+        uploads: (( awsparam@localstack "/s3/uploads" || "dev-uploads" ))
+        assets: (( awsparam@localstack "/s3/assets" || "dev-assets" ))
+        backups: (( awsparam@localstack "/s3/backups" || "dev-backups" ))
+      
+      # Generate presigned URLs for testing
+      test_urls:
+        upload: (( concat (grab aws.endpoint) "/" (grab s3.buckets.uploads) "/test-upload" ))
+        download: (( concat (grab aws.endpoint) "/" (grab s3.buckets.assets) "/test-asset" ))
+    
+    # DynamoDB tables
+    dynamodb:
+      tables:
+        users: (( awsparam@localstack "/dynamodb/users" || "dev-users" ))
+        sessions: (( awsparam@localstack "/dynamodb/sessions" || "dev-sessions" ))
+        cache: (( awsparam@localstack "/dynamodb/cache" || "dev-cache" ))
+    
+    # SQS queues
+    sqs:
+      queues:
+        tasks: (( awsparam@localstack "/sqs/tasks" || "dev-tasks" ))
+        notifications: (( awsparam@localstack "/sqs/notifications" || "dev-notifications" ))
+        dlq: (( awsparam@localstack "/sqs/dlq" || "dev-dlq" ))
+    
+    # Secrets Manager (local secrets)
+    secrets:
+      # Store dev secrets in LocalStack
+      api_key: (( awssecret@localstack "dev/api/key" || "dev-api-key-12345" ))
+      db_password: (( awssecret@localstack "dev/db/password" || "devpass123" ))
+      jwt_secret: (( awssecret@localstack "dev/jwt/secret" || "dev-jwt-secret" ))
+
+  # Local NATS for messaging
+  nats:
+    # Basic configuration
+    url: (( nats@local "kv:config/url" || "nats://localhost:4222" ))
+    
+    # Development streams
+    streams:
+      events:
+        name: dev-events
+        subjects: ["events.>"]
+        retention: "limits"
+        max_messages: 10000
+        max_age: "1h"
+      
+      logs:
+        name: dev-logs
+        subjects: ["logs.>"]
+        retention: "limits"
+        max_messages: 50000
+        max_age: "24h"
+    
+    # KV stores for development
+    kv_stores:
+      config:
+        bucket: dev-config
+        history: 5
+        ttl: "1h"
+        
+      cache:
+        bucket: dev-cache
+        history: 1
+        ttl: "5m"
+        
+      features:
+        bucket: dev-features
+        history: 10
+        ttl: "24h"
+    
+    # Object store for files
+    object_store:
+      bucket: dev-files
+      max_size: "100MB"
+      
+      # Test data
+      test_files:
+        config: (( nats@local "obj:test/config.yaml" || "{}" ))
+        template: (( nats@local "obj:test/template.html" || "<html>Test</html>" ))
+        data: (( nats@local "obj:test/data.json" || "[]" ))
+
+  # Local Vault (dev mode)
+  vault:
+    # Development secrets (non-sensitive)
+    dev_secrets:
+      database:
+        host: (( vault@dev "secret/database:host" || "localhost" ))
+        port: (( vault@dev "secret/database:port" || 5432 ))
+        name: (( vault@dev "secret/database:name" || "devdb" ))
+        user: (( vault@dev "secret/database:user" || "devuser" ))
+        password: (( vault@dev "secret/database:password" || "devpass" ))
+      
+      redis:
+        host: (( vault@dev "secret/redis:host" || "localhost" ))
+        port: (( vault@dev "secret/redis:port" || 6379 ))
+        password: (( vault@dev "secret/redis:password" || "" ))
+      
+      api:
+        internal_key: (( vault@dev "secret/api:internal_key" || "dev-internal-key" ))
+        external_key: (( vault@dev "secret/api:external_key" || "dev-external-key" ))
+
+# Mock External Services
+mock_services:
+  # Payment provider mock
+  payment:
+    endpoint: (( awsparam@mocks "/payment/endpoint" || "http://localhost:8001" ))
+    api_key: (( vault@mocks "secret/payment:api_key" || "mock-payment-key" ))
+    
+    # Test cards
+    test_cards:
+      success: "4242424242424242"
+      decline: "4000000000000002"
+      insufficient: "4000000000009995"
+    
+    # Test responses
+    responses:
+      success: (( nats@mocks "obj:payment/success.json" ))
+      failure: (( nats@mocks "obj:payment/failure.json" ))
+  
+  # Email service mock
+  email:
+    endpoint: (( awsparam@mocks "/email/endpoint" || "http://localhost:8002" ))
+    api_key: (( vault@mocks "secret/email:api_key" || "mock-email-key" ))
+    
+    # Test configuration
+    from_address: "noreply@dev.local"
+    test_recipients: ["test@dev.local", "admin@dev.local"]
+    
+    # Email templates for testing
+    templates:
+      welcome: (( nats@mocks "obj:email/welcome.html" ))
+      reset: (( nats@mocks "obj:email/reset.html" ))
+      notification: (( nats@mocks "obj:email/notification.html" ))
+  
+  # SMS service mock
+  sms:
+    endpoint: (( awsparam@mocks "/sms/endpoint" || "http://localhost:8003" ))
+    api_key: (( vault@mocks "secret/sms:api_key" || "mock-sms-key" ))
+    
+    # Test phone numbers
+    test_numbers:
+      success: "+15551234567"
+      failure: "+15559999999"
+      
+    # Response templates
+    responses:
+      sent: (( nats@mocks "obj:sms/sent.json" ))
+      failed: (( nats@mocks "obj:sms/failed.json" ))
+
+# Test Data Management
+test_data:
+  # User fixtures
+  users:
+    admin:
+      id: "dev-admin-001"
+      email: "admin@dev.local"
+      password_hash: (( vault@dev "secret/test/admin:password_hash" || "$2b$10$..." ))
+      roles: ["admin", "user"]
+      
+    regular:
+      id: "dev-user-001"
+      email: "user@dev.local" 
+      password_hash: (( vault@dev "secret/test/user:password_hash" || "$2b$10$..." ))
+      roles: ["user"]
+      
+    test_accounts: (( nats@dev "obj:test/users.json" || "[]" ))
+  
+  # API test tokens
+  tokens:
+    admin: (( vault@dev "secret/test/tokens:admin" || "dev-admin-token" ))
+    user: (( vault@dev "secret/test/tokens:user" || "dev-user-token" ))
+    expired: (( vault@dev "secret/test/tokens:expired" || "dev-expired-token" ))
+    invalid: "invalid-token-12345"
+  
+  # Sample data sets
+  datasets:
+    products: (( nats@dev "obj:test/products.json" ))
+    orders: (( nats@dev "obj:test/orders.json" ))
+    customers: (( nats@dev "obj:test/customers.json" ))
+
+# Development Features
+features:
+  # All features enabled for development
+  all_features: (( nats@dev "kv:features/all" || {} ))
+  
+  # Individual feature flags
+  new_ui: (( grab all_features.new_ui || true ))
+  beta_api: (( grab all_features.beta_api || true ))
+  debug_mode: (( grab all_features.debug_mode || true ))
+  verbose_logging: (( grab all_features.verbose_logging || true ))
+  mock_external: (( grab all_features.mock_external || true ))
+  
+  # Developer-specific features
+  developer_features:
+    show_sql: (( nats@dev (concat "kv:features/" (grab meta.developer) "/show_sql") || true ))
+    hot_reload: (( nats@dev (concat "kv:features/" (grab meta.developer) "/hot_reload") || true ))
+    debug_toolbar: (( nats@dev (concat "kv:features/" (grab meta.developer) "/debug_toolbar") || true ))
+
+# Branch-specific Configuration
+branches:
+  # Feature branch overrides
+  feature_config:
+    # Database for feature branch
+    database_name: (( concat "dev_" (grab meta.developer) "_" (grab meta.feature_branch) ))
+    
+    # Isolated queues
+    queue_prefix: (( concat "dev-" (grab meta.feature_branch) "-" ))
+    
+    # Branch-specific feature flags
+    features: (( nats@dev (concat "kv:branches/" (grab meta.feature_branch) "/features") || {} ))
+  
+  # Shared resources
+  shared:
+    cache_prefix: "dev-shared-"
+    cdn_bucket: "dev-shared-assets"
+
+# Local Development Tools
+tools:
+  # Database management
+  database:
+    # Connection string for local development
+    url: (( concat 
+      "postgresql://" 
+      (grab local_services.vault.dev_secrets.database.user) ":"
+      (grab local_services.vault.dev_secrets.database.password) "@"
+      (grab local_services.vault.dev_secrets.database.host) ":"
+      (grab local_services.vault.dev_secrets.database.port) "/"
+      (grab branches.feature_config.database_name)
+    ))
+    
+    # Migration status
+    migrations:
+      current: (( nats@dev "kv:migrations/current" || "0" ))
+      pending: (( nats@dev "obj:migrations/pending.json" || "[]" ))
+  
+  # API testing
+  api:
+    base_url: "http://localhost:3000"
+    
+    # Postman/Insomnia environment
+    environment:
+      name: (( concat "Dev - " (grab meta.developer) ))
+      variables:
+        - key: "base_url"
+          value: (( grab api.base_url ))
+        - key: "auth_token"
+          value: (( grab test_data.tokens.admin ))
+        - key: "test_user_email"
+          value: (( grab test_data.users.regular.email ))
+  
+  # Debugging
+  debug:
+    # Remote debugging ports
+    ports:
+      api: 9229
+      worker: 9230
+      frontend: 9231
+    
+    # Source maps
+    source_maps:
+      enabled: true
+      upload_endpoint: (( awsparam@dev "/debug/sourcemaps/endpoint" || "http://localhost:8004" ))
+    
+    # Performance profiling
+    profiling:
+      enabled: (( grab features.debug_mode ))
+      output_dir: "./profiles"
+      
+# Seed Data Scripts
+seed_data:
+  # Commands to populate development data
+  commands:
+    - name: "Create S3 buckets"
+      run: |
+        aws --endpoint-url={{ local_services.aws.endpoint }} s3 mb s3://{{ local_services.aws.s3.buckets.uploads }}
+        aws --endpoint-url={{ local_services.aws.endpoint }} s3 mb s3://{{ local_services.aws.s3.buckets.assets }}
+        
+    - name: "Create NATS streams"
+      run: |
+        nats stream add {{ local_services.nats.streams.events.name }} \
+          --subjects="{{ local_services.nats.streams.events.subjects }}" \
+          --retention={{ local_services.nats.streams.events.retention }}
+          
+    - name: "Load test data"
+      run: |
+        nats kv put {{ local_services.nats.kv_stores.config.bucket }} test/data '{{ test_data }}'
+        
+    - name: "Set feature flags"
+      run: |
+        nats kv put {{ local_services.nats.kv_stores.features.bucket }} all '{{ features.all_features }}'
+
+# Development Environment Summary
+environment_summary:
+  services:
+    aws: (( grab local_services.aws.endpoint ))
+    nats: (( grab local_services.nats.url ))
+    vault: "http://localhost:8200"
+    
+  databases:
+    postgresql: (( grab tools.database.url ))
+    redis: (( concat "redis://localhost:" (grab local_services.vault.dev_secrets.redis.port) ))
+    
+  features_enabled: (( grab features ))
+  
+  test_accounts:
+    admin_email: (( grab test_data.users.admin.email ))
+    admin_token: (( grab test_data.tokens.admin ))
+    
+  useful_commands:
+    - "make dev-setup    # Set up all local services"
+    - "make seed-data    # Populate test data"
+    - "make test-api     # Run API tests"
+    - "make debug        # Start with debugging enabled"

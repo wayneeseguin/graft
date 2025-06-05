@@ -546,9 +546,9 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 	// Note: The first pattern's optional group (?:\s*\((.*)\))? will NOT match when there's a space
 	// between operator and parentheses, so "file (concat...)" will fall through to second pattern
 	for _, pattern := range []string{
-		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*)\((.*)\)\s*\)\)$`, // (( op(x,y,z) )) - no space between op and (
-		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*)\s+(\(.*\))\s*\)\)$`, // (( op (x,y,z) )) - space between op and (
-		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*)(?:\s+(.*))?\s*\)\)$`,     // (( op x y z ))
+		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*(?:@[a-zA-Z][a-zA-Z0-9_-]*)?)\((.*)\)\s*\)\)$`, // (( op@target(x,y,z) )) - no space between op and (
+		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*(?:@[a-zA-Z][a-zA-Z0-9_-]*)?)\s+(\(.*\))\s*\)\)$`, // (( op@target (x,y,z) )) - space between op and (
+		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*(?:@[a-zA-Z][a-zA-Z0-9_-]*)?)(?:\s+(.*))?\s*\)\)$`,     // (( op@target x y z ))
 	} {
 		re := regexp.MustCompile(pattern)
 		if !re.MatchString(src) {
@@ -559,24 +559,36 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 		m := re.FindStringSubmatch(src)
 		log.DEBUG("parsing `%s': looks like a (( %s ... )) operator", src, m[1])
 
+		// Extract operator name and target from operator@target syntax
+		operatorName := m[1]
+		targetName := ""
+		if strings.Contains(operatorName, "@") {
+			parts := strings.SplitN(operatorName, "@", 2)
+			if len(parts) == 2 {
+				operatorName = parts[0]
+				targetName = parts[1]
+				log.DEBUG("  - extracted operator '%s' with target '%s'", operatorName, targetName)
+			}
+		}
+
 		// Special case: BOSH variable syntax ((var-name)) should be ignored
 		// m[2] contains the arguments, if it's empty and name contains dash, it's likely BOSH syntax
 		// But first check if it's actually a registered operator
-		if strings.Contains(m[1], "-") && (len(m) < 3 || m[2] == "") {
+		if strings.Contains(operatorName, "-") && (len(m) < 3 || m[2] == "") {
 			// Only ignore if it's not a registered operator
-			if OpRegistry[m[1]] == nil {
-				log.DEBUG("  - ignoring BOSH variable syntax: %s", m[1])
+			if OpRegistry[operatorName] == nil {
+				log.DEBUG("  - ignoring BOSH variable syntax: %s", operatorName)
 				return nil, nil
 			}
 		}
 
-		op := OpRegistry[m[1]]
+		op := OpRegistry[operatorName]
 		if op == nil {
-			log.DEBUG("  - unknown operator: %s, creating NullOperator", m[1])
+			log.DEBUG("  - unknown operator: %s, creating NullOperator", operatorName)
 			// Create a NullOperator for unknown operators
-			op = NullOperator{Missing: m[1]}
+			op = NullOperator{Missing: operatorName}
 		} else if op.Phase() != phase {
-			log.DEBUG("  - skipping (( %s ... )) operation; it belongs to a different phase", m[1])
+			log.DEBUG("  - skipping (( %s ... )) operation; it belongs to a different phase", operatorName)
 			return nil, nil
 		}
 

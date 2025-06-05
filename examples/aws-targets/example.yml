@@ -1,0 +1,233 @@
+# Example using AWS operators with targets
+
+# Application configuration using different AWS targets
+app:
+  name: "myapp"
+  
+  # Production configuration from production AWS account
+  production:
+    # Parameter Store access for configuration
+    database:
+      host: (( awsparam@production "/app/prod/database/host" ))
+      port: (( awsparam@production "/app/prod/database/port" ))
+      name: (( awsparam@production "/app/prod/database/name" ))
+      # Secrets Manager for sensitive data
+      username: (( awssecret@production "prod/database/credentials?key=username" ))
+      password: (( awssecret@production "prod/database/credentials?key=password" ))
+      
+    # API configuration
+    api:
+      base_url: (( awsparam@production "/app/prod/api/base_url" ))
+      rate_limit: (( awsparam@production "/app/prod/api/rate_limit" ))
+      timeout: (( awsparam@production "/app/prod/api/timeout" ))
+      # API keys from Secrets Manager
+      key: (( awssecret@production "prod/api/credentials?key=api_key" ))
+      secret: (( awssecret@production "prod/api/credentials?key=api_secret" ))
+    
+    # External service integration
+    services:
+      payment_gateway_url: (( awsparam@production "/services/payment/url" ))
+      payment_api_key: (( awssecret@production "payment-gateway-key" ))
+      
+      notification_service_url: (( awsparam@production "/services/notifications/url" ))
+      notification_token: (( awssecret@production "notification-service-token" ))
+    
+    # Infrastructure configuration
+    infrastructure:
+      redis_url: (( concat "redis://:" (awssecret@production "redis-password") "@" (awsparam@production "/infrastructure/redis/host") ":6379" ))
+      elasticsearch_url: (( concat "https://" (awsparam@production "/infrastructure/elasticsearch/host") ":9200" ))
+      
+    # Feature flags
+    features:
+      new_checkout_enabled: (( awsparam@production "/features/new_checkout_enabled" ))
+      beta_features_enabled: (( awsparam@production "/features/beta_features_enabled" ))
+  
+  # Staging configuration from staging AWS account
+  staging:
+    database:
+      host: (( awsparam@staging "/app/staging/database/host" ))
+      port: (( awsparam@staging "/app/staging/database/port" ))
+      name: (( awsparam@staging "/app/staging/database/name" ))
+      username: (( awssecret@staging "staging/database/credentials?key=username" ))
+      password: (( awssecret@staging "staging/database/credentials?key=password" ))
+      
+    api:
+      base_url: (( awsparam@staging "/app/staging/api/base_url" ))
+      rate_limit: (( awsparam@staging "/app/staging/api/rate_limit" ))
+      key: (( awssecret@staging "staging/api/credentials?key=api_key" ))
+      secret: (( awssecret@staging "staging/api/credentials?key=api_secret" ))
+  
+  # Development configuration using LocalStack
+  development:
+    database:
+      host: (( awsparam@dev "/app/dev/database/host" ))
+      port: (( awsparam@dev "/app/dev/database/port" ))
+      name: (( awsparam@dev "/app/dev/database/name" ))
+      username: (( awssecret@dev "dev/database/credentials?key=username" ))
+      password: (( awssecret@dev "dev/database/credentials?key=password" ))
+
+# Cross-account integrations using partner AWS account
+partners:
+  payment_provider:
+    # Access shared resources in partner account
+    webhook_url: (( awsparam@partner "/webhooks/payment/url" ))
+    api_endpoint: (( awsparam@partner "/api/payment/endpoint" ))
+    shared_secret: (( awssecret@partner "payment-webhook-secret" ))
+    
+  analytics_provider:
+    tracking_id: (( awsparam@partner "/analytics/tracking_id" ))
+    api_key: (( awssecret@partner "analytics-api-key" ))
+
+# Multi-environment configuration with fallbacks
+shared:
+  # Try production first, then staging, then default
+  monitoring:
+    endpoint: (( awsparam@production "/monitoring/endpoint" || awsparam@staging "/monitoring/endpoint" || awsparam "/monitoring/endpoint" ))
+    api_key: (( awssecret@production "monitoring-api-key" || awssecret@staging "monitoring-api-key" || "default-key" ))
+  
+  # Logging configuration with environment-specific fallbacks
+  logging:
+    level: (( awsparam@production "/logging/level" || "info" ))
+    destination: (( awsparam@production "/logging/destination" || "stdout" ))
+    api_key: (( awssecret@production "logging-api-key" || "default-logging-key" ))
+
+# Versioned secrets and staged deployments
+api_keys:
+  # Current production API key
+  current: (( awssecret@production "api-key" ))
+  
+  # Previous version for rollback
+  previous: (( awssecret@production "api-key?version=1" ))
+  
+  # Staging version for blue-green deployments
+  staging: (( awssecret@production "api-key?stage=AWSPENDING" ))
+  
+  # Specific version by version ID
+  v2: (( awssecret@production "api-key?version=a1b2c3d4-5678-90ab-cdef-example11111" ))
+
+# Service discovery and dynamic configuration
+services:
+  # Production services
+  user_service:
+    url: (( concat "https://" (awsparam@production "/services/user/host") ":" (awsparam@production "/services/user/port") ))
+    health_check: (( concat (awsparam@production "/services/user/base_url") "/health" ))
+    api_key: (( awssecret@production "user-service-api-key" ))
+    
+  auth_service:
+    url: (( concat "https://" (awsparam@production "/services/auth/host") ))
+    jwt_secret: (( awssecret@production "auth-jwt-secret" ))
+    refresh_token_ttl: (( awsparam@production "/services/auth/refresh_token_ttl" ))
+    
+  notification_service:
+    url: (( awsparam@production "/services/notification/url" ))
+    batch_size: (( awsparam@production "/services/notification/batch_size" ))
+    api_credentials: (( awssecret@production "notification-service-credentials" ))
+
+# Infrastructure as Code configuration
+infrastructure:
+  # Database clusters
+  databases:
+    primary:
+      production:
+        host: (( awsparam@production "/infrastructure/db/primary/host" ))
+        port: (( awsparam@production "/infrastructure/db/primary/port" ))
+        master_user: (( awssecret@production "db-primary-master-credentials?key=username" ))
+        master_password: (( awssecret@production "db-primary-master-credentials?key=password" ))
+      staging:
+        host: (( awsparam@staging "/infrastructure/db/primary/host" ))
+        port: (( awsparam@staging "/infrastructure/db/primary/port" ))
+        master_user: (( awssecret@staging "db-primary-master-credentials?key=username" ))
+        master_password: (( awssecret@staging "db-primary-master-credentials?key=password" ))
+    
+    replica:
+      production:
+        host: (( awsparam@production "/infrastructure/db/replica/host" ))
+        port: (( awsparam@production "/infrastructure/db/replica/port" ))
+        
+  # Caching layers
+  redis:
+    production:
+      cluster_endpoint: (( awsparam@production "/infrastructure/redis/cluster_endpoint" ))
+      auth_token: (( awssecret@production "redis-auth-token" ))
+      max_connections: (( awsparam@production "/infrastructure/redis/max_connections" ))
+    staging:
+      cluster_endpoint: (( awsparam@staging "/infrastructure/redis/cluster_endpoint" ))
+      auth_token: (( awssecret@staging "redis-auth-token" ))
+
+# Monitoring and observability
+monitoring:
+  # Metrics collection
+  prometheus:
+    production_endpoint: (( awsparam@production "/monitoring/prometheus/endpoint" ))
+    staging_endpoint: (( awsparam@staging "/monitoring/prometheus/endpoint" ))
+    scrape_interval: (( awsparam@production "/monitoring/prometheus/scrape_interval" ))
+    
+  # Logging aggregation
+  elasticsearch:
+    production_cluster: (( awsparam@production "/logging/elasticsearch/cluster" ))
+    staging_cluster: (( awsparam@staging "/logging/elasticsearch/cluster" ))
+    index_template: (( awsparam@production "/logging/elasticsearch/index_template" ))
+    
+  # Alerting
+  alerts:
+    slack_webhook: (( awssecret@production "slack-webhook-alerts" ))
+    pagerduty_key: (( awssecret@production "pagerduty-integration-key" ))
+    email_list: (( awsparam@production "/alerts/email_recipients" ))
+
+# Security and compliance
+security:
+  # Encryption keys
+  encryption:
+    primary_key: (( awssecret@production "encryption-primary-key" ))
+    secondary_key: (( awssecret@production "encryption-secondary-key" ))
+    rotation_schedule: (( awsparam@production "/security/key_rotation_schedule" ))
+    
+  # Authentication providers
+  oauth:
+    google:
+      client_id: (( awsparam@production "/oauth/google/client_id" ))
+      client_secret: (( awssecret@production "oauth-google-client-secret" ))
+    github:
+      client_id: (( awsparam@production "/oauth/github/client_id" ))
+      client_secret: (( awssecret@production "oauth-github-client-secret" ))
+      
+  # Certificate management
+  certificates:
+    api_tls_cert: (( awssecret@production "api-tls-certificate" ))
+    api_tls_key: (( awssecret@production "api-tls-private-key" ))
+    ca_bundle: (( awssecret@production "ca-certificate-bundle" ))
+
+# Environment-specific feature flags
+features:
+  production:
+    new_ui_enabled: (( awsparam@production "/features/new_ui_enabled" ))
+    beta_features: (( awsparam@production "/features/beta_features" ))
+    maintenance_mode: (( awsparam@production "/features/maintenance_mode" ))
+    
+  staging:
+    new_ui_enabled: (( awsparam@staging "/features/new_ui_enabled" ))
+    experimental_features: (( awsparam@staging "/features/experimental_features" ))
+    
+  development:
+    all_features_enabled: (( awsparam@dev "/features/all_features_enabled" || "true" ))
+
+# Deployment configuration
+deployment:
+  # Container registry credentials
+  registry:
+    production:
+      url: (( awsparam@production "/deployment/registry/url" ))
+      username: (( awssecret@production "registry-credentials?key=username" ))
+      password: (( awssecret@production "registry-credentials?key=password" ))
+      
+  # Kubernetes configuration
+  kubernetes:
+    production:
+      cluster_endpoint: (( awsparam@production "/k8s/cluster_endpoint" ))
+      ca_cert: (( awssecret@production "k8s-ca-certificate" ))
+      service_account_token: (( awssecret@production "k8s-service-account-token" ))
+      
+    staging:
+      cluster_endpoint: (( awsparam@staging "/k8s/cluster_endpoint" ))
+      ca_cert: (( awssecret@staging "k8s-ca-certificate" ))
+      service_account_token: (( awssecret@staging "k8s-service-account-token" ))

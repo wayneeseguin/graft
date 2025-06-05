@@ -24,6 +24,161 @@ var vaultSecretCache = map[string]map[string]interface{}{}
 // VaultRefs maps secret path to paths in YAML structure which call for it
 var VaultRefs = map[string][]string{}
 
+// VaultTarget represents a vault target configuration
+type VaultTarget struct {
+	URL        string `yaml:"url"`
+	Token      string `yaml:"token"`
+	Namespace  string `yaml:"namespace"`
+	SkipVerify bool   `yaml:"skip_verify"`
+}
+
+// VaultClientPool manages vault clients for different targets
+type VaultClientPool struct {
+	clients map[string]*vaultkv.KV
+	configs map[string]*VaultTarget
+}
+
+// Global client pool for target-aware vault clients
+var vaultClientPool = &VaultClientPool{
+	clients: make(map[string]*vaultkv.KV),
+	configs: make(map[string]*VaultTarget),
+}
+
+// GetClient returns a vault client for the specified target
+func (vcp *VaultClientPool) GetClient(targetName string, engine graft.Engine) (*vaultkv.KV, error) {
+	// Return existing client if available
+	if client, exists := vcp.clients[targetName]; exists {
+		return client, nil
+	}
+	
+	// Get target configuration
+	config, err := vcp.getTargetConfig(targetName, engine)
+	if err != nil {
+		return nil, fmt.Errorf("vault target '%s' not found: %v", targetName, err)
+	}
+	
+	// Create new client
+	client, err := createVaultClientFromConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create vault client for target '%s': %v", targetName, err)
+	}
+	
+	// Store client for reuse
+	vcp.clients[targetName] = client
+	vcp.configs[targetName] = config
+	
+	return client, nil
+}
+
+// getTargetConfig retrieves target configuration from the engine or environment
+func (vcp *VaultClientPool) getTargetConfig(targetName string, engine graft.Engine) (*VaultTarget, error) {
+	// Check if we have cached config
+	if config, exists := vcp.configs[targetName]; exists {
+		return config, nil
+	}
+	
+	// For now, try environment variables with target suffix
+	// In a full implementation, this would query the engine's configuration
+	envPrefix := fmt.Sprintf("VAULT_%s_", strings.ToUpper(targetName))
+	
+	config := &VaultTarget{
+		URL:       os.Getenv(envPrefix + "ADDR"),
+		Token:     os.Getenv(envPrefix + "TOKEN"),
+		Namespace: os.Getenv(envPrefix + "NAMESPACE"),
+	}
+	
+	// Check for skip verify
+	if skipStr := os.Getenv(envPrefix + "SKIP_VERIFY"); skipStr == "true" || skipStr == "1" {
+		config.SkipVerify = true
+	}
+	
+	// If no environment variables found, return error
+	if config.URL == "" || config.Token == "" {
+		return nil, fmt.Errorf("vault target '%s' configuration not found (expected %sADDR and %sTOKEN environment variables)", 
+			targetName, envPrefix, envPrefix)
+	}
+	
+	return config, nil
+}
+
+// createVaultClientFromConfig creates a vault client from target configuration
+func createVaultClientFromConfig(config *VaultTarget) (*vaultkv.KV, error) {
+	// Expand environment variables in configuration
+	addr := os.ExpandEnv(config.URL)
+	token := os.ExpandEnv(config.Token)
+	namespace := os.ExpandEnv(config.Namespace)
+	
+	parsedURL, err := url.Parse(addr)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse Vault URL `%s': %s", addr, err)
+	}
+	
+	// Port handling
+	if parsedURL.Port() == "" {
+		if parsedURL.Scheme == "http" {
+			parsedURL.Host = parsedURL.Host + ":80"
+		} else {
+			parsedURL.Host = parsedURL.Host + ":443"
+		}
+	}
+	
+	// TLS configuration
+	roots, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, fmt.Errorf("unable to retrieve system root certificate authorities: %s", err)
+	}
+	
+	client := &vaultkv.Client{
+		AuthToken: token,
+		VaultURL:  parsedURL,
+		Namespace: namespace,
+		Client: &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				TLSClientConfig: &tls.Config{
+					RootCAs:            roots,
+					InsecureSkipVerify: config.SkipVerify,
+				},
+			},
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				if len(via) > 10 {
+					return fmt.Errorf("stopped after 10 redirects")
+				}
+				req.Header.Add("X-Vault-Token", token)
+				req.Header.Add("X-Vault-Namespace", namespace)
+				return nil
+			},
+		},
+	}
+	
+	// Enable tracing if debug is on
+	if DebugOn() {
+		client.Trace = os.Stderr
+	}
+	
+	return client.NewKV(), nil
+}
+
+// extractTarget attempts to extract target information from the operator context
+func (o VaultOperator) extractTarget(ev *Evaluator, args []*Expr) string {
+	// For now, we'll implement a simple approach where target information
+	// could be stored in the engine state or extracted from the evaluator context.
+	// In a full implementation, this would access the parsed operator call's target field.
+	
+	// TODO: This is a placeholder implementation. In the complete implementation,
+	// the target would be available from the operator call context.
+	// For now, we'll return empty string (no target) to maintain backward compatibility.
+	return ""
+}
+
+// getCacheKey generates a cache key that includes target information
+func (o VaultOperator) getCacheKey(target, path string) string {
+	if target == "" {
+		return path
+	}
+	return fmt.Sprintf("%s@%s", target, path)
+}
+
 // SkipVault toggles whether calls to the Vault operator actually cause the
 // Vault to be contacted and the keys substituted in.
 var SkipVault bool
@@ -460,7 +615,14 @@ func (o VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	// Get engine
 	engine := graft.GetEngine(ev)
 
+	// Extract target information if available
+	targetName := o.extractTarget(ev, args)
+	if targetName != "" {
+		DEBUG("vault: using target '%s'", targetName)
+	}
+
 	// syntax: (( vault "secret/path:key" ))
+	// syntax: (( vault@target "secret/path:key" ))
 	// syntax: (( vault path.object "to concat with" other.object ))
 	// syntax: (( vault "secret/path:key" || "default" ))
 	// syntax: (( vault prefix "/" key ":password" || "default" ))
@@ -472,12 +634,12 @@ func (o VaultOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	// Detect if we need enhanced parsing for sub-operators
 	if o.needsEnhancedParsing(args) {
 		DEBUG("vault: using enhanced parsing with sub-operators")
-		return o.runWithSubOperators(ev, args, engine)
+		return o.runWithSubOperators(ev, args, engine, targetName)
 	}
 
 	// Use classic implementation for backward compatibility
 	DEBUG("vault: using classic parsing")
-	return o.runClassic(ev, args, engine)
+	return o.runClassic(ev, args, engine, targetName)
 }
 
 // needsEnhancedParsing checks if any arguments contain vault sub-operators
@@ -501,7 +663,7 @@ func (o VaultOperator) needsEnhancedParsing(args []*Expr) bool {
 }
 
 // runClassic executes vault operator with classic logic (backward compatibility)
-func (o VaultOperator) runClassic(ev *Evaluator, args []*Expr, engine graft.Engine) (*Response, error) {
+func (o VaultOperator) runClassic(ev *Evaluator, args []*Expr, engine graft.Engine, targetName string) (*Response, error) {
 	// Use the existing argument processor
 	processor := newVaultArgProcessor(args)
 
@@ -523,11 +685,11 @@ func (o VaultOperator) runClassic(ev *Evaluator, args []*Expr, engine graft.Engi
 		return nil, err
 	}
 
-	return o.tryVaultPaths(ev, engine, paths, processor)
+	return o.tryVaultPaths(ev, engine, paths, processor, targetName)
 }
 
 // runWithSubOperators executes vault operator with sub-operator support
-func (o VaultOperator) runWithSubOperators(ev *Evaluator, args []*Expr, engine graft.Engine) (*Response, error) {
+func (o VaultOperator) runWithSubOperators(ev *Evaluator, args []*Expr, engine graft.Engine, targetName string) (*Response, error) {
 	// Use enhanced argument processor
 	processor := newVaultArgProcessor(args)
 
@@ -549,11 +711,11 @@ func (o VaultOperator) runWithSubOperators(ev *Evaluator, args []*Expr, engine g
 		return nil, err
 	}
 
-	return o.tryVaultPaths(ev, engine, paths, processor)
+	return o.tryVaultPaths(ev, engine, paths, processor, targetName)
 }
 
 // tryVaultPaths attempts to retrieve secrets from a list of vault paths
-func (o VaultOperator) tryVaultPaths(ev *Evaluator, engine graft.Engine, paths []string, processor *vaultArgProcessor) (*Response, error) {
+func (o VaultOperator) tryVaultPaths(ev *Evaluator, engine graft.Engine, paths []string, processor *vaultArgProcessor, targetName string) (*Response, error) {
 	// Try each path in order
 	var lastErr error
 	for i, key := range paths {
@@ -563,7 +725,7 @@ func (o VaultOperator) tryVaultPaths(ev *Evaluator, engine graft.Engine, paths [
 		engine.GetOperatorState().AddVaultRef(key, []string{ev.Here.String()})
 
 		// Perform the vault lookup
-		secret, err := o.performVaultLookup(engine, key)
+		secret, err := o.performVaultLookup(engine, key, targetName)
 		if err == nil {
 			// Success!
 			DEBUG("vault: path %d succeeded", i+1)
@@ -654,26 +816,40 @@ func (VaultOperator) resolveVaultArgs(ev *Evaluator, args []*Expr) (string, erro
 }
 
 // performVaultLookup performs the actual vault lookup
-func (VaultOperator) performVaultLookup(engine graft.Engine, key string) (string, error) {
+func (o VaultOperator) performVaultLookup(engine graft.Engine, key string, targetName string) (string, error) {
 	if engine.GetOperatorState().IsVaultSkipped() {
 		return "REDACTED", nil
 	}
 
-	kv := engine.GetOperatorState().GetVaultClient()
-	if kv == nil {
-		// For backward compatibility, try to initialize from environment
-		if SkipVault {
-			return "REDACTED", nil
+	var kv *vaultkv.KV
+	var err error
+	
+	if targetName != "" {
+		// Use target-specific client
+		kv, err = vaultClientPool.GetClient(targetName, engine)
+		if err != nil {
+			return "", fmt.Errorf("failed to get vault client for target '%s': %v", targetName, err)
 		}
-		
-		// Fall back to global initialization for now
-		if globalKV == nil {
-			err := initializeVaultClient()
-			if err != nil {
-				return "", fmt.Errorf("Error during Vault client initialization: %s", err)
+		DEBUG("vault: using target-specific client for '%s'", targetName)
+	} else {
+		// Fall back to default behavior (environment-based or global client)
+		kv = engine.GetOperatorState().GetVaultClient()
+		if kv == nil {
+			// For backward compatibility, try to initialize from environment
+			if SkipVault {
+				return "REDACTED", nil
 			}
+			
+			// Fall back to global initialization
+			if globalKV == nil {
+				err := initializeVaultClient()
+				if err != nil {
+					return "", fmt.Errorf("Error during Vault client initialization: %s", err)
+				}
+			}
+			kv = globalKV
 		}
-		kv = globalKV
+		DEBUG("vault: using default client")
 	}
 
 	leftPart, rightPart := parsePath(key)
@@ -681,14 +857,15 @@ func (VaultOperator) performVaultLookup(engine graft.Engine, key string) (string
 		return "", ansi.Errorf("@R{invalid argument} @c{%s}@R{; must be in the form} @m{path/to/secret:key}", key)
 	}
 
-	// Check cache first
+	// Check cache first (include target in cache key)
+	cacheKey := o.getCacheKey(targetName, leftPart)
 	vaultCache := engine.GetOperatorState().GetVaultCache()
 	var fullSecret map[string]interface{}
 	var found bool
-	if fullSecret, found = vaultCache[leftPart]; found {
-		DEBUG("vault: Cache hit for `%s`", leftPart)
+	if fullSecret, found = vaultCache[cacheKey]; found {
+		DEBUG("vault: Cache hit for `%s` (target: %s)", leftPart, targetName)
 	} else {
-		DEBUG("vault: Cache MISS for `%s`", leftPart)
+		DEBUG("vault: Cache MISS for `%s` (target: %s)", leftPart, targetName)
 		// Secret isn't cached. Grab it from the vault.
 		var err error
 		fullSecret, err = getVaultSecretWithClient(kv, leftPart)
@@ -700,7 +877,7 @@ func (VaultOperator) performVaultLookup(engine graft.Engine, key string) (string
 			}
 			return "", err
 		}
-		engine.GetOperatorState().SetVaultCache(leftPart, fullSecret)
+		engine.GetOperatorState().SetVaultCache(cacheKey, fullSecret)
 	}
 
 	secret, err := extractSubkey(fullSecret, leftPart, rightPart)
@@ -792,7 +969,7 @@ func (o VaultTryOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 		// Use the shared vault infrastructure
 		vaultOp := VaultOperator{}
-		secret, err := vaultOp.performVaultLookup(engine, path)
+		secret, err := vaultOp.performVaultLookup(engine, path, "")
 		if err == nil {
 			// Success!
 			DEBUG("vault-try: path %d succeeded", i+1)

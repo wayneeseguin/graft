@@ -1,0 +1,330 @@
+# Microservices Configuration with Targets
+# This example demonstrates using targets for a microservices architecture
+
+meta:
+  namespace: platform
+  environment: (( grab $ENVIRONMENT || "development" ))
+
+# Service Discovery and Configuration
+services:
+  # Authentication Service
+  auth:
+    # Service configuration from different sources
+    config:
+      # Basic settings from Parameter Store
+      host: (( awsparam@platform "/services/auth/host" ))
+      port: (( awsparam@platform "/services/auth/port" ))
+      replicas: (( awsparam@platform "/services/auth/replicas" ))
+      
+      # Database connection
+      database:
+        host: (( awsparam@platform "/services/auth/db/host" ))
+        port: (( awsparam@platform "/services/auth/db/port" ))
+        name: (( awsparam@platform "/services/auth/db/name" ))
+        # Credentials from Vault
+        username: (( vault@auth "/database/auth:username" ))
+        password: (( vault@auth "/database/auth:password" ))
+        
+        # Connection pool settings from NATS
+        pool: (( nats@config "kv:services/auth/db/pool" ))
+      
+      # JWT configuration
+      jwt:
+        # Public key from Parameter Store
+        public_key: (( awsparam@platform "/services/auth/jwt/public_key" ))
+        # Private key from Vault (more secure)
+        private_key: (( vault@auth "/jwt:private_key" ))
+        # Algorithm and expiry from NATS (easily changeable)
+        algorithm: (( nats@config "kv:services/auth/jwt/algorithm" ))
+        expiry: (( nats@config "kv:services/auth/jwt/expiry" ))
+      
+      # OAuth providers
+      oauth:
+        google:
+          client_id: (( awsparam@platform "/oauth/google/client_id" ))
+          client_secret: (( vault@oauth "/google:client_secret" ))
+          redirect_uri: (( concat "https://" (awsparam@platform "/services/auth/domain") "/oauth/google/callback" ))
+        
+        github:
+          client_id: (( awsparam@platform "/oauth/github/client_id" ))
+          client_secret: (( vault@oauth "/github:client_secret" ))
+          redirect_uri: (( concat "https://" (awsparam@platform "/services/auth/domain") "/oauth/github/callback" ))
+    
+    # Feature flags specific to auth service
+    features: (( nats@features "kv:services/auth/features" ))
+    
+    # Monitoring endpoints
+    monitoring:
+      healthcheck: /health
+      metrics: /metrics
+      # Monitoring credentials
+      prometheus_token: (( vault@monitoring "/prometheus/auth:token" ))
+
+  # User Service
+  user:
+    config:
+      host: (( awsparam@platform "/services/user/host" ))
+      port: (( awsparam@platform "/services/user/port" ))
+      
+      # Primary database (PostgreSQL)
+      database:
+        primary:
+          host: (( awsparam@platform "/services/user/db/primary/host" ))
+          credentials:
+            username: (( vault@user "/database/primary:username" ))
+            password: (( vault@user "/database/primary:password" ))
+        
+        # Read replicas
+        replicas:
+          - host: (( awsparam@platform "/services/user/db/replica1/host" ))
+            weight: 70
+          - host: (( awsparam@platform "/services/user/db/replica2/host" ))
+            weight: 30
+      
+      # Cache configuration (Redis)
+      cache:
+        host: (( awsparam@platform "/services/user/redis/host" ))
+        port: (( awsparam@platform "/services/user/redis/port" ))
+        password: (( vault@cache "/redis/user:password" ))
+        # Cache policies from NATS
+        ttl: (( nats@config "kv:services/user/cache/ttl" ))
+        max_entries: (( nats@config "kv:services/user/cache/max_entries" ))
+      
+      # Profile pictures storage
+      storage:
+        s3:
+          bucket: (( awsparam@platform "/services/user/s3/bucket" ))
+          region: (( awsparam@platform "/services/user/s3/region" ))
+          # S3 access via IAM role or keys from Vault
+          access_key: (( vault@storage "/s3/user:access_key" || "" ))
+          secret_key: (( vault@storage "/s3/user:secret_key" || "" ))
+        
+        # CDN configuration
+        cdn:
+          enabled: (( nats@config "kv:services/user/cdn/enabled" ))
+          domain: (( awsparam@platform "/services/user/cdn/domain" ))
+          key: (( vault@cdn "/cloudfront/user:key" ))
+
+  # Notification Service
+  notification:
+    config:
+      host: (( awsparam@platform "/services/notification/host" ))
+      port: (( awsparam@platform "/services/notification/port" ))
+      
+      # Message queue configuration (NATS JetStream)
+      queue:
+        url: (( nats@messaging "kv:config/url" ))
+        credentials:
+          user: (( nats@messaging "kv:auth/user" ))
+          password: (( vault@messaging "/nats:password" ))
+        
+        # Stream configurations
+        streams:
+          email: (( nats@messaging "obj:streams/email.json" ))
+          sms: (( nats@messaging "obj:streams/sms.json" ))
+          push: (( nats@messaging "obj:streams/push.json" ))
+      
+      # Email provider settings
+      email:
+        provider: (( awsparam@platform "/services/notification/email/provider" ))
+        
+        # SendGrid configuration
+        sendgrid:
+          api_key: (( vault@email "/sendgrid:api_key" ))
+          from_address: (( awsparam@platform "/services/notification/email/from" ))
+          templates: (( nats@templates "obj:email/sendgrid" ))
+        
+        # AWS SES configuration (fallback)
+        ses:
+          region: (( awsparam@platform "/services/notification/ses/region" ))
+          from_address: (( awsparam@platform "/services/notification/ses/from" ))
+          configuration_set: (( awsparam@platform "/services/notification/ses/config_set" ))
+      
+      # SMS provider settings
+      sms:
+        provider: (( awsparam@platform "/services/notification/sms/provider" ))
+        
+        # Twilio configuration
+        twilio:
+          account_sid: (( vault@sms "/twilio:account_sid" ))
+          auth_token: (( vault@sms "/twilio:auth_token" ))
+          from_number: (( awsparam@platform "/services/notification/sms/from" ))
+          
+        # AWS SNS configuration (fallback)
+        sns:
+          region: (( awsparam@platform "/services/notification/sns/region" ))
+          topic_arn: (( awsparam@platform "/services/notification/sns/topic" ))
+      
+      # Push notification settings
+      push:
+        # Firebase Cloud Messaging
+        fcm:
+          project_id: (( awsparam@platform "/services/notification/fcm/project_id" ))
+          credentials: (( vault@push "/fcm:service_account_json" ))
+        
+        # Apple Push Notification Service
+        apns:
+          team_id: (( awsparam@platform "/services/notification/apns/team_id" ))
+          bundle_id: (( awsparam@platform "/services/notification/apns/bundle_id" ))
+          key_id: (( vault@push "/apns:key_id" ))
+          private_key: (( vault@push "/apns:private_key" ))
+
+  # API Gateway
+  api_gateway:
+    config:
+      host: (( awsparam@platform "/services/gateway/host" ))
+      port: (( awsparam@platform "/services/gateway/port" ))
+      
+      # Rate limiting configuration
+      rate_limiting:
+        enabled: (( nats@config "kv:services/gateway/rate_limit/enabled" ))
+        
+        # Redis for rate limiting
+        redis:
+          host: (( awsparam@platform "/services/gateway/redis/host" ))
+          password: (( vault@cache "/redis/gateway:password" ))
+          
+        # Rate limit rules from NATS
+        rules: (( nats@config "obj:services/gateway/rate_limits.yaml" ))
+      
+      # Service discovery
+      services:
+        # Consul configuration
+        consul:
+          address: (( awsparam@platform "/infrastructure/consul/address" ))
+          token: (( vault@consul "/tokens/gateway:token" ))
+          
+        # Service endpoints (fallback if Consul is down)
+        static:
+          auth: (( concat "http://" (grab services.auth.config.host) ":" (grab services.auth.config.port) ))
+          user: (( concat "http://" (grab services.user.config.host) ":" (grab services.user.config.port) ))
+          notification: (( concat "http://" (grab services.notification.config.host) ":" (grab services.notification.config.port) ))
+      
+      # API keys for external consumers
+      api_keys:
+        # Mobile app
+        mobile:
+          ios: (( vault@api_keys "/mobile/ios:key" ))
+          android: (( vault@api_keys "/mobile/android:key" ))
+        
+        # Partner integrations
+        partners:
+          acme_corp: (( vault@api_keys "/partners/acme:key" ))
+          widget_inc: (( vault@api_keys "/partners/widget:key" ))
+
+# Shared Infrastructure
+infrastructure:
+  # Service mesh configuration
+  service_mesh:
+    # Istio configuration
+    istio:
+      enabled: (( nats@config "kv:infrastructure/istio/enabled" ))
+      pilot_url: (( awsparam@platform "/infrastructure/istio/pilot" ))
+      
+      # mTLS certificates
+      ca_cert: (( vault@mesh "/istio/ca:cert" ))
+      ca_key: (( vault@mesh "/istio/ca:key" ))
+  
+  # Observability stack
+  observability:
+    # Prometheus
+    prometheus:
+      url: (( awsparam@platform "/infrastructure/prometheus/url" ))
+      # Service-specific scrape configs from NATS
+      scrape_configs: (( nats@monitoring "obj:prometheus/scrape_configs.yaml" ))
+      
+    # Grafana
+    grafana:
+      url: (( awsparam@platform "/infrastructure/grafana/url" ))
+      admin_password: (( vault@monitoring "/grafana:admin_password" ))
+      # Dashboards stored in NATS
+      dashboards:
+        services: (( nats@monitoring "obj:grafana/dashboards/services.json" ))
+        infrastructure: (( nats@monitoring "obj:grafana/dashboards/infrastructure.json" ))
+        business: (( nats@monitoring "obj:grafana/dashboards/business.json" ))
+    
+    # Jaeger tracing
+    jaeger:
+      collector: (( awsparam@platform "/infrastructure/jaeger/collector" ))
+      query_url: (( awsparam@platform "/infrastructure/jaeger/query" ))
+      sampling_rate: (( nats@config "kv:infrastructure/jaeger/sampling_rate" ))
+  
+  # Message broker
+  kafka:
+    # Broker configuration
+    brokers: (( awsparam@platform "/infrastructure/kafka/brokers" ))
+    
+    # SASL authentication
+    sasl:
+      mechanism: (( awsparam@platform "/infrastructure/kafka/sasl/mechanism" ))
+      username: (( awsparam@platform "/infrastructure/kafka/sasl/username" ))
+      password: (( vault@kafka "/sasl:password" ))
+    
+    # Topic configurations from NATS
+    topics: (( nats@kafka "obj:topics/config.yaml" ))
+
+# Environment-specific overrides
+environments:
+  production:
+    # Production-specific database settings
+    database_pool_size: 100
+    cache_ttl: 3600
+    
+    # Production feature flags
+    features:
+      new_user_flow: false
+      advanced_notifications: true
+      beta_api: false
+    
+    # Production monitoring
+    monitoring:
+      alert_channel: "#prod-alerts"
+      pagerduty_key: (( vault@pagerduty "/production:integration_key" ))
+  
+  staging:
+    # Staging-specific settings
+    database_pool_size: 20
+    cache_ttl: 300
+    
+    # Staging feature flags
+    features:
+      new_user_flow: true
+      advanced_notifications: true
+      beta_api: true
+    
+    # Staging monitoring
+    monitoring:
+      alert_channel: "#staging-alerts"
+      pagerduty_key: (( vault@pagerduty "/staging:integration_key" ))
+  
+  development:
+    # Development-specific settings
+    database_pool_size: 5
+    cache_ttl: 60
+    
+    # Development feature flags (all enabled)
+    features:
+      new_user_flow: true
+      advanced_notifications: true
+      beta_api: true
+      debug_mode: true
+    
+    # Development monitoring
+    monitoring:
+      alert_channel: "#dev-alerts"
+      pagerduty_key: "dev-key-not-used"
+
+# Apply environment-specific settings
+current_env: (( grab environments.[meta.environment] || grab environments.development ))
+
+# Final service configuration with overrides
+final_config:
+  services: (( grab services ))
+  infrastructure: (( grab infrastructure ))
+  
+  # Apply environment overrides
+  overrides:
+    database_pool_size: (( grab current_env.database_pool_size ))
+    cache_ttl: (( grab current_env.cache_ttl ))
+    features: (( grab current_env.features ))
+    monitoring: (( grab current_env.monitoring ))

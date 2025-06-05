@@ -2,9 +2,35 @@
 
 These operators load data from external sources like HashiCorp Vault, AWS services, and local files.
 
+## Target Support
+
+Many external data operators support **targets** (v1.36.0+) to connect to multiple instances of the same service:
+
+```yaml
+# Connect to different Vault instances
+prod_secret: (( vault@production "secret/api:key" ))
+staging_secret: (( vault@staging "secret/api:key" ))
+
+# Different AWS accounts
+prod_param: (( awsparam@production "/app/config" ))
+dev_param: (( awsparam@development "/app/config" ))
+
+# Multiple NATS clusters
+cache_data: (( nats@cache "kv:config/app" ))
+queue_data: (( nats@queue "kv:jobs/pending" ))
+```
+
+Operators supporting targets:
+- `vault` / `vault-try`
+- `awsparam` / `awssecret`
+- `nats`
+
+See [Target-Aware Operators Guide](../guides/targets.md) for detailed configuration and usage.
+
 ## (( vault ))
 
-Usage: `(( vault PATH[:KEY] [|| DEFAULT] ))`
+Usage: `(( vault PATH[:KEY] [|| DEFAULT] ))`  
+With targets: `(( vault@TARGET PATH[:KEY] [|| DEFAULT] ))`
 
 The `(( vault ))` operator retrieves secrets from [HashiCorp Vault](https://www.vaultproject.io/). It connects to Vault using environment variables for authentication and configuration.
 
@@ -56,6 +82,15 @@ database:
   username: (( vault "secret/db:username" ))
   password: (( vault "secret/db:password" ))
   port: (( vault "secret/db:port" || 5432 ))
+
+# With targets (different Vault instances)
+environments:
+  production:
+    password: (( vault@production "secret/db:password" ))
+    api_key: (( vault@production "secret/api:key" ))
+  staging:
+    password: (( vault@staging "secret/db:password" ))
+    api_key: (( vault@staging "secret/api:key" ))
 ```
 
 See also: [vault examples](/examples/vault/), [vault integration guide](../guides/vault-integration.md)
@@ -115,7 +150,8 @@ See also: [vault-try examples](/examples/vault/vault-try.yml)
 
 ## (( awsparam ))
 
-Usage: `(( awsparam PATH [?key=SUBKEY] ))`
+Usage: `(( awsparam PATH [?key=SUBKEY] ))`  
+With targets: `(( awsparam@TARGET PATH [?key=SUBKEY] ))`
 
 The `(( awsparam ))` operator retrieves parameters from [AWS Systems Manager Parameter Store](https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html).
 
@@ -154,11 +190,18 @@ paths:
 database:
   host: (( awsparam (concat paths.db_config "?key=host") ))
   port: (( awsparam (concat paths.db_config "?key=port") ))
+
+# With targets (different AWS accounts)
+multi_account:
+  prod_db_host: (( awsparam@production "/app/prod/db_host" ))
+  staging_db_host: (( awsparam@staging "/app/staging/db_host" ))
+  dev_db_host: (( awsparam@dev "/app/dev/db_host" ))
 ```
 
 ## (( awssecret ))
 
-Usage: `(( awssecret NAME_OR_ARN [?key=SUBKEY&stage=STAGE&version=VERSION] ))`
+Usage: `(( awssecret NAME_OR_ARN [?key=SUBKEY&stage=STAGE&version=VERSION] ))`  
+With targets: `(( awssecret@TARGET NAME_OR_ARN [?key=SUBKEY&stage=STAGE&version=VERSION] ))`
 
 The `(( awssecret ))` operator retrieves secrets from [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/).
 
@@ -201,6 +244,12 @@ meta:
 
 secrets:
   api_key: (( awssecret (concat meta.env "/" meta.service "/key") ))
+
+# With targets (cross-account secrets)
+cross_account:
+  shared_api_key: (( awssecret@shared "shared/api/key" ))
+  partner_token: (( awssecret@partner "partner/integration/token" ))
+  prod_db_pass: (( awssecret@production "prod/db/credentials?key=password" ))
 ```
 
 ## (( file ))
@@ -302,7 +351,8 @@ See also: [load examples](/examples/load/)
 
 ## (( nats ))
 
-Usage: `(( nats "STORE_TYPE:PATH" [CONNECTION_CONFIG] ))`
+Usage: `(( nats "STORE_TYPE:PATH" [CONNECTION_CONFIG] ))`  
+With targets: `(( nats@TARGET "STORE_TYPE:PATH" ))`
 
 The `(( nats ))` operator retrieves values from [NATS JetStream](https://docs.nats.io/jetstream) Key-Value (KV) stores and Object stores. It intelligently handles different data types and provides seamless integration with graft's YAML processing.
 
@@ -350,6 +400,12 @@ services:
 # If KV contains: 'foo: bar\nnested:\n  key: value'
 config: (( nats "kv:app/config" ))
 # Result: {foo: bar, nested: {key: value}}
+
+# With targets (multiple NATS clusters)
+clusters:
+  cache_config: (( nats@cache "kv:config/app" ))
+  queue_config: (( nats@queue "kv:config/workers" ))
+  stream_data: (( nats@stream "obj:data/latest.json" ))
 ```
 
 ### Object Store Examples:

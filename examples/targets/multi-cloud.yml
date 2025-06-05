@@ -1,0 +1,305 @@
+# Multi-Cloud Infrastructure Configuration
+# This example shows how to use targets to manage resources across multiple cloud providers
+
+meta:
+  app_name: global-platform
+  environment: production
+
+# AWS Resources (Multiple Accounts)
+aws:
+  # Main production account
+  production:
+    vpc:
+      id: (( awsparam@aws_prod "/infrastructure/vpc/id" ))
+      cidr: (( awsparam@aws_prod "/infrastructure/vpc/cidr" ))
+      subnets:
+        private: (( awsparam@aws_prod "/infrastructure/subnets/private" ))
+        public: (( awsparam@aws_prod "/infrastructure/subnets/public" ))
+    
+    rds:
+      endpoint: (( awsparam@aws_prod "/database/endpoint" ))
+      port: (( awsparam@aws_prod "/database/port" ))
+      credentials:
+        username: (( awssecret@aws_prod "rds/master?key=username" ))
+        password: (( awssecret@aws_prod "rds/master?key=password" ))
+    
+    s3:
+      buckets:
+        assets: (( awsparam@aws_prod "/s3/buckets/assets" ))
+        backups: (( awsparam@aws_prod "/s3/buckets/backups" ))
+        logs: (( awsparam@aws_prod "/s3/buckets/logs" ))
+  
+  # Shared services account
+  shared:
+    monitoring:
+      cloudwatch_endpoint: (( awsparam@aws_shared "/monitoring/cloudwatch/endpoint" ))
+      prometheus_url: (( awsparam@aws_shared "/monitoring/prometheus/url" ))
+      grafana_url: (( awsparam@aws_shared "/monitoring/grafana/url" ))
+    
+    secrets:
+      api_keys:
+        datadog: (( awssecret@aws_shared "monitoring/datadog/api_key" ))
+        pagerduty: (( awssecret@aws_shared "monitoring/pagerduty/api_key" ))
+        slack: (( awssecret@aws_shared "notifications/slack/webhook" ))
+  
+  # Partner integration account
+  partner:
+    api:
+      endpoint: (( awsparam@aws_partner "/integration/api/endpoint" ))
+      credentials:
+        client_id: (( awssecret@aws_partner "integration/oauth?key=client_id" ))
+        client_secret: (( awssecret@aws_partner "integration/oauth?key=client_secret" ))
+
+# Google Cloud Resources (via Vault)
+gcp:
+  production:
+    project_id: (( vault@gcp_prod "secret/gcp/project:id" ))
+    
+    gke:
+      cluster_endpoint: (( vault@gcp_prod "secret/gke/cluster:endpoint" ))
+      ca_certificate: (( vault@gcp_prod "secret/gke/cluster:ca_cert" ))
+      
+    pubsub:
+      topics:
+        events: (( vault@gcp_prod "secret/pubsub/topics:events" ))
+        notifications: (( vault@gcp_prod "secret/pubsub/topics:notifications" ))
+      
+    bigquery:
+      dataset: (( vault@gcp_prod "secret/bigquery:dataset" ))
+      credentials: (( vault@gcp_prod "secret/bigquery:service_account_json" ))
+
+# Azure Resources (via Vault)
+azure:
+  production:
+    subscription_id: (( vault@azure_prod "secret/azure/subscription:id" ))
+    resource_group: (( vault@azure_prod "secret/azure/resource_group:name" ))
+    
+    cosmos_db:
+      endpoint: (( vault@azure_prod "secret/cosmosdb:endpoint" ))
+      key: (( vault@azure_prod "secret/cosmosdb:primary_key" ))
+      database: (( vault@azure_prod "secret/cosmosdb:database" ))
+    
+    key_vault:
+      name: (( vault@azure_prod "secret/keyvault:name" ))
+      tenant_id: (( vault@azure_prod "secret/keyvault:tenant_id" ))
+
+# NATS Configuration (Multiple Clusters)
+messaging:
+  # Main event bus
+  events:
+    cluster_url: (( nats@events "kv:config/cluster_url" ))
+    auth_token: (( nats@events "kv:auth/token" ))
+    streams:
+      orders: (( nats@events "kv:streams/orders/config" ))
+      payments: (( nats@events "kv:streams/payments/config" ))
+      notifications: (( nats@events "kv:streams/notifications/config" ))
+  
+  # Cache cluster
+  cache:
+    cluster_url: (( nats@cache "kv:config/cluster_url" ))
+    auth_token: (( nats@cache "kv:auth/token" ))
+    buckets:
+      sessions: (( nats@cache "kv:buckets/sessions" ))
+      api_cache: (( nats@cache "kv:buckets/api_cache" ))
+  
+  # Analytics cluster
+  analytics:
+    cluster_url: (( nats@analytics "kv:config/cluster_url" ))
+    auth_token: (( nats@analytics "kv:auth/token" ))
+    object_store:
+      reports: (( nats@analytics "obj:reports/latest.json" ))
+      dashboards: (( nats@analytics "obj:dashboards/config.yaml" ))
+
+# Cross-Cloud Service Mesh
+service_mesh:
+  # AWS services
+  aws_services:
+    api_gateway:
+      url: (( concat "https://" (awsparam@aws_prod "/api/gateway/domain") ))
+      key: (( awssecret@aws_prod "api/gateway/key" ))
+    
+    lambda_endpoints:
+      auth: (( awsparam@aws_prod "/lambda/endpoints/auth" ))
+      processing: (( awsparam@aws_prod "/lambda/endpoints/processing" ))
+  
+  # GCP services
+  gcp_services:
+    cloud_run:
+      url: (( vault@gcp_prod "secret/cloudrun/service:url" ))
+      token: (( vault@gcp_prod "secret/cloudrun/service:token" ))
+    
+    cloud_functions:
+      webhook: (( vault@gcp_prod "secret/functions/webhook:url" ))
+      processor: (( vault@gcp_prod "secret/functions/processor:url" ))
+  
+  # Azure services
+  azure_services:
+    functions:
+      api: (( vault@azure_prod "secret/functions/api:endpoint" ))
+      key: (( vault@azure_prod "secret/functions/api:key" ))
+
+# Global CDN Configuration
+cdn:
+  # Primary CDN (AWS CloudFront)
+  primary:
+    distribution_id: (( awsparam@aws_prod "/cdn/cloudfront/distribution_id" ))
+    domain: (( awsparam@aws_prod "/cdn/cloudfront/domain" ))
+    origin_secret: (( awssecret@aws_prod "cdn/origin/secret" ))
+  
+  # Backup CDN (via Vault)
+  backup:
+    provider: (( vault@cdn_backup "secret/cdn/provider:name" ))
+    endpoint: (( vault@cdn_backup "secret/cdn/config:endpoint" ))
+    auth_token: (( vault@cdn_backup "secret/cdn/auth:token" ))
+
+# Database Replication Across Clouds
+databases:
+  primary:
+    # AWS RDS (Production)
+    host: (( awsparam@aws_prod "/rds/primary/endpoint" ))
+    credentials:
+      username: (( awssecret@aws_prod "rds/primary?key=username" ))
+      password: (( awssecret@aws_prod "rds/primary?key=password" ))
+  
+  replicas:
+    # GCP Cloud SQL
+    gcp:
+      host: (( vault@gcp_prod "secret/cloudsql/replica:host" ))
+      credentials:
+        username: (( vault@gcp_prod "secret/cloudsql/replica:username" ))
+        password: (( vault@gcp_prod "secret/cloudsql/replica:password" ))
+    
+    # Azure Database
+    azure:
+      host: (( vault@azure_prod "secret/database/replica:host" ))
+      credentials:
+        username: (( vault@azure_prod "secret/database/replica:username" ))
+        password: (( vault@azure_prod "secret/database/replica:password" ))
+
+# Disaster Recovery Configuration
+disaster_recovery:
+  # Primary region (AWS us-east-1)
+  primary:
+    region: us-east-1
+    backup_bucket: (( awsparam@aws_prod "/dr/backup/bucket" ))
+    snapshot_vault: (( vault@dr_primary "secret/snapshots:location" ))
+  
+  # DR region (AWS us-west-2)
+  secondary:
+    region: us-west-2
+    backup_bucket: (( awsparam@aws_dr "/dr/backup/bucket" ))
+    snapshot_vault: (( vault@dr_secondary "secret/snapshots:location" ))
+    failover_config: (( nats@dr "kv:failover/config" ))
+
+# Cost Allocation Tags
+tags:
+  # Fetch from different sources based on resource location
+  aws_tags: (( awsparam@aws_shared "/tagging/standard" ))
+  gcp_labels: (( vault@gcp_shared "secret/labels:standard" ))
+  azure_tags: (( vault@azure_shared "secret/tags:standard" ))
+  
+  # Merge into common structure
+  common:
+    environment: (( grab meta.environment ))
+    application: (( grab meta.app_name ))
+    cost_center: (( awsparam@aws_shared "/billing/cost_center" ))
+    owner: (( vault@shared "secret/ownership:team" ))
+
+# Monitoring and Observability
+observability:
+  # Metrics (AWS CloudWatch + Prometheus)
+  metrics:
+    cloudwatch:
+      namespace: (( awsparam@aws_prod "/monitoring/cloudwatch/namespace" ))
+      dimensions: (( awsparam@aws_prod "/monitoring/cloudwatch/dimensions" ))
+    
+    prometheus:
+      pushgateway: (( vault@monitoring "secret/prometheus:pushgateway_url" ))
+      remote_write: (( vault@monitoring "secret/prometheus:remote_write_url" ))
+  
+  # Logs (Multi-destination)
+  logs:
+    destinations:
+      - name: cloudwatch
+        group: (( awsparam@aws_prod "/logging/cloudwatch/log_group" ))
+        stream: (( awsparam@aws_prod "/logging/cloudwatch/log_stream" ))
+      
+      - name: elasticsearch
+        url: (( vault@logging "secret/elasticsearch:url" ))
+        api_key: (( vault@logging "secret/elasticsearch:api_key" ))
+      
+      - name: splunk
+        hec_url: (( vault@logging "secret/splunk:hec_url" ))
+        hec_token: (( vault@logging "secret/splunk:hec_token" ))
+  
+  # Traces (Distributed)
+  tracing:
+    jaeger:
+      collector: (( nats@tracing "kv:jaeger/collector_endpoint" ))
+      sampling_rate: (( nats@tracing "kv:jaeger/sampling_rate" ))
+    
+    zipkin:
+      endpoint: (( vault@tracing "secret/zipkin:endpoint" ))
+      api_key: (( vault@tracing "secret/zipkin:api_key" ))
+
+# Security Configuration
+security:
+  # WAF (Web Application Firewall)
+  waf:
+    aws:
+      web_acl_id: (( awsparam@aws_prod "/security/waf/web_acl_id" ))
+      rules: (( awsparam@aws_prod "/security/waf/rules" ))
+    
+    cloudflare:
+      zone_id: (( vault@cloudflare "secret/waf:zone_id" ))
+      api_token: (( vault@cloudflare "secret/waf:api_token" ))
+  
+  # Secrets Rotation
+  rotation:
+    schedule: (( nats@security "kv:rotation/schedule" ))
+    last_rotated: (( nats@security "kv:rotation/last_updated" ))
+    pending_secrets:
+      - path: (( vault@rotation "secret/pending:database_password" ))
+        target: production
+        service: database
+      - path: (( vault@rotation "secret/pending:api_key" ))
+        target: production
+        service: api
+
+# Compliance and Governance
+compliance:
+  # Data residency requirements
+  data_residency:
+    us_data:
+      storage: (( awsparam@aws_us "/compliance/storage/location" ))
+      processing: (( awsparam@aws_us "/compliance/processing/region" ))
+    
+    eu_data:
+      storage: (( awsparam@aws_eu "/compliance/storage/location" ))
+      processing: (( awsparam@aws_eu "/compliance/processing/region" ))
+    
+    apac_data:
+      storage: (( awsparam@aws_apac "/compliance/storage/location" ))
+      processing: (( awsparam@aws_apac "/compliance/processing/region" ))
+  
+  # Audit trails
+  audit:
+    aws_cloudtrail: (( awsparam@aws_audit "/audit/cloudtrail/bucket" ))
+    gcp_audit_logs: (( vault@gcp_audit "secret/audit:log_sink" ))
+    azure_activity_log: (( vault@azure_audit "secret/audit:workspace_id" ))
+
+# Feature Flags (Multi-Source)
+features:
+  # Production features from Vault
+  production: (( vault@features_prod "secret/flags:all" ))
+  
+  # Staging features from NATS
+  staging: (( nats@features_staging "kv:flags/all" ))
+  
+  # Development features from AWS
+  development: (( awsparam@features_dev "/features/flags" ))
+  
+  # A/B testing configuration
+  ab_tests:
+    current: (( nats@ab_testing "obj:tests/current.json" ))
+    results: (( nats@ab_testing "obj:tests/results.json" ))

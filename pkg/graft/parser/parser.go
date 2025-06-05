@@ -433,6 +433,7 @@ func (p *Parser) parseOperatorCall() (*Expr, error) {
 	
 	token := p.currentToken()
 	var opName string
+	var targetName string
 	
 	// Map token types to operator names
 	switch token.Type {
@@ -450,6 +451,15 @@ func (p *Parser) parseOperatorCall() (*Expr, error) {
 		opName = "%"
 	default:
 		return nil, p.syntaxError("expected operator name", p.tokenPosition(token))
+	}
+
+	// Check for operator@target syntax
+	if strings.Contains(opName, "@") {
+		parts := strings.SplitN(opName, "@", 2)
+		if len(parts) == 2 {
+			opName = parts[0]
+			targetName = parts[1]
+		}
 	}
 	
 	// Extract operator name and modifiers
@@ -561,6 +571,10 @@ func (p *Parser) parseOperatorCall() (*Expr, error) {
 	}
 	
 	expr := NewOperatorCallWithPos(baseOpName, args, p.tokenPosition(token))
+	// Set the target if specified
+	if targetName != "" {
+		expr.Target = targetName
+	}
 	
 	// Parse operator modifiers (if any)
 	modifiers := p.parseOperatorModifiers(opName)

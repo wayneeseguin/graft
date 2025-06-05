@@ -1,0 +1,75 @@
+# Example using vault operator with targets
+
+# Application configuration using different vault targets
+app:
+  name: "myapp"
+  
+  # Production configuration from production vault
+  production:
+    database:
+      host: (( vault@production "secret/db:host" ))
+      port: (( vault@production "secret/db:port" ))
+      username: (( vault@production "secret/db:username" ))
+      password: (( vault@production "secret/db:password" ))
+    
+    api:
+      key: (( vault@production "secret/api:key" ))
+      secret: (( vault@production "secret/api:secret" ))
+    
+    redis:
+      url: (( concat "redis://:" (vault@production "secret/redis:password") "@" (vault@production "secret/redis:host") ":6379" ))
+  
+  # Staging configuration from staging vault
+  staging:
+    database:
+      host: (( vault@staging "secret/db:host" ))
+      port: (( vault@staging "secret/db:port" ))
+      username: (( vault@staging "secret/db:username" ))
+      password: (( vault@staging "secret/db:password" ))
+    
+    api:
+      key: (( vault@staging "secret/api:key" ))
+      secret: (( vault@staging "secret/api:secret" ))
+  
+  # Development configuration using default vault
+  development:
+    database:
+      host: (( vault "secret/dev/db:host" ))
+      port: (( vault "secret/dev/db:port" ))
+      username: (( vault "secret/dev/db:username" ))
+      password: (( vault "secret/dev/db:password" ))
+
+# Cross-environment configuration with fallbacks
+shared:
+  # Try production first, then staging, then default
+  monitoring_token: (( vault@production "secret/monitoring:token" || vault@staging "secret/monitoring:token" || vault "secret/monitoring:token" ))
+  
+  # Use target-specific logging credentials with fallback
+  logging:
+    endpoint: (( vault@production "secret/logging:endpoint" || "https://logs.default.com" ))
+    api_key: (( vault@production "secret/logging:api_key" || "default-key" ))
+
+# Feature flags from different environments
+features:
+  production_features: (( vault@production "secret/features:enabled" ))
+  staging_features: (( vault@staging "secret/features:enabled" ))
+  
+# Service discovery
+services:
+  auth_service:
+    production_url: (( concat "https://" (vault@production "secret/services:auth_host") ))
+    staging_url: (( concat "https://" (vault@staging "secret/services:auth_host") ))
+    
+  payment_service:
+    production_key: (( vault@production "secret/services/payment:api_key" ))
+    staging_key: (( vault@staging "secret/services/payment:api_key" ))
+
+# TLS certificates from target-specific vaults
+tls:
+  production:
+    cert: (( vault@production "secret/tls:cert" ))
+    key: (( vault@production "secret/tls:key" ))
+    
+  staging:
+    cert: (( vault@staging "secret/tls:cert" ))
+    key: (( vault@staging "secret/tls:key" ))

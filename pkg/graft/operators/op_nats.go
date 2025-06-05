@@ -6,6 +6,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -89,9 +91,242 @@ var (
 // When true will always return "REDACTED"
 var SkipNats bool
 
+// NatsTarget represents a NATS target configuration
+type NatsTarget struct {
+	URL                string        `yaml:"url"`
+	Timeout            time.Duration `yaml:"timeout"`
+	Retries            int           `yaml:"retries"`
+	RetryInterval      time.Duration `yaml:"retry_interval"`
+	RetryBackoff       float64       `yaml:"retry_backoff"`
+	MaxRetryInterval   time.Duration `yaml:"max_retry_interval"`
+	TLS                bool          `yaml:"tls"`
+	CertFile           string        `yaml:"cert_file"`
+	KeyFile            string        `yaml:"key_file"`
+	CAFile             string        `yaml:"ca_file"`
+	InsecureSkipVerify bool          `yaml:"insecure_skip_verify"`
+	CacheTTL           time.Duration `yaml:"cache_ttl"`
+	StreamingThreshold int64         `yaml:"streaming_threshold"`
+	AuditLogging       bool          `yaml:"audit_logging"`
+}
+
+// NatsClientPool manages NATS connections for different targets
+type NatsClientPool struct {
+	mu          sync.RWMutex
+	connections map[string]*pooledConnection
+	configs     map[string]*NatsTarget
+}
+
+// Global client pool for target-aware NATS connections
+var natsTargetPool = &NatsClientPool{
+	connections: make(map[string]*pooledConnection),
+	configs:     make(map[string]*NatsTarget),
+}
+
+// GetConnection returns a NATS connection for the specified target
+func (ncp *NatsClientPool) GetConnection(targetName string) (*pooledConnection, error) {
+	ncp.mu.RLock()
+	if conn, exists := ncp.connections[targetName]; exists {
+		conn.refCount++
+		conn.lastUsed = time.Now()
+		ncp.mu.RUnlock()
+		return conn, nil
+	}
+	ncp.mu.RUnlock()
+	
+	// Get target configuration
+	config, err := ncp.getTargetConfig(targetName)
+	if err != nil {
+		return nil, fmt.Errorf("NATS target '%s' not found: %v", targetName, err)
+	}
+	
+	// Create NATS configuration from target config
+	natsConfig := &natsConfig{
+		URL:                config.URL,
+		Timeout:            config.Timeout,
+		Retries:            config.Retries,
+		RetryInterval:      config.RetryInterval,
+		RetryBackoff:       config.RetryBackoff,
+		MaxRetryInterval:   config.MaxRetryInterval,
+		TLS:                config.TLS,
+		CertFile:           config.CertFile,
+		KeyFile:            config.KeyFile,
+		CAFile:             config.CAFile,
+		InsecureSkipVerify: config.InsecureSkipVerify,
+		CacheTTL:           config.CacheTTL,
+		StreamingThreshold: config.StreamingThreshold,
+		AuditLogging:       config.AuditLogging,
+	}
+	
+	// Create new connection
+	conn, err := createNatsConnectionFromConfig(natsConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create NATS connection for target '%s': %v", targetName, err)
+	}
+	
+	pooledConn := &pooledConnection{
+		conn:     conn,
+		lastUsed: time.Now(),
+		refCount: 1,
+	}
+	
+	// Create JetStream context
+	js, err := jetstream.New(conn)
+	if err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("failed to create JetStream context for target '%s': %v", targetName, err)
+	}
+	pooledConn.js = js
+	
+	// Store connection for reuse
+	ncp.mu.Lock()
+	ncp.connections[targetName] = pooledConn
+	ncp.configs[targetName] = config
+	ncp.mu.Unlock()
+	
+	return pooledConn, nil
+}
+
+// getTargetConfig retrieves target configuration from environment variables
+func (ncp *NatsClientPool) getTargetConfig(targetName string) (*NatsTarget, error) {
+	// Check if we have cached config
+	ncp.mu.RLock()
+	if config, exists := ncp.configs[targetName]; exists {
+		ncp.mu.RUnlock()
+		return config, nil
+	}
+	ncp.mu.RUnlock()
+	
+	// Use environment variables with target suffix
+	envPrefix := fmt.Sprintf("NATS_%s_", strings.ToUpper(targetName))
+	
+	// Check if the URL environment variable is set (required for target configurations)
+	urlEnvVar := envPrefix + "URL"
+	url := os.Getenv(urlEnvVar)
+	if url == "" {
+		return nil, fmt.Errorf("NATS target '%s' configuration incomplete (expected %s environment variable)", 
+			targetName, urlEnvVar)
+	}
+	
+	config := &NatsTarget{
+		URL:                url,
+		Timeout:            parseDurationOrDefault(getEnvOrDefault(envPrefix+"TIMEOUT", "5s"), 5*time.Second),
+		Retries:            parseIntOrDefault(getEnvOrDefault(envPrefix+"RETRIES", "3"), 3),
+		RetryInterval:      parseDurationOrDefault(getEnvOrDefault(envPrefix+"RETRY_INTERVAL", "1s"), 1*time.Second),
+		RetryBackoff:       parseFloatOrDefault(getEnvOrDefault(envPrefix+"RETRY_BACKOFF", "2.0"), 2.0),
+		MaxRetryInterval:   parseDurationOrDefault(getEnvOrDefault(envPrefix+"MAX_RETRY_INTERVAL", "30s"), 30*time.Second),
+		TLS:                parseBoolOrDefault(getEnvOrDefault(envPrefix+"TLS", "false"), false),
+		CertFile:           getEnvOrDefault(envPrefix+"CERT_FILE", ""),
+		KeyFile:            getEnvOrDefault(envPrefix+"KEY_FILE", ""),
+		CAFile:             getEnvOrDefault(envPrefix+"CA_FILE", ""),
+		InsecureSkipVerify: parseBoolOrDefault(getEnvOrDefault(envPrefix+"INSECURE_SKIP_VERIFY", "false"), false),
+		CacheTTL:           parseDurationOrDefault(getEnvOrDefault(envPrefix+"CACHE_TTL", "5m"), 5*time.Minute),
+		StreamingThreshold: parseInt64OrDefault(getEnvOrDefault(envPrefix+"STREAMING_THRESHOLD", "10485760"), 10*1024*1024),
+		AuditLogging:       parseBoolOrDefault(getEnvOrDefault(envPrefix+"AUDIT_LOGGING", "false"), false),
+	}
+	
+	return config, nil
+}
+
+// ReleaseConnection decreases the reference count for a target connection
+func (ncp *NatsClientPool) ReleaseConnection(targetName string) {
+	ncp.mu.Lock()
+	defer ncp.mu.Unlock()
+	
+	if conn, exists := ncp.connections[targetName]; exists {
+		conn.refCount--
+		if conn.refCount <= 0 {
+			// Connection no longer in use, but keep it cached for reuse
+			conn.refCount = 0
+		}
+	}
+}
+
 // NatsOperator provides the (( nats "store_type:path" )) operator
 // It will fetch values from NATS JetStream KV or Object stores
 type NatsOperator struct{}
+
+// extractTarget extracts target name from operator call (placeholder)
+func (n NatsOperator) extractTarget(ev *graft.Evaluator, args []*graft.Expr) string {
+	// TODO: Extract target from parsed expression when parser supports it
+	// For now, return empty string to use default configuration
+	return ""
+}
+
+// getCacheKey generates a cache key that includes target information
+func (n NatsOperator) getCacheKey(target, storeType, storePath string) string {
+	if target == "" {
+		return fmt.Sprintf("%s:%s", storeType, storePath)
+	}
+	return fmt.Sprintf("%s@%s:%s", target, storeType, storePath)
+}
+
+// fetchFromKVWithTarget retrieves a value from a NATS KV store with target-aware caching
+func (n NatsOperator) fetchFromKVWithTarget(js jetstream.JetStream, storePath string, config *natsConfig, target string) (interface{}, error) {
+	startTime := time.Now()
+	operationType := "kv"
+	
+	// Audit logging
+	if config.AuditLogging {
+		if target != "" {
+			DEBUG("AUDIT: Accessing KV store: %s (target: %s)", storePath, target)
+		} else {
+			DEBUG("AUDIT: Accessing KV store: %s", storePath)
+		}
+	}
+	
+	// Check TTL cache first with target-aware key
+	cacheKey := n.getCacheKey(target, "kv", storePath)
+	if val, ok := natsCache.get(cacheKey); ok {
+		duration := time.Since(startTime)
+		natsMetrics.recordOperation(operationType, duration, false, true)
+		return val, nil
+	}
+	
+	// Use existing fetchFromKV logic but with target-aware caching
+	result, err := fetchFromKV(js, storePath, config)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Cache the result with target-aware key
+	natsCache.set(cacheKey, result, config.CacheTTL)
+	
+	return result, nil
+}
+
+// fetchFromObjectWithTarget retrieves a value from a NATS Object store with target-aware caching  
+func (n NatsOperator) fetchFromObjectWithTarget(js jetstream.JetStream, storePath string, config *natsConfig, target string) (interface{}, error) {
+	startTime := time.Now()
+	operationType := "obj"
+	
+	// Audit logging
+	if config.AuditLogging {
+		if target != "" {
+			DEBUG("AUDIT: Accessing Object store: %s (target: %s)", storePath, target)
+		} else {
+			DEBUG("AUDIT: Accessing Object store: %s", storePath)
+		}
+	}
+	
+	// Check TTL cache first with target-aware key
+	cacheKey := n.getCacheKey(target, "obj", storePath)
+	if val, ok := natsCache.get(cacheKey); ok {
+		duration := time.Since(startTime)
+		natsMetrics.recordOperation(operationType, duration, false, true)
+		return val, nil
+	}
+	
+	// Use existing fetchFromObject logic but with target-aware caching
+	result, err := fetchFromObject(js, storePath, config)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Cache the result with target-aware key
+	natsCache.set(cacheKey, result, config.CacheTTL)
+	
+	return result, nil
+}
 
 // natsConfig holds connection configuration with enhanced retry and TLS options
 type natsConfig struct {
@@ -435,7 +670,7 @@ func fetchFromKV(js jetstream.JetStream, storePath string, config *natsConfig) (
 		DEBUG("AUDIT: Accessing KV store: %s", storePath)
 	}
 	
-	// Check TTL cache first
+	// Check TTL cache first  
 	cacheKey := fmt.Sprintf("kv:%s", storePath)
 	if val, ok := natsCache.get(cacheKey); ok {
 		duration := time.Since(startTime)
@@ -680,20 +915,33 @@ func (n NatsOperator) Run(ev *graft.Evaluator, args []*graft.Expr) (*graft.Respo
 		return nil, err
 	}
 	
-	// Get connection from pool
-	pc, err := natsPool.getConnection(config)
-	if err != nil {
-		return nil, err
+	// Extract target information (placeholder for now)
+	targetName := n.extractTarget(ev, args)
+	
+	var pc *pooledConnection
+	if targetName != "" {
+		// Use target-aware client pool
+		pc, err = natsTargetPool.GetConnection(targetName)
+		if err != nil {
+			return nil, err
+		}
+		defer natsTargetPool.ReleaseConnection(targetName)
+	} else {
+		// Use default connection pool
+		pc, err = natsPool.getConnection(config)
+		if err != nil {
+			return nil, err
+		}
+		defer natsPool.releaseConnection(config)
 	}
-	defer natsPool.releaseConnection(config)
 	
 	// Fetch the value based on store type
 	var value interface{}
 	switch storeType {
 	case "kv":
-		value, err = fetchFromKV(pc.js, storePath, config)
+		value, err = n.fetchFromKVWithTarget(pc.js, storePath, config, targetName)
 	case "obj":
-		value, err = fetchFromObject(pc.js, storePath, config)
+		value, err = n.fetchFromObjectWithTarget(pc.js, storePath, config, targetName)
 	}
 	
 	if err != nil {
@@ -876,6 +1124,61 @@ func streamLargeObject(obj jetstream.ObjectStore, objectName string, maxSize int
 	}
 	
 	return result, nil
+}
+
+// Helper functions for environment variable parsing
+
+// parseInt64OrDefault parses int64 string or returns default
+func parseInt64OrDefault(value string, defaultValue int64) int64 {
+	if i, err := strconv.ParseInt(value, 10, 64); err == nil {
+		return i
+	}
+	return defaultValue
+}
+
+// parseFloatOrDefault parses float64 string or returns default
+func parseFloatOrDefault(value string, defaultValue float64) float64 {
+	if f, err := strconv.ParseFloat(value, 64); err == nil {
+		return f
+	}
+	return defaultValue
+}
+
+// createNatsConnectionFromConfig creates a NATS connection from target configuration
+func createNatsConnectionFromConfig(config *natsConfig) (*nats.Conn, error) {
+	opts := buildConnectionOptions(config)
+	
+	var conn *nats.Conn
+	var err error
+	
+	retryInterval := config.RetryInterval
+	for attempt := 0; attempt <= config.Retries; attempt++ {
+		if attempt > 0 {
+			DEBUG("retrying NATS connection (attempt %d/%d) after %v", attempt, config.Retries, retryInterval)
+			time.Sleep(retryInterval)
+			
+			// Apply backoff
+			if config.RetryBackoff > 1 {
+				retryInterval = time.Duration(float64(retryInterval) * config.RetryBackoff)
+				if config.MaxRetryInterval > 0 && retryInterval > config.MaxRetryInterval {
+					retryInterval = config.MaxRetryInterval
+				}
+			}
+		}
+		
+		conn, err = nats.Connect(config.URL, opts...)
+		if err == nil {
+			break
+		}
+		
+		DEBUG("failed to connect to NATS: %v", err)
+	}
+	
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to NATS after %d attempts: %v", config.Retries+1, err)
+	}
+	
+	return conn, nil
 }
 
 func init() {

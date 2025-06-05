@@ -1,0 +1,144 @@
+# Example using NATS operator with targets
+
+# Application configuration using different NATS targets
+app:
+  name: "myapp"
+  
+  # Production configuration from production NATS
+  production:
+    # KV store access for configuration
+    database:
+      host: (( nats@production "kv:db/host" ))
+      port: (( nats@production "kv:db/port" ))
+      username: (( nats@production "kv:db/username" ))
+      password: (( nats@production "kv:db/password" ))
+    
+    # API configuration
+    api:
+      key: (( nats@production "kv:api/key" ))
+      secret: (( nats@production "kv:api/secret" ))
+      rate_limit: (( nats@production "kv:api/rate_limit" ))
+    
+    # Redis configuration with connection string building
+    redis:
+      url: (( concat "redis://:/" (nats@production "kv:redis/password") "@" (nats@production "kv:redis/host") ":6379" ))
+    
+    # TLS certificates from object store
+    tls:
+      cert: (( nats@production "obj:certificates/server.crt" ))
+      key: (( nats@production "obj:certificates/server.key" ))
+      ca: (( nats@production "obj:certificates/ca.crt" ))
+  
+  # Staging configuration from staging NATS
+  staging:
+    database:
+      host: (( nats@staging "kv:db/host" ))
+      port: (( nats@staging "kv:db/port" ))
+      username: (( nats@staging "kv:db/username" ))
+      password: (( nats@staging "kv:db/password" ))
+    
+    api:
+      key: (( nats@staging "kv:api/key" ))
+      secret: (( nats@staging "kv:api/secret" ))
+      rate_limit: (( nats@staging "kv:api/rate_limit" ))
+  
+  # Development configuration using default NATS
+  development:
+    database:
+      host: (( nats "kv:dev/db/host" ))
+      port: (( nats "kv:dev/db/port" ))
+      username: (( nats "kv:dev/db/username" ))
+      password: (( nats "kv:dev/db/password" ))
+
+# Cross-environment configuration with fallbacks
+shared:
+  # Try production first, then staging, then default
+  monitoring_token: (( nats@production "kv:monitoring/token" || nats@staging "kv:monitoring/token" || nats "kv:monitoring/token" ))
+  
+  # Use target-specific logging credentials with fallback
+  logging:
+    endpoint: (( nats@production "kv:logging/endpoint" || "https://logs.default.com" ))
+    api_key: (( nats@production "kv:logging/api_key" || "default-key" ))
+
+# Feature flags from different environments
+features:
+  production_features: (( nats@production "kv:features/enabled" ))
+  staging_features: (( nats@staging "kv:features/enabled" ))
+  
+# Service discovery
+services:
+  auth_service:
+    production_url: (( concat "https://" (nats@production "kv:services/auth_host") ))
+    staging_url: (( concat "https://" (nats@staging "kv:services/auth_host") ))
+    
+  payment_service:
+    production_key: (( nats@production "kv:services/payment/api_key" ))
+    staging_key: (( nats@staging "kv:services/payment/api_key" ))
+
+# Large configuration files from object store
+configurations:
+  # Large YAML configuration file
+  app_config: (( nats@production "obj:configs/app-config.yml" ))
+  
+  # JSON configuration
+  feature_toggles: (( nats@production "obj:configs/features.json" ))
+  
+  # Binary data (will be base64 encoded)
+  encryption_key: (( nats@production "obj:secrets/encryption.key" ))
+
+# Environment-specific microservice configurations
+microservices:
+  user_service:
+    production:
+      config: (( nats@production "kv:microservices/user/config" ))
+      secrets: (( nats@production "obj:microservices/user/secrets.yml" ))
+    staging:
+      config: (( nats@staging "kv:microservices/user/config" ))
+      secrets: (( nats@staging "obj:microservices/user/secrets.yml" ))
+      
+  notification_service:
+    production:
+      smtp_config: (( nats@production "kv:notifications/smtp" ))
+      templates: (( nats@production "obj:notifications/templates.zip" ))
+    staging:
+      smtp_config: (( nats@staging "kv:notifications/smtp" ))
+      templates: (( nats@staging "obj:notifications/templates.zip" ))
+
+# Monitoring and observability
+monitoring:
+  # Prometheus configuration
+  prometheus:
+    production_config: (( nats@production "obj:monitoring/prometheus.yml" ))
+    staging_config: (( nats@staging "obj:monitoring/prometheus.yml" ))
+  
+  # Grafana dashboards
+  grafana:
+    dashboards: (( nats@production "obj:monitoring/grafana-dashboards.json" ))
+    
+  # Alert rules
+  alerts:
+    rules: (( nats@production "obj:monitoring/alert-rules.yml" ))
+
+# Deployment configurations
+deployments:
+  kubernetes:
+    production:
+      namespace_config: (( nats@production "kv:k8s/namespace" ))
+      resource_limits: (( nats@production "kv:k8s/resources" ))
+      secrets: (( nats@production "obj:k8s/secrets.yml" ))
+    staging:
+      namespace_config: (( nats@staging "kv:k8s/namespace" ))
+      resource_limits: (( nats@staging "kv:k8s/resources" ))
+      secrets: (( nats@staging "obj:k8s/secrets.yml" ))
+
+# Infrastructure as Code
+infrastructure:
+  terraform:
+    # Terraform variable files from object store
+    production_vars: (( nats@production "obj:terraform/production.tfvars" ))
+    staging_vars: (( nats@staging "obj:terraform/staging.tfvars" ))
+    
+  ansible:
+    # Ansible inventory and vars
+    production_inventory: (( nats@production "obj:ansible/production-inventory.yml" ))
+    staging_inventory: (( nats@staging "obj:ansible/staging-inventory.yml" ))

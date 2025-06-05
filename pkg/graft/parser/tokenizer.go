@@ -31,6 +31,7 @@ const (
 	TokenQuestion    // Future: ? (for ternary)
 	TokenColon       // Future: : (for ternary)
 	TokenPipe        // | for vault choice sub-operator
+	TokenAt          // @ for operator targets (e.g., vault@production)
 	TokenEOF
 	TokenUnknown
 )
@@ -87,6 +88,8 @@ func (t Token) String() string {
 		return ":"
 	case TokenPipe:
 		return "|"
+	case TokenAt:
+		return "@"
 	default:
 		return t.Value
 	}
@@ -311,6 +314,19 @@ func (t *Tokenizer) Tokenize() []Token {
 				t.advance()
 			}
 			
+		case '@':
+			// @ for operator targets (e.g., vault@production)
+			// Check if this is part of an operator@target expression
+			if current.Len() > 0 && t.isOperatorChar(t.peek()) {
+				// This is part of an operator@target expression, keep it together
+				current.WriteByte(ch)
+				t.advance()
+			} else {
+				t.flushCurrent(&current)
+				t.addToken("@", TokenAt)
+				t.advance()
+			}
+			
 		default:
 			current.WriteByte(ch)
 			t.advance()
@@ -412,6 +428,14 @@ func (t *Tokenizer) classifyToken(value string) TokenType {
 	// Check if it's an operator with modifiers (e.g., "vault:nocache")
 	if strings.Contains(value, ":") {
 		parts := strings.Split(value, ":")
+		if len(parts) > 1 && IsRegisteredOperator(parts[0]) {
+			return TokenOperator
+		}
+	}
+	
+	// Check if it's an operator with target (e.g., "vault@production")
+	if strings.Contains(value, "@") {
+		parts := strings.Split(value, "@")
 		if len(parts) > 1 && IsRegisteredOperator(parts[0]) {
 			return TokenOperator
 		}

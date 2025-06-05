@@ -39,6 +39,7 @@ type Expr struct {
 	Type      ExprType
 	Operator  string
 	Name      string
+	Target    string  // Target for operator (e.g., "production" in "vault@production")
 	Left      *Expr
 	Right     *Expr
 	Literal   interface{}
