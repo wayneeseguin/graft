@@ -1,44 +1,112 @@
+name: Release
+
 on:
-  release:
-    types: [created]
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
-  build-release-artifacts:
-    name: build-release-artifacts
+  build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        include:
-        - goos: linux
-          goarch: amd64
-        - goos: linux
-          goarch: arm64
-        - goos: windows
-          goarch: amd64
-        - goos: darwin
-          goarch: amd64
-        - goos: darwin
-          goarch: arm64
-
+        goos: [linux, darwin]
+        goarch: [amd64, arm64]
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: stable
-        check-latest: true
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Build
-      env:
-        CGO_ENABLED: 0
-        GOOS: ${{ matrix.goos }}
-        GOARCH: ${{ matrix.goarch }}
-      run: 'go build -v -o graft-${{ matrix.goos }}-${{ matrix.goarch }} -ldflags="-X main.Version=${{ github.event.release.tag_name }}" ./cmd/graft'
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
 
-    - uses: geofffranks/upload-asset@v2
-      with:
-        file: ./graft-${{ matrix.goos }}-${{ matrix.goarch }}
-        with_sha1: true
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          OUTPUT_NAME=graft-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}
+          
+          go build -ldflags "-X main.Version=${VERSION}" -o ${OUTPUT_NAME} ./cmd/graft
+          
+          # Create tar.gz archive
+          tar -czf ${OUTPUT_NAME}.tar.gz ${OUTPUT_NAME}
+          
+          # Create checksum
+          sha256sum ${OUTPUT_NAME}.tar.gz > ${OUTPUT_NAME}.tar.gz.sha256
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: graft-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            graft-${{ steps.version.outputs.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Consolidate artifacts
+        run: |
+          mkdir -p releases
+          find artifacts -type f -name "*.tar.gz*" -exec mv {} releases/ \;
+
+      - name: Generate release notes
+        run: |
+          cat > release-notes.md << EOF
+          # Release ${{ steps.version.outputs.VERSION }}
+          
+          ## Downloads
+          
+          ### Linux
+          - [graft-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/graft-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz)
+          - [graft-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/graft-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz)
+          
+          ### macOS
+          - [graft-${{ steps.version.outputs.VERSION }}-darwin-amd64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/graft-${{ steps.version.outputs.VERSION }}-darwin-amd64.tar.gz)
+          - [graft-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/graft-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz)
+          
+          ## Installation
+          
+          \`\`\`bash
+          # Download the appropriate binary for your platform
+          curl -L https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.VERSION }}/graft-${{ steps.version.outputs.VERSION }}-\$(uname -s | tr '[:upper:]' '[:lower:]')-\$(uname -m | sed 's/x86_64/amd64/').tar.gz | tar -xz
+          
+          # Move to your PATH
+          sudo mv graft-${{ steps.version.outputs.VERSION }}-* /usr/local/bin/graft
+          \`\`\`
+          
+          ## Changelog
+          
+          See [commit history](https://github.com/${{ github.repository }}/compare/v0.0.0...${{ steps.version.outputs.VERSION }}) for changes.
+          EOF
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: release-notes.md
+          files: releases/*
+          draft: false
+          prerelease: false

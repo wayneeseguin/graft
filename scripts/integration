@@ -11,8 +11,8 @@ use POSIX qw(strftime);
 # Configuration
 my $DOCKER_VAULT_IMAGE = 'hashicorp/vault:latest';
 my $DOCKER_NATS_IMAGE = 'nats:2.10-alpine';
-my $VAULT_PORT = $ENV{GRAFT_TEST_VAULT_PORT} || 8200;
-my $NATS_PORT = $ENV{GRAFT_TEST_NATS_PORT} || 4222;
+my $VAULT_PORT = $ENV{GRAFT_TEST_VAULT_PORT} || 8288;
+my $NATS_PORT = $ENV{GRAFT_TEST_NATS_PORT} || 4288;
 my $VAULT_DEV_TOKEN = 'root-token-for-testing';
 
 # Command line options
@@ -56,46 +56,46 @@ main();
 sub main {
     say "Graft Integration Tests";
     say "=" x 50;
-    
+
     # Check prerequisites
     check_prerequisites();
-    
+
     # Start services
     if ($test_vault) {
         say "\nStarting Vault server...";
         start_vault_server();
     }
-    
+
     if ($test_nats) {
         say "\nStarting NATS server...";
         start_nats_server();
     }
-    
+
     # Run tests
     if ($test_vault) {
         say "\nRunning Vault integration tests...";
         run_vault_tests();
     }
-    
+
     if ($test_nats) {
         say "\nRunning NATS integration tests...";
         run_nats_tests();
     }
-    
+
     # Run joint tests if both services are enabled
     if ($test_vault && $test_nats) {
         say "\nRunning joint Vault + NATS integration tests...";
         run_vault_nats_tests();
     }
-    
+
     # Print summary
     print_summary();
-    
+
     # Cleanup
     unless ($keep_containers) {
         cleanup_containers();
     }
-    
+
     exit($fail_count > 0 ? 1 : 0);
 }
 
@@ -103,10 +103,10 @@ sub check_prerequisites {
     # Check for docker
     my $docker_check = `docker --version 2>&1`;
     die "Docker is not installed or not in PATH\n" unless $docker_check =~ /Docker version/;
-    
+
     # Check for graft binary
     die "graft binary not found. Run 'make build' first.\n" unless -x './graft';
-    
+
     # Check if ports are available
     check_port_available($VAULT_PORT) if $test_vault;
     check_port_available($NATS_PORT) if $test_nats;
@@ -133,50 +133,50 @@ sub check_port_available {
 
 sub start_vault_server {
     my $container_name = "graft-test-vault-$$";
-    
+
     # Start Vault in dev mode
     my $cmd = qq{docker run -d --rm --name $container_name -p $VAULT_PORT:8200 -e VAULT_DEV_ROOT_TOKEN_ID=$VAULT_DEV_TOKEN $DOCKER_VAULT_IMAGE};
-    
+
     log_verbose("Running: $cmd");
     my $container_id = `$cmd`;
     chomp $container_id;
-    
+
     die "Failed to start Vault container\n" unless $container_id;
-    
+
     $containers{vault} = {
         name => $container_name,
         id => $container_id,
         port => $VAULT_PORT,
     };
-    
+
     # Wait for Vault to be ready
     wait_for_service("http://localhost:$VAULT_PORT/v1/sys/health", 30);
-    
+
     # Initialize test data
     setup_vault_test_data();
 }
 
 sub start_nats_server {
     my $container_name = "graft-test-nats-$$";
-    
+
     # Start NATS with JetStream enabled
     my $cmd = qq{docker run -d --rm --name $container_name -p $NATS_PORT:4222 $DOCKER_NATS_IMAGE -js};
-    
+
     log_verbose("Running: $cmd");
     my $container_id = `$cmd`;
     chomp $container_id;
-    
+
     die "Failed to start NATS container\n" unless $container_id;
-    
+
     $containers{nats} = {
         name => $container_name,
         id => $container_id,
         port => $NATS_PORT,
     };
-    
+
     # Wait for NATS to be ready
     sleep 2; # NATS starts quickly
-    
+
     # Initialize test data
     setup_nats_test_data();
 }
@@ -184,7 +184,7 @@ sub start_nats_server {
 sub wait_for_service {
     my ($url, $timeout) = @_;
     my $start = time();
-    
+
     while ((time() - $start) < $timeout) {
         my $check = `curl -s -o /dev/null -w "%{http_code}" $url 2>&1`;
         if ($check eq '200') {
@@ -193,17 +193,17 @@ sub wait_for_service {
         }
         sleep 0.5;
     }
-    
+
     die "Service at $url failed to start within $timeout seconds\n";
 }
 
 sub setup_vault_test_data {
     my $vault_addr = "http://localhost:$VAULT_PORT";
     my $token = $VAULT_DEV_TOKEN;
-    
+
     # Enable KV v2 secrets engine
     run_command("curl -s -X POST -H 'X-Vault-Token: $token' $vault_addr/v1/sys/mounts/secret -d '{\"type\":\"kv\",\"options\":{\"version\":\"2\"}}'");
-    
+
     # Add test secrets
     my @secrets = (
         {
@@ -219,27 +219,27 @@ sub setup_vault_test_data {
             data => '{"data":{"enabled":"true","max_users":"100","tier":"premium"}}'
         },
     );
-    
+
     for my $secret (@secrets) {
         run_command("curl -s -X POST -H 'X-Vault-Token: $token' $vault_addr/v1/$secret->{path} -d '$secret->{data}'");
     }
-    
+
     log_verbose("Vault test data initialized");
 }
 
 sub setup_nats_test_data {
     my $nats_url = "nats://localhost:$NATS_PORT";
-    
+
     # Install nats CLI if not available
     my $nats_cli = `which nats 2>/dev/null`;
     if (!$nats_cli) {
         say "NATS CLI not found. Installing...";
         run_command('go install github.com/nats-io/natscli/nats@latest');
     }
-    
+
     # Create KV bucket
     run_command("nats -s $nats_url kv add test-bucket 2>&1");
-    
+
     # Add test KV data
     my @kv_data = (
         { key => 'config.host', value => 'api.example.com' },
@@ -248,65 +248,65 @@ sub setup_nats_test_data {
         { key => 'features.auth', value => 'enabled' },
         { key => 'features.cache', value => 'true' },
     );
-    
+
     for my $kv (@kv_data) {
         run_command("nats -s $nats_url kv put test-bucket '$kv->{key}' '$kv->{value}' 2>&1");
     }
-    
+
     # Create object store
     run_command("nats -s $nats_url object add test-objects 2>&1");
-    
+
     # Add test objects
     my $yaml_file = "$temp_dir/test.yml";
     write_file($yaml_file, "version: 1.0\napp: test\nenv: integration\n");
     run_command("nats -s $nats_url object put test-objects $yaml_file --name config.yml 2>&1");
-    
+
     log_verbose("NATS test data initialized");
 }
 
 sub run_vault_tests {
     say "\n1..7 # Vault operator tests";
-    
+
     # Test 1: Basic secret retrieval
     test_vault_basic();
-    
+
     # Test 2: Secret with specific key
     test_vault_with_key();
-    
+
     # Test 3: Multiple vault references
     test_vault_multiple();
-    
+
     # Test 4: Vault with defaults
     test_vault_defaults();
-    
+
     # Test 5: Invalid path handling
     test_vault_invalid_path();
-    
+
     # Test 6: Target-specific vault
     test_vault_targets();
-    
+
     # Test 7: Vault in complex merge
     test_vault_merge();
 }
 
 sub run_nats_tests {
     say "\n1..6 # NATS operator tests";
-    
+
     # Test 1: Basic KV retrieval
     test_nats_kv_basic();
-    
+
     # Test 2: Object store YAML retrieval
     test_nats_object_yaml();
-    
+
     # Test 3: Multiple NATS references
     test_nats_multiple();
-    
+
     # Test 4: Invalid key handling
     test_nats_invalid_key();
-    
+
     # Test 5: Target-specific NATS
     test_nats_targets();
-    
+
     # Test 6: NATS with timeout
     test_nats_timeout();
 }
@@ -323,7 +323,7 @@ EOF
         VAULT_ADDR => "http://localhost:$VAULT_PORT",
         VAULT_TOKEN => $VAULT_DEV_TOKEN,
     });
-    
+
     ok($result->{success}, "Vault basic secret retrieval");
     ok($result->{output} =~ /username:\s+admin/, "Retrieved correct username");
     ok($result->{output} =~ /password:\s+secret123/, "Retrieved correct password");
@@ -339,7 +339,7 @@ EOF
         VAULT_ADDR => "http://localhost:$VAULT_PORT",
         VAULT_TOKEN => $VAULT_DEV_TOKEN,
     });
-    
+
     ok($result->{success}, "Vault with specific keys");
     ok($result->{output} =~ m{connection:\s+postgres://db\.example\.com:5432/myapp}, "Built correct connection string");
 }
@@ -358,7 +358,7 @@ EOF
         VAULT_ADDR => "http://localhost:$VAULT_PORT",
         VAULT_TOKEN => $VAULT_DEV_TOKEN,
     });
-    
+
     ok($result->{success}, "Multiple vault references");
     ok($result->{output} =~ /enabled:\s+true/, "Boolean value retrieved");
     ok($result->{output} =~ /max_users:\s+100/, "Numeric value retrieved");
@@ -376,7 +376,7 @@ EOF
         VAULT_ADDR => "http://localhost:$VAULT_PORT",
         VAULT_TOKEN => $VAULT_DEV_TOKEN,
     });
-    
+
     ok($result->{success}, "Vault with defaults");
     ok($result->{output} =~ /secret:\s+default-value/, "Default value used for missing secret");
     ok($result->{output} =~ /real:\s+admin/, "Real value used when present");
@@ -392,7 +392,7 @@ EOF
         VAULT_ADDR => "http://localhost:$VAULT_PORT",
         VAULT_TOKEN => $VAULT_DEV_TOKEN,
     });
-    
+
     ok(!$result->{success}, "Vault with invalid path fails");
     ok($result->{stderr} =~ /vault.*error|failed/i, "Error message mentions vault");
 }
@@ -414,7 +414,7 @@ EOF
         VAULT_PROD_ADDR => "http://localhost:$VAULT_PORT",
         VAULT_PROD_TOKEN => $VAULT_DEV_TOKEN,
     });
-    
+
     ok($result->{success}, "Target-specific vault operators");
     ok($result->{output} =~ /dev:.*username:\s+admin/s, "Dev target retrieved value");
     ok($result->{output} =~ /prod:.*username:\s+admin/s, "Prod target retrieved value");
@@ -440,7 +440,7 @@ EOF
         VAULT_ADDR => "http://localhost:$VAULT_PORT",
         VAULT_TOKEN => $VAULT_DEV_TOKEN,
     });
-    
+
     ok($result->{success}, "Vault in merged documents");
     ok($result->{output} =~ /host:\s+db\.example\.com/, "Overlay vault value used");
     ok($result->{output} =~ /username:\s+admin/, "Base vault value preserved");
@@ -459,7 +459,7 @@ EOF
     my $result = run_graft_test($yaml, {
         NATS_URL => "nats://localhost:$NATS_PORT",
     });
-    
+
     ok($result->{success}, "NATS KV basic retrieval");
     ok($result->{output} =~ /host:\s+api\.example\.com/, "Retrieved correct host");
     ok($result->{output} =~ /port:\s+"8080"/, "Retrieved correct port");
@@ -474,7 +474,7 @@ EOF
     my $result = run_graft_test($yaml, {
         NATS_URL => "nats://localhost:$NATS_PORT",
     });
-    
+
     ok($result->{success}, "NATS object store YAML retrieval");
     ok($result->{output} =~ /version:\s+["']?1\.0/, "YAML content parsed");
     ok($result->{output} =~ /app:\s+test/, "YAML structure preserved");
@@ -492,7 +492,7 @@ EOF
     my $result = run_graft_test($yaml, {
         NATS_URL => "nats://localhost:$NATS_PORT",
     });
-    
+
     ok($result->{success}, "Multiple NATS references");
     ok($result->{output} =~ /auth:\s+enabled/, "First KV value retrieved");
     ok($result->{output} =~ /cache:\s+true/, "Second KV value retrieved");
@@ -508,7 +508,7 @@ EOF
     my $result = run_graft_test($yaml, {
         NATS_URL => "nats://localhost:$NATS_PORT",
     });
-    
+
     ok(!$result->{success}, "NATS with invalid key fails");
     ok($result->{stderr} =~ /nats.*error|failed|not found/i, "Error message mentions NATS");
 }
@@ -527,7 +527,7 @@ EOF
         NATS_DEV_URL => "nats://localhost:$NATS_PORT",
         NATS_PROD_URL => "nats://localhost:$NATS_PORT",
     });
-    
+
     ok($result->{success}, "Target-specific NATS operators");
     ok($result->{output} =~ /dev:.*host:\s+api\.example\.com/s, "Dev target retrieved value");
     ok($result->{output} =~ /prod:.*host:\s+api\.example\.com/s, "Prod target retrieved value");
@@ -543,7 +543,7 @@ EOF
         NATS_URL => "nats://localhost:$NATS_PORT",
         NATS_TIMEOUT => "1s",
     });
-    
+
     ok($result->{success}, "NATS with custom timeout");
     ok($result->{output} =~ /host:\s+api\.example\.com/, "Retrieved value within timeout");
 }
@@ -551,19 +551,19 @@ EOF
 # Joint Vault + NATS tests
 sub run_vault_nats_tests {
     say "\n1..5 # Joint Vault + NATS operator tests";
-    
+
     # Test 1: Multi-source configuration
     test_vault_nats_multi_source();
-    
+
     # Test 2: Dynamic paths from NATS to Vault
     test_vault_nats_dynamic_paths();
-    
+
     # Test 3: Conditional source selection
     test_vault_nats_conditional();
-    
+
     # Test 4: Target-specific integration
     test_vault_nats_targets();
-    
+
     # Test 5: Complex service discovery
     test_vault_nats_service_discovery();
 }
@@ -589,7 +589,7 @@ EOF
         VAULT_TOKEN => $VAULT_DEV_TOKEN,
         NATS_URL => "nats://localhost:$NATS_PORT",
     });
-    
+
     ok($result->{success}, "Multi-source Vault + NATS configuration");
     ok($result->{output} =~ /url:\s+https:\/\/api\.example\.com\/v1\/auth/, "NATS host in URL");
     ok($result->{output} =~ /url:\s+https:\/\/api\.example\.com\/v1\/users/, "Static URL preserved");
@@ -600,7 +600,7 @@ EOF
 sub test_vault_nats_dynamic_paths {
     # First, add a path key to NATS
     run_command("nats -s nats://localhost:$NATS_PORT kv put test-bucket 'vault.path' 'secret/test/credentials' 2>&1");
-    
+
     my $yaml = create_test_file('vault-nats-dynamic.yml', <<'EOF');
 credentials:
   username: (( vault (concat (nats "kv:test-bucket/vault.path") ":username") ))
@@ -612,7 +612,7 @@ EOF
         VAULT_TOKEN => $VAULT_DEV_TOKEN,
         NATS_URL => "nats://localhost:$NATS_PORT",
     });
-    
+
     ok($result->{success}, "Dynamic Vault paths from NATS");
     ok($result->{output} =~ /username:\s+admin/, "Username from dynamic path");
     ok($result->{output} =~ /password:\s+secret123/, "Password from dynamic path");
@@ -621,7 +621,7 @@ EOF
 sub test_vault_nats_conditional {
     # Add environment config to NATS
     run_command("nats -s nats://localhost:$NATS_PORT kv put test-bucket 'env' 'production' 2>&1");
-    
+
     my $yaml = create_test_file('vault-nats-conditional.yml', <<'EOF');
 database:
   host: (( nats "kv:test-bucket/config.host" ))
@@ -636,7 +636,7 @@ EOF
         VAULT_TOKEN => $VAULT_DEV_TOKEN,
         NATS_URL => "nats://localhost:$NATS_PORT",
     });
-    
+
     ok($result->{success}, "Conditional Vault/NATS source selection");
     ok($result->{output} =~ /env:\s+production/, "Environment from NATS");
     ok($result->{output} =~ /production:\s+db\.example\.com/, "Production credentials from Vault");
@@ -664,7 +664,7 @@ EOF
         NATS_DEV_URL => "nats://localhost:$NATS_PORT",
         NATS_PROD_URL => "nats://localhost:$NATS_PORT",
     });
-    
+
     ok($result->{success}, "Target-specific Vault + NATS integration");
     ok($result->{output} =~ /dev:.*config:\s+api\.example\.com.*secret:\s+admin/s, "Dev target values");
     ok($result->{output} =~ /prod:.*config:\s+api\.example\.com.*secret:\s+admin/s, "Prod target values");
@@ -674,7 +674,7 @@ sub test_vault_nats_service_discovery {
     # Setup service discovery data
     run_command("nats -s nats://localhost:$NATS_PORT kv put test-bucket 'services.auth.port' '8443' 2>&1");
     run_command("nats -s nats://localhost:$NATS_PORT kv put test-bucket 'services.auth.path' '/v2/authenticate' 2>&1");
-    
+
     my $yaml = create_test_file('vault-nats-discovery.yml', <<'EOF');
 services:
   auth:
@@ -690,7 +690,7 @@ EOF
         VAULT_TOKEN => $VAULT_DEV_TOKEN,
         NATS_URL => "nats://localhost:$NATS_PORT",
     });
-    
+
     ok($result->{success}, "Complex service discovery with Vault + NATS");
     ok($result->{output} =~ m{url:\s+https://api\.example\.com:8443/v2/authenticate}, "Service URL assembled correctly");
     ok($result->{output} =~ /client_id:\s+admin/, "Vault credentials integrated");
@@ -715,17 +715,17 @@ sub write_file {
 sub run_graft_test {
     my ($files, $env) = @_;
     $env //= {};
-    
+
     # Build environment string
     my $env_str = join(' ', map { "$_='$env->{$_}'" } keys %$env);
-    
+
     # Run graft
     my $cmd = "$env_str ./graft merge $files 2>&1";
     log_verbose("Running: $cmd");
-    
+
     my $output = `$cmd`;
     my $exit_code = $? >> 8;
-    
+
     # Separate stdout and stderr (simple heuristic)
     my ($stdout, $stderr) = ('', '');
     if ($exit_code != 0) {
@@ -733,14 +733,14 @@ sub run_graft_test {
     } else {
         $stdout = $output;
     }
-    
+
     # Debug output for failed tests
     if ($exit_code != 0 && $verbose) {
         say "=== GRAFT OUTPUT (exit $exit_code) ===";
         say $output;
         say "=== END OUTPUT ===";
     }
-    
+
     return {
         success => $exit_code == 0,
         output => $stdout,
@@ -753,7 +753,7 @@ sub ok {
     my ($condition, $description) = @_;
     $description //= '';  # Default to empty string if undefined
     $test_count++;
-    
+
     if ($condition) {
         $pass_count++;
         say "ok $test_count - $description";
@@ -776,7 +776,7 @@ sub log_verbose {
 
 sub cleanup_containers {
     say "\nCleaning up containers...";
-    
+
     for my $service (keys %containers) {
         my $container = $containers{$service};
         log_verbose("Stopping container: $container->{name}");
@@ -790,7 +790,7 @@ sub print_summary {
     say "  Total tests: $test_count";
     say "  Passed: $pass_count";
     say "  Failed: $fail_count";
-    
+
     if ($fail_count == 0) {
         say "\nAll tests passed!";
     } else {
