@@ -125,7 +125,7 @@ func (dc *DiskCache) Set(key string, entry *CacheEntry) {
 
 	// Persist to disk if enabled
 	if dc.config.Persistence {
-		go dc.persistEntry(key, entry)
+		dc.persistEntry(key, entry)
 	}
 }
 
@@ -141,7 +141,7 @@ func (dc *DiskCache) Delete(key string) {
 
 		// Remove from disk if persistence is enabled
 		if dc.config.Persistence {
-			go dc.removeFromDisk(key)
+			dc.removeFromDisk(key)
 		}
 	}
 }
@@ -156,7 +156,7 @@ func (dc *DiskCache) Clear() {
 
 	// Clear disk storage if persistence is enabled
 	if dc.config.Persistence {
-		go dc.clearDisk()
+		dc.clearDisk()
 	}
 }
 
@@ -176,7 +176,7 @@ func (dc *DiskCache) evictLRU() {
 		delete(dc.entries, oldestKey)
 
 		if dc.config.Persistence {
-			go dc.removeFromDisk(oldestKey)
+			dc.removeFromDisk(oldestKey)
 		}
 	}
 }
@@ -292,7 +292,36 @@ func (dc *DiskCache) persistEntry(key string, entry *CacheEntry) {
 		return
 	}
 
-	ioutil.WriteFile(entryPath, entryData, 0644)
+	if err := ioutil.WriteFile(entryPath, entryData, 0644); err != nil {
+		return
+	}
+
+	// Update the index file
+	dc.updateIndex(key, filename)
+}
+
+// updateIndex updates the index file with a new entry
+// Note: This method assumes the caller already holds the lock
+func (dc *DiskCache) updateIndex(key string, filename string) {
+	indexPath := filepath.Join(dc.config.StoragePath, dc.config.FilePrefix+"_index.json")
+	
+	// Read existing index
+	index := make(map[string]string)
+	indexData, err := ioutil.ReadFile(indexPath)
+	if err == nil {
+		json.Unmarshal(indexData, &index)
+	}
+	
+	// Update index
+	index[key] = filename
+	
+	// Write updated index
+	indexData, err = json.Marshal(index)
+	if err != nil {
+		return
+	}
+	
+	ioutil.WriteFile(indexPath, indexData, 0644)
 }
 
 // removeFromDisk removes an entry file from disk
@@ -300,6 +329,37 @@ func (dc *DiskCache) removeFromDisk(key string) {
 	filename := dc.generateFilename(key)
 	entryPath := filepath.Join(dc.config.StoragePath, filename)
 	os.Remove(entryPath)
+	
+	// Update the index file to remove this entry
+	dc.removeFromIndex(key)
+}
+
+// removeFromIndex removes an entry from the index file
+// Note: This method assumes the caller already holds the lock
+func (dc *DiskCache) removeFromIndex(key string) {
+	indexPath := filepath.Join(dc.config.StoragePath, dc.config.FilePrefix+"_index.json")
+	
+	// Read existing index
+	index := make(map[string]string)
+	indexData, err := ioutil.ReadFile(indexPath)
+	if err != nil {
+		return // No index file
+	}
+	
+	if err := json.Unmarshal(indexData, &index); err != nil {
+		return
+	}
+	
+	// Remove from index
+	delete(index, key)
+	
+	// Write updated index
+	indexData, err = json.Marshal(index)
+	if err != nil {
+		return
+	}
+	
+	ioutil.WriteFile(indexPath, indexData, 0644)
 }
 
 // clearDisk removes all cache files from disk
