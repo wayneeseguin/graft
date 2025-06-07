@@ -1,97 +1,114 @@
-#!/usr/bin/env bash
+#!/usr/bin/env perl
 
-set -euo pipefail
+use strict;
+use warnings;
+use File::Basename;
+use File::Path qw(make_path remove_tree);
+use Cwd qw(getcwd abs_path);
+use Digest::SHA qw(sha256_hex);
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+# ANSI color codes
+my $RED = "\033[0;31m";
+my $GREEN = "\033[0;32m";
+my $YELLOW = "\033[1;33m";
+my $NC = "\033[0m"; # No Color
 
-# Get script directory
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# Get script directory and project root
+my $script_dir = dirname(abs_path($0));
+my $project_root = dirname($script_dir);
 
 # Check if we're in the project root
-if [[ ! -f "$PROJECT_ROOT/go.mod" ]]; then
-    echo -e "${RED}Error: go.mod not found. Please run this script from the project root.${NC}"
-    exit 1
-fi
+unless (-f "$project_root/go.mod") {
+    die "${RED}Error: go.mod not found. Please run this script from the project root.${NC}\n";
+}
 
 # Get version from argument or git tag
-if [[ $# -eq 1 ]]; then
-    VERSION="$1"
-else
+my $version;
+if (@ARGV == 1) {
+    $version = $ARGV[0];
+} else {
     # Try to get version from current tag
-    VERSION=$(git describe --tags --exact-match 2>/dev/null || echo "")
-    if [[ -z "$VERSION" ]]; then
-        echo -e "${RED}Error: No version specified and no git tag found.${NC}"
-        echo "Usage: $0 <version>"
-        echo "Example: $0 v0.1.0"
-        exit 1
-    fi
-fi
+    $version = `git describe --tags --exact-match 2>/dev/null`;
+    chomp $version;
+    if (!$version) {
+        die "${RED}Error: No version specified and no git tag found.${NC}\n" .
+            "Usage: $0 <version>\n" .
+            "Example: $0 v0.1.0\n";
+    }
+}
 
 # Ensure version starts with 'v'
-if [[ ! "$VERSION" =~ ^v ]]; then
-    VERSION="v$VERSION"
-fi
+$version = "v$version" unless $version =~ /^v/;
 
-echo -e "${GREEN}Building graft release $VERSION${NC}"
+print "${GREEN}Building graft release $version${NC}\n";
 
 # Create releases directory
-RELEASE_DIR="$PROJECT_ROOT/releases"
-rm -rf "$RELEASE_DIR"
-mkdir -p "$RELEASE_DIR"
+my $release_dir = "$project_root/releases";
+remove_tree($release_dir) if -d $release_dir;
+make_path($release_dir) or die "Failed to create $release_dir: $!\n";
 
 # Platforms to build for
-PLATFORMS=(
-    "linux/amd64"
-    "linux/arm64"
-    "darwin/amd64"
-    "darwin/arm64"
-)
+my @platforms = (
+    { goos => 'linux',  goarch => 'amd64' },
+    { goos => 'linux',  goarch => 'arm64' },
+    { goos => 'darwin', goarch => 'amd64' },
+    { goos => 'darwin', goarch => 'arm64' },
+);
+
+# Save current directory
+my $orig_dir = getcwd();
 
 # Build for each platform
-for platform in "${PLATFORMS[@]}"; do
-    IFS='/' read -r goos goarch <<< "$platform"
+foreach my $platform (@platforms) {
+    my $goos = $platform->{goos};
+    my $goarch = $platform->{goarch};
     
-    echo -e "${YELLOW}Building for $goos/$goarch...${NC}"
+    print "${YELLOW}Building for $goos/$goarch...${NC}\n";
     
-    output_name="graft-${VERSION}-${goos}-${goarch}"
+    my $output_name = "graft-${version}-${goos}-${goarch}";
     
     # Build the binary
-    GOOS=$goos GOARCH=$goarch CGO_ENABLED=0 go build \
-        -ldflags "-X main.Version=${VERSION}" \
-        -o "$RELEASE_DIR/$output_name" \
-        ./cmd/graft
+    $ENV{GOOS} = $goos;
+    $ENV{GOARCH} = $goarch;
+    $ENV{CGO_ENABLED} = '0';
+    
+    my $build_cmd = "go build -ldflags \"-X main.Version=${version}\" " .
+                    "-o \"$release_dir/$output_name\" ./cmd/graft";
+    
+    system($build_cmd) == 0 or die "Build failed for $goos/$goarch: $!\n";
     
     # Create tar.gz archive
-    echo -e "  Creating archive..."
-    cd "$RELEASE_DIR"
-    tar -czf "${output_name}.tar.gz" "$output_name"
+    print "  Creating archive...\n";
+    chdir($release_dir) or die "Cannot chdir to $release_dir: $!\n";
+    
+    my $tar_cmd = "tar -czf \"${output_name}.tar.gz\" \"$output_name\"";
+    system($tar_cmd) == 0 or die "Failed to create archive: $!\n";
     
     # Generate checksum
-    echo -e "  Generating checksum..."
-    if command -v sha256sum >/dev/null 2>&1; then
-        sha256sum "${output_name}.tar.gz" > "${output_name}.tar.gz.sha256"
-    else
-        # macOS fallback
-        shasum -a 256 "${output_name}.tar.gz" > "${output_name}.tar.gz.sha256"
-    fi
+    print "  Generating checksum...\n";
+    
+    # Try sha256sum first, fall back to shasum for macOS
+    my $sha_cmd;
+    if (system("which sha256sum >/dev/null 2>&1") == 0) {
+        $sha_cmd = "sha256sum \"${output_name}.tar.gz\" > \"${output_name}.tar.gz.sha256\"";
+    } else {
+        $sha_cmd = "shasum -a 256 \"${output_name}.tar.gz\" > \"${output_name}.tar.gz.sha256\"";
+    }
+    
+    system($sha_cmd) == 0 or die "Failed to generate checksum: $!\n";
     
     # Remove the uncompressed binary
-    rm "$output_name"
+    unlink("$output_name") or warn "Failed to remove $output_name: $!\n";
     
-    cd "$PROJECT_ROOT"
+    chdir($orig_dir) or die "Cannot chdir back to $orig_dir: $!\n";
     
-    echo -e "${GREEN}  ✓ Built ${output_name}.tar.gz${NC}"
-done
+    print "${GREEN}  ✓ Built ${output_name}.tar.gz${NC}\n";
+}
 
-echo -e "\n${GREEN}Release artifacts created in $RELEASE_DIR:${NC}"
-ls -la "$RELEASE_DIR"
+print "\n${GREEN}Release artifacts created in $release_dir:${NC}\n";
+system("ls -la \"$release_dir\"");
 
-echo -e "\n${GREEN}Build complete!${NC}"
-echo -e "To create a GitHub release, push the tag:"
-echo -e "  ${YELLOW}git tag -a $VERSION -m \"Release $VERSION\"${NC}"
-echo -e "  ${YELLOW}git push origin $VERSION${NC}"
+print "\n${GREEN}Build complete!${NC}\n";
+print "To create a GitHub release, push the tag:\n";
+print "  ${YELLOW}git tag -a $version -m \"Release $version\"${NC}\n";
+print "  ${YELLOW}git push origin $version${NC}\n";
