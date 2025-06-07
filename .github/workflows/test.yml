@@ -28,7 +28,7 @@ jobs:
         run: go build ./cmd/graft
 
       - name: Upload graft binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: graft-binary
           path: ./graft
@@ -47,7 +47,7 @@ jobs:
           check-latest: true
 
       - name: Download graft binary
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: graft-binary
 
