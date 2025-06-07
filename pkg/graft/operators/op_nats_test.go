@@ -3,6 +3,7 @@ package operators
 import (
 	"bytes"
 	"context"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +14,17 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wayneeseguin/graft/pkg/graft"
 )
+
+func TestMain(m *testing.M) {
+	// Run tests
+	code := m.Run()
+	
+	// Cleanup NATS resources
+	ShutdownNatsOperator()
+	
+	// Exit with test result code
+	os.Exit(code)
+}
 
 func startTestNATSServer() (*server.Server, string) {
 	opts := &server.Options{

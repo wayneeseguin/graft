@@ -1,0 +1,25 @@
+# Testing conditional use of vault vs nats based on environment
+meta:
+  use_vault: (( grab $USE_VAULT || false ))
+  use_nats: (( grab $USE_NATS || true ))
+  env: (( grab $ENVIRONMENT || "dev" ))
+
+secrets:
+  database:
+    # Use vault if enabled, otherwise use nats
+    username: (( ternary meta.use_vault (vault "secret/db:username") (nats "kv:secrets/db/username") ))
+    password: (( ternary meta.use_vault (vault "secret/db:password") (nats "kv:secrets/db/password") ))
+  
+  api_keys:
+    # Try vault first, fallback to nats
+    primary: (( vault "secret/api:primary_key" || nats "kv:api/keys/primary" ))
+    secondary: (( vault "secret/api:secondary_key" || nats "kv:api/keys/secondary" ))
+
+config:
+  # Always use NATS for configuration
+  app_settings: (( nats "obj:configs/app-settings.yaml" ))
+  
+  # Use vault for sensitive feature flags
+  feature_flags:
+    premium_features: (( vault (concat "secret/features/" meta.env ":premium") ))
+    beta_features: (( nats (concat "kv:features/" meta.env "/beta") ))

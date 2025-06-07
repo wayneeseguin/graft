@@ -1,0 +1,23 @@
+# Base configuration with references to vault and nats
+app:
+  name: "myapp"
+  environment: (( grab meta.environment ))
+
+database:
+  host: (( grab meta.db_host ))
+  port: (( grab meta.db_port ))
+  username: (( vault "secret/database:username" ))
+  password: (( vault "secret/database:password" ))
+
+cache:
+  type: "redis"
+  host: (( nats "kv:config/cache/host" ))
+  port: (( nats "kv:config/cache/port" ))
+  auth:
+    enabled: true
+    token: (( vault "secret/redis:auth_token" ))
+
+meta:
+  environment: "dev"
+  db_host: "localhost"
+  db_port: 5432

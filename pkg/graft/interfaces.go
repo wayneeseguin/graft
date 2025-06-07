@@ -140,6 +140,11 @@ func (op *Opcall) Where() *tree.Cursor {
 	return op.where
 }
 
+// SetWhere sets the cursor location for this operator call
+func (op *Opcall) SetWhere(cursor *tree.Cursor) {
+	op.where = cursor
+}
+
 // Src returns the source string for this operator call
 func (op *Opcall) Src() string {
 	return op.src

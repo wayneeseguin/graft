@@ -1,0 +1,31 @@
+# Testing dynamic path construction with vault and nats
+environments:
+  - name: "dev"
+    config:
+      database:
+        host: (( nats (concat "kv:env/" environments.0.name "/database/host") ))
+        credentials: (( vault (concat "secret/" environments.0.name "/database:credentials") ))
+      features:
+        debug: true
+        
+  - name: "staging"
+    config:
+      database:
+        host: (( nats (concat "kv:env/" environments.1.name "/database/host") ))
+        credentials: (( vault (concat "secret/" environments.1.name "/database:credentials") ))
+      features:
+        debug: false
+
+  - name: "production"
+    config:
+      database:
+        host: (( nats (concat "kv:env/" environments.2.name "/database/host") ))
+        credentials: (( vault (concat "secret/" environments.2.name "/database:credentials") ))
+      features:
+        debug: false
+
+# Reference to dynamic environment
+current_env:
+  name: (( grab meta.target_env || "dev" ))
+  database:
+    connection_string: (( concat "postgresql://" (vault (concat "secret/" current_env.name "/db:username")) ":" (vault (concat "secret/" current_env.name "/db:password")) "@" (nats (concat "kv:env/" current_env.name "/database/host")) "/" (nats (concat "kv:env/" current_env.name "/database/name")) ))

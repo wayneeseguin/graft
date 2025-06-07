@@ -368,17 +368,38 @@ func parseNatsPath(path string) (storeType, storePath string, err error) {
 
 // parseNatsConfig extracts configuration from arguments
 func parseNatsConfig(ev *graft.Evaluator, args []*graft.Expr) (*natsConfig, error) {
+	// Default URL from environment or fallback to NATS default
+	defaultURL := os.Getenv("NATS_URL")
+	if defaultURL == "" {
+		defaultURL = nats.DefaultURL
+	}
+	
+	// Parse environment variables for default configuration
+	defaultTimeout := parseDurationOrDefault(os.Getenv("NATS_TIMEOUT"), 5*time.Second)
+	defaultRetries := parseIntOrDefault(os.Getenv("NATS_RETRIES"), 3)
+	defaultRetryInterval := parseDurationOrDefault(os.Getenv("NATS_RETRY_INTERVAL"), 1*time.Second)
+	defaultRetryBackoff := parseFloatOrDefault(os.Getenv("NATS_RETRY_BACKOFF"), 2.0)
+	defaultMaxRetryInterval := parseDurationOrDefault(os.Getenv("NATS_MAX_RETRY_INTERVAL"), 30*time.Second)
+	defaultTLS := parseBoolOrDefault(os.Getenv("NATS_TLS"), false)
+	defaultCacheTTLEnv := parseDurationOrDefault(os.Getenv("NATS_CACHE_TTL"), defaultCacheTTL)
+	defaultStreamingThreshold := parseInt64OrDefault(os.Getenv("NATS_STREAMING_THRESHOLD"), 10*1024*1024)
+	defaultAuditLogging := parseBoolOrDefault(os.Getenv("NATS_AUDIT_LOGGING"), false)
+	
 	config := &natsConfig{
-		URL:                nats.DefaultURL,
-		Timeout:            5 * time.Second,
-		Retries:            3,
-		RetryInterval:      1 * time.Second,
-		RetryBackoff:       2.0,
-		MaxRetryInterval:   30 * time.Second,
-		TLS:                false,
-		CacheTTL:           defaultCacheTTL,
-		StreamingThreshold: 10 * 1024 * 1024, // 10MB default
-		AuditLogging:       false,             // Disabled by default
+		URL:                defaultURL,
+		Timeout:            defaultTimeout,
+		Retries:            defaultRetries,
+		RetryInterval:      defaultRetryInterval,
+		RetryBackoff:       defaultRetryBackoff,
+		MaxRetryInterval:   defaultMaxRetryInterval,
+		TLS:                defaultTLS,
+		CertFile:           os.Getenv("NATS_CERT_FILE"),
+		KeyFile:            os.Getenv("NATS_KEY_FILE"),
+		CAFile:             os.Getenv("NATS_CA_FILE"),
+		InsecureSkipVerify: parseBoolOrDefault(os.Getenv("NATS_INSECURE_SKIP_VERIFY"), false),
+		CacheTTL:           defaultCacheTTLEnv,
+		StreamingThreshold: defaultStreamingThreshold,
+		AuditLogging:       defaultAuditLogging,
 	}
 	
 	// If we have a second argument, it could be URL string or config map
@@ -718,11 +739,50 @@ func fetchFromKV(js jetstream.JetStream, storePath string, config *natsConfig) (
 		// Determine the value type and process accordingly
 		value := entry.Value()
 		
-		// Try to parse as YAML first (could be embedded YAML in KV)
-		err = yaml.Unmarshal(value, &result)
-		if err != nil {
-			// If YAML parsing fails, treat as string
-			result = string(value)
+		// Handle empty values explicitly
+		if len(value) == 0 {
+			result = ""
+		} else {
+			// For KV store, check if it looks like YAML/JSON that should be parsed
+			valueStr := string(value)
+			
+			// Try parsing as YAML if it looks like structured data
+			// Be conservative to avoid parsing simple strings with colons as YAML
+			trimmed := strings.TrimSpace(valueStr)
+			looksLikeYAML := false
+			
+			if trimmed != "" {
+				// For KV store, only parse multi-line YAML content
+				// Single-line values (even JSON) are preserved as strings
+				// This allows storing JSON strings, URLs, and other text with special characters
+				if strings.Contains(trimmed, "\n") {
+					// Multi-line content is likely YAML, try to parse it
+					looksLikeYAML = true
+				}
+			}
+			
+			if looksLikeYAML {
+				
+				// Try to parse as YAML
+				var parsed interface{}
+				err = yaml.Unmarshal(value, &parsed)
+				if err == nil && parsed != nil {
+					// Successfully parsed and got non-string result
+					if _, isString := parsed.(string); !isString {
+						// Convert to ensure map[interface{}]interface{} for compatibility
+						result = convertYAMLTypes(parsed)
+					} else {
+						// Parsed but still a string, keep original
+						result = valueStr
+					}
+				} else {
+					// Failed to parse, keep as string
+					result = valueStr
+				}
+			} else {
+				// Simple string value
+				result = valueStr
+			}
 		}
 		
 		// Cache the result with TTL
@@ -819,10 +879,13 @@ func fetchFromObject(js jetstream.JetStream, storePath string, config *natsConfi
 		switch contentType {
 		case "text/yaml", "text/x-yaml", "application/x-yaml", "application/yaml":
 			// Parse as YAML
-			err = yaml.Unmarshal(data, &result)
+			var yamlResult interface{}
+			err = yaml.Unmarshal(data, &yamlResult)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse YAML from object '%s': %v", objectName, err)
 			}
+			// Ensure we return map[interface{}]interface{} for compatibility
+			result = convertYAMLTypes(yamlResult)
 		case "application/json", "text/json":
 			// Parse as JSON (YAML parser handles JSON too)
 			err = yaml.Unmarshal(data, &result)
@@ -830,8 +893,22 @@ func fetchFromObject(js jetstream.JetStream, storePath string, config *natsConfi
 				return nil, fmt.Errorf("failed to parse JSON from object '%s': %v", objectName, err)
 			}
 		case "text/plain", "":
-			// Return as string if text or no content type
-			result = string(data)
+			// Check file extension if no content type
+			if contentType == "" && (strings.HasSuffix(objectName, ".yaml") || strings.HasSuffix(objectName, ".yml")) {
+				// Parse as YAML for .yaml/.yml files
+				var yamlResult interface{}
+				err = yaml.Unmarshal(data, &yamlResult)
+				if err != nil {
+					// If parsing fails, return as string
+					result = string(data)
+				} else {
+					// Ensure we return map[interface{}]interface{} for compatibility
+					result = convertYAMLTypes(yamlResult)
+				}
+			} else {
+				// Return as string if text or no content type
+				result = string(data)
+			}
 		default:
 			// For any other content type, base64 encode
 			result = base64.StdEncoding.EncodeToString(data)
@@ -1181,14 +1258,78 @@ func createNatsConnectionFromConfig(config *natsConfig) (*nats.Conn, error) {
 	return conn, nil
 }
 
+var natsCacheStopCleanup = make(chan struct{})
+
 func init() {
 	go natsPool.cleanupLoop()
 	go func() {
 		ticker := time.NewTicker(cacheCleanupInterval)
 		defer ticker.Stop()
-		for range ticker.C {
-			natsCache.cleanup()
+		for {
+			select {
+			case <-ticker.C:
+				natsCache.cleanup()
+			case <-natsCacheStopCleanup:
+				return
+			}
 		}
 	}()
 	RegisterOp("nats", NatsOperator{})
+}
+
+// ShutdownNatsOperator gracefully shuts down NATS connections and goroutines
+func ShutdownNatsOperator() {
+	// Stop cleanup goroutines
+	close(natsPool.stopCleanup)
+	close(natsCacheStopCleanup)
+	
+	// Close all pooled connections
+	natsPool.mu.Lock()
+	for _, pc := range natsPool.connections {
+		if pc.conn != nil {
+			pc.conn.Close()
+		}
+	}
+	natsPool.connections = make(map[string]*pooledConnection)
+	natsPool.mu.Unlock()
+	
+	// Close target pool connections
+	natsTargetPool.mu.Lock()
+	for _, pc := range natsTargetPool.connections {
+		if pc.conn != nil {
+			pc.conn.Close()
+		}
+	}
+	natsTargetPool.connections = make(map[string]*pooledConnection)
+	natsTargetPool.mu.Unlock()
+	
+	// Clear cache
+	ClearNatsCache()
+}
+
+// convertYAMLTypes ensures YAML data uses map[interface{}]interface{} for consistency
+func convertYAMLTypes(input interface{}) interface{} {
+	switch v := input.(type) {
+	case map[string]interface{}:
+		result := make(map[interface{}]interface{})
+		for k, val := range v {
+			result[k] = convertYAMLTypes(val)
+		}
+		return result
+	case []interface{}:
+		result := make([]interface{}, len(v))
+		for i, val := range v {
+			result[i] = convertYAMLTypes(val)
+		}
+		return result
+	case map[interface{}]interface{}:
+		// Already the right type, but check nested values
+		result := make(map[interface{}]interface{})
+		for k, val := range v {
+			result[k] = convertYAMLTypes(val)
+		}
+		return result
+	default:
+		return input
+	}
 }

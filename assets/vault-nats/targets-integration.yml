@@ -1,0 +1,39 @@
+# Testing vault and nats with target-specific configurations
+defaults:
+  database:
+    port: 5432
+    ssl: true
+
+# Target-specific configurations
+production:
+  database:
+    host: (( nats@production "kv:database/prod/host" ))
+    username: (( vault@production "secret/prod/db:username" ))
+    password: (( vault@production "secret/prod/db:password" ))
+    ssl_cert: (( vault@production:nocache "secret/prod/db:ssl_cert" ))
+
+staging:
+  database:
+    host: (( nats@staging "kv:database/staging/host" ))
+    username: (( vault@staging "secret/staging/db:username" ))
+    password: (( vault@staging "secret/staging/db:password" ))
+    ssl: false
+
+development:
+  database:
+    host: "localhost"
+    username: "dev_user"
+    password: "dev_pass"
+    ssl: false
+
+# Merge based on target
+database:
+  host: (( grab (concat meta.target ".database.host") || defaults.database.host ))
+  port: (( grab (concat meta.target ".database.port") || defaults.database.port ))
+  username: (( grab (concat meta.target ".database.username") ))
+  password: (( grab (concat meta.target ".database.password") ))
+  ssl: (( grab (concat meta.target ".database.ssl") || defaults.database.ssl ))
+  ssl_cert: (( grab (concat meta.target ".database.ssl_cert") || null ))
+
+meta:
+  target: (( grab $TARGET || "development" ))

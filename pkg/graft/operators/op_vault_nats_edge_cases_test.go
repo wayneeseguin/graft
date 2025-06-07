@@ -219,8 +219,14 @@ enhanced_config:
 
 			// Verify it's a proper YAML structure
 			configMap, ok := resp.Value.(map[interface{}]interface{})
+			if !ok {
+				// Debug: print the actual type
+				fmt.Printf("Expected map[interface{}]interface{}, got %T: %v\n", resp.Value, resp.Value)
+			}
 			So(ok, ShouldBeTrue)
-			So(configMap["large_config"], ShouldNotBeNil)
+			if ok {
+				So(configMap["large_config"], ShouldNotBeNil)
+			}
 		})
 
 		Convey("Network failures and retries", func() {
@@ -272,9 +278,14 @@ config:
 			os.Setenv("NATS_URL", "nats://localhost:99999")
 			defer os.Setenv("NATS_URL", url)
 
-			// This should fail
+			// This should fail during Run
 			natsOp2 := &NatsOperator{}
 			err = natsOp2.Setup()
+			So(err, ShouldBeNil) // Setup doesn't connect
+			
+			// But Run should fail
+			args2 := []*graft.Expr{{Type: graft.Literal, Literal: "kv:network-test/test-key"}}
+			_, err = natsOp2.Run(ev, args2)
 			So(err, ShouldNotBeNil) // Connection should fail
 		})
 

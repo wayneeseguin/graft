@@ -214,6 +214,8 @@ func (m *Merger) Merge(a map[interface{}]interface{}, b map[interface{}]interfac
 
 func (m *Merger) mergeMap(orig map[interface{}]interface{}, n map[interface{}]interface{}, node string) {
 	log.DEBUG("mergeMap: merging at node %s", node)
+	log.DEBUG("mergeMap: orig keys = %v", getMapKeys(orig))
+	log.DEBUG("mergeMap: new keys = %v", getMapKeys(n))
 	mergeRx := regexp.MustCompile(`^\s*\Q((\E\s*merge\s*.*\Q))\E`)
 	for k, val := range n {
 		path := fmt.Sprintf("%s.%v", node, k)
@@ -325,6 +327,13 @@ func (m *Merger) MergeObj(orig interface{}, n interface{}, node string) interfac
 			m.mergeMap(orig.(map[interface{}]interface{}), n.(map[interface{}]interface{}), node)
 			return orig
 
+		case map[string]interface{}:
+			// Convert orig to map[interface{}]interface{} and merge
+			log.DEBUG("%s: converting original map[string]interface{} to map[interface{}]interface{} for merge", node)
+			converted := convertToInterfaceMap(orig).(map[interface{}]interface{})
+			m.mergeMap(converted, n.(map[interface{}]interface{}), node)
+			return converted
+
 		case nil:
 			orig := map[interface{}]interface{}{}
 			m.mergeMap(orig, n.(map[interface{}]interface{}), node)
@@ -333,6 +342,31 @@ func (m *Merger) MergeObj(orig interface{}, n interface{}, node string) interfac
 		default:
 			log.DEBUG("%s: replacing with new data (original was not a map)", node)
 			return t
+		}
+	
+	case map[string]interface{}:
+		switch origType := orig.(type) {
+		case map[interface{}]interface{}:
+			log.DEBUG("%s: performing map merge (converting new map[string]interface{} to map[interface{}]interface{})", node)
+			newConverted := convertToInterfaceMap(t).(map[interface{}]interface{})
+			m.mergeMap(orig.(map[interface{}]interface{}), newConverted, node)
+			return orig
+
+		case map[string]interface{}:
+			log.DEBUG("%s: performing map merge (both are map[string]interface{}, converting to map[interface{}]interface{})", node)
+			origConverted := convertToInterfaceMap(origType).(map[interface{}]interface{})
+			newConverted := convertToInterfaceMap(t).(map[interface{}]interface{})
+			m.mergeMap(origConverted, newConverted, node)
+			return origConverted
+
+		case nil:
+			log.DEBUG("%s: new map creation (converting map[string]interface{} to map[interface{}]interface{})", node)
+			converted := convertToInterfaceMap(t).(map[interface{}]interface{})
+			return converted
+
+		default:
+			log.DEBUG("%s: replacing with new data (original was not a map)", node)
+			return convertToInterfaceMap(t)
 		}
 
 	case []interface{}:
@@ -981,4 +1015,40 @@ func (m *Merger) addToSortListIfNecessary(operator, path string) {
 		m.metadata.SortPaths = make(map[string]string)
 	}
 	m.metadata.SortPaths[cleanPath] = sortKey
+}
+
+func getMapKeys(m map[interface{}]interface{}) []interface{} {
+	keys := make([]interface{}, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func convertToInterfaceMap(input interface{}) interface{} {
+	switch v := input.(type) {
+	case map[string]interface{}:
+		result := make(map[interface{}]interface{})
+		for k, val := range v {
+			result[k] = convertToInterfaceMap(val)
+		}
+		return result
+	case []interface{}:
+		// Also convert arrays that might contain maps
+		result := make([]interface{}, len(v))
+		for i, val := range v {
+			result[i] = convertToInterfaceMap(val)
+		}
+		return result
+	case map[interface{}]interface{}:
+		// Already the right type, but check nested values
+		result := make(map[interface{}]interface{})
+		for k, val := range v {
+			result[k] = convertToInterfaceMap(val)
+		}
+		return result
+	default:
+		// Return as-is for other types
+		return input
+	}
 }
