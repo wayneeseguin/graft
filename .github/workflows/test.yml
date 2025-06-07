@@ -19,3 +19,17 @@ jobs:
 
       - name: Vet
         run: go list ./... | grep -v vendor | xargs go vet
+
+      - name: Build graft binary
+        run: go build ./cmd/graft
+
+      - name: Run integration tests with Docker
+        run: |
+          # Install Perl dependencies (usually pre-installed on Ubuntu)
+          sudo apt-get update && sudo apt-get install -y perl
+          
+          # Make integration script executable
+          chmod +x scripts/integration
+          
+          # Run integration tests
+          make integration
