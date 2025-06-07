@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
@@ -93,6 +93,12 @@ func evaluateNestedOperator(ev *Evaluator, expr *Expr) (interface{}, error) {
 
 	// Create a temporary opcall for the nested operator
 	opcall := graft.NewOpcall(op, args, "")
+	
+	// Set the where field to the current evaluator's position
+	// This is important for operators like vault that use ev.Here
+	if ev.Here != nil {
+		opcall.SetWhere(ev.Here.Copy())
+	}
 
 	// Run the nested operator
 	resp, err := opcall.Run(ev)

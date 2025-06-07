@@ -7,7 +7,7 @@ import (
 	"strings"
 	
 	"github.com/starkandwayne/goutils/tree"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // document implements the Document interface

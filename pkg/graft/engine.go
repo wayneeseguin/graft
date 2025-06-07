@@ -15,8 +15,42 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/starkandwayne/goutils/tree"
 	vaultkv "github.com/cloudfoundry-community/vaultkv"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
+
+// convertStringMapToInterfaceMap recursively converts map[string]interface{} to map[interface{}]interface{}
+// This is needed for yaml.v3 compatibility since it returns map[string]interface{} instead of map[interface{}]interface{}
+// It also converts YAML 1.1 boolean strings back to booleans for compatibility
+func convertStringMapToInterfaceMap(input interface{}) interface{} {
+	switch v := input.(type) {
+	case map[string]interface{}:
+		result := make(map[interface{}]interface{})
+		for k, val := range v {
+			result[k] = convertStringMapToInterfaceMap(val)
+		}
+		return result
+	case []interface{}:
+		// Also convert arrays that might contain maps
+		result := make([]interface{}, len(v))
+		for i, val := range v {
+			result[i] = convertStringMapToInterfaceMap(val)
+		}
+		return result
+	case string:
+		// Convert YAML 1.1 boolean strings back to booleans for compatibility
+		switch v {
+		case "yes", "Yes", "YES", "on", "On", "ON":
+			return true
+		case "no", "No", "NO", "off", "Off", "OFF":
+			return false
+		default:
+			return v
+		}
+	default:
+		// Return as-is for primitive types
+		return v
+	}
+}
 
 // DefaultEngine is the default implementation of the Engine interface
 // It provides all the core functionality needed by graft
@@ -459,14 +493,18 @@ func (e *DefaultEngine) ParseYAML(data []byte) (Document, error) {
 		return nil, nil
 	}
 	
-	// Check that root is a map/hash
-	result, ok := genericResult.(map[interface{}]interface{})
-	if !ok {
+	// Check that root is a map/hash - handle both v2 and v3 map types
+	switch result := genericResult.(type) {
+	case map[interface{}]interface{}:
+		return NewDocument(result), nil
+	case map[string]interface{}:
+		// Convert map[string]interface{} to map[interface{}]interface{} for compatibility
+		converted := convertStringMapToInterfaceMap(result).(map[interface{}]interface{})
+		return NewDocument(converted), nil
+	default:
 		// Return plain error for compatibility with tests
 		return nil, fmt.Errorf("Root of YAML document is not a hash/map:")
 	}
-	
-	return NewDocument(result), nil
 }
 
 // ParseJSON parses JSON data into a Document
