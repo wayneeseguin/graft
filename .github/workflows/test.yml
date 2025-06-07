@@ -1,10 +1,14 @@
+name: CI
+
 on: [push, pull_request]
 
 jobs:
-  test:
+  unit-tests:
+    name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
@@ -14,20 +18,44 @@ jobs:
       - name: Build
         run: go build -v ./...
 
-      - name: Test
+      - name: Run unit tests
         run: go list ./... | grep -v vendor | xargs go test
 
-      - name: Vet
+      - name: Run go vet
         run: go list ./... | grep -v vendor | xargs go vet
 
       - name: Build graft binary
         run: go build ./cmd/graft
 
+      - name: Upload graft binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: graft-binary
+          path: ./graft
+
+  integration-tests:
+    name: Integration Tests
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: stable
+          check-latest: true
+
+      - name: Download graft binary
+        uses: actions/download-artifact@v3
+        with:
+          name: graft-binary
+
+      - name: Make graft binary executable
+        run: chmod +x ./graft
+
       - name: Run integration tests with Docker
         run: |
-          # Install Perl dependencies (usually pre-installed on Ubuntu)
-          sudo apt-get update && sudo apt-get install -y perl
-          
           # Make integration script executable
           chmod +x scripts/integration
           
