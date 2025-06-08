@@ -258,7 +258,7 @@ func NewOperatorCallWithPos(op string, args []*graft.Expr, pos graft.Position) *
 	}
 	
 	// Create a new opcall with args set
-	opcallPtr := (*opcallWithArgs)(unsafe.Pointer(opcall))
+	opcallPtr := (*opcallWithArgs)(unsafe.Pointer(opcall)) // #nosec G103 - required for efficient struct field access
 	opcallPtr.args = args
 	
 	expr.Call = opcall

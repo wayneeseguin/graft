@@ -3,7 +3,7 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -134,7 +134,7 @@ func (api *TuningAPI) handleConfig(w http.ResponseWriter, r *http.Request) {
 	api.mu.RUnlock()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(config)
+	_ = json.NewEncoder(w).Encode(config)
 }
 
 // handleGetConfig gets a specific configuration value
@@ -165,7 +165,7 @@ func (api *TuningAPI) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // handleSetConfig sets a configuration value
@@ -268,7 +268,7 @@ func (api *TuningAPI) handleSetConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // handleValidateConfig validates a configuration change
@@ -305,7 +305,7 @@ func (api *TuningAPI) handleValidateConfig(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // handleReloadConfig reloads configuration from file
@@ -335,7 +335,7 @@ func (api *TuningAPI) handleReloadConfig(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // handleExportConfig exports the current configuration
@@ -356,7 +356,7 @@ func (api *TuningAPI) handleExportConfig(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/x-yaml")
 	w.Header().Set("Content-Disposition", "attachment; filename=graft_performance.yaml")
-	w.Write([]byte(yamlStr))
+	_, _ = w.Write([]byte(yamlStr))
 }
 
 // handleImportConfig imports a configuration
@@ -366,7 +366,7 @@ func (api *TuningAPI) handleImportConfig(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Failed to read request body", http.StatusBadRequest)
 		return
@@ -401,7 +401,7 @@ func (api *TuningAPI) handleImportConfig(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // handleProfiles lists available profiles
@@ -423,7 +423,7 @@ func (api *TuningAPI) handleProfiles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(profileList)
+	_ = json.NewEncoder(w).Encode(profileList)
 }
 
 // handleApplyProfile applies a performance profile
@@ -482,7 +482,7 @@ func (api *TuningAPI) handleApplyProfile(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // handleHistory returns tuning history
@@ -503,7 +503,7 @@ func (api *TuningAPI) handleHistory(w http.ResponseWriter, r *http.Request) {
 	changes := api.history.GetChanges(limit)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(changes)
+	_ = json.NewEncoder(w).Encode(changes)
 }
 
 // handleMetrics returns performance metrics
@@ -534,7 +534,7 @@ func (api *TuningAPI) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(metrics)
+	_ = json.NewEncoder(w).Encode(metrics)
 }
 
 // handleHealth returns API health status
@@ -550,5 +550,5 @@ func (api *TuningAPI) handleHealth(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }

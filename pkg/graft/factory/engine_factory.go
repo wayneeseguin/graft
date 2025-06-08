@@ -1,6 +1,7 @@
 package factory
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/wayneeseguin/graft/pkg/graft"
@@ -24,70 +25,146 @@ func NewDefaultEngine() *graft.DefaultEngine {
 	engine := graft.NewDefaultEngineWithConfig(config)
 
 	// Register all default operators
-	registerDefaultOperators(engine)
+	if err := registerDefaultOperators(engine); err != nil {
+		panic(fmt.Sprintf("failed to register default operators: %v", err))
+	}
 
 	return engine
 }
 
 // registerDefaultOperators registers all built-in operators with the engine
-func registerDefaultOperators(engine *graft.DefaultEngine) {
+func registerDefaultOperators(engine *graft.DefaultEngine) error {
 	// Type checking operators
-	engine.RegisterOperator("empty", &operators.EmptyOperator{})
-	engine.RegisterOperator("null", &operators.NullOperator{})
+	if err := engine.RegisterOperator("empty", &operators.EmptyOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("null", &operators.NullOperator{}); err != nil {
+		return err
+	}
 
 	// Reference operators
-	engine.RegisterOperator("grab", &operators.GrabOperator{})
-	engine.RegisterOperator("param", &operators.ParamOperator{})
+	if err := engine.RegisterOperator("grab", &operators.GrabOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("param", &operators.ParamOperator{}); err != nil {
+		return err
+	}
 
 	// String manipulation
-	engine.RegisterOperator("concat", &operators.ConcatOperator{})
-	engine.RegisterOperator("join", &operators.JoinOperator{})
-	engine.RegisterOperator("stringify", &operators.StringifyOperator{})
-	engine.RegisterOperator("base64", &operators.Base64Operator{})
-	engine.RegisterOperator("base64-decode", &operators.Base64DecodeOperator{})
+	if err := engine.RegisterOperator("concat", &operators.ConcatOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("join", &operators.JoinOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("stringify", &operators.StringifyOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("base64", &operators.Base64Operator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("base64-decode", &operators.Base64DecodeOperator{}); err != nil {
+		return err
+	}
 
 	// Data manipulation
-	engine.RegisterOperator("keys", &operators.KeysOperator{})
-	engine.RegisterOperator("sort", &operators.SortOperator{})
-	engine.RegisterOperator("shuffle", &operators.ShuffleOperator{})
-	engine.RegisterOperator("prune", &operators.PruneOperator{})
+	if err := engine.RegisterOperator("keys", &operators.KeysOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("sort", &operators.SortOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("shuffle", &operators.ShuffleOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("prune", &operators.PruneOperator{}); err != nil {
+		return err
+	}
 
 	// Math operators
-	engine.RegisterOperator("calc", &operators.CalcOperator{})
+	if err := engine.RegisterOperator("calc", &operators.CalcOperator{}); err != nil {
+		return err
+	}
 
 	// Control flow
-	engine.RegisterOperator("ternary", &operators.TernaryOperator{})
-	engine.RegisterOperator("negate", &operators.NegateOperator{})
-	engine.RegisterOperator("defer", &operators.DeferOperator{})
+	if err := engine.RegisterOperator("ternary", &operators.TernaryOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("negate", &operators.NegateOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("defer", &operators.DeferOperator{}); err != nil {
+		return err
+	}
 
 	// External data sources
-	engine.RegisterOperator("vault", &operators.VaultOperator{})
-	engine.RegisterOperator("vault-try", &operators.VaultTryOperator{})
-	engine.RegisterOperator("file", &operators.FileOperator{})
-	engine.RegisterOperator("awsparam", operators.NewAwsParamOperator())
-	engine.RegisterOperator("awssecret", operators.NewAwsSecretOperator())
-	engine.RegisterOperator("load", &operators.LoadOperator{})
+	if err := engine.RegisterOperator("vault", &operators.VaultOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("vault-try", &operators.VaultTryOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("file", &operators.FileOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("awsparam", operators.NewAwsParamOperator()); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("awssecret", operators.NewAwsSecretOperator()); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("load", &operators.LoadOperator{}); err != nil {
+		return err
+	}
 
 	// Network operations
-	engine.RegisterOperator("static_ips", &operators.StaticIPOperator{})
-	engine.RegisterOperator("ips", &operators.IpsOperator{})
+	if err := engine.RegisterOperator("static_ips", &operators.StaticIPOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("ips", &operators.IpsOperator{}); err != nil {
+		return err
+	}
 
 	// Advanced operations
-	engine.RegisterOperator("inject", &operators.InjectOperator{})
-	engine.RegisterOperator("cartesian-product", &operators.CartesianProductOperator{})
+	if err := engine.RegisterOperator("inject", &operators.InjectOperator{}); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("cartesian-product", &operators.CartesianProductOperator{}); err != nil {
+		return err
+	}
 
 	// Boolean operators
-	engine.RegisterOperator("&&", operators.NewTypeAwareAndOperator())
-	engine.RegisterOperator("||", operators.NewTypeAwareOrOperator())
-	engine.RegisterOperator("!", operators.NewTypeAwareNotOperator())
+	if err := engine.RegisterOperator("&&", operators.NewTypeAwareAndOperator()); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("||", operators.NewTypeAwareOrOperator()); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("!", operators.NewTypeAwareNotOperator()); err != nil {
+		return err
+	}
 
 	// Comparison operators
-	engine.RegisterOperator("==", operators.NewTypeAwareEqualOperator())
-	engine.RegisterOperator("!=", operators.NewTypeAwareNotEqualOperator())
-	engine.RegisterOperator("<", operators.NewTypeAwareLessOperator())
-	engine.RegisterOperator(">", operators.NewTypeAwareGreaterOperator())
-	engine.RegisterOperator("<=", operators.NewTypeAwareLessOrEqualOperator())
-	engine.RegisterOperator(">=", operators.NewTypeAwareGreaterOrEqualOperator())
+	if err := engine.RegisterOperator("==", operators.NewTypeAwareEqualOperator()); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("!=", operators.NewTypeAwareNotEqualOperator()); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("<", operators.NewTypeAwareLessOperator()); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator(">", operators.NewTypeAwareGreaterOperator()); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator("<=", operators.NewTypeAwareLessOrEqualOperator()); err != nil {
+		return err
+	}
+	if err := engine.RegisterOperator(">=", operators.NewTypeAwareGreaterOrEqualOperator()); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // NewMinimalEngine creates an engine with only essential operators
@@ -95,9 +172,15 @@ func NewMinimalEngine() *graft.DefaultEngine {
 	engine := graft.NewDefaultEngine()
 
 	// Register only essential operators
-	engine.RegisterOperator("grab", &operators.GrabOperator{})
-	engine.RegisterOperator("concat", &operators.ConcatOperator{})
-	engine.RegisterOperator("empty", &operators.EmptyOperator{})
+	if err := engine.RegisterOperator("grab", &operators.GrabOperator{}); err != nil {
+		panic(fmt.Sprintf("failed to register grab operator: %v", err))
+	}
+	if err := engine.RegisterOperator("concat", &operators.ConcatOperator{}); err != nil {
+		panic(fmt.Sprintf("failed to register concat operator: %v", err))
+	}
+	if err := engine.RegisterOperator("empty", &operators.EmptyOperator{}); err != nil {
+		panic(fmt.Sprintf("failed to register empty operator: %v", err))
+	}
 
 	return engine
 }
@@ -110,7 +193,9 @@ func NewTestEngine() *graft.DefaultEngine {
 	config.EnableCaching = false
 
 	engine := graft.NewDefaultEngineWithConfig(config)
-	registerDefaultOperators(engine)
+	if err := registerDefaultOperators(engine); err != nil {
+		panic(fmt.Sprintf("failed to register default operators for test engine: %v", err))
+	}
 
 	return engine
 }

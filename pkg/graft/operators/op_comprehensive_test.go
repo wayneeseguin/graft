@@ -2,7 +2,6 @@ package operators
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,11 +16,11 @@ func TestOperatorsComprehensive(t *testing.T) {
 
 		Convey("file operator with nested concat", func() {
 			// Create a temp file
-			tmpDir, err := ioutil.TempDir("", "graft-test")
+			tmpDir, err := os.MkdirTemp("", "graft-test")
 			So(err, ShouldBeNil)
 			defer os.RemoveAll(tmpDir)
 
-			err = ioutil.WriteFile(filepath.Join(tmpDir, "test.txt"), []byte("Hello from file!"), 0644)
+			err = os.WriteFile(filepath.Join(tmpDir, "test.txt"), []byte("Hello from file!"), 0644)
 			So(err, ShouldBeNil)
 
 			input := fmt.Sprintf(`
@@ -91,11 +90,11 @@ result: (( stringify (grab data.users) ))
 
 		Convey("complex nested expressions", func() {
 			// Create temp files
-			tmpDir, err := ioutil.TempDir("", "graft-test")
+			tmpDir, err := os.MkdirTemp("", "graft-test")
 			So(err, ShouldBeNil)
 			defer os.RemoveAll(tmpDir)
 
-			err = ioutil.WriteFile(filepath.Join(tmpDir, "users.yml"), []byte("alice,bob,charlie"), 0644)
+			err = os.WriteFile(filepath.Join(tmpDir, "users.yml"), []byte("alice,bob,charlie"), 0644)
 			So(err, ShouldBeNil)
 
 			input := fmt.Sprintf(`

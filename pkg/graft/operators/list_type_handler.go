@@ -208,7 +208,10 @@ func convertToInt(val interface{}) (int64, bool) {
 	case int64:
 		return v, true
 	case uint:
-		return int64(v), true
+		if v <= 9223372036854775807 { // Max int64
+			return int64(v), true
+		}
+		return 0, false
 	case uint8:
 		return int64(v), true
 	case uint16:

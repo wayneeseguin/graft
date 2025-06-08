@@ -3,7 +3,6 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,7 +56,7 @@ func NewDiskCache(config DiskCacheConfig) (*DiskCache, error) {
 
 	// Create storage directory if it doesn't exist
 	if config.Persistence {
-		if err := os.MkdirAll(config.StoragePath, 0755); err != nil {
+		if err := os.MkdirAll(config.StoragePath, 0700); err != nil {
 			return nil, fmt.Errorf("failed to create cache directory: %v", err)
 		}
 	}
@@ -194,7 +193,8 @@ func (dc *DiskCache) LoadFromDisk() error {
 
 	// Load index file
 	indexPath := filepath.Join(dc.config.StoragePath, dc.config.FilePrefix+"_index.json")
-	indexData, err := ioutil.ReadFile(indexPath)
+	// #nosec G304 - File path is constructed from configured cache storage path which is expected for cache persistence
+	indexData, err := os.ReadFile(indexPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil // No existing cache
@@ -210,7 +210,8 @@ func (dc *DiskCache) LoadFromDisk() error {
 	// Load individual cache files
 	for key, filename := range index {
 		entryPath := filepath.Join(dc.config.StoragePath, filename)
-		entryData, err := ioutil.ReadFile(entryPath)
+		// #nosec G304 - File path is constructed from configured cache storage path which is expected for cache persistence
+		entryData, err := os.ReadFile(entryPath)
 		if err != nil {
 			continue // Skip corrupted entries
 		}
@@ -225,7 +226,7 @@ func (dc *DiskCache) LoadFromDisk() error {
 			dc.entries[key] = &entry
 		} else {
 			// Remove expired entry
-			os.Remove(entryPath)
+			_ = os.Remove(entryPath) // Best effort, ignore errors
 		}
 	}
 
@@ -261,7 +262,7 @@ func (dc *DiskCache) SaveToDisk() error {
 			continue // Skip entries that can't be serialized
 		}
 
-		if err := ioutil.WriteFile(entryPath, entryData, 0644); err != nil {
+		if err := os.WriteFile(entryPath, entryData, 0600); err != nil {
 			continue // Skip entries that can't be written
 		}
 
@@ -275,7 +276,7 @@ func (dc *DiskCache) SaveToDisk() error {
 	}
 
 	indexPath := filepath.Join(dc.config.StoragePath, dc.config.FilePrefix+"_index.json")
-	if err := ioutil.WriteFile(indexPath, indexData, 0644); err != nil {
+	if err := os.WriteFile(indexPath, indexData, 0600); err != nil {
 		return fmt.Errorf("failed to write cache index: %v", err)
 	}
 
@@ -292,7 +293,7 @@ func (dc *DiskCache) persistEntry(key string, entry *CacheEntry) {
 		return
 	}
 
-	if err := ioutil.WriteFile(entryPath, entryData, 0644); err != nil {
+	if err := os.WriteFile(entryPath, entryData, 0600); err != nil {
 		return
 	}
 
@@ -307,9 +308,10 @@ func (dc *DiskCache) updateIndex(key string, filename string) {
 	
 	// Read existing index
 	index := make(map[string]string)
-	indexData, err := ioutil.ReadFile(indexPath)
+	// #nosec G304 - File path is constructed from configured cache storage path which is expected for cache persistence
+	indexData, err := os.ReadFile(indexPath)
 	if err == nil {
-		json.Unmarshal(indexData, &index)
+		_ = json.Unmarshal(indexData, &index) // Ignore unmarshal errors, use empty index
 	}
 	
 	// Update index
@@ -321,14 +323,14 @@ func (dc *DiskCache) updateIndex(key string, filename string) {
 		return
 	}
 	
-	ioutil.WriteFile(indexPath, indexData, 0644)
+	_ = os.WriteFile(indexPath, indexData, 0600) // Best effort, ignore errors
 }
 
 // removeFromDisk removes an entry file from disk
 func (dc *DiskCache) removeFromDisk(key string) {
 	filename := dc.generateFilename(key)
 	entryPath := filepath.Join(dc.config.StoragePath, filename)
-	os.Remove(entryPath)
+	_ = os.Remove(entryPath) // Best effort, ignore errors
 	
 	// Update the index file to remove this entry
 	dc.removeFromIndex(key)
@@ -341,7 +343,8 @@ func (dc *DiskCache) removeFromIndex(key string) {
 	
 	// Read existing index
 	index := make(map[string]string)
-	indexData, err := ioutil.ReadFile(indexPath)
+	// #nosec G304 - File path is constructed from configured cache storage path which is expected for cache persistence
+	indexData, err := os.ReadFile(indexPath)
 	if err != nil {
 		return // No index file
 	}
@@ -359,7 +362,7 @@ func (dc *DiskCache) removeFromIndex(key string) {
 		return
 	}
 	
-	ioutil.WriteFile(indexPath, indexData, 0644)
+	_ = os.WriteFile(indexPath, indexData, 0600) // Best effort, ignore errors
 }
 
 // clearDisk removes all cache files from disk
@@ -371,7 +374,7 @@ func (dc *DiskCache) clearDisk() {
 	}
 
 	for _, path := range matches {
-		os.Remove(path)
+		_ = os.Remove(path) // Best effort, ignore errors
 	}
 }
 

@@ -657,7 +657,7 @@ func (tx *cowTreeTransaction) commitInternal() error {
 	// Apply all deletes
 	for pathStr := range tx.deletes {
 		path := splitPath(pathStr)
-		tx.tree.deleteInternal(path...) // Ignore errors for non-existent paths
+		_ = tx.tree.deleteInternal(path...) // Ignore errors for non-existent paths
 	}
 	
 	return nil

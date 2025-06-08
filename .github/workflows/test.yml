@@ -3,8 +3,8 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  unit-tests:
-    name: Unit Tests
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -18,12 +18,6 @@ jobs:
       - name: Build
         run: go build -v ./...
 
-      - name: Run unit tests
-        run: go list ./... | grep -v vendor | xargs go test
-
-      - name: Run go vet
-        run: go list ./... | grep -v vendor | xargs go vet
-
       - name: Build graft binary
         run: go build ./cmd/graft
 
@@ -32,6 +26,48 @@ jobs:
         with:
           name: graft-binary
           path: ./graft
+
+  vet:
+    name: Vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: stable
+          check-latest: true
+
+      - name: Run go vet
+        run: go list ./... | grep -v vendor | xargs go vet
+
+  gosec:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: ./...
+
+  unit-tests:
+    name: Unit Tests
+    needs: [build, vet, gosec]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: stable
+          check-latest: true
+
+      - name: Run unit tests
+        run: go list ./... | grep -v vendor | xargs go test
 
   integration-tests:
     name: Integration Tests

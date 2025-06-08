@@ -137,7 +137,7 @@ func createVaultClientFromConfig(config *VaultTarget) (*vaultkv.KV, error) {
 				Proxy: http.ProxyFromEnvironment,
 				TLSClientConfig: &tls.Config{
 					RootCAs:            roots,
-					InsecureSkipVerify: config.SkipVerify,
+					InsecureSkipVerify: config.SkipVerify, // #nosec G402 - controlled by user configuration
 				},
 			},
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -579,7 +579,7 @@ func initializeVaultClient() error {
 				Proxy: http.ProxyFromEnvironment,
 				TLSClientConfig: &tls.Config{
 					RootCAs:            roots,
-					InsecureSkipVerify: skip,
+					InsecureSkipVerify: skip, // #nosec G402 - skip is controlled by user configuration
 				},
 			},
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {

@@ -2,7 +2,6 @@ package operators
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -101,7 +100,7 @@ func (FileOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	}
 
 	// Read the file
-	file, err := ioutil.ReadFile(filename)
+	file, err := os.ReadFile(filename) // #nosec G304 - file operator needs to read user-specified files
 	if err != nil {
 		DEBUG("failed to read file")
 		DEBUG("error was: %s", err)

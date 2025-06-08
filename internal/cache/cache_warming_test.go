@@ -2,7 +2,6 @@ package cache
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -13,7 +12,7 @@ import (
 func TestCacheWarming(t *testing.T) {
 	Convey("Cache Warming System", t, func() {
 
-		tempDir, err := ioutil.TempDir("", "graft_warming_test")
+		tempDir, err := os.MkdirTemp("", "graft_warming_test")
 		So(err, ShouldBeNil)
 		defer os.RemoveAll(tempDir)
 
@@ -28,7 +27,7 @@ func TestCacheWarming(t *testing.T) {
 
 			cache, err := NewHierarchicalCache(cacheConfig)
 			So(err, ShouldBeNil)
-			defer cache.Close()
+			defer func() { _ = cache.Close() }()
 
 			// Create cache warming system
 			warmingConfig := CacheWarmingConfig{
@@ -123,7 +122,7 @@ func TestCacheWarming(t *testing.T) {
 				TTL:       time.Minute,
 			})
 			So(err, ShouldBeNil)
-			defer cache.Close()
+			defer func() { _ = cache.Close() }()
 
 			Convey("Frequency-based strategy", func() {
 				warmingConfig := CacheWarmingConfig{
@@ -192,7 +191,7 @@ func TestCacheWarming(t *testing.T) {
 				TTL:       time.Minute,
 			})
 			So(err, ShouldBeNil)
-			defer cache.Close()
+			defer func() { _ = cache.Close() }()
 
 			warmingConfig := CacheWarmingConfig{
 				Enabled:        true,
@@ -233,7 +232,7 @@ func TestCacheWarming(t *testing.T) {
 				TTL:       time.Minute,
 			})
 			So(err, ShouldBeNil)
-			defer cache.Close()
+			defer func() { _ = cache.Close() }()
 
 			warmingConfig := CacheWarmingConfig{
 				Enabled: false,
@@ -316,7 +315,7 @@ func BenchmarkCacheWarming(b *testing.B) {
 		L2Enabled: false,
 		TTL:       time.Hour,
 	})
-	defer cache.Close()
+	defer func() { _ = cache.Close() }()
 
 	warmingConfig := CacheWarmingConfig{
 		Enabled:      true,

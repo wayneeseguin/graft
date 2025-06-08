@@ -169,7 +169,7 @@ func saveConfig(engine graft.Engine, config graft.Document, filename string) {
 		return
 	}
 
-	err = os.WriteFile(filename, yamlBytes, 0644)
+	err = os.WriteFile(filename, yamlBytes, 0600)
 	if err != nil {
 		log.Printf("Failed to write file %s: %v", filename, err)
 		return

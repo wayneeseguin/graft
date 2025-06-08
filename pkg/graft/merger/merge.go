@@ -127,7 +127,7 @@ func Merge(l ...map[interface{}]interface{}) (map[interface{}]interface{}, error
 	m := &Merger{}
 	root := map[interface{}]interface{}{}
 	for _, next := range l {
-		m.Merge(root, next)
+		_ = m.Merge(root, next)
 	}
 	return root, m.Error()
 }
@@ -141,7 +141,7 @@ func MergeWithMetadata(l ...map[interface{}]interface{}) (map[interface{}]interf
 	}
 	root := map[interface{}]interface{}{}
 	for _, next := range l {
-		m.Merge(root, next)
+		_ = m.Merge(root, next)
 	}
 	return root, m.Error(), &m.metadata
 }

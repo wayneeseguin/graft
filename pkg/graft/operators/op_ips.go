@@ -62,7 +62,16 @@ func makeInt(val interface{}) int {
 
 func netSize(ipnet *net.IPNet) int {
 	ones, bits := ipnet.Mask.Size()
-	return 1 << uint(bits-ones)
+	// Safely calculate shift value
+	if bits <= ones {
+		return 1 // Minimum network size
+	}
+	diff := bits - ones
+	if diff >= 31 {
+		return 1<<31 - 1 // Max int32 value
+	}
+	shift := uint(diff) // #nosec G115 - bounds checked above
+	return 1 << shift
 }
 
 func abs(n int) int {

@@ -144,15 +144,21 @@ func (ms *MonitoringServer) handleCacheAnalytics(w http.ResponseWriter, r *http.
 	case "json":
 		w.Header().Set("Content-Type", "application/json")
 		report := ms.cacheAnalytics.GenerateReport()
-		json.NewEncoder(w).Encode(report)
+		if err := json.NewEncoder(w).Encode(report); err != nil {
+			http.Error(w, "Failed to encode report", http.StatusInternalServerError)
+		}
 
 	case "metrics":
 		w.Header().Set("Content-Type", "text/plain")
-		reporter.GenerateMetricsReport(w)
+		if err := reporter.GenerateMetricsReport(w); err != nil {
+			http.Error(w, "Failed to generate metrics report", http.StatusInternalServerError)
+		}
 
 	default:
 		w.Header().Set("Content-Type", "text/plain")
-		reporter.GenerateTextReport(w)
+		if err := reporter.GenerateTextReport(w); err != nil {
+			http.Error(w, "Failed to generate text report", http.StatusInternalServerError)
+		}
 	}
 }
 
@@ -163,7 +169,9 @@ func (ms *MonitoringServer) handleTimingAnalytics(w http.ResponseWriter, r *http
 	if format == "json" {
 		w.Header().Set("Content-Type", "application/json")
 		summary := ms.timingAgg.GetSummary()
-		json.NewEncoder(w).Encode(summary)
+		if err := json.NewEncoder(w).Encode(summary); err != nil {
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		}
 	} else {
 		w.Header().Set("Content-Type", "text/plain")
 		stats := ms.timingAgg.GetAllStats()
@@ -179,7 +187,9 @@ func (ms *MonitoringServer) handleTimingAnalytics(w http.ResponseWriter, r *http
 func (ms *MonitoringServer) handleSlowOps(w http.ResponseWriter, r *http.Request) {
 	limit := 100
 	if l := r.URL.Query().Get("limit"); l != "" {
-		fmt.Sscanf(l, "%d", &limit)
+		if _, err := fmt.Sscanf(l, "%d", &limit); err != nil {
+			limit = 100 // fallback to default on parse error
+		}
 	}
 
 	history := ms.slowOpDetector.GetHistory(limit)
@@ -192,7 +202,7 @@ func (ms *MonitoringServer) handleSlowOps(w http.ResponseWriter, r *http.Request
 			"stats":   stats,
 			"history": history,
 		}
-		json.NewEncoder(w).Encode(response)
+		_ = json.NewEncoder(w).Encode(response)
 	} else {
 		w.Header().Set("Content-Type", "text/plain")
 		fmt.Fprintf(w, "=== Slow Operations ===\n")
@@ -226,7 +236,7 @@ func (ms *MonitoringServer) handleHealth(w http.ResponseWriter, r *http.Request)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(health)
+	_ = json.NewEncoder(w).Encode(health)
 }
 
 // handleDashboard handles the dashboard page
@@ -372,7 +382,7 @@ func (ms *MonitoringServer) handleDashboard(w http.ResponseWriter, r *http.Reque
 </html>`
 
 	t, _ := template.New("dashboard").Parse(tmpl)
-	t.Execute(w, nil)
+	_ = t.Execute(w, nil)
 }
 
 // handleMetricsStream handles WebSocket metrics streaming

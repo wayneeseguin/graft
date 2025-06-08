@@ -138,9 +138,18 @@ func (r *MetricsRegistry) collectResources() {
 
 			// Update metrics
 			stats := r.resourceCollector.GetSnapshot()
+			// Safely convert uint64 to int64 with bounds checking
+			heapAlloc := stats.MemStats.HeapAlloc
+			if heapAlloc > 9223372036854775807 { // Max int64
+				heapAlloc = 9223372036854775807
+			}
+			heapObjects := stats.MemStats.HeapObjects
+			if heapObjects > 9223372036854775807 { // Max int64
+				heapObjects = 9223372036854775807
+			}
 			r.collector.UpdateResourceMetrics(
-				int64(stats.MemStats.HeapAlloc),
-				int64(stats.MemStats.HeapObjects),
+				int64(heapAlloc), // #nosec G115 - bounds checked above
+				int64(heapObjects), // #nosec G115 - bounds checked above
 				int64(stats.NumGoroutines),
 			)
 
@@ -251,14 +260,20 @@ func (rc *ResourceCollector) Collect() {
 		rc.recentGCPauses = rc.recentGCPauses[:0]
 
 		// Get last 10 pauses
-		startIdx := 0
+		var startIdx uint32
 		if numGC > 10 {
-			startIdx = int((numGC - 10) % 256)
+			startIdx = (numGC - 10) % 256
 		}
 
-		for i := 0; i < int(numGC) && i < 10; i++ {
+		var i uint32
+		for i = 0; i < numGC && i < 10; i++ {
 			idx := (startIdx + i) % 256
-			rc.recentGCPauses = append(rc.recentGCPauses, time.Duration(rc.memStats.PauseNs[idx]))
+			// Safely convert uint64 to int64 for Duration
+			pauseNs := rc.memStats.PauseNs[idx]
+			if pauseNs > 9223372036854775807 { // Max int64
+				pauseNs = 9223372036854775807
+			}
+			rc.recentGCPauses = append(rc.recentGCPauses, time.Duration(pauseNs)) // #nosec G115 - bounds checked above
 		}
 	}
 }

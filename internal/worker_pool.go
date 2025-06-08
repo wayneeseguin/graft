@@ -91,7 +91,7 @@ func (wp *WorkerPool) worker(id int) {
 
 			// Apply rate limiting if configured
 			if wp.rateLimiter != nil {
-				wp.rateLimiter.Wait(wp.ctx)
+				_ = wp.rateLimiter.Wait(wp.ctx)
 			}
 
 			// Execute the task

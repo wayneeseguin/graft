@@ -24,11 +24,15 @@ func NewShardedLockManager(numShards int) *ShardedLockManager {
 	if numShards <= 0 {
 		numShards = 32 // Default number of shards
 	}
+	// Ensure numShards doesn't exceed uint32 max
+	if numShards > 4294967295 { // Max uint32
+		numShards = 4294967295
+	}
 
 	shards := make([]shard, numShards)
 	return &ShardedLockManager{
 		shards:    shards,
-		numShards: uint32(numShards),
+		numShards: uint32(numShards), // #nosec G115 - bounds checked above
 	}
 }
 
@@ -103,8 +107,8 @@ func (slm *ShardedLockManager) getShardIndex(path []string) uint32 {
 
 	h := fnv.New32a()
 	for _, segment := range path {
-		h.Write([]byte(segment))
-		h.Write([]byte("."))
+		_, _ = h.Write([]byte(segment))
+		_, _ = h.Write([]byte("."))
 	}
 
 	return h.Sum32() % slm.numShards

@@ -155,7 +155,7 @@ func (g *CacheKeyGenerator) hashString(input string) string {
 // fnvHash generates an FNV-1a hash (fast and good distribution)
 func (g *CacheKeyGenerator) fnvHash(input string) string {
 	h := fnv.New64a()
-	h.Write([]byte(input))
+	_, _ = h.Write([]byte(input)) // Hash write never fails
 	return fmt.Sprintf("fnv_%x", h.Sum64())
 }
 

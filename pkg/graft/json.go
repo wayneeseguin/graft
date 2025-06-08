@@ -61,6 +61,7 @@ func JSONifyFiles(paths []string, strict bool) ([]string, error) {
 			}
 		} else {
 			DEBUG("Processing file '%s'", path)
+			// #nosec G304 - File path is from user-provided command line arguments which is expected behavior for processing YAML files
 			data, err = os.ReadFile(path)
 			if err != nil {
 				return nil, ansi.Errorf("@R{Error reading file} @m{%s}: %s", path, err)
@@ -125,7 +126,10 @@ func deinterfaceMap(o map[interface{}]interface{}, strict bool) (map[string]inte
 			if strict {
 				return nil, fmt.Errorf("Non-string keys found during strict JSON conversion")
 			} else {
-				addKeyToMap(m, k, v, strict)
+				err := addKeyToMap(m, k, v, strict)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 

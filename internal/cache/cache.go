@@ -60,6 +60,10 @@ func NewConcurrentCache(config CacheConfig) *ConcurrentCache {
 	for shards < config.Shards {
 		shards <<= 1
 	}
+	// Ensure shards doesn't exceed uint32 max
+	if shards > 4294967295 { // Max uint32
+		shards = 4294967295
+	}
 
 	shardCapacity := config.Capacity / shards
 	if shardCapacity < 1 {
@@ -68,7 +72,7 @@ func NewConcurrentCache(config CacheConfig) *ConcurrentCache {
 
 	cache := &ConcurrentCache{
 		shards:    make([]*CacheShard, shards),
-		shardMask: uint32(shards - 1),
+		shardMask: uint32(shards - 1), // #nosec G115 - bounds checked above
 		ttl:       config.TTL,
 	}
 
@@ -85,7 +89,7 @@ func NewConcurrentCache(config CacheConfig) *ConcurrentCache {
 // getShard returns the shard for a given key
 func (c *ConcurrentCache) getShard(key string) *CacheShard {
 	h := fnv.New32a()
-	h.Write([]byte(key))
+	_, _ = h.Write([]byte(key)) // Hash write never fails
 	return c.shards[h.Sum32()&c.shardMask]
 }
 

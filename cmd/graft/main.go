@@ -342,6 +342,7 @@ func loadYamlFile(file string) (YamlFile, error) {
 	if file == "-" {
 		target = YamlFile{Reader: os.Stdin, Path: "-"}
 	} else {
+		// #nosec G304 - File path is from user-provided command line arguments which is expected behavior for the CLI tool
 		f, err := os.Open(file)
 		if err != nil {
 			return YamlFile{}, ansi.Errorf("@R{Error reading file} @m{%s}: %s", file, err.Error())
@@ -716,8 +717,12 @@ func diffFiles(paths []string) (string, bool, error) {
 
 	var buf bytes.Buffer
 	out := bufio.NewWriter(&buf)
-	reportWriter.WriteReport(out)
-	out.Flush()
+	if err := reportWriter.WriteReport(out); err != nil {
+		return "", false, fmt.Errorf("failed to write report: %v", err)
+	}
+	if err := out.Flush(); err != nil {
+		return "", false, fmt.Errorf("failed to flush report: %v", err)
+	}
 
 	return buf.String(), len(report.Diffs) > 0, nil
 }

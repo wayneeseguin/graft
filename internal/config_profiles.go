@@ -223,7 +223,7 @@ func InitializeProfiles() error {
 // GetProfileManager returns the global profile manager
 func GetProfileManager() *ProfileManager {
 	if globalProfileManager == nil {
-		InitializeProfiles()
+		_ = InitializeProfiles() // Will use defaults if initialization fails
 	}
 	return globalProfileManager
 }

@@ -106,7 +106,7 @@ func (LoadOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 func getBytesFromLocation(location string) ([]byte, error) {
 	// Handle location as a URI if it looks like one and has a scheme
 	if locURL, err := url.ParseRequestURI(location); err == nil && locURL.Scheme != "" {
-		response, err := http.Get(location)
+		response, err := http.Get(location) // #nosec G107 - load operator needs to fetch from user-specified URLs
 		if err != nil {
 			return nil, err
 		}
@@ -127,6 +127,7 @@ func getBytesFromLocation(location string) ([]byte, error) {
 
 	// Handle location as local file if there is a file at that location
 	if _, err := os.Stat(location); err == nil {
+		// #nosec G304 - File path is from user-provided configuration/input which is expected behavior for the load operator
 		return os.ReadFile(location)
 	}
 

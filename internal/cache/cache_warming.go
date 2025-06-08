@@ -3,7 +3,7 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"sort"
 	"sync"
 	"time"
@@ -273,7 +273,7 @@ func (cw *CacheWarming) periodicWarming() {
 	defer ticker.Stop()
 
 	for range ticker.C {
-		cw.WarmCache()
+		_ = cw.WarmCache() // Continue warming even if errors occur
 	}
 }
 
@@ -388,7 +388,7 @@ func (ua *UsageAnalytics) LoadFromDisk() error {
 		return nil
 	}
 
-	data, err := ioutil.ReadFile(ua.storagePath)
+	data, err := os.ReadFile(ua.storagePath)
 	if err != nil {
 		return nil // File doesn't exist, start fresh
 	}
@@ -419,7 +419,7 @@ func (ua *UsageAnalytics) SaveToDisk() error {
 		return fmt.Errorf("failed to marshal usage patterns: %v", err)
 	}
 
-	return ioutil.WriteFile(ua.storagePath, data, 0644)
+	return os.WriteFile(ua.storagePath, data, 0600)
 }
 
 // DefaultCacheWarmingConfig provides sensible defaults

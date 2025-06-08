@@ -64,7 +64,7 @@ func NewProfiler(config *ProfilerConfig) *Profiler {
 
 	if config.Enabled {
 		// Create profile directory
-		os.MkdirAll(config.ProfileDir, 0755)
+		_ = os.MkdirAll(config.ProfileDir, 0700)
 
 		// Set sample rate
 		runtime.SetCPUProfileRate(config.SampleRate)
@@ -94,8 +94,9 @@ func (p *Profiler) startPProfServer(addr string) {
 	mux.HandleFunc("/debug/pprof/custom", p.handleCustomProfiles)
 
 	p.pprofServer = &http.Server{
-		Addr:    addr,
-		Handler: mux,
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	go func() {
@@ -136,13 +137,14 @@ func (p *Profiler) StartCPUProfile() error {
 	}
 
 	filename := filepath.Join(p.profileDir, fmt.Sprintf("cpu_%s.prof", timestamp()))
+	// #nosec G304 - File path is constructed from configured profile directory which is expected for profiling output
 	f, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create CPU profile: %v", err)
 	}
 
 	if err := rpprof.StartCPUProfile(f); err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("failed to start CPU profile: %v", err)
 	}
 
@@ -176,6 +178,7 @@ func (p *Profiler) WriteHeapProfile() error {
 	}
 
 	filename := filepath.Join(p.profileDir, fmt.Sprintf("heap_%s.prof", timestamp()))
+	// #nosec G304 - File path is constructed from configured profile directory which is expected for profiling output
 	f, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create heap profile: %v", err)
@@ -221,13 +224,14 @@ func (p *Profiler) WriteAllProfiles() error {
 		}
 
 		filename := filepath.Join(p.profileDir, fmt.Sprintf("%s_%s.prof", profile.name, timestamp))
+		// #nosec G304 - File path is constructed from configured profile directory which is expected for profiling output
 		f, err := os.Create(filename)
 		if err != nil {
 			return fmt.Errorf("failed to create %s profile: %v", profile.name, err)
 		}
 
 		err = profile.prof.WriteTo(f, 0)
-		f.Close()
+		_ = f.Close()
 		if err != nil {
 			return fmt.Errorf("failed to write %s profile: %v", profile.name, err)
 		}
@@ -236,13 +240,14 @@ func (p *Profiler) WriteAllProfiles() error {
 	// Custom profiles
 	for name, profile := range p.customProfiles {
 		filename := filepath.Join(p.profileDir, fmt.Sprintf("%s_%s.prof", name, timestamp))
+		// #nosec G304 - File path is constructed from configured profile directory which is expected for profiling output
 		f, err := os.Create(filename)
 		if err != nil {
 			return fmt.Errorf("failed to create %s profile: %v", name, err)
 		}
 
 		err = profile.WriteTo(f, 0)
-		f.Close()
+		_ = f.Close()
 		if err != nil {
 			return fmt.Errorf("failed to write %s profile: %v", name, err)
 		}
@@ -265,13 +270,14 @@ func (p *Profiler) StartTrace() error {
 	}
 
 	filename := filepath.Join(p.profileDir, fmt.Sprintf("trace_%s.out", timestamp()))
+	// #nosec G304 - File path is constructed from configured profile directory which is expected for profiling output
 	f, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create trace file: %v", err)
 	}
 
 	if err := trace.Start(f); err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("failed to start trace: %v", err)
 	}
 
@@ -305,7 +311,7 @@ func (p *Profiler) RegisterCustomProfile(name string, profile *rpprof.Profile) {
 	// Register with default mux if pprof server is running
 	if p.pprofServer != nil {
 		http.HandleFunc("/debug/pprof/"+name, func(w http.ResponseWriter, r *http.Request) {
-			profile.WriteTo(w, 0)
+			_ = profile.WriteTo(w, 0)
 		})
 	}
 }
@@ -349,14 +355,14 @@ func (p *Profiler) Stop() error {
 	// Stop CPU profiling if active
 	if p.cpuProfile != nil {
 		rpprof.StopCPUProfile()
-		p.cpuProfile.Close()
+		_ = p.cpuProfile.Close()
 		p.cpuProfile = nil
 	}
 
 	// Stop tracing if active
 	if p.traceFile != nil {
 		trace.Stop()
-		p.traceFile.Close()
+		_ = p.traceFile.Close()
 		p.traceFile = nil
 	}
 
@@ -364,7 +370,7 @@ func (p *Profiler) Stop() error {
 	if p.pprofServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		p.pprofServer.Shutdown(ctx)
+		_ = p.pprofServer.Shutdown(ctx)
 		p.pprofServer = nil
 	}
 
@@ -444,7 +450,7 @@ func ProfileHeap(name string, fn func() error) error {
 	err := fn()
 
 	if profiler.IsEnabled() {
-		profiler.WriteHeapProfile()
+		_ = profiler.WriteHeapProfile()
 	}
 
 	return err

@@ -3,7 +3,6 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -163,7 +162,7 @@ func (cli *TuningCLI) setConfig(args []string) error {
 	validator := NewConfigValidator()
 	if err := validator.Validate(cli.config); err != nil {
 		// Revert the change
-		SetFieldValue(cli.config, path, oldValue)
+		_ = SetFieldValue(cli.config, path, oldValue)
 		return fmt.Errorf("validation failed: %v", err)
 	}
 
@@ -175,7 +174,7 @@ func (cli *TuningCLI) setConfig(args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(cli.configLoader.configPath, []byte(yamlStr), 0644); err != nil {
+		if err := os.WriteFile(cli.configLoader.configPath, []byte(yamlStr), 0600); err != nil {
 			return fmt.Errorf("failed to save configuration: %v", err)
 		}
 		fmt.Println("Configuration saved.")
@@ -204,7 +203,7 @@ func (cli *TuningCLI) applyProfile(args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(cli.configLoader.configPath, []byte(yamlStr), 0644); err != nil {
+		if err := os.WriteFile(cli.configLoader.configPath, []byte(yamlStr), 0600); err != nil {
 			return fmt.Errorf("failed to save configuration: %v", err)
 		}
 		fmt.Println("Configuration saved.")
@@ -229,7 +228,7 @@ func (cli *TuningCLI) listProfiles() error {
 		fmt.Fprintf(w, "%s\t%s\n", name, desc)
 	}
 
-	w.Flush()
+	_ = w.Flush()
 	return nil
 }
 
@@ -242,7 +241,7 @@ func (cli *TuningCLI) exportConfig(args []string) error {
 
 	if len(args) > 0 && args[0] != "-" {
 		// Write to file
-		if err := ioutil.WriteFile(args[0], []byte(yamlStr), 0644); err != nil {
+		if err := os.WriteFile(args[0], []byte(yamlStr), 0600); err != nil {
 			return fmt.Errorf("failed to write configuration: %v", err)
 		}
 		fmt.Printf("Configuration exported to: %s\n", args[0])
@@ -260,7 +259,7 @@ func (cli *TuningCLI) importConfig(args []string) error {
 		return fmt.Errorf("usage: config import <file>")
 	}
 
-	data, err := ioutil.ReadFile(args[0])
+	data, err := os.ReadFile(args[0])
 	if err != nil {
 		return fmt.Errorf("failed to read file: %v", err)
 	}
@@ -285,7 +284,7 @@ func (cli *TuningCLI) importConfig(args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(cli.configLoader.configPath, []byte(yamlStr), 0644); err != nil {
+		if err := os.WriteFile(cli.configLoader.configPath, []byte(yamlStr), 0600); err != nil {
 			return fmt.Errorf("failed to save configuration: %v", err)
 		}
 		fmt.Println("Configuration saved.")
@@ -300,7 +299,7 @@ func (cli *TuningCLI) validateConfig(args []string) error {
 
 	if len(args) > 0 {
 		// Validate external file
-		data, err := ioutil.ReadFile(args[0])
+		data, err := os.ReadFile(args[0])
 		if err != nil {
 			return fmt.Errorf("failed to read file: %v", err)
 		}
@@ -349,7 +348,7 @@ func (cli *TuningCLI) resetConfig() error {
 		if err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(cli.configLoader.configPath, []byte(yamlStr), 0644); err != nil {
+		if err := os.WriteFile(cli.configLoader.configPath, []byte(yamlStr), 0600); err != nil {
 			return fmt.Errorf("failed to save configuration: %v", err)
 		}
 		fmt.Println("Configuration saved.")

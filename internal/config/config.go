@@ -225,6 +225,7 @@ func (m *Manager) Load(path string) error {
 	}
 
 	// Read file
+	// #nosec G304 - File path is from user-provided configuration path which is expected behavior for loading config files
 	data, err := os.ReadFile(expandedPath)
 	if err != nil {
 		return fmt.Errorf("reading config file: %w", err)

@@ -659,7 +659,7 @@ func buildConnectionOptions(config *natsConfig) []nats.Option {
 	// TLS configuration
 	if config.TLS {
 		tlsConfig := &tls.Config{
-			InsecureSkipVerify: config.InsecureSkipVerify,
+			InsecureSkipVerify: config.InsecureSkipVerify, // #nosec G402 - controlled by user configuration
 		}
 		
 		if config.CertFile != "" && config.KeyFile != "" {
@@ -1166,7 +1166,8 @@ func streamLargeObject(obj jetstream.ObjectStore, objectName string, maxSize int
 		return nil, err
 	}
 	
-	if int64(info.Size) <= maxSize {
+	// Safely compare with bounds checking
+	if maxSize < 0 || (maxSize >= 0 && info.Size <= uint64(maxSize)) {
 		// Object is small enough, use normal method
 		return obj.GetBytes(context.Background(), objectName)
 	}

@@ -50,7 +50,7 @@ func (cr *CacheReporter) GenerateTextReport(w io.Writer) error {
 			stats.AvgLoadTime.Round(time.Microsecond),
 		)
 	}
-	tw.Flush()
+	_ = tw.Flush() // Best effort
 
 	// Hot keys section
 	if len(report.HotKeys) > 0 {
@@ -74,7 +74,7 @@ func (cr *CacheReporter) GenerateTextReport(w io.Writer) error {
 				key.AvgLoadTime.Round(time.Microsecond),
 			)
 		}
-		tw.Flush()
+		_ = tw.Flush() // Best effort
 	}
 
 	// Recommendations

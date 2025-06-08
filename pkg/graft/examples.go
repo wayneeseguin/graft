@@ -198,8 +198,8 @@ app:
 	fmt.Printf("DB host: %s\n", dbHost)
 	
 	// Set values
-	doc.Set("app.version", "2.0")
-	doc.Set("app.config.database.ssl", true)
+	_ = doc.Set("app.version", "2.0")
+	_ = doc.Set("app.config.database.ssl", true)
 	
 	// Get all top-level keys
 	keys := doc.Keys()

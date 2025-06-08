@@ -97,7 +97,12 @@ func (pool *HTTPClientPool) Get() *http.Client {
 		return client
 	default:
 		// Pool is empty, create new client if under limit
-		if pool.created.Load() < int32(pool.maxSize) {
+		maxSize := pool.maxSize
+		if maxSize > 2147483647 { // Max int32
+			maxSize = 2147483647
+		}
+		// #nosec G115 - bounds checked above
+		if pool.created.Load() < int32(maxSize) {
 			pool.created.Add(1)
 			pool.misses.Add(1)
 			return pool.factory()
@@ -309,7 +314,12 @@ func (pool *VaultClientPool) Get() (interface{}, error) {
 
 // createNewClient creates a new client, respecting the pool limit
 func (pool *VaultClientPool) createNewClient() (interface{}, error) {
-	if pool.created.Load() < int32(pool.maxSize) {
+	maxSize := pool.maxSize
+	if maxSize > 2147483647 { // Max int32
+		maxSize = 2147483647
+	}
+	// #nosec G115 - bounds checked above
+	if pool.created.Load() < int32(maxSize) {
 		wrapper, err := pool.factory()
 		if err != nil {
 			pool.misses.Add(1)

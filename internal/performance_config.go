@@ -2,7 +2,6 @@ package internal
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 	"strconv"
@@ -167,7 +166,7 @@ func (c *ConfigLoader) Load() (*PerformanceConfig, error) {
 	// Load from file if it exists
 	if c.configPath != "" {
 		if _, err := os.Stat(c.configPath); err == nil {
-			data, err := ioutil.ReadFile(c.configPath)
+			data, err := os.ReadFile(c.configPath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to read config file: %v", err)
 			}
@@ -345,7 +344,7 @@ func InitializeConfig(configPath string) error {
 func GetGlobalConfig() *PerformanceConfig {
 	if globalConfig == nil {
 		// Initialize with defaults if not yet initialized
-		InitializeConfig("")
+		_ = InitializeConfig("")
 	}
 	return globalConfig
 }
