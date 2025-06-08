@@ -3,7 +3,7 @@ package graft
 import (
 	"context"
 	"fmt"
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // Action represents the type of action an operator should take

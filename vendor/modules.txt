@@ -187,10 +187,6 @@ github.com/smarty/assertions/internal/oglematchers
 github.com/smartystreets/goconvey/convey
 github.com/smartystreets/goconvey/convey/gotest
 github.com/smartystreets/goconvey/convey/reporting
-# github.com/starkandwayne/goutils v0.0.0-20190115202530-896b8a6904be
-## explicit
-github.com/starkandwayne/goutils/ansi
-github.com/starkandwayne/goutils/tree
 # github.com/texttheater/golang-levenshtein v1.0.1
 ## explicit; go 1.13
 github.com/texttheater/golang-levenshtein/levenshtein

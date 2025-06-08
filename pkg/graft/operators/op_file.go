@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // FileOperator handles nested operator calls

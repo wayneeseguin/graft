@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"github.com/wayneeseguin/graft/pkg/graft"
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // UseParser is a feature flag to enable the new parser

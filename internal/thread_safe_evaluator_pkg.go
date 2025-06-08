@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	gotree "github.com/starkandwayne/goutils/tree"
+	gotree "github.com/wayneeseguin/graft/internal/utils/tree"
 	"github.com/wayneeseguin/graft/pkg/graft"
 )
 

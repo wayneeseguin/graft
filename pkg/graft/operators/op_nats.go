@@ -15,8 +15,8 @@ import (
 	"github.com/geofffranks/yaml"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/starkandwayne/goutils/ansi"
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/ansi"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 	"github.com/wayneeseguin/graft/pkg/graft"
 )
 

@@ -13,12 +13,12 @@ import (
 	"github.com/gonvenience/ytbx"
 	"github.com/homeport/dyff/pkg/dyff"
 	"github.com/mattn/go-isatty"
-	"github.com/starkandwayne/goutils/ansi"
+	"github.com/wayneeseguin/graft/internal/utils/ansi"
 
 	"github.com/wayneeseguin/graft/log"
 	"github.com/wayneeseguin/graft/pkg/graft"
 	_ "github.com/wayneeseguin/graft/pkg/graft/operators" // Register operators
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 
 	"strings"
 

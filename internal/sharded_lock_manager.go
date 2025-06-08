@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // ShardedLockManager provides fine-grained locking with multiple shards

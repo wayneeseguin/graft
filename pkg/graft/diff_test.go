@@ -12,7 +12,7 @@ import (
 	// Also https://github.com/go-yaml/yaml/pull/195
 	"github.com/geofffranks/simpleyaml"
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/starkandwayne/goutils/ansi"
+	"github.com/wayneeseguin/graft/internal/utils/ansi"
 )
 
 func TestDiff(t *testing.T) {

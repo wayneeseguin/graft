@@ -19,7 +19,7 @@ import (
 	"github.com/geofffranks/yaml"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/starkandwayne/goutils/ansi"
+	"github.com/wayneeseguin/graft/internal/utils/ansi"
 )
 
 func TestVault(t *testing.T) {

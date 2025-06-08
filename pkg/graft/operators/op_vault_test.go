@@ -3,7 +3,7 @@ package operators
 import (
 	"testing"
 
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

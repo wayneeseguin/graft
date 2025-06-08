@@ -3,7 +3,7 @@ package operators
 import (
 	"fmt"
 
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // NegationOperator implements logical negation (!)

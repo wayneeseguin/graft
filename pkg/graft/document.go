@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 	
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 	"gopkg.in/yaml.v3"
 )
 

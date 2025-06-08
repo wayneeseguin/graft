@@ -13,3 +13,4 @@ artifacts
 *.test
 *.log
 *.txt
+coverage.*

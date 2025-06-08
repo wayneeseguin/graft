@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/starkandwayne/goutils/ansi"
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/ansi"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 	"github.com/wayneeseguin/graft/pkg/graft"
 )
 

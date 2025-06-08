@@ -18,8 +18,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
 	"github.com/geofffranks/yaml"
-	"github.com/starkandwayne/goutils/ansi"
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/ansi"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 	"github.com/wayneeseguin/graft/pkg/graft"
 )
 

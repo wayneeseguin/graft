@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"unsafe"
 	"github.com/wayneeseguin/graft/pkg/graft"
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // OperatorRegistry holds operator metadata for the parser

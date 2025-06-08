@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"github.com/starkandwayne/goutils/ansi"
+	"github.com/wayneeseguin/graft/internal/utils/ansi"
 	"github.com/geofffranks/simpleyaml"
 )
 

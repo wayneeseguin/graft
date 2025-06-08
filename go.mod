@@ -17,7 +17,6 @@ require (
 	github.com/nats-io/nats-server/v2 v2.11.4
 	github.com/nats-io/nats.go v1.43.0
 	github.com/smartystreets/goconvey v1.8.1
-	github.com/starkandwayne/goutils v0.0.0-20190115202530-896b8a6904be
 	github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2
 	github.com/ziutek/utils v0.0.0-20190626152656-eb2a3b364d6c
 	gopkg.in/yaml.v2 v2.4.0

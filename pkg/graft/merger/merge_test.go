@@ -8,8 +8,8 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/geofffranks/simpleyaml"
-	"github.com/starkandwayne/goutils/ansi"
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/ansi"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 func TestShouldKeyMergeArrayOfHashes(t *testing.T) {

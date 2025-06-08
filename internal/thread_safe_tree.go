@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // SafeTree implements ThreadSafeTree interface with proper synchronization

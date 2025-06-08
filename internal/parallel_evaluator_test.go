@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 	"github.com/wayneeseguin/graft/log"
 	"github.com/wayneeseguin/graft/pkg/graft"
 	_ "github.com/wayneeseguin/graft/pkg/graft/operators" // Register operators

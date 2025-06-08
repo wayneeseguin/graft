@@ -5,7 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // Parser implements a precedence-climbing parser for Graft expressions

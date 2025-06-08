@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 	"github.com/geofffranks/yaml"
-	fmt "github.com/starkandwayne/goutils/ansi"
+	fmt "github.com/wayneeseguin/graft/internal/utils/ansi"
 )
 
 func pad1(pad, s string) string {

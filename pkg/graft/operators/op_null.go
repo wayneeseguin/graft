@@ -3,7 +3,7 @@ package operators
 import (
 	"fmt"
 
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // NullOperator handles nested operator calls

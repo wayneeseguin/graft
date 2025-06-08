@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"github.com/wayneeseguin/graft/log"
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 func init() {

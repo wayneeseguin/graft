@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // EmptyOperator handles nested operator calls

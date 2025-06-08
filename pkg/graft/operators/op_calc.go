@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/Knetic/govaluate"
-	"github.com/starkandwayne/goutils/ansi"
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/ansi"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // CalcOperator is invoked with (( calc <expression> ))

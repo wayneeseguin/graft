@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // ShuffleOperator ...

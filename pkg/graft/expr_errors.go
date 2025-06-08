@@ -3,7 +3,7 @@ package graft
 import (
 	"fmt"
 	"strings"
-	"github.com/starkandwayne/goutils/ansi"
+	"github.com/wayneeseguin/graft/internal/utils/ansi"
 )
 
 // ExprError represents an error that occurred during expression parsing or evaluation

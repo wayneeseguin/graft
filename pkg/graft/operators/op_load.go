@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 
 	"github.com/geofffranks/simpleyaml"
-	"github.com/starkandwayne/goutils/ansi"
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/ansi"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // LoadOperator is invoked with (( load <location> ))

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/geofffranks/yaml"
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // StringifyOperator handles nested operator calls

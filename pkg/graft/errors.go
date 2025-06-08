@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 	"github.com/wayneeseguin/graft/log"
-	"github.com/starkandwayne/goutils/ansi"
+	"github.com/wayneeseguin/graft/internal/utils/ansi"
 )
 
 // MultiError ...

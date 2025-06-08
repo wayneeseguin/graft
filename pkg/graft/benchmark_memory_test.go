@@ -3,7 +3,7 @@ package graft_test
 import (
 	"testing"
 	
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 	"github.com/wayneeseguin/graft/pkg/graft"
 	"github.com/wayneeseguin/graft/pkg/graft/operators"
 )

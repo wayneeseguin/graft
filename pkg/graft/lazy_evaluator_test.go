@@ -4,7 +4,7 @@ import (
 	"testing"
 	
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 func TestLazyEvaluator(t *testing.T) {

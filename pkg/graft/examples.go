@@ -6,7 +6,7 @@ import (
 	"log"
 	"strings"
 	
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // This file contains examples of how to use the graft library

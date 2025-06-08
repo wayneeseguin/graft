@@ -3,7 +3,7 @@ package operators
 import (
 	"fmt"
 
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // LogicalOrOperator implements true logical OR (not fallback)

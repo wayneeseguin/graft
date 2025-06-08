@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // KeysOperator handles nested operator calls

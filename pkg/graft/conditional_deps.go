@@ -1,7 +1,7 @@
 package graft
 
 import (
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // DependencyType indicates whether a dependency is conditional or unconditional

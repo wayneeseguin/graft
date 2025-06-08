@@ -2,12 +2,9 @@ package ansi
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"unicode"
-
-	"github.com/mattn/go-isatty"
 )
 
 var (
@@ -42,8 +39,20 @@ var (
 	re = regexp.MustCompile(`(?s)@[kKrRgGyYbBmMpPcCwW*]{.*?}`)
 )
 
-var colorable = isatty.IsTerminal(os.Stdout.Fd())
+// isTerminal checks if the given file descriptor is a terminal
+func isTerminal(fd uintptr) bool {
+	// Simple terminal detection without external dependency
+	// This replaces github.com/mattn/go-isatty
+	stat, err := os.Stdout.Stat()
+	if err != nil {
+		return false
+	}
+	return (stat.Mode() & os.ModeCharDevice) != 0
+}
 
+var colorable = isTerminal(os.Stdout.Fd())
+
+// Color enables or disables color output
 func Color(c bool) {
 	colorable = c
 }
@@ -72,18 +81,12 @@ func colorize(s string) string {
 	})
 }
 
-func Printf(format string, a ...interface{}) (int, error) {
-	return fmt.Printf(colorize(format), a...)
-}
-
-func Fprintf(out io.Writer, format string, a ...interface{}) (int, error) {
-	return fmt.Fprintf(out, colorize(format), a...)
-}
-
+// Sprintf formats according to a format specifier and returns the resulting string with ANSI color codes
 func Sprintf(format string, a ...interface{}) string {
 	return fmt.Sprintf(colorize(format), a...)
 }
 
+// Errorf formats according to a format specifier and returns the string as a value that satisfies error with ANSI color codes
 func Errorf(format string, a ...interface{}) error {
 	return fmt.Errorf(colorize(format), a...)
 }

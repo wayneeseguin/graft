@@ -11,7 +11,7 @@ import (
 	"time"
 	
 	. "github.com/smartystreets/goconvey/convey"
-	"github.com/starkandwayne/goutils/tree"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 func TestThreadSafeEvaluator(t *testing.T) {
