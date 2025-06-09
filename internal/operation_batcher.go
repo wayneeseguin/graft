@@ -143,6 +143,10 @@ func (ob *OperationBatcher) groupOperations(operations []*DependencyNode) map[st
 	groups := make(map[string][]*DependencyNode)
 
 	for _, op := range operations {
+		if op == nil {
+			continue
+		}
+		
 		if !ob.canBatch(op) {
 			// Non-batchable operations go in their own group
 			key := fmt.Sprintf("single_%s", op.ID)
@@ -159,6 +163,10 @@ func (ob *OperationBatcher) groupOperations(operations []*DependencyNode) map[st
 
 // canBatch determines if an operation can be batched
 func (ob *OperationBatcher) canBatch(op *DependencyNode) bool {
+	if op == nil {
+		return false
+	}
+	
 	// Check if operator type supports batching
 	batchableOps := map[string]bool{
 		"vault":      true,

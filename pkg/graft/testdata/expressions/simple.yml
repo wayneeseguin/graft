@@ -1,0 +1,28 @@
+# Simple expression test fixtures
+literals:
+  string: "hello world"
+  number: 42
+  float: 3.14
+  boolean: true
+  null: null
+  list: [1, 2, 3]
+  map:
+    key1: value1
+    key2: value2
+
+references:
+  direct: (( grab literals.string ))
+  nested: (( grab literals.map.key1 ))
+  list_index: (( grab literals.list.1 ))
+  
+env_vars:
+  simple: (( $TEST_VAR ))
+  with_default: (( $MISSING_VAR || "default" ))
+  
+logical_or:
+  fallback: (( grab missing.path || "fallback value" ))
+  chain: (( grab missing1 || grab missing2 || grab literals.string ))
+  
+nested_expressions:
+  concat_with_grab: (( concat "prefix-" (grab literals.string) "-suffix" ))
+  nested_or: (( grab (( $ENV_KEY || "literals" )).string ))

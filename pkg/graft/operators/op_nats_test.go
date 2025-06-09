@@ -78,6 +78,11 @@ func TestNatsOperator(t *testing.T) {
 		})
 		
 		Convey("With test NATS server", func() {
+			if testing.Short() {
+				SkipConvey("Skipping NATS integration tests in short mode", func() {})
+				return
+			}
+			
 			// Start test NATS server
 			ns, url := startTestNATSServer()
 			defer ns.Shutdown()

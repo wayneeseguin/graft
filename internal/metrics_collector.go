@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -45,6 +46,9 @@ type MetricsCollector struct {
 
 	// Custom metrics
 	CustomMetrics map[string]*MetricFamily
+	
+	// Mutex for custom metrics
+	customMu sync.RWMutex
 }
 
 // NewMetricsCollector creates a new metrics collector
@@ -292,7 +296,9 @@ func (mc *MetricsCollector) RecordError(errorType string, err error) {
 // RegisterCustomMetric registers a custom metric family
 func (mc *MetricsCollector) RegisterCustomMetric(name, help string, metricType MetricType) *MetricFamily {
 	family := NewMetricFamily(name, help, metricType)
+	mc.customMu.Lock()
 	mc.CustomMetrics[name] = family
+	mc.customMu.Unlock()
 	return family
 }
 
@@ -324,9 +330,11 @@ func (mc *MetricsCollector) GetAllMetricFamilies() []*MetricFamily {
 	}
 
 	// Add custom metrics
+	mc.customMu.RLock()
 	for _, family := range mc.CustomMetrics {
 		families = append(families, family)
 	}
+	mc.customMu.RUnlock()
 
 	return families
 }

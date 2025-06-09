@@ -2,6 +2,12 @@
 #
 # This example demonstrates common patterns for using Vault
 # with Kubernetes deployments and configurations
+#
+# NOTE: This is a simplified example for demonstration purposes only.
+# It intentionally shows a basic setup without security hardening.
+# For production use with security best practices, see kubernetes-integration-secure.yml
+#
+# WARNING: This example has known security issues and should NOT be used in production!
 
 # Kubernetes Secret manifest
 apiVersion: v1
@@ -38,15 +44,51 @@ metadata:
   namespace: production
 spec:
   replicas: 3
+  selector:
+    matchLabels:
+      app: myapp
   template:
+    metadata:
+      labels:
+        app: myapp
     spec:
       # Service account for Vault authentication
       serviceAccountName: myapp-vault
       
+      # Pod-level security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      
       # Init container to fetch secrets from Vault
+      # NOTE: This basic example lacks security controls - see secure version
       initContainers:
       - name: vault-init
         image: vault:1.13.0
+        
+        # Container security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          capabilities:
+            drop:
+              - ALL
+        
+        # Resource limits and requests
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        
         env:
         - name: VAULT_ADDR
           value: https://vault.example.com
@@ -67,10 +109,33 @@ spec:
         volumeMounts:
         - name: vault-secrets
           mountPath: /vault/secrets
+        - name: vault-tmp
+          mountPath: /tmp
       
       containers:
       - name: myapp
-        image: myapp:latest
+        # Using specific version tag for production
+        image: myapp:v1.2.3
+        
+        # Container security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          capabilities:
+            drop:
+              - ALL
+        
+        # Resource limits and requests
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        
         env:
         # Static configuration
         - name: DATABASE_HOST
@@ -92,13 +157,38 @@ spec:
         - name: VAULT_SECRET_PATH
           value: secret/myapp/production
         
+        # Liveness and readiness probes
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        
         volumeMounts:
         - name: vault-secrets
           mountPath: /vault/secrets
           readOnly: true
+        - name: app-tmp
+          mountPath: /tmp
+        - name: app-cache
+          mountPath: /app/cache
       
       volumes:
       - name: vault-secrets
+        emptyDir: {}
+      - name: vault-tmp
+        emptyDir: {}
+      - name: app-tmp
+        emptyDir: {}
+      - name: app-cache
         emptyDir: {}
 
 ---
@@ -153,7 +243,7 @@ spec:
   values:
     image:
       repository: myapp
-      tag: latest
+      tag: v1.2.3
     
     # Database configuration from Vault
     database:

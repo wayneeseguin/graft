@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package operators
 
 import (
@@ -15,6 +18,10 @@ import (
 )
 
 func TestVaultNatsEdgeCases(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+	
 	Convey("Vault and NATS Edge Cases and Error Scenarios", t, func() {
 		// Start test NATS server
 		ns, url := startTestNATSServer()

@@ -1,0 +1,35 @@
+# Error cases for expression evaluation
+errors:
+  # Reference errors
+  missing_reference: (( grab non.existent.path ))
+  cyclic_reference: (( grab errors.cyclic_reference ))
+  
+  # Type errors  
+  invalid_operation: (( concat 123 456 ))  # concat expects strings
+  
+  # Syntax errors (these would be caught during parsing)
+  # unclosed_expression: (( grab test
+  # invalid_operator: (( @invalid test ))
+  
+  # Nested errors
+  nested_error: (( grab (( grab missing.path )) ))
+  
+  # Environment variable errors
+  missing_env: (( $UNDEFINED_VAR ))
+  
+# Circular references
+circular:
+  a: (( grab circular.b ))
+  b: (( grab circular.c ))
+  c: (( grab circular.a ))
+  
+# Deep nesting
+deep:
+  level1:
+    level2:
+      level3:
+        level4:
+          level5:
+            value: "deep value"
+            
+deep_ref: (( grab deep.level1.level2.level3.level4.level5.value ))

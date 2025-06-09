@@ -1,6 +1,10 @@
 # Kubernetes ConfigMap Examples with Stringify
 #
 # Creating ConfigMaps with embedded YAML/properties files
+#
+# SECURITY NOTE: This example is for demonstration purposes.
+# Sensitive data like passwords, API keys, and secrets should
+# be stored in Kubernetes Secrets, not ConfigMaps.
 
 # Application configuration to embed
 app_config:
@@ -146,9 +150,13 @@ data:
     APP_NAME=my-microservice
     APP_ENV=production
     LOG_LEVEL=info
-    DATABASE_URL=postgresql://appuser:password@postgres-primary:5432/myapp_prod
-    REDIS_URL=redis://redis-cluster:6379
-    JWT_SECRET=your-secret-key
+    DATABASE_HOST=postgres-primary
+    DATABASE_PORT=5432
+    DATABASE_NAME=myapp_prod
+    REDIS_HOST=redis-cluster
+    REDIS_PORT=6379
+    # NOTE: Sensitive values like JWT_SECRET should be stored in Kubernetes Secrets
+    # JWT_SECRET should be read from a Secret, not ConfigMap
     METRICS_ENABLED=true
     TRACING_ENABLED=true
 
@@ -172,7 +180,8 @@ data:
     server.servlet.context-path=/api
     spring.profiles.active=production
     spring.datasource.url=jdbc:postgresql://db:5432/myapp
-    spring.datasource.username=appuser
+    # NOTE: Username should be stored in a Secret, not ConfigMap
+    # spring.datasource.username should be read from a Secret
     logging.level.root=INFO
 
 # YAML config for stringification

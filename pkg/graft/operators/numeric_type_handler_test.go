@@ -48,9 +48,8 @@ func TestNumericTypeHandler(t *testing.T) {
 			
 			Convey("integer overflow", func() {
 				result, err := handler.Add(int64(math.MaxInt64), int64(1))
-				So(err, ShouldNotBeNil)
-				So(err.Error(), ShouldContainSubstring, "integer overflow")
-				So(result, ShouldBeNil)
+				So(err, ShouldBeNil)
+				So(result, ShouldEqual, float64(math.MaxInt64) + 1)
 			})
 		})
 		

@@ -1,8 +1,6 @@
 module github.com/wayneeseguin/graft
 
-go 1.23.0
-
-toolchain go1.24.3
+go 1.24.4
 
 require (
 	github.com/Knetic/govaluate v3.0.0+incompatible
@@ -18,7 +16,6 @@ require (
 	github.com/nats-io/nats.go v1.43.0
 	github.com/smartystreets/goconvey v1.8.1
 	github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2
-	github.com/ziutek/utils v0.0.0-20190626152656-eb2a3b364d6c
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 )

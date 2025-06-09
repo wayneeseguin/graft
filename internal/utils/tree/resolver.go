@@ -10,16 +10,19 @@ import (
 func listFind(l []interface{}, fields []string, key string) (interface{}, uint64, bool) {
 	for _, field := range fields {
 		for i, v := range l {
+			// Convert index to uint64 safely
+			idx := uint64(i) // #nosec G115 - i is from range loop, always >= 0
+			
 			switch v.(type) {
 			case map[string]interface{}:
 				value, ok := v.(map[string]interface{})[field]
 				if ok && value == key {
-					return v, uint64(i), true
+					return v, idx, true
 				}
 			case map[interface{}]interface{}:
 				value, ok := v.(map[interface{}]interface{})[field]
 				if ok && value == key {
-					return v, uint64(i), true
+					return v, idx, true
 				}
 			}
 		}

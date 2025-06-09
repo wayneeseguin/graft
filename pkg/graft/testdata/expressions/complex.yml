@@ -1,0 +1,52 @@
+# Complex expression test cases
+data:
+  users:
+    - name: Alice
+      age: 30
+      active: true
+    - name: Bob
+      age: 25
+      active: false
+    - name: Charlie
+      age: 35
+      active: true
+      
+  config:
+    host: localhost
+    port: 8080
+    ssl: false
+    
+  templates:
+    url: (( concat "http" (( ternary data.config.ssl "s" "" )) "://" data.config.host ":" data.config.port ))
+    greeting: (( concat "Hello, " (( grab $USER || "Guest" )) "!" ))
+    
+# Complex nested expressions
+complex:
+  # Conditional with nested grabs
+  user_status: (( ternary (( grab data.users.0.active )) "active" "inactive" ))
+  
+  # Multiple fallbacks
+  config_value: (( grab $CUSTOM_HOST || grab data.config.host || "default.local" ))
+  
+  # Expression as operator argument
+  dynamic_path: (( grab data.(( $CONFIG_KEY || "config" )).host ))
+  
+  # Nested operators
+  calculated: (( calc "(( grab data.users.0.age )) + (( grab data.users.1.age ))" ))
+  
+  # List operations
+  all_names: (( map data.users "name" ))
+  active_users: (( filter data.users "active" ))
+  
+# Performance test - many expressions
+performance:
+  expr1: (( grab data.config.host ))
+  expr2: (( grab data.config.port ))
+  expr3: (( grab data.users.0.name ))
+  expr4: (( grab data.users.1.name ))
+  expr5: (( grab data.users.2.name ))
+  expr6: (( concat "user-" (( grab data.users.0.name )) ))
+  expr7: (( concat "user-" (( grab data.users.1.name )) ))
+  expr8: (( concat "user-" (( grab data.users.2.name )) ))
+  expr9: (( ternary true "yes" "no" ))
+  expr10: (( ternary false "yes" "no" ))

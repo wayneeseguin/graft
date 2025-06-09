@@ -196,9 +196,6 @@ github.com/virtuald/go-ordered-json
 # github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2
 ## explicit
 github.com/voxelbrain/goptions
-# github.com/ziutek/utils v0.0.0-20190626152656-eb2a3b364d6c
-## explicit
-github.com/ziutek/utils/netaddr
 # golang.org/x/crypto v0.38.0
 ## explicit; go 1.23.0
 golang.org/x/crypto/bcrypt

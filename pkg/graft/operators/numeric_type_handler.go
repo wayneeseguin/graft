@@ -80,9 +80,10 @@ func (h *NumericTypeHandler) Add(a, b interface{}) (interface{}, error) {
 	aInt := aNum.(int64)
 	bInt := bNum.(int64)
 	
-	// Check for overflow
+	// Check for overflow and convert to float if necessary
 	if (bInt > 0 && aInt > math.MaxInt64-bInt) || (bInt < 0 && aInt < math.MinInt64-bInt) {
-		return nil, fmt.Errorf("integer overflow in addition: %d + %d", aInt, bInt)
+		// Convert to float to handle overflow
+		return float64(aInt) + float64(bInt), nil
 	}
 	
 	return aInt + bInt, nil

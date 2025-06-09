@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/wayneeseguin/graft/internal/utils/netutil"
 	"github.com/wayneeseguin/graft/internal/utils/tree"
-	"github.com/ziutek/utils/netaddr"
 )
 
 // IpOperator...
@@ -139,7 +139,7 @@ func (IpsOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	if len(args) == 2 {
 		return &Response{
 			Type:  Replace,
-			Value: netaddr.IPAdd(ip, start).String(),
+			Value: netutil.IPAdd(ip, start).String(),
 		}, nil
 	} else {
 		count := makeInt(vals[2])
@@ -150,7 +150,7 @@ func (IpsOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		}
 		lst := []interface{}{}
 		for i := start; i < start+count; i++ {
-			lst = append(lst, netaddr.IPAdd(ip, i).String())
+			lst = append(lst, netutil.IPAdd(ip, i).String())
 		}
 		return &Response{
 			Type:  Replace,
