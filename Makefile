@@ -26,9 +26,8 @@ COVERAGE_HTML := $(COVERAGE_DIR)/coverage.html
 ##@ General
 
 help: ## Show this help message
-	@echo "graft Makefile - Available targets:"
-	@echo ""
-	@awk 'BEGIN {FS = ":.*##"; printf "\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@echo -e "\033[33mgraft\033[0m - Available \`make T\` (T)argets:"
+	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[32m\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 	@echo ""
 	@echo "Version: $(VERSION)"
 
