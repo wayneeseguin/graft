@@ -11,9 +11,10 @@ GO_FILES := $(shell find . -name '*.go' -not -path "./vendor/*")
 COVERAGE_DIR := coverage
 COVERAGE_FILE := $(COVERAGE_DIR)/coverage.out
 COVERAGE_HTML := $(COVERAGE_DIR)/coverage.html
+INSTALL_PATH ?= /usr/local/bin
 
 # Phony targets
-.PHONY: help build build-examples package clean
+.PHONY: help build build-examples package clean install
 .PHONY: test test-unit test-clean test-verbose test-race test-integration test-all test-cli
 .PHONY: integration integration-nats integration-vault integration-aws integration-debug
 .PHONY: debug-nats test-nats-recovery test-nats-monitor test-nats-load
@@ -51,6 +52,12 @@ package: clean build ## Clean, build, and prepare for release
 	@mkdir -p dist
 	@cp $(BINARY_NAME) dist/
 	@echo "Package ready in dist/"
+
+install: build ## Install graft binary to INSTALL_PATH (default: /usr/local/bin)
+	@echo "Installing graft to $(INSTALL_PATH)..."
+	@mkdir -p $(INSTALL_PATH)
+	@cp $(BINARY_NAME) $(INSTALL_PATH)/$(BINARY_NAME)
+	@echo "graft installed to $(INSTALL_PATH)/$(BINARY_NAME)"
 
 clean: ## Remove build artifacts and binaries
 	@echo "Cleaning..."
