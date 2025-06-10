@@ -31,6 +31,7 @@ type WorkerPool struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	wg        sync.WaitGroup
+	shutdown  atomic.Bool
 
 	// Metrics
 	tasksProcessed atomic.Uint64
@@ -125,6 +126,10 @@ func (wp *WorkerPool) worker(id int) {
 
 // Submit adds a task to the worker pool queue
 func (wp *WorkerPool) Submit(task Task) error {
+	if wp.shutdown.Load() {
+		return fmt.Errorf("worker pool is shut down")
+	}
+
 	select {
 	case wp.taskQueue <- task:
 		wp.tasksQueued.Add(1)
@@ -165,9 +170,10 @@ func (wp *WorkerPool) Results() <-chan TaskResult {
 
 // Shutdown gracefully shuts down the worker pool
 func (wp *WorkerPool) Shutdown() {
-	wp.cancel()
+	wp.shutdown.Store(true)
 	close(wp.taskQueue)
 	wp.wg.Wait()
+	wp.cancel()
 	close(wp.results)
 }
 

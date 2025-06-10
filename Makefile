@@ -17,12 +17,13 @@ INSTALL_PATH ?= /usr/local/bin
 .PHONY: help build build-examples package clean install
 .PHONY: test test-unit test-clean test-verbose test-race test-integration test-all test-cli
 .PHONY: integration integration-nats integration-vault integration-aws integration-debug
-.PHONY: debug-nats test-nats-recovery test-nats-monitor test-nats-load
+.PHONY: test-nats-recovery test-nats-monitor test-nats-load
 .PHONY: debug-vault test-vault-auth test-vault-kv test-vault-load
 .PHONY: fmt vet security gosec trivy coverage coverage-text
 .PHONY: bench bench-full
 .PHONY: deps check ci install-tools
 .PHONY: test-color
+.PHONY: hooks hooks-install hooks-uninstall hooks-check pre-commit pre-push
 
 ##@ General
 
@@ -125,16 +126,6 @@ integration-debug: build ## Run integration tests (keep containers)
 	@DEBUG=1 scripts/integration
 
 ##@ NATS Testing
-
-debug-nats: ## Start NATS debug environment
-	@echo "Starting NATS debug environment..."
-	@docker run -d --name graft-nats-debug \
-		-p 4222:4222 \
-		-p 8222:8222 \
-		nats:latest -js
-	@echo "NATS available at nats://localhost:4222"
-	@echo "NATS monitoring at http://localhost:8222"
-	@echo "Run 'docker stop graft-nats-debug && docker rm graft-nats-debug' to cleanup"
 
 test-nats-recovery: build ## Run NATS error recovery tests
 	@echo "Running NATS error recovery tests..."
@@ -247,6 +238,42 @@ install-tools: ## Install development tools
 		curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin; \
 	fi
 	@echo "Development tools installed ✓"
+
+##@ Git Hooks
+
+pre-commit: fmt vet build ## Run all pre-commit checks (fmt, vet, build)
+	@echo ""
+	@echo "✅ All pre-commit checks passed!"
+
+pre-push: gosec trivy test ## Run all pre-push checks (gosec, trivy, test)
+	@echo ""
+	@echo "✅ All pre-push checks passed!"
+
+hooks: hooks-install ## Install git hooks (alias for hooks-install)
+
+hooks-install: ## Install pre-commit and pre-push hooks
+	@echo "Installing git hooks..."
+	@git config core.hooksPath .githooks
+	@echo "Git hooks installed successfully ✓"
+	@echo "Hooks location: .githooks/"
+	@echo "- pre-commit: fmt, vet, build"
+	@echo "- pre-push: gosec, trivy, tests"
+
+hooks-uninstall: ## Remove git hooks configuration
+	@echo "Removing git hooks..."
+	@git config --unset core.hooksPath || true
+	@echo "Git hooks uninstalled ✓"
+
+hooks-check: ## Check current git hooks configuration
+	@echo "Current git hooks configuration:"
+	@echo -n "Hooks path: "
+	@git config core.hooksPath || echo "(default .git/hooks/)"
+	@if [ -d ".githooks" ]; then \
+		echo "Available hooks in .githooks/:"; \
+		ls -la .githooks/ | grep -E "pre-commit|pre-push" || echo "  No hooks found"; \
+	else \
+		echo "No .githooks directory found"; \
+	fi
 
 ##@ Legacy Targets (for backwards compatibility)
 

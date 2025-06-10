@@ -603,6 +603,9 @@ func TestWorkerPoolShutdown(t *testing.T) {
 			}
 		}
 
+		// Give workers a moment to pick up tasks
+		time.Sleep(5 * time.Millisecond)
+
 		// Shutdown should wait for running tasks to complete
 		start := time.Now()
 		wp.Shutdown()

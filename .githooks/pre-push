@@ -1,0 +1,76 @@
+#!/bin/bash
+# Pre-push hook for graft project
+# Runs: gosec and trivy security scans
+
+set -e
+
+echo "🔒 Running pre-push security checks..."
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Function to print colored output
+print_status() {
+    if [ $1 -eq 0 ]; then
+        echo -e "${GREEN}✓ $2${NC}"
+    else
+        echo -e "${RED}✗ $2${NC}"
+        exit 1
+    fi
+}
+
+# Function to check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# 1. Run gosec if available
+if command_exists gosec; then
+    echo "Running gosec security scan..."
+    # Run gosec on all packages, excluding vendor and test files
+    gosec -quiet -fmt json -out /tmp/gosec-results.json ./... 2>/dev/null || true
+    
+    # Check if there are any issues
+    if [ -f /tmp/gosec-results.json ]; then
+        ISSUES=$(jq '.Issues | length' /tmp/gosec-results.json 2>/dev/null || echo "0")
+        if [ "$ISSUES" -gt 0 ]; then
+            echo -e "${RED}✗ gosec found $ISSUES security issues:${NC}"
+            jq -r '.Issues[] | "  - \(.severity): \(.details) (\(.file):\(.line))"' /tmp/gosec-results.json
+            rm -f /tmp/gosec-results.json
+            echo -e "${YELLOW}Fix security issues before pushing${NC}"
+            exit 1
+        fi
+        rm -f /tmp/gosec-results.json
+    fi
+    print_status 0 "gosec security scan passed"
+else
+    echo -e "${YELLOW}⚠ gosec not installed. Install with: go install github.com/securego/gosec/v2/cmd/gosec@latest${NC}"
+fi
+
+# 2. Run trivy if available
+if command_exists trivy; then
+    echo "Running trivy vulnerability scan..."
+    
+    # Run trivy on the filesystem
+    trivy fs . --security-checks vuln --quiet --exit-code 1 2>/dev/null
+    TRIVY_STATUS=$?
+    
+    if [ $TRIVY_STATUS -ne 0 ]; then
+        echo -e "${RED}✗ trivy found vulnerabilities${NC}"
+        echo "Run 'trivy fs .' for detailed report"
+        exit 1
+    fi
+    print_status 0 "trivy vulnerability scan passed"
+else
+    echo -e "${YELLOW}⚠ trivy not installed. Install from: https://github.com/aquasecurity/trivy${NC}"
+fi
+
+# 3. Ensure all tests pass
+echo "Running tests..."
+go test ./... -short >/dev/null 2>&1
+print_status $? "All tests passed"
+
+echo -e "${GREEN}✅ All pre-push checks passed!${NC}"

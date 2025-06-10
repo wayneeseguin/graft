@@ -198,7 +198,9 @@ func (ce *CostEstimator) EstimateBatchCost(operations []*DependencyNode) float64
 	// Group by operator type
 	groups := make(map[string][]*DependencyNode)
 	for _, op := range operations {
-		groups[op.OperatorType] = append(groups[op.OperatorType], op)
+		if op != nil {
+			groups[op.OperatorType] = append(groups[op.OperatorType], op)
+		}
 	}
 
 	totalCost := float64(0)
@@ -251,7 +253,7 @@ func (ce *CostEstimator) EstimateParallelCost(operations []*DependencyNode) floa
 	// Parallel cost is the maximum cost of any operation
 	maxCost := float64(0)
 	for _, op := range operations {
-		if op.Cost > maxCost {
+		if op != nil && op.Cost > maxCost {
 			maxCost = op.Cost
 		}
 	}

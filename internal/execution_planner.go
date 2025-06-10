@@ -140,7 +140,9 @@ func (ep *ExecutionPlanner) optimizeStage(stage ExecutionStage, stageNum int) Op
 	} else {
 		// No batching - calculate individual costs
 		for _, op := range stage.Operations {
-			optStage.EstimatedCost += op.Cost
+			if op != nil {
+				optStage.EstimatedCost += op.Cost
+			}
 		}
 	}
 
@@ -159,6 +161,9 @@ func (ep *ExecutionPlanner) groupForParallel(ops []*DependencyNode) []ParallelGr
 	sorted := make([]*DependencyNode, len(ops))
 	copy(sorted, ops)
 	sort.Slice(sorted, func(i, j int) bool {
+		if sorted[i] == nil || sorted[j] == nil {
+			return false
+		}
 		return sorted[i].Cost > sorted[j].Cost
 	})
 
@@ -171,9 +176,13 @@ func (ep *ExecutionPlanner) groupForParallel(ops []*DependencyNode) []ParallelGr
 			end = len(sorted)
 		}
 
+		maxCost := float64(0)
+		if sorted[i] != nil {
+			maxCost = sorted[i].Cost
+		}
 		group := ParallelGroup{
 			Operations: sorted[i:end],
-			MaxCost:    sorted[i].Cost, // First is highest cost
+			MaxCost:    maxCost, // First is highest cost
 		}
 		groups = append(groups, group)
 	}

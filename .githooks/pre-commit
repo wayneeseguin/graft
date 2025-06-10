@@ -1,0 +1,69 @@
+#!/bin/bash
+# Pre-commit hook for graft project
+# Runs: go fmt, go vet, and build checks
+
+set -e
+
+echo "🔍 Running pre-commit checks..."
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Function to print colored output
+print_status() {
+    if [ $1 -eq 0 ]; then
+        echo -e "${GREEN}✓ $2${NC}"
+    else
+        echo -e "${RED}✗ $2${NC}"
+        exit 1
+    fi
+}
+
+# Function to check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Check for required tools
+if ! command_exists go; then
+    echo -e "${RED}Error: go is not installed${NC}"
+    exit 1
+fi
+
+# Get list of changed Go files
+CHANGED_GO_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)
+
+if [ -z "$CHANGED_GO_FILES" ]; then
+    echo "No Go files to check"
+    exit 0
+fi
+
+echo "Checking files:"
+echo "$CHANGED_GO_FILES" | sed 's/^/  - /'
+echo
+
+# 1. Run go fmt check
+echo "Running go fmt..."
+UNFORMATTED=$(gofmt -l $CHANGED_GO_FILES)
+if [ -n "$UNFORMATTED" ]; then
+    echo -e "${RED}✗ The following files need formatting:${NC}"
+    echo "$UNFORMATTED" | sed 's/^/  - /'
+    echo -e "${YELLOW}Run 'make fmt' or 'go fmt ./...' to fix${NC}"
+    exit 1
+fi
+print_status 0 "All files properly formatted"
+
+# 2. Run go vet
+echo "Running go vet..."
+go vet ./... 2>&1
+print_status $? "go vet passed"
+
+# 3. Run build
+echo "Running build..."
+make build >/dev/null 2>&1
+print_status $? "Build successful"
+
+echo -e "${GREEN}✅ All pre-commit checks passed!${NC}"
