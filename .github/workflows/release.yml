@@ -11,6 +11,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.24.4
     strategy:
       matrix:
         goos: [linux, darwin]

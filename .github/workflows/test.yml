@@ -6,6 +6,8 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.24.4
     steps:
       - uses: actions/checkout@v3
       
@@ -30,6 +32,8 @@ jobs:
   vet:
     name: Vet
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.24.4
     steps:
       - uses: actions/checkout@v3
       
@@ -45,6 +49,8 @@ jobs:
   gosec:
     name: Security Scan
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.24.4
     steps:
       - uses: actions/checkout@v3
       
@@ -63,6 +69,8 @@ jobs:
     name: Unit Tests
     needs: [build, vet, gosec]
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.24.4
     steps:
       - uses: actions/checkout@v3
       
@@ -79,6 +87,8 @@ jobs:
     name: Integration Tests
     needs: unit-tests
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: go1.24.4
     steps:
       - uses: actions/checkout@v3
       
