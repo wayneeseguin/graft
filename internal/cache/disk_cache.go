@@ -305,7 +305,7 @@ func (dc *DiskCache) persistEntry(key string, entry *CacheEntry) {
 // Note: This method assumes the caller already holds the lock
 func (dc *DiskCache) updateIndex(key string, filename string) {
 	indexPath := filepath.Join(dc.config.StoragePath, dc.config.FilePrefix+"_index.json")
-	
+
 	// Read existing index
 	index := make(map[string]string)
 	// #nosec G304 - File path is constructed from configured cache storage path which is expected for cache persistence
@@ -313,16 +313,16 @@ func (dc *DiskCache) updateIndex(key string, filename string) {
 	if err == nil {
 		_ = json.Unmarshal(indexData, &index) // Ignore unmarshal errors, use empty index
 	}
-	
+
 	// Update index
 	index[key] = filename
-	
+
 	// Write updated index
 	indexData, err = json.Marshal(index)
 	if err != nil {
 		return
 	}
-	
+
 	_ = os.WriteFile(indexPath, indexData, 0600) // Best effort, ignore errors
 }
 
@@ -331,7 +331,7 @@ func (dc *DiskCache) removeFromDisk(key string) {
 	filename := dc.generateFilename(key)
 	entryPath := filepath.Join(dc.config.StoragePath, filename)
 	_ = os.Remove(entryPath) // Best effort, ignore errors
-	
+
 	// Update the index file to remove this entry
 	dc.removeFromIndex(key)
 }
@@ -340,7 +340,7 @@ func (dc *DiskCache) removeFromDisk(key string) {
 // Note: This method assumes the caller already holds the lock
 func (dc *DiskCache) removeFromIndex(key string) {
 	indexPath := filepath.Join(dc.config.StoragePath, dc.config.FilePrefix+"_index.json")
-	
+
 	// Read existing index
 	index := make(map[string]string)
 	// #nosec G304 - File path is constructed from configured cache storage path which is expected for cache persistence
@@ -348,20 +348,20 @@ func (dc *DiskCache) removeFromIndex(key string) {
 	if err != nil {
 		return // No index file
 	}
-	
+
 	if err := json.Unmarshal(indexData, &index); err != nil {
 		return
 	}
-	
+
 	// Remove from index
 	delete(index, key)
-	
+
 	// Write updated index
 	indexData, err = json.Marshal(index)
 	if err != nil {
 		return
 	}
-	
+
 	_ = os.WriteFile(indexPath, indexData, 0600) // Best effort, ignore errors
 }
 

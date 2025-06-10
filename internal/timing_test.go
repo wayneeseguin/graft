@@ -36,7 +36,7 @@ func TestTimer(t *testing.T) {
 
 	t.Run("timer metadata", func(t *testing.T) {
 		timer := NewTimer("metadata_test")
-		
+
 		timer.SetMetadata("key1", "value1")
 		timer.SetMetadata("key2", 42)
 		timer.SetMetadata("key3", true)
@@ -78,7 +78,7 @@ func TestTimer(t *testing.T) {
 
 	t.Run("double stop protection", func(t *testing.T) {
 		timer := NewTimer("double_stop")
-		
+
 		// First stop
 		duration1 := timer.Stop()
 		if duration1 <= 0 {
@@ -94,9 +94,9 @@ func TestTimer(t *testing.T) {
 
 	t.Run("running timer duration", func(t *testing.T) {
 		timer := NewTimer("running")
-		
+
 		time.Sleep(5 * time.Millisecond)
-		
+
 		// Duration should be positive for running timer
 		runningDuration := timer.Duration()
 		if runningDuration <= 0 {
@@ -104,7 +104,7 @@ func TestTimer(t *testing.T) {
 		}
 
 		time.Sleep(5 * time.Millisecond)
-		
+
 		// Stop and check final duration
 		finalDuration := timer.Stop()
 		if finalDuration <= runningDuration {
@@ -205,11 +205,11 @@ func TestTimerHierarchy(t *testing.T) {
 	t.Run("self duration calculation", func(t *testing.T) {
 		parent := NewTimer("parent")
 		time.Sleep(5 * time.Millisecond)
-		
+
 		child := parent.Child("child")
 		time.Sleep(10 * time.Millisecond)
 		childDuration := child.Stop()
-		
+
 		time.Sleep(5 * time.Millisecond)
 		parentDuration := parent.Stop()
 
@@ -233,7 +233,7 @@ func TestTimerHierarchy(t *testing.T) {
 func TestTimingContext(t *testing.T) {
 	t.Run("basic context operations", func(t *testing.T) {
 		tc := NewTimingContext()
-		
+
 		timer1 := tc.Start("operation1")
 		if timer1.Name() != "operation1" {
 			t.Errorf("expected timer name 'operation1', got %s", timer1.Name())
@@ -264,14 +264,14 @@ func TestTimingContext(t *testing.T) {
 
 	t.Run("nested context timing", func(t *testing.T) {
 		tc := NewTimingContext()
-		
+
 		outer := tc.Start("outer")
 		time.Sleep(5 * time.Millisecond)
-		
+
 		inner := tc.Start("inner")
 		time.Sleep(5 * time.Millisecond)
 		tc.Stop() // stops inner
-		
+
 		time.Sleep(5 * time.Millisecond)
 		tc.Stop() // stops outer
 
@@ -294,7 +294,7 @@ func TestTimingContext(t *testing.T) {
 
 	t.Run("context integration", func(t *testing.T) {
 		ctx := WithTiming(context.Background())
-		
+
 		retrievedTC := GetTimingContext(ctx)
 		if retrievedTC == nil {
 			t.Fatal("timing context should be retrievable from context")
@@ -334,7 +334,7 @@ func TestTimingConcurrency(t *testing.T) {
 	t.Run("concurrent metadata access", func(t *testing.T) {
 		timer := NewTimer("concurrent")
 		var wg sync.WaitGroup
-		
+
 		// Start multiple goroutines setting metadata
 		for i := 0; i < 100; i++ {
 			wg.Add(1)
@@ -346,7 +346,7 @@ func TestTimingConcurrency(t *testing.T) {
 		}
 
 		wg.Wait()
-		
+
 		// Timer should still be functional
 		if timer.Name() != "concurrent" {
 			t.Error("timer name should remain unchanged")
@@ -407,7 +407,7 @@ func TestAutoTimer(t *testing.T) {
 		func() {
 			autoTimer := NewAutoTimer("auto_test")
 			defer autoTimer.Stop()
-			
+
 			time.Sleep(10 * time.Millisecond)
 			duration = autoTimer.Timer().Duration()
 		}()
@@ -419,7 +419,7 @@ func TestAutoTimer(t *testing.T) {
 
 	t.Run("auto timer with panic", func(t *testing.T) {
 		var autoTimer *AutoTimer
-		
+
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
@@ -429,10 +429,10 @@ func TestAutoTimer(t *testing.T) {
 					}
 				}
 			}()
-			
+
 			autoTimer = NewAutoTimer("panic_test")
 			defer autoTimer.Stop()
-			
+
 			panic("test panic")
 		}()
 	})
@@ -498,7 +498,7 @@ func TestTimingAccuracy(t *testing.T) {
 			measured := timer.Stop()
 
 			if absDuration(measured-sleepDuration) > tolerance {
-				t.Errorf("iteration %d: expected ~%v, got %v (diff: %v)", 
+				t.Errorf("iteration %d: expected ~%v, got %v (diff: %v)",
 					i, sleepDuration, measured, absDuration(measured-sleepDuration))
 			}
 		}

@@ -11,12 +11,12 @@ func TestColor(t *testing.T) {
 	if !colorable {
 		t.Error("expected colorable to be true")
 	}
-	
+
 	Color(false)
 	if colorable {
 		t.Error("expected colorable to be false")
 	}
-	
+
 	// Reset to default
 	Color(true)
 }
@@ -24,7 +24,7 @@ func TestColor(t *testing.T) {
 func TestColorize(t *testing.T) {
 	// Enable colors for testing
 	Color(true)
-	
+
 	tests := []struct {
 		name     string
 		input    string
@@ -66,7 +66,7 @@ func TestColorize(t *testing.T) {
 			expected: "\033[01;31mr\033[00m\033[01;33ma\033[00m\033[01;32mi\033[00m\033[01;36mn\033[00m \033[01;34mb\033[00m\033[01;35mo\033[00m\033[01;31mw\033[00m",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := colorize(tt.input)
@@ -81,7 +81,7 @@ func TestColorizeDisabled(t *testing.T) {
 	// Disable colors for testing
 	Color(false)
 	defer Color(true) // Reset after test
-	
+
 	tests := []struct {
 		name     string
 		input    string
@@ -103,7 +103,7 @@ func TestColorizeDisabled(t *testing.T) {
 			expected: "rainbow",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := colorize(tt.input)
@@ -116,7 +116,7 @@ func TestColorizeDisabled(t *testing.T) {
 
 func TestSprintf(t *testing.T) {
 	Color(true)
-	
+
 	tests := []struct {
 		name     string
 		format   string
@@ -142,7 +142,7 @@ func TestSprintf(t *testing.T) {
 			expected: "\033[00;34mInfo message\033[00m",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := Sprintf(tt.format, tt.args...)
@@ -155,7 +155,7 @@ func TestSprintf(t *testing.T) {
 
 func TestErrorf(t *testing.T) {
 	Color(true)
-	
+
 	tests := []struct {
 		name     string
 		format   string
@@ -175,7 +175,7 @@ func TestErrorf(t *testing.T) {
 			expected: "\033[01;31mFatal error\033[00m in \033[00;36mmain.go\033[00m: \033[01;33mfile not found\033[00m",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := Errorf(tt.format, tt.args...)
@@ -188,7 +188,7 @@ func TestErrorf(t *testing.T) {
 
 func TestAllColors(t *testing.T) {
 	Color(true)
-	
+
 	// Test all color codes
 	colorTests := map[string]string{
 		"k": "00;30", // black
@@ -210,13 +210,13 @@ func TestAllColors(t *testing.T) {
 		"w": "00;37", // white
 		"W": "01;37", // white (BOLD)
 	}
-	
+
 	for colorCode, expected := range colorTests {
 		t.Run("color_"+colorCode, func(t *testing.T) {
 			input := "@" + colorCode + "{test}"
 			result := colorize(input)
 			expectedResult := "\033[" + expected + "mtest\033[00m"
-			
+
 			if result != expectedResult {
 				t.Errorf("colorize(%q) = %q, want %q", input, result, expectedResult)
 			}
@@ -226,7 +226,7 @@ func TestAllColors(t *testing.T) {
 
 func TestNestedColors(t *testing.T) {
 	Color(true)
-	
+
 	// Test individual color codes work (nested colors aren't supported by this implementation)
 	tests := []struct {
 		input    string
@@ -245,7 +245,7 @@ func TestNestedColors(t *testing.T) {
 			contains: []string{"\033[00;34m", "\033[00m"},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		result := colorize(tt.input)
 		for _, expected := range tt.contains {
@@ -259,7 +259,7 @@ func TestNestedColors(t *testing.T) {
 func BenchmarkColorize(b *testing.B) {
 	Color(true)
 	input := "@R{Error}: @G{Success} @b{Info} @Y{Warning}"
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		colorize(input)
@@ -269,7 +269,7 @@ func BenchmarkColorize(b *testing.B) {
 func BenchmarkSprintf(b *testing.B) {
 	Color(true)
 	format := "@R{Error}: %s @G{Success}: %d"
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		Sprintf(format, "test error", 42)

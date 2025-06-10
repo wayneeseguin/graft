@@ -99,19 +99,19 @@ type PerformanceConfig struct {
 
 // CacheConfig contains cache-related settings
 type CacheConfig struct {
-	ExpressionCacheSize int  `yaml:"expression_cache_size" json:"expression_cache_size" default:"10000"`
-	OperatorCacheSize   int  `yaml:"operator_cache_size" json:"operator_cache_size" default:"5000"`
-	FileCacheSize       int  `yaml:"file_cache_size" json:"file_cache_size" default:"100"`
+	ExpressionCacheSize int           `yaml:"expression_cache_size" json:"expression_cache_size" default:"10000"`
+	OperatorCacheSize   int           `yaml:"operator_cache_size" json:"operator_cache_size" default:"5000"`
+	FileCacheSize       int           `yaml:"file_cache_size" json:"file_cache_size" default:"100"`
 	TTL                 time.Duration `yaml:"ttl" json:"ttl" default:"5m"`
-	EnableWarmup        bool `yaml:"enable_warmup" json:"enable_warmup" default:"false"`
+	EnableWarmup        bool          `yaml:"enable_warmup" json:"enable_warmup" default:"false"`
 }
 
 // ConcurrencyConfig contains concurrency settings
 type ConcurrencyConfig struct {
-	MaxWorkers      int `yaml:"max_workers" json:"max_workers" default:"0"` // 0 = auto
-	QueueSize       int `yaml:"queue_size" json:"queue_size" default:"1000"`
-	BatchSize       int `yaml:"batch_size" json:"batch_size" default:"10"`
-	EnableAdaptive  bool `yaml:"enable_adaptive" json:"enable_adaptive" default:"true"`
+	MaxWorkers     int  `yaml:"max_workers" json:"max_workers" default:"0"` // 0 = auto
+	QueueSize      int  `yaml:"queue_size" json:"queue_size" default:"1000"`
+	BatchSize      int  `yaml:"batch_size" json:"batch_size" default:"10"`
+	EnableAdaptive bool `yaml:"enable_adaptive" json:"enable_adaptive" default:"true"`
 }
 
 // MemoryConfig contains memory management settings
@@ -140,12 +140,12 @@ type LoggingConfig struct {
 
 // Manager manages configuration loading, validation, and hot-reloading
 type Manager struct {
-	config       *Config
-	configPath   string
-	mu           sync.RWMutex
-	changeHooks  []func(*Config)
-	stopWatcher  chan struct{}
-	watcherDone  chan struct{}
+	config      *Config
+	configPath  string
+	mu          sync.RWMutex
+	changeHooks []func(*Config)
+	stopWatcher chan struct{}
+	watcherDone chan struct{}
 }
 
 // NewManager creates a new configuration manager
@@ -263,11 +263,11 @@ func (m *Manager) LoadProfile(profileName string) error {
 	if err := m.Load(profilePath); err != nil {
 		return fmt.Errorf("loading profile %s: %w", profileName, err)
 	}
-	
+
 	m.mu.Lock()
 	m.config.Profile = profileName
 	m.mu.Unlock()
-	
+
 	return nil
 }
 
@@ -275,7 +275,7 @@ func (m *Manager) LoadProfile(profileName string) error {
 func (m *Manager) Get() *Config {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	// Return a copy to prevent mutations
 	configCopy := *m.config
 	return &configCopy

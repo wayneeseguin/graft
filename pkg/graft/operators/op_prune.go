@@ -65,9 +65,9 @@ func (PruneOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 			Value: nil,
 		}, nil
 	}
-	
+
 	DEBUG("  current value at %s: %T(%v)", ev.Here, val, val)
-	
+
 	// Return the current value unchanged - just mark it for pruning at the end
 	// This allows other operators to still reference the value
 	return &Response{

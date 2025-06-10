@@ -8,14 +8,14 @@ import (
 
 // LazyExpression represents an expression that is evaluated only when needed
 type LazyExpression struct {
-	expr         *Expr
-	evaluator    *Evaluator
+	expr          *Expr
+	evaluator     *Evaluator
 	lazyEvaluator *LazyEvaluator // Reference to the lazy evaluator that owns this
-	result       interface{}
-	error        error
-	evaluated    bool
-	mu           sync.RWMutex
-	deps         []*LazyExpression // Dependencies
+	result        interface{}
+	error         error
+	evaluated     bool
+	mu            sync.RWMutex
+	deps          []*LazyExpression // Dependencies
 }
 
 // LazyEvaluator manages lazy evaluation of expressions
@@ -27,12 +27,12 @@ type LazyEvaluator struct {
 
 // LazyEvaluationStats tracks lazy evaluation performance
 type LazyEvaluationStats struct {
-	TotalExpressions   int64
-	EvaluatedCount     int64
-	SkippedCount       int64
-	CacheHits          int64
-	EvaluationTime     time.Duration
-	DependencyChecks   int64
+	TotalExpressions int64
+	EvaluatedCount   int64
+	SkippedCount     int64
+	CacheHits        int64
+	EvaluationTime   time.Duration
+	DependencyChecks int64
 }
 
 // NewLazyEvaluator creates a new lazy evaluator
@@ -65,11 +65,11 @@ func NewLazyExpressionWithEvaluator(expr *Expr, evaluator *Evaluator, lazyEvalua
 func (le *LazyExpression) Evaluate() (interface{}, error) {
 	le.mu.Lock()
 	defer le.mu.Unlock()
-	
+
 	if le.evaluated {
 		return le.result, le.error
 	}
-	
+
 	// Check dependencies first
 	for _, dep := range le.deps {
 		if _, err := dep.Evaluate(); err != nil {
@@ -77,16 +77,16 @@ func (le *LazyExpression) Evaluate() (interface{}, error) {
 			return nil, le.error
 		}
 	}
-	
+
 	// Evaluate the expression
 	start := time.Now()
 	result, err := le.evaluateExpression()
 	duration := time.Since(start)
-	
+
 	le.result = result
 	le.error = err
 	le.evaluated = true
-	
+
 	// Update stats
 	if le.lazyEvaluator != nil {
 		le.lazyEvaluator.updateStats(duration, true)
@@ -94,7 +94,7 @@ func (le *LazyExpression) Evaluate() (interface{}, error) {
 		// Fall back to global evaluator if no specific evaluator is set
 		GlobalLazyEvaluator.updateStats(duration, true)
 	}
-	
+
 	return le.result, le.error
 }
 
@@ -103,12 +103,12 @@ func (le *LazyExpression) evaluateExpression() (interface{}, error) {
 	if le.expr == nil || le.evaluator == nil {
 		return nil, fmt.Errorf("invalid lazy expression: missing expr or evaluator")
 	}
-	
+
 	// Evaluate based on expression type
 	switch le.expr.Type {
 	case Literal:
 		return le.expr.Literal, nil
-		
+
 	case Reference:
 		if le.expr.Reference == nil {
 			return nil, fmt.Errorf("invalid reference expression")
@@ -118,25 +118,25 @@ func (le *LazyExpression) evaluateExpression() (interface{}, error) {
 			return nil, fmt.Errorf("failed to resolve reference: %v", err)
 		}
 		return result, nil
-		
+
 	case OperatorCall:
 		// For operator calls, we need to evaluate through the normal operator system
 		// This is simplified - in practice, we'd need proper operator lookup and execution
 		opName := le.expr.Op()
 		args := le.expr.Args()
-		
+
 		operator := OperatorFor(opName)
 		if operator == nil {
 			return nil, fmt.Errorf("unknown operator: %s", opName)
 		}
-		
+
 		response, err := operator.Run(le.evaluator, args)
 		if err != nil {
 			return nil, err
 		}
-		
+
 		return response.Value, nil
-		
+
 	default:
 		return nil, fmt.Errorf("unsupported expression type for lazy evaluation: %d", le.expr.Type)
 	}
@@ -160,27 +160,27 @@ func (le *LazyExpression) AddDependency(dep *LazyExpression) {
 func (lev *LazyEvaluator) WrapExpression(expr *Expr, evaluator *Evaluator) *LazyExpression {
 	lev.mu.Lock()
 	defer lev.mu.Unlock()
-	
+
 	// Generate a key for the expression
 	key := fmt.Sprintf("%p_%d", expr, time.Now().UnixNano())
-	
+
 	lazy := NewLazyExpressionWithEvaluator(expr, evaluator, lev)
 	lev.expressions[key] = lazy
 	lev.stats.TotalExpressions++
-	
+
 	return lazy
 }
 
 // EvaluateIfNeeded evaluates an expression only if its result is actually needed
 func (lev *LazyEvaluator) EvaluateIfNeeded(expr *Expr, evaluator *Evaluator) (interface{}, error) {
 	lazy := lev.WrapExpression(expr, evaluator)
-	
+
 	// Check if this expression is actually needed for the final result
 	if !lev.isExpressionNeeded(expr, evaluator) {
 		lev.stats.SkippedCount++
 		return nil, nil // Skip evaluation
 	}
-	
+
 	return lazy.Evaluate()
 }
 
@@ -192,19 +192,19 @@ func (lev *LazyEvaluator) isExpressionNeeded(expr *Expr, evaluator *Evaluator) b
 	// 1. If expression is a literal, always evaluate (cheap)
 	// 2. If expression is a reference to a commonly used path, evaluate
 	// 3. If expression is an operator call that affects the current path, evaluate
-	
+
 	switch expr.Type {
 	case Literal:
 		return true // Literals are cheap to evaluate
-		
+
 	case Reference:
 		// Check if this reference path is used elsewhere
 		return true // For now, always evaluate references
-		
+
 	case OperatorCall:
 		// Check if this operator call affects the current evaluation path
 		opName := expr.Op()
-		
+
 		// Some operators like 'vault' might be expensive and should be lazy
 		expensiveOps := map[string]bool{
 			"vault":     true,
@@ -213,14 +213,14 @@ func (lev *LazyEvaluator) isExpressionNeeded(expr *Expr, evaluator *Evaluator) b
 			"awsparam":  true,
 			"awssecret": true,
 		}
-		
+
 		if expensiveOps[opName] {
 			// Only evaluate if the result is actually used
 			return lev.isResultUsed(expr, evaluator)
 		}
-		
+
 		return true // Other operators, evaluate normally
-		
+
 	default:
 		return true
 	}
@@ -231,7 +231,7 @@ func (lev *LazyEvaluator) isResultUsed(expr *Expr, evaluator *Evaluator) bool {
 	// This is a simplified implementation
 	// In practice, this would involve analyzing the evaluation tree
 	// and checking if the current path contributes to the final result
-	
+
 	// For now, assume all expressions are used
 	return true
 }
@@ -240,7 +240,7 @@ func (lev *LazyEvaluator) isResultUsed(expr *Expr, evaluator *Evaluator) bool {
 func (lev *LazyEvaluator) updateStats(duration time.Duration, evaluated bool) {
 	lev.mu.Lock()
 	defer lev.mu.Unlock()
-	
+
 	if evaluated {
 		lev.stats.EvaluatedCount++
 		lev.stats.EvaluationTime += duration
@@ -259,7 +259,7 @@ func (lev *LazyEvaluator) GetStats() LazyEvaluationStats {
 func (lev *LazyEvaluator) Reset() {
 	lev.mu.Lock()
 	defer lev.mu.Unlock()
-	
+
 	lev.expressions = make(map[string]*LazyExpression)
 	lev.stats = LazyEvaluationStats{}
 }
@@ -283,7 +283,7 @@ func ShouldUseLazyEvaluation(expr *Expr) bool {
 		}
 		return expensiveOps[opName]
 	}
-	
+
 	return false
 }
 
@@ -292,7 +292,7 @@ func LazyEvaluateExpression(expr *Expr, evaluator *Evaluator) (interface{}, erro
 	if ShouldUseLazyEvaluation(expr) {
 		return GlobalLazyEvaluator.EvaluateIfNeeded(expr, evaluator)
 	}
-	
+
 	// Fall back to normal evaluation
 	return evaluateExpressionNormally(expr, evaluator)
 }

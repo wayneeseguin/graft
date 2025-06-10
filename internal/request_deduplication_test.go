@@ -19,7 +19,7 @@ func TestRequestDeduplicator(t *testing.T) {
 		rd := NewRequestDeduplicator(config)
 
 		executed := atomic.Int32{}
-		
+
 		// Function that increments counter
 		fn := func() (interface{}, error) {
 			executed.Add(1)
@@ -79,7 +79,7 @@ func TestRequestDeduplicator(t *testing.T) {
 		rd := NewRequestDeduplicator(config)
 
 		executed := atomic.Int32{}
-		
+
 		fn := func() (interface{}, error) {
 			count := executed.Add(1)
 			return fmt.Sprintf("result_%d", count), nil
@@ -229,7 +229,7 @@ func TestRequestDeduplicatorConcurrency(t *testing.T) {
 		rd := NewRequestDeduplicator(config)
 
 		executed := atomic.Int32{}
-		
+
 		fn := func() (interface{}, error) {
 			count := executed.Add(1)
 			time.Sleep(50 * time.Millisecond) // Simulate work
@@ -287,7 +287,7 @@ func TestRequestDeduplicatorConcurrency(t *testing.T) {
 		rd := NewRequestDeduplicator(config)
 
 		executed := atomic.Int32{}
-		
+
 		fn := func() (interface{}, error) {
 			count := executed.Add(1)
 			time.Sleep(10 * time.Millisecond)
@@ -346,7 +346,7 @@ func TestRequestDeduplicatorConcurrency(t *testing.T) {
 		rd := NewRequestDeduplicator(config)
 
 		executed := atomic.Int32{}
-		
+
 		fn := func() (interface{}, error) {
 			count := executed.Add(1)
 			time.Sleep(20 * time.Millisecond)
@@ -433,7 +433,7 @@ func TestRequestDeduplicatorCleanup(t *testing.T) {
 		// Start request but don't wait for it
 		key := "cleanup_key"
 		rd.Deduplicate(key, fn)
-		
+
 		// Wait for request to start
 		time.Sleep(10 * time.Millisecond)
 
@@ -495,7 +495,7 @@ func TestRequestDeduplicatorCleanup(t *testing.T) {
 func TestKeyBuilder(t *testing.T) {
 	t.Run("basic key building", func(t *testing.T) {
 		kb := NewKeyBuilder("test")
-		
+
 		key1 := kb.BuildKey("component1", "component2")
 		key2 := kb.BuildKey("component1", "component2")
 		key3 := kb.BuildKey("component1", "component3")
@@ -518,7 +518,7 @@ func TestKeyBuilder(t *testing.T) {
 
 	t.Run("empty components", func(t *testing.T) {
 		kb := NewKeyBuilder("empty")
-		
+
 		key1 := kb.BuildKey()
 		key2 := kb.BuildKey("")
 		key3 := kb.BuildKey("", "")
@@ -666,7 +666,7 @@ func TestRequestDeduplicationMetrics(t *testing.T) {
 		// Make 1 miss and 3 hits (same key)
 		key := "hit_rate_key"
 		var wg sync.WaitGroup
-		
+
 		for i := 0; i < 4; i++ {
 			wg.Add(1)
 			go func() {
@@ -675,7 +675,7 @@ func TestRequestDeduplicationMetrics(t *testing.T) {
 				<-resultChan
 			}()
 		}
-		
+
 		wg.Wait()
 
 		// Check hit rate
@@ -697,7 +697,7 @@ func TestRequestDeduplicationMetrics(t *testing.T) {
 		}
 
 		str := metrics.String()
-		
+
 		// Should contain all key information
 		expectedSubstrings := []string{
 			"Hits: 10",

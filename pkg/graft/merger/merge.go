@@ -7,9 +7,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	
+
 	"github.com/wayneeseguin/graft/internal/utils/ansi"
-	
+
 	"github.com/wayneeseguin/graft/log"
 )
 
@@ -70,7 +70,7 @@ func (e MultiError) Error() string {
 	if len(e.Errors) == 1 {
 		return e.Errors[0].Error()
 	}
-	
+
 	// For multiple errors, list them all
 	var msgs []string
 	for _, err := range e.Errors {
@@ -101,7 +101,7 @@ type Merger struct {
 
 	Errors MultiError
 	depth  int
-	
+
 	// Metadata about operations encountered during merge
 	metadata MergeMetadata
 }
@@ -109,7 +109,9 @@ type Merger struct {
 // ModificationDefinition encapsulates the details of an array modification:
 // (1) the type of modification, e.g. insert, delete, replace
 // (2) an optional guide to the specific part of the array to be modified,
-//    for example the index at which an insertion should be done
+//
+//	for example the index at which an insertion should be done
+//
 // (3) an optional list of entries to be added or merged into the array
 type ModificationDefinition struct {
 	listOp listOp
@@ -178,7 +180,7 @@ func deepCopy(orig interface{}) interface{} {
 	if orig == nil {
 		return nil
 	}
-	
+
 	switch v := orig.(type) {
 	case map[interface{}]interface{}:
 		x := map[interface{}]interface{}{}
@@ -193,7 +195,7 @@ func deepCopy(orig interface{}) interface{} {
 			x[i] = deepCopy(val)
 		}
 		return x
-		
+
 	case map[string]interface{}:
 		x := make(map[string]interface{})
 		for k, val := range v {
@@ -268,7 +270,7 @@ func (m *Merger) MergeObj(orig interface{}, n interface{}, node string) interfac
 		log.DEBUG("%s: a (( prune )) operator is about to be replaced, check if its path needs to be saved", node)
 		log.DEBUG("MergeObj: prune operator being replaced: orig=%q, new=%v", origString, n)
 		m.addToPruneListIfNecessary(node)
-		return n  // Return the new value, not the prune operator
+		return n // Return the new value, not the prune operator
 
 	case newOk && pruneRx.MatchString(newString):
 		// Check if we're in an array context based on the path
@@ -284,13 +286,13 @@ func (m *Merger) MergeObj(orig interface{}, n interface{}, node string) interfac
 				return "(( prune ))"
 			}
 		}
-		
+
 		// For non-array contexts (regular map keys), when a prune operator
 		// is replacing existing content, we need to decide whether to:
 		// 1. Preserve the original value (if it might be referenced by other operators)
 		// 2. Return the prune operator (for standard evaluation)
 		//
-		// Special case: if there's no original content (orig == nil), 
+		// Special case: if there's no original content (orig == nil),
 		// return the prune operator for evaluation
 		if orig != nil {
 			// Check if the original value is complex (map or array)
@@ -299,14 +301,14 @@ func (m *Merger) MergeObj(orig interface{}, n interface{}, node string) interfac
 			case map[interface{}]interface{}, []interface{}:
 				log.DEBUG("%s: prune operator replacing complex content, marking for prune but preserving original value", node)
 				m.addToPruneListIfNecessary(node)
-				return orig  // Keep original value for other operators to reference
+				return orig // Keep original value for other operators to reference
 			default:
 				log.DEBUG("%s: prune operator replacing simple content, treating as regular string", node)
-				return newString  // Return prune operator for evaluation
+				return newString // Return prune operator for evaluation
 			}
 		} else {
 			log.DEBUG("%s: prune operator with no original content, returning operator for evaluation", node)
-			return newString  // Return prune operator for evaluation
+			return newString // Return prune operator for evaluation
 		}
 
 	case origOk && sortRx.MatchString(origString):
@@ -343,7 +345,7 @@ func (m *Merger) MergeObj(orig interface{}, n interface{}, node string) interfac
 			log.DEBUG("%s: replacing with new data (original was not a map)", node)
 			return t
 		}
-	
+
 	case map[string]interface{}:
 		switch origType := orig.(type) {
 		case map[interface{}]interface{}:
@@ -407,8 +409,8 @@ func (m *Merger) mergeArray(orig []interface{}, n []interface{}, node string) []
 	// Process the modifications definitions that were found in the new list
 	for i, modificationDefinition := range modificationDefinitions {
 		log.DEBUG("  #%d %#v", i, modificationDefinition)
-		log.DEBUG("  modification: op=%v, key=%v, name=%v, index=%v, list_len=%d", 
-			modificationDefinition.listOp, modificationDefinition.key, modificationDefinition.name, 
+		log.DEBUG("  modification: op=%v, key=%v, name=%v, index=%v, list_len=%d",
+			modificationDefinition.listOp, modificationDefinition.key, modificationDefinition.name,
 			modificationDefinition.index, len(modificationDefinition.list))
 
 		// insert/delete operations will use a list index later in this loop block
@@ -584,7 +586,7 @@ func (m *Merger) mergeArrayDefault(orig []interface{}, n []interface{}, node str
 func (m *Merger) mergeArrayInline(orig []interface{}, n []interface{}, node string) []interface{} {
 	log.DEBUG("%s: mergeArrayInline - orig=%v (len=%d), new=%v (len=%d)", node, orig, len(orig), n, len(n))
 	pruneRx := regexp.MustCompile(`^\s*\Q((\E\s*prune\s*\Q))\E`)
-	
+
 	// First, scan the new array to identify which indices have prune operators
 	prunedIndices := make(map[int]bool)
 	for i, item := range n {
@@ -596,7 +598,7 @@ func (m *Merger) mergeArrayInline(orig []interface{}, n []interface{}, node stri
 
 	// Merge arrays with prune handling
 	merged := make([]interface{}, 0, len(orig)+len(n))
-	
+
 	// When we have prune operators, we need to handle the merge differently
 	if len(prunedIndices) > 0 {
 		log.DEBUG("%s: handling array merge with %d prune operators, orig len=%d, new len=%d", node, len(prunedIndices), len(orig), len(n))
@@ -609,7 +611,7 @@ func (m *Merger) mergeArrayInline(orig []interface{}, n []interface{}, node stri
 				// Skip this element entirely - it's being pruned
 				continue
 			}
-			
+
 			// If there's a corresponding element in the new array (and it's not a prune), merge them
 			if i < len(n) && !prunedIndices[i] {
 				path := fmt.Sprintf("%s.%d", node, len(merged))
@@ -621,7 +623,7 @@ func (m *Merger) mergeArrayInline(orig []interface{}, n []interface{}, node stri
 				merged = append(merged, orig[i])
 			}
 		}
-		
+
 		// Add any additional elements from the new array that are beyond the original array's length
 		for i := len(orig); i < len(n); i++ {
 			if !prunedIndices[i] {
@@ -638,22 +640,22 @@ func (m *Merger) mergeArrayInline(orig []interface{}, n []interface{}, node stri
 			mergedItem := m.MergeObj(orig[i], n[i], path)
 			merged = append(merged, mergedItem)
 		}
-		
+
 		// Process remaining elements from original array (if any)
 		for i := len(n); i < len(orig); i++ {
 			merged = append(merged, orig[i])
 		}
-		
+
 		// Process remaining elements from new array (if any)
 		for i := len(orig); i < len(n); i++ {
 			path := fmt.Sprintf("%s.%d", node, i)
-			
+
 			// If this index should be pruned, skip it
 			if prunedIndices[i] {
 				log.DEBUG("%s: pruning list entry at index %d", path, i)
 				continue
 			}
-			
+
 			log.DEBUG("%s: appending new data to existing array", path)
 			mergedItem := m.MergeObj(nil, n[i], path)
 			merged = append(merged, mergedItem)
@@ -666,24 +668,24 @@ func (m *Merger) mergeArrayInline(orig []interface{}, n []interface{}, node stri
 func (m *Merger) mergeArrayByKey(orig []interface{}, n []interface{}, node string, key string) []interface{} {
 	merged := make([]interface{}, 0, len(orig)+len(n))
 	newMap := make(map[interface{}]interface{})
-	
+
 	for _, o := range n {
 		obj := o.(map[interface{}]interface{})
 		newMap[obj[key]] = obj
 	}
-	
+
 	for _, o := range orig {
 		obj := o.(map[interface{}]interface{})
 		path := fmt.Sprintf("%s.%s", node, obj[key])
 		var mergedItem interface{}
-		
+
 		if _, ok := newMap[obj[key]]; ok {
 			mergedItem = m.MergeObj(obj, newMap[obj[key]], path)
 			delete(newMap, obj[key])
 		} else {
 			mergedItem = m.MergeObj(nil, obj, path)
 		}
-		
+
 		// Don't check for prune operators here - they should be handled at the field level
 		merged = append(merged, mergedItem)
 	}
@@ -695,7 +697,7 @@ func (m *Merger) mergeArrayByKey(orig []interface{}, n []interface{}, node strin
 			path := fmt.Sprintf("%s.%d", node, i)
 			log.DEBUG("%s: appending new data to merged array", path)
 			mergedItem := m.MergeObj(nil, obj, path)
-			
+
 			// Don't check for prune operators here - they should be handled at the field level
 			merged = append(merged, mergedItem)
 			i++
@@ -984,14 +986,14 @@ func deleteIndexFromList(orig []interface{}, idx int) []interface{} {
 func (m *Merger) addToPruneListIfNecessary(path string) {
 	// Remove "$." prefix if present
 	cleanPath := strings.TrimPrefix(path, "$.")
-	
+
 	// Check if already in list
 	for _, p := range m.metadata.PrunePaths {
 		if p == cleanPath {
 			return
 		}
 	}
-	
+
 	log.DEBUG("merger: adding '%s' to the list of paths to prune", cleanPath)
 	m.metadata.PrunePaths = append(m.metadata.PrunePaths, cleanPath)
 }
@@ -1001,15 +1003,15 @@ func (m *Merger) addToSortListIfNecessary(operator, path string) {
 	// Extract sort order from operator if present
 	sortRx := regexp.MustCompile(`^\s*\Q((\E\s*sort(?:\s+by\s+(.*?))?\s*\Q))\E$`)
 	matches := sortRx.FindStringSubmatch(operator)
-	
+
 	sortKey := ""
 	if len(matches) > 1 && matches[1] != "" {
 		sortKey = strings.TrimSpace(matches[1])
 	}
-	
+
 	// Remove "$." prefix if present
 	cleanPath := strings.TrimPrefix(path, "$.")
-	
+
 	log.DEBUG("merger: adding '%s' to the list of paths to sort (by: %s)", cleanPath, sortKey)
 	if m.metadata.SortPaths == nil {
 		m.metadata.SortPaths = make(map[string]string)

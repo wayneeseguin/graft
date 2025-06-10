@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"testing"
 
-	"gopkg.in/yaml.v2"
 	. "github.com/smartystreets/goconvey/convey"
+	"gopkg.in/yaml.v2"
 )
 
 // TestYAMLv2Baseline documents current yaml.v2 behavior before migration
 func TestYAMLv2Baseline(t *testing.T) {
 	Convey("YAML v2 Baseline Behavior Documentation", t, func() {
-		
+
 		Convey("Map Type Behavior", func() {
 			yamlData := `
 name: test
@@ -25,19 +25,19 @@ list:
 			var result interface{}
 			err := yaml.Unmarshal([]byte(yamlData), &result)
 			So(err, ShouldBeNil)
-			
+
 			// Document that yaml.v2 returns map[interface{}]interface{}
 			resultMap, ok := result.(map[interface{}]interface{})
 			So(ok, ShouldBeTrue)
 			So(resultMap["name"], ShouldEqual, "test")
-			
+
 			// Nested maps are also interface{} keyed
 			nested, ok := resultMap["nested"].(map[interface{}]interface{})
 			So(ok, ShouldBeTrue)
 			So(nested["key"], ShouldEqual, "value")
 			So(nested["number"], ShouldEqual, 42)
 		})
-		
+
 		Convey("Boolean Value Handling", func() {
 			testCases := []struct {
 				yaml     string
@@ -53,7 +53,7 @@ list:
 				{`value: True`, true, "YAML True"},
 				{`value: False`, false, "YAML False"},
 			}
-			
+
 			for _, tc := range testCases {
 				Convey("Testing "+tc.desc, func() {
 					var result map[interface{}]interface{}
@@ -63,7 +63,7 @@ list:
 				})
 			}
 		})
-		
+
 		Convey("JSON Compatibility", func() {
 			yamlData := `
 name: test
@@ -74,19 +74,19 @@ config:
 			var yamlResult interface{}
 			err := yaml.Unmarshal([]byte(yamlData), &yamlResult)
 			So(err, ShouldBeNil)
-			
+
 			// Document that direct JSON marshaling fails with yaml.v2 output
 			_, err = json.Marshal(yamlResult)
 			So(err, ShouldNotBeNil) // This should fail due to interface{} keys
 			So(err.Error(), ShouldContainSubstring, "unsupported type")
-			
+
 			// But conversion through our helper works
 			jsonCompatible := convertToJSONCompatible(yamlResult)
 			jsonBytes, err := json.Marshal(jsonCompatible)
 			So(err, ShouldBeNil)
 			So(jsonBytes, ShouldNotBeNil)
 		})
-		
+
 		Convey("Environment Variable Parsing", func() {
 			testCases := []struct {
 				envValue string
@@ -100,7 +100,7 @@ config:
 				{`{"key":"value"}`, map[interface{}]interface{}{"key": "value"}, "object"},
 				{`plain string`, "plain string", "plain string"},
 			}
-			
+
 			for _, tc := range testCases {
 				Convey("Testing env var: "+tc.desc, func() {
 					var result interface{}
@@ -109,7 +109,7 @@ config:
 						// Plain strings might fail YAML parsing, that's expected
 						result = tc.envValue
 					}
-					
+
 					switch expected := tc.expected.(type) {
 					case map[interface{}]interface{}:
 						resultMap, ok := result.(map[interface{}]interface{})
@@ -123,7 +123,7 @@ config:
 				})
 			}
 		})
-		
+
 		Convey("Error Handling", func() {
 			invalidYAML := `
 name: test
@@ -134,7 +134,7 @@ name: test
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "yaml")
 		})
-		
+
 		Convey("Multi-Document YAML", func() {
 			multiDoc := `---
 name: doc1
@@ -145,12 +145,12 @@ name: doc2
 			var result interface{}
 			err := yaml.Unmarshal([]byte(multiDoc), &result)
 			So(err, ShouldBeNil)
-			
+
 			resultMap, ok := result.(map[interface{}]interface{})
 			So(ok, ShouldBeTrue)
 			So(resultMap["name"], ShouldEqual, "doc1")
 		})
-		
+
 		Convey("Empty and Null Values", func() {
 			testCases := []struct {
 				yaml     string
@@ -162,7 +162,7 @@ name: doc2
 				{`value: ~`, nil, "tilde null"},
 				{`value: ""`, "", "empty string"},
 			}
-			
+
 			for _, tc := range testCases {
 				Convey("Testing "+tc.desc, func() {
 					var result map[interface{}]interface{}
@@ -184,11 +184,11 @@ func TestConvertToJSONCompatibleBaseline(t *testing.T) {
 			true:         "bool_key",
 			nil:          "nil_key",
 		}
-		
+
 		result := convertToJSONCompatible(input)
 		resultMap, ok := result.(map[string]interface{})
 		So(ok, ShouldBeTrue)
-		
+
 		// Document how different key types are handled
 		So(resultMap["string_key"], ShouldEqual, "value")
 		So(resultMap["123"], ShouldEqual, "numeric_key")

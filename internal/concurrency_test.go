@@ -20,19 +20,19 @@ func TestWorkerPool(t *testing.T) {
 			QueueSize: 10,
 		})
 		defer pool.Shutdown()
-		
+
 		// Submit tasks
 		for i := 0; i < 10; i++ {
 			task := &testTask{
 				id:    fmt.Sprintf("task-%d", i),
 				value: i,
-		}
+			}
 			err := pool.Submit(task)
 			if err != nil {
 				t.Fatalf("Failed to submit task: %v", err)
 			}
 		}
-		
+
 		// Collect results
 		results := make(map[string]int)
 		for i := 0; i < 10; i++ {
@@ -46,12 +46,12 @@ func TestWorkerPool(t *testing.T) {
 				t.Fatal("Timeout waiting for results")
 			}
 		}
-		
+
 		// Verify all tasks completed
 		if len(results) != 10 {
 			t.Fatalf("Expected 10 results, got %d", len(results))
 		}
-		
+
 		// Verify correct values
 		for i := 0; i < 10; i++ {
 			id := fmt.Sprintf("task-%d", i)
@@ -60,7 +60,7 @@ func TestWorkerPool(t *testing.T) {
 			}
 		}
 	})
-	
+
 	t.Run("RateLimiting", func(t *testing.T) {
 		pool := NewWorkerPool(WorkerPoolConfig{
 			Name:      "test-rate-limited",
@@ -69,9 +69,9 @@ func TestWorkerPool(t *testing.T) {
 			RateLimit: 10, // 10 per second
 		})
 		defer pool.Shutdown()
-		
+
 		start := time.Now()
-		
+
 		// Submit 20 tasks
 		for i := 0; i < 20; i++ {
 			task := &testTask{
@@ -83,12 +83,12 @@ func TestWorkerPool(t *testing.T) {
 				t.Fatalf("Failed to submit task: %v", err)
 			}
 		}
-		
+
 		// Collect all results
 		for i := 0; i < 20; i++ {
 			<-pool.Results()
 		}
-		
+
 		elapsed := time.Since(start)
 		// With 10/second rate limit and initial bucket of 10 tokens,
 		// first 10 tasks complete immediately, then 10 more at 10/second
@@ -100,7 +100,7 @@ func TestWorkerPool(t *testing.T) {
 			t.Fatalf("Tasks took too long: %v (expected <3s)", elapsed)
 		}
 	})
-	
+
 	t.Run("ConcurrentAccess", func(t *testing.T) {
 		pool := NewWorkerPool(WorkerPoolConfig{
 			Name:      "test-concurrent",
@@ -108,11 +108,11 @@ func TestWorkerPool(t *testing.T) {
 			QueueSize: 100,
 		})
 		defer pool.Shutdown()
-		
+
 		var wg sync.WaitGroup
 		var submitted atomic.Uint64
 		var completed atomic.Uint64
-		
+
 		// Submit tasks from multiple goroutines
 		for g := 0; g < 10; g++ {
 			wg.Add(1)
@@ -132,7 +132,7 @@ func TestWorkerPool(t *testing.T) {
 				}
 			}(g)
 		}
-		
+
 		// Collect results concurrently
 		wg.Add(1)
 		go func() {
@@ -147,9 +147,9 @@ func TestWorkerPool(t *testing.T) {
 				}
 			}
 		}()
-		
+
 		wg.Wait()
-		
+
 		if submitted.Load() != 100 {
 			t.Fatalf("Expected 100 submitted tasks, got %d", submitted.Load())
 		}
@@ -167,7 +167,7 @@ func TestConcurrentCache(t *testing.T) {
 			Capacity: 100,
 			TTL:      0,
 		})
-		
+
 		// Set and get
 		c.Set("key1", "value1")
 		value, found := c.Get("key1")
@@ -177,74 +177,74 @@ func TestConcurrentCache(t *testing.T) {
 		if value != "value1" {
 			t.Fatalf("Expected value1, got %v", value)
 		}
-		
+
 		// Miss
 		_, found = c.Get("key2")
 		if found {
 			t.Fatal("Expected not to find key2")
 		}
-		
+
 		// Delete
 		deleted := c.Delete("key1")
 		if !deleted {
 			t.Fatal("Expected to delete key1")
 		}
-		
+
 		_, found = c.Get("key1")
 		if found {
 			t.Fatal("Expected not to find deleted key1")
 		}
 	})
-	
+
 	t.Run("TTLExpiration", func(t *testing.T) {
 		c := cache.NewConcurrentCache(cache.CacheConfig{
 			Shards:   4,
 			Capacity: 100,
 			TTL:      100 * time.Millisecond,
 		})
-		
+
 		c.Set("key1", "value1")
-		
+
 		// Should exist immediately
 		_, found := c.Get("key1")
 		if !found {
 			t.Fatal("Expected to find key1")
 		}
-		
+
 		// Wait for expiration
 		time.Sleep(150 * time.Millisecond)
-		
+
 		// Should be expired
 		_, found = c.Get("key1")
 		if found {
 			t.Fatal("Expected key1 to be expired")
 		}
 	})
-	
+
 	t.Run("ConcurrentAccess", func(t *testing.T) {
 		c := cache.NewConcurrentCache(cache.CacheConfig{
 			Shards:   16,
 			Capacity: 1000,
 			TTL:      0,
 		})
-		
+
 		var wg sync.WaitGroup
 		numGoroutines := 100
 		numOperations := 1000
-		
+
 		// Track operations
 		var sets atomic.Uint64
 		var gets atomic.Uint64
 		var deletes atomic.Uint64
-		
+
 		for i := 0; i < numGoroutines; i++ {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
-				
+
 				for j := 0; j < numOperations; j++ {
 					key := fmt.Sprintf("key-%d-%d", id, j%100)
-					
+
 					switch j % 3 {
 					case 0:
 						c.Set(key, j)
@@ -259,49 +259,49 @@ func TestConcurrentCache(t *testing.T) {
 				}
 			}(i)
 		}
-		
+
 		wg.Wait()
-		
+
 		totalOps := sets.Load() + gets.Load() + deletes.Load()
 		expectedOps := uint64(numGoroutines * numOperations)
 		if totalOps != expectedOps {
 			t.Fatalf("Expected %d operations, got %d", expectedOps, totalOps)
 		}
-		
+
 		// Check metrics
 		metrics := c.Metrics()
 		if metrics.Sets != sets.Load() {
 			t.Fatalf("Metrics mismatch: expected %d sets, got %d", sets.Load(), metrics.Sets)
 		}
 	})
-	
+
 	t.Run("LRUEviction", func(t *testing.T) {
 		c := cache.NewConcurrentCache(cache.CacheConfig{
 			Shards:   1, // Single shard for predictable behavior
 			Capacity: 3,
 			TTL:      0,
 		})
-		
+
 		// Fill cache
 		c.Set("key1", "value1")
 		c.Set("key2", "value2")
 		c.Set("key3", "value3")
-		
+
 		// Access key1 and key2 multiple times to increase hit count
 		for i := 0; i < 5; i++ {
 			c.Get("key1")
 			c.Get("key2")
 		}
-		
+
 		// Add key4, should evict key3 (least recently used)
 		c.Set("key4", "value4")
-		
+
 		// Check that key3 was evicted
 		_, found := c.Get("key3")
 		if found {
 			t.Fatal("Expected key3 to be evicted")
 		}
-		
+
 		// Check that other keys still exist
 		for _, key := range []string{"key1", "key2", "key4"} {
 			_, found := c.Get(key)
@@ -317,16 +317,16 @@ func TestRaceConditions(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping race condition tests in short mode")
 	}
-	
+
 	t.Run("WorkerPoolRace", func(t *testing.T) {
 		pool := NewWorkerPool(WorkerPoolConfig{
 			Name:      "race-test",
 			Workers:   10,
 			QueueSize: 1000,
 		})
-		
+
 		var wg sync.WaitGroup
-		
+
 		// Submit tasks concurrently
 		for i := 0; i < 10; i++ {
 			wg.Add(1)
@@ -341,7 +341,7 @@ func TestRaceConditions(t *testing.T) {
 				}
 			}(i)
 		}
-		
+
 		// Read results concurrently
 		resultsDone := make(chan bool)
 		go func() {
@@ -359,7 +359,7 @@ func TestRaceConditions(t *testing.T) {
 			}
 			resultsDone <- true
 		}()
-		
+
 		// Read metrics concurrently
 		wg.Add(1)
 		go func() {
@@ -369,30 +369,30 @@ func TestRaceConditions(t *testing.T) {
 				time.Sleep(time.Millisecond)
 			}
 		}()
-		
+
 		// Wait for task submission to complete
 		wg.Wait()
-		
+
 		// Wait for all results to be read
 		success := <-resultsDone
-		
+
 		// Now safe to shutdown
 		pool.Shutdown()
-		
+
 		if !success {
 			t.Fatal("Failed to read all results")
 		}
 	})
-	
+
 	t.Run("CacheRace", func(t *testing.T) {
 		c := cache.NewConcurrentCache(cache.CacheConfig{
 			Shards:   16,
 			Capacity: 1000,
 			TTL:      time.Second,
 		})
-		
+
 		var wg sync.WaitGroup
-		
+
 		// Concurrent writes
 		for i := 0; i < 10; i++ {
 			wg.Add(1)
@@ -404,7 +404,7 @@ func TestRaceConditions(t *testing.T) {
 				}
 			}(i)
 		}
-		
+
 		// Concurrent reads
 		for i := 0; i < 10; i++ {
 			wg.Add(1)
@@ -416,7 +416,7 @@ func TestRaceConditions(t *testing.T) {
 				}
 			}()
 		}
-		
+
 		// Concurrent deletes
 		wg.Add(1)
 		go func() {
@@ -426,7 +426,7 @@ func TestRaceConditions(t *testing.T) {
 				c.Delete(key)
 			}
 		}()
-		
+
 		// Concurrent metrics
 		wg.Add(1)
 		go func() {
@@ -436,7 +436,7 @@ func TestRaceConditions(t *testing.T) {
 				_ = c.Size()
 			}
 		}()
-		
+
 		wg.Wait()
 	})
 }
@@ -460,7 +460,7 @@ func (t *testTask) Execute(ctx context.Context) (interface{}, error) {
 			return nil, ctx.Err()
 		}
 	}
-	
+
 	// Simple computation
 	return t.value * 2, nil
 }
@@ -472,14 +472,14 @@ func BenchmarkConcurrentCache(b *testing.B) {
 		Capacity: 10000,
 		TTL:      0,
 	})
-	
+
 	// Pre-populate cache
 	for i := 0; i < 1000; i++ {
 		c.Set(fmt.Sprintf("key-%d", i), i)
 	}
-	
+
 	b.ResetTimer()
-	
+
 	b.Run("Get", func(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			i := 0
@@ -490,7 +490,7 @@ func BenchmarkConcurrentCache(b *testing.B) {
 			}
 		})
 	})
-	
+
 	b.Run("Set", func(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			i := 0
@@ -501,7 +501,7 @@ func BenchmarkConcurrentCache(b *testing.B) {
 			}
 		})
 	})
-	
+
 	b.Run("Mixed", func(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			i := 0

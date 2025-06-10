@@ -29,7 +29,7 @@ func NewTestTask(id string, duration time.Duration, result interface{}, err erro
 
 func (t *TestTask) Execute(ctx context.Context) (interface{}, error) {
 	t.executed.Store(true)
-	
+
 	if t.duration > 0 {
 		select {
 		case <-time.After(t.duration):
@@ -37,7 +37,7 @@ func (t *TestTask) Execute(ctx context.Context) (interface{}, error) {
 			return nil, ctx.Err()
 		}
 	}
-	
+
 	return t.result, t.err
 }
 
@@ -57,7 +57,7 @@ func TestWorkerPoolDetailed(t *testing.T) {
 			Workers:   2,
 			QueueSize: 10,
 		}
-		
+
 		wp := NewWorkerPool(config)
 		defer wp.Shutdown()
 
@@ -99,18 +99,18 @@ func TestWorkerPoolDetailed(t *testing.T) {
 			Workers:   3,
 			QueueSize: 20,
 		}
-		
+
 		wp := NewWorkerPool(config)
 		defer wp.Shutdown()
 
 		// Submit multiple tasks
 		taskCount := 10
 		tasks := make([]*TestTask, taskCount)
-		
+
 		for i := 0; i < taskCount; i++ {
 			task := NewTestTask(fmt.Sprintf("task%d", i), 5*time.Millisecond, fmt.Sprintf("result%d", i), nil)
 			tasks[i] = task
-			
+
 			err := wp.Submit(task)
 			if err != nil {
 				t.Fatalf("failed to submit task %d: %v", i, err)
@@ -158,14 +158,14 @@ func TestWorkerPoolDetailed(t *testing.T) {
 			Workers:   1,
 			QueueSize: 5,
 		}
-		
+
 		wp := NewWorkerPool(config)
 		defer wp.Shutdown()
 
 		// Submit task that returns error
 		expectedErr := fmt.Errorf("test error")
 		task := NewTestTask("error_task", 0, nil, expectedErr)
-		
+
 		err := wp.Submit(task)
 		if err != nil {
 			t.Fatalf("failed to submit task: %v", err)
@@ -191,7 +191,7 @@ func TestWorkerPoolDetailed(t *testing.T) {
 			Workers:   1,
 			QueueSize: 2,
 		}
-		
+
 		wp := NewWorkerPool(config)
 		defer wp.Shutdown()
 
@@ -221,13 +221,13 @@ func TestWorkerPoolDetailed(t *testing.T) {
 			Workers:   2,
 			QueueSize: 5,
 		}
-		
+
 		wp := NewWorkerPool(config)
 		defer wp.Shutdown()
 
 		// Submit task and wait for result
 		task := NewTestTask("wait_task", 20*time.Millisecond, "wait_result", nil)
-		
+
 		start := time.Now()
 		result, err := wp.SubmitAndWait(task)
 		duration := time.Since(start)
@@ -252,7 +252,7 @@ func TestWorkerPoolDetailed(t *testing.T) {
 			Workers:   2,
 			QueueSize: 5,
 		}
-		
+
 		wp := NewWorkerPool(config)
 
 		// Submit task that checks context
@@ -268,7 +268,7 @@ func TestWorkerPoolDetailed(t *testing.T) {
 		// The task should either:
 		// 1. Not execute at all (if worker exits before picking it up)
 		// 2. Execute but return context.Canceled (if worker picks it up but context is cancelled)
-		
+
 		// We can't guarantee which case happens, so we just verify shutdown doesn't hang
 		select {
 		case result := <-wp.Results():
@@ -290,7 +290,7 @@ func TestWorkerPoolMetrics(t *testing.T) {
 			Workers:   2,
 			QueueSize: 10,
 		}
-		
+
 		wp := NewWorkerPool(config)
 		defer wp.Shutdown()
 
@@ -359,7 +359,7 @@ func TestWorkerPoolConcurrency(t *testing.T) {
 			Workers:   5,
 			QueueSize: 100,
 		}
-		
+
 		wp := NewWorkerPool(config)
 		defer wp.Shutdown()
 
@@ -373,11 +373,11 @@ func TestWorkerPoolConcurrency(t *testing.T) {
 			wg.Add(1)
 			go func(goroutineID int) {
 				defer wg.Done()
-				
+
 				for i := 0; i < tasksPerGoroutine; i++ {
 					taskID := fmt.Sprintf("g%d_t%d", goroutineID, i)
 					task := NewTestTask(taskID, 1*time.Millisecond, fmt.Sprintf("result_%s", taskID), nil)
-					
+
 					err := wp.Submit(task)
 					if err != nil {
 						t.Errorf("goroutine %d: failed to submit task %s: %v", goroutineID, taskID, err)
@@ -420,7 +420,7 @@ func TestWorkerPoolConcurrency(t *testing.T) {
 			Workers:   3,
 			QueueSize: 20,
 		}
-		
+
 		wp := NewWorkerPool(config)
 		defer wp.Shutdown()
 
@@ -432,16 +432,16 @@ func TestWorkerPoolConcurrency(t *testing.T) {
 			wg.Add(1)
 			go func(id int) {
 				defer wg.Done()
-				
+
 				taskID := fmt.Sprintf("wait_task_%d", id)
 				task := NewTestTask(taskID, 10*time.Millisecond, fmt.Sprintf("result_%d", id), nil)
-				
+
 				result, err := wp.SubmitAndWait(task)
 				if err != nil {
 					t.Errorf("task %s: unexpected error: %v", taskID, err)
 					return
 				}
-				
+
 				expectedResult := fmt.Sprintf("result_%d", id)
 				if result != expectedResult {
 					t.Errorf("task %s: expected result %s, got %v", taskID, expectedResult, result)
@@ -498,14 +498,14 @@ func TestTokenBucketRateLimiter(t *testing.T) {
 		// Wait should succeed but take time
 		ctx := context.Background()
 		start := time.Now()
-		
+
 		err := rl.Wait(ctx)
 		duration := time.Since(start)
-		
+
 		if err != nil {
 			t.Errorf("unexpected error waiting for token: %v", err)
 		}
-		
+
 		// Should have waited approximately 1/rate seconds
 		expectedMin := 400 * time.Millisecond // Allow some variance
 		if duration < expectedMin {
@@ -545,7 +545,7 @@ func TestWorkerPoolWithRateLimit(t *testing.T) {
 			QueueSize: 10,
 			RateLimit: 2, // 2 tasks per second
 		}
-		
+
 		wp := NewWorkerPool(config)
 		defer wp.Shutdown()
 
@@ -561,7 +561,7 @@ func TestWorkerPoolWithRateLimit(t *testing.T) {
 
 		// Measure execution time
 		start := time.Now()
-		
+
 		// Collect results
 		for i := 0; i < taskCount; i++ {
 			select {
@@ -570,9 +570,9 @@ func TestWorkerPoolWithRateLimit(t *testing.T) {
 				t.Fatalf("timeout waiting for result %d", i)
 			}
 		}
-		
+
 		duration := time.Since(start)
-		
+
 		// With rate limit of 2/sec, 4 tasks should take at least ~2 seconds
 		// (2 immediate, then 2 more after ~1 second each)
 		expectedMin := 1500 * time.Millisecond // Allow some variance
@@ -591,7 +591,7 @@ func TestWorkerPoolShutdown(t *testing.T) {
 			Workers:   2,
 			QueueSize: 5,
 		}
-		
+
 		wp := NewWorkerPool(config)
 
 		// Submit some tasks
@@ -627,7 +627,7 @@ func TestWorkerPoolShutdown(t *testing.T) {
 			Workers:   1, // Only 1 worker to ensure queueing
 			QueueSize: 10,
 		}
-		
+
 		wp := NewWorkerPool(config)
 
 		// Submit more tasks than can be processed immediately

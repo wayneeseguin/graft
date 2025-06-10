@@ -46,7 +46,7 @@ type MetricsCollector struct {
 
 	// Custom metrics
 	CustomMetrics map[string]*MetricFamily
-	
+
 	// Mutex for custom metrics
 	customMu sync.RWMutex
 }

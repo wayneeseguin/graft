@@ -18,7 +18,7 @@ import (
 func TestDiff(t *testing.T) {
 	// Disable ANSI colors for testing
 	ansi.Color(false)
-	
+
 	YAML := func(s string) map[interface{}]interface{} {
 		y, err := simpleyaml.NewYaml([]byte(s))
 		So(err, ShouldBeNil)

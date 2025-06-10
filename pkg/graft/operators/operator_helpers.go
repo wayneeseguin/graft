@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"gopkg.in/yaml.v3"
 	"github.com/wayneeseguin/graft/pkg/graft"
+	"gopkg.in/yaml.v3"
 )
 
 // ResolveOperatorArgument resolves an expression argument, including nested operator calls
@@ -41,7 +41,7 @@ func ResolveOperatorArgument(ev *Evaluator, arg *Expr) (interface{}, error) {
 			return nil, fmt.Errorf("environment variable '%s' is not set", arg.Name)
 		}
 		// Try to unmarshal the value as YAML if it looks like structured data
-		if val == "true" || val == "false" || val == "null" || 
+		if val == "true" || val == "false" || val == "null" ||
 			(len(val) > 0 && (val[0] == '{' || val[0] == '[' || val[0] == '-')) {
 			var unmarshalled interface{}
 			if err := yaml.Unmarshal([]byte(val), &unmarshalled); err == nil {
@@ -93,7 +93,7 @@ func evaluateNestedOperator(ev *Evaluator, expr *Expr) (interface{}, error) {
 
 	// Create a temporary opcall for the nested operator
 	opcall := graft.NewOpcall(op, args, "")
-	
+
 	// Set the where field to the current evaluator's position
 	// This is important for operators like vault that use ev.Here
 	if ev.Here != nil {

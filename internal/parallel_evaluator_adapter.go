@@ -363,7 +363,7 @@ func (pa *ParallelEvaluatorAdapter) runParallelGroup(ops []*graft.Opcall) error 
 	if opsLen > 2147483647 { // Max int32
 		opsLen = 2147483647
 	}
-	metrics.RecordConcurrency(int32(opsLen)) // #nosec G115 - bounds checked above
+	metrics.RecordConcurrency(int32(opsLen))        // #nosec G115 - bounds checked above
 	defer metrics.RecordConcurrency(-int32(opsLen)) // #nosec G115 - bounds checked above
 
 	// Convert Opcalls to Operations for parallel engine

@@ -10,8 +10,8 @@ import (
 type COWNode struct {
 	value    interface{}
 	children map[interface{}]*COWNode
-	version  int64  // Version for optimistic locking
-	isShared int32  // Atomic flag indicating if this node is shared
+	version  int64 // Version for optimistic locking
+	isShared int32 // Atomic flag indicating if this node is shared
 }
 
 // NewCOWNode creates a new Copy-on-Write node
@@ -41,7 +41,7 @@ func (node *COWNode) clone() *COWNode {
 		version:  atomic.AddInt64(&node.version, 1),
 		isShared: 0,
 	}
-	
+
 	// Deep copy the value if it's a map
 	switch v := node.value.(type) {
 	case map[interface{}]interface{}:
@@ -59,21 +59,21 @@ func (node *COWNode) clone() *COWNode {
 	default:
 		cloned.value = node.value
 	}
-	
+
 	// Shallow copy of children - they'll be cloned on write
 	for k, child := range node.children {
 		cloned.children[k] = child
 		child.markShared()
 	}
-	
+
 	return cloned
 }
 
 // COWTree implements ThreadSafeTree using Copy-on-Write semantics
 type COWTree struct {
-	root     *COWNode
-	mu       sync.RWMutex
-	version  int64
+	root    *COWNode
+	mu      sync.RWMutex
+	version int64
 }
 
 // Ensure COWTree implements ThreadSafeTree
@@ -85,11 +85,11 @@ func NewCOWTree(data map[interface{}]interface{}) *COWTree {
 		root:    NewCOWNode(nil),
 		version: 0,
 	}
-	
+
 	if data != nil {
 		tree.buildFromData(data)
 	}
-	
+
 	return tree
 }
 
@@ -97,14 +97,14 @@ func NewCOWTree(data map[interface{}]interface{}) *COWTree {
 func (cow *COWTree) buildFromData(data map[interface{}]interface{}) {
 	cow.mu.Lock()
 	defer cow.mu.Unlock()
-	
+
 	cow.root = cow.buildNodeFromValue(data)
 }
 
 // buildNodeFromValue recursively builds COW nodes from values
 func (cow *COWTree) buildNodeFromValue(value interface{}) *COWNode {
 	node := NewCOWNode(value)
-	
+
 	switch v := value.(type) {
 	case map[interface{}]interface{}:
 		for k, child := range v {
@@ -119,7 +119,7 @@ func (cow *COWTree) buildNodeFromValue(value interface{}) *COWNode {
 			node.children[i] = cow.buildNodeFromValue(child)
 		}
 	}
-	
+
 	return node
 }
 
@@ -127,11 +127,11 @@ func (cow *COWTree) buildNodeFromValue(value interface{}) *COWNode {
 func (cow *COWTree) Clone() map[interface{}]interface{} {
 	cow.mu.RLock()
 	defer cow.mu.RUnlock()
-	
+
 	if cow.root == nil || cow.root.value == nil {
 		return make(map[interface{}]interface{})
 	}
-	
+
 	return deepCopy(cow.root.value).(map[interface{}]interface{})
 }
 
@@ -164,11 +164,11 @@ func (cow *COWTree) Get(path string) (interface{}, error) {
 func (cow *COWTree) Find(path ...string) (interface{}, error) {
 	cow.mu.RLock()
 	defer cow.mu.RUnlock()
-	
+
 	if len(path) == 0 {
 		return nil, fmt.Errorf("empty path")
 	}
-	
+
 	return cow.findInNode(cow.root, path...)
 }
 
@@ -177,13 +177,13 @@ func (cow *COWTree) findInNode(node *COWNode, path ...string) (interface{}, erro
 	if node == nil {
 		return nil, fmt.Errorf("path not found: %v", path)
 	}
-	
+
 	if len(path) == 0 {
 		return node.value, nil
 	}
-	
+
 	key := path[0]
-	
+
 	// Check if node has the key in its value map
 	switch v := node.value.(type) {
 	case map[interface{}]interface{}:
@@ -199,12 +199,12 @@ func (cow *COWTree) findInNode(node *COWNode, path ...string) (interface{}, erro
 			}
 		}
 	}
-	
+
 	// Look in children
 	if childNode, exists := node.children[key]; exists {
 		return cow.findInNode(childNode, path[1:]...)
 	}
-	
+
 	return nil, fmt.Errorf("path not found: %v", path)
 }
 
@@ -227,7 +227,7 @@ func (cow *COWTree) Exists(path ...string) bool {
 func (cow *COWTree) Copy() ThreadSafeTree {
 	cow.mu.RLock()
 	defer cow.mu.RUnlock()
-	
+
 	return cow.copyInternal()
 }
 
@@ -235,13 +235,13 @@ func (cow *COWTree) Copy() ThreadSafeTree {
 func (cow *COWTree) copyInternal() *COWTree {
 	// Mark the current root as shared
 	cow.root.markShared()
-	
+
 	// Create a new tree sharing the same root
 	newTree := &COWTree{
 		root:    cow.root,
 		version: cow.version,
 	}
-	
+
 	return newTree
 }
 
@@ -255,7 +255,7 @@ func (cow *COWTree) Set(path string, value interface{}) error {
 func (cow *COWTree) SetAtPath(value interface{}, path ...string) error {
 	cow.mu.Lock()
 	defer cow.mu.Unlock()
-	
+
 	return cow.setInternal(value, path...)
 }
 
@@ -264,12 +264,12 @@ func (cow *COWTree) setInternal(value interface{}, path ...string) error {
 	if len(path) == 0 {
 		return fmt.Errorf("empty path")
 	}
-	
+
 	// Clone the root if it's shared
 	if cow.root.isNodeShared() {
 		cow.root = cow.root.clone()
 	}
-	
+
 	err := cow.setInternalNode(cow.root, value, path...)
 	if err == nil {
 		atomic.AddInt64(&cow.version, 1)
@@ -282,12 +282,12 @@ func (cow *COWTree) setInternalNode(node *COWNode, value interface{}, path ...st
 	if len(path) == 1 {
 		// Base case: set the value
 		key := path[0]
-		
+
 		// Ensure node has a map value
 		if node.value == nil {
 			node.value = make(map[interface{}]interface{})
 		}
-		
+
 		// Convert value to map if needed
 		var nodeMap map[interface{}]interface{}
 		switch v := node.value.(type) {
@@ -305,10 +305,10 @@ func (cow *COWTree) setInternalNode(node *COWNode, value interface{}, path ...st
 			nodeMap = make(map[interface{}]interface{})
 			node.value = nodeMap
 		}
-		
+
 		// Set the value
 		nodeMap[key] = value
-		
+
 		// Create or update child node
 		if childNode, exists := node.children[key]; exists {
 			if childNode.isNodeShared() {
@@ -318,14 +318,14 @@ func (cow *COWTree) setInternalNode(node *COWNode, value interface{}, path ...st
 		} else {
 			node.children[key] = NewCOWNode(value)
 		}
-		
+
 		return nil
 	}
-	
+
 	// Recursive case: navigate deeper
 	key := path[0]
 	remainingPath := path[1:]
-	
+
 	var childNode *COWNode
 	if existing, exists := node.children[key]; exists {
 		if existing.isNodeShared() {
@@ -338,7 +338,7 @@ func (cow *COWTree) setInternalNode(node *COWNode, value interface{}, path ...st
 		// Create new intermediate node
 		childNode = NewCOWNode(make(map[interface{}]interface{}))
 		node.children[key] = childNode
-		
+
 		// Update parent's value map
 		if node.value == nil {
 			node.value = make(map[interface{}]interface{})
@@ -347,7 +347,7 @@ func (cow *COWTree) setInternalNode(node *COWNode, value interface{}, path ...st
 			nodeMap[key] = childNode.value
 		}
 	}
-	
+
 	return cow.setInternalNode(childNode, value, remainingPath...)
 }
 
@@ -355,7 +355,7 @@ func (cow *COWTree) setInternalNode(node *COWNode, value interface{}, path ...st
 func (cow *COWTree) Delete(path ...string) error {
 	cow.mu.Lock()
 	defer cow.mu.Unlock()
-	
+
 	return cow.deleteInternal(path...)
 }
 
@@ -364,12 +364,12 @@ func (cow *COWTree) deleteInternal(path ...string) error {
 	if len(path) == 0 {
 		return fmt.Errorf("empty path")
 	}
-	
+
 	// Clone the root if it's shared
 	if cow.root.isNodeShared() {
 		cow.root = cow.root.clone()
 	}
-	
+
 	err := cow.deleteInternalNode(cow.root, path...)
 	if err == nil {
 		atomic.AddInt64(&cow.version, 1)
@@ -382,33 +382,33 @@ func (cow *COWTree) deleteInternalNode(node *COWNode, path ...string) error {
 	if len(path) == 1 {
 		// Base case: delete the key
 		key := path[0]
-		
+
 		// Remove from children
 		delete(node.children, key)
-		
+
 		// Remove from value map
 		if nodeMap, ok := node.value.(map[interface{}]interface{}); ok {
 			delete(nodeMap, key)
 		}
-		
+
 		return nil
 	}
-	
+
 	// Recursive case
 	key := path[0]
 	remainingPath := path[1:]
-	
+
 	childNode, exists := node.children[key]
 	if !exists {
 		return fmt.Errorf("path not found: %v", path)
 	}
-	
+
 	// Clone child if shared
 	if childNode.isNodeShared() {
 		childNode = childNode.clone()
 		node.children[key] = childNode
 	}
-	
+
 	return cow.deleteInternalNode(childNode, remainingPath...)
 }
 
@@ -416,21 +416,21 @@ func (cow *COWTree) deleteInternalNode(node *COWNode, path ...string) error {
 func (cow *COWTree) Replace(data map[string]interface{}) error {
 	cow.mu.Lock()
 	defer cow.mu.Unlock()
-	
+
 	// Convert to interface{} map
 	converted := make(map[interface{}]interface{})
 	for k, v := range data {
 		converted[k] = v
 	}
-	
+
 	// Merge with existing data
 	existingData := cow.toMapInterface()
 	mergedData := deepMerge(existingData, converted)
-	
+
 	// Rebuild tree
 	cow.root = cow.buildNodeFromValue(mergedData)
 	atomic.AddInt64(&cow.version, 1)
-	
+
 	return nil
 }
 
@@ -439,22 +439,22 @@ func (cow *COWTree) Merge(other ThreadSafeTree) error {
 	if otherCOW, ok := other.(*COWTree); ok {
 		cow.mu.Lock()
 		defer cow.mu.Unlock()
-		
+
 		otherCOW.mu.RLock()
 		defer otherCOW.mu.RUnlock()
-		
+
 		// Convert both trees to maps and merge
 		thisData := cow.toMapInterface()
 		otherData := otherCOW.toMapInterface()
 		mergedData := deepMerge(thisData, otherData)
-		
+
 		// Rebuild tree
 		cow.root = cow.buildNodeFromValue(mergedData)
 		atomic.AddInt64(&cow.version, 1)
-		
+
 		return nil
 	}
-	
+
 	return fmt.Errorf("cannot merge incompatible tree types")
 }
 
@@ -462,18 +462,18 @@ func (cow *COWTree) Merge(other ThreadSafeTree) error {
 func (cow *COWTree) CompareAndSwap(oldValue, newValue interface{}, path ...string) bool {
 	cow.mu.Lock()
 	defer cow.mu.Unlock()
-	
+
 	// Get current value
 	currentValue, err := cow.Find(path...)
 	if err != nil && oldValue != nil {
 		return false
 	}
-	
+
 	// Compare values
 	if !deepEqual(currentValue, oldValue) {
 		return false
 	}
-	
+
 	// Perform the swap
 	err = cow.SetAtPath(newValue, path...)
 	return err == nil
@@ -483,10 +483,10 @@ func (cow *COWTree) CompareAndSwap(oldValue, newValue interface{}, path ...strin
 func (cow *COWTree) Update(fn func(current interface{}) interface{}, path ...string) error {
 	cow.mu.Lock()
 	defer cow.mu.Unlock()
-	
+
 	currentValue, _ := cow.Find(path...)
 	newValue := fn(currentValue)
-	
+
 	return cow.SetAtPath(newValue, path...)
 }
 
@@ -494,7 +494,7 @@ func (cow *COWTree) Update(fn func(current interface{}) interface{}, path ...str
 func (cow *COWTree) Transaction(fn func(tx TreeTransaction) error) error {
 	cow.mu.Lock()
 	defer cow.mu.Unlock()
-	
+
 	// Create a transaction that operates on a copy
 	tx := &cowTreeTransaction{
 		tree:     cow,
@@ -502,13 +502,13 @@ func (cow *COWTree) Transaction(fn func(tx TreeTransaction) error) error {
 		changes:  make(map[string]interface{}),
 		deletes:  make(map[string]bool),
 	}
-	
+
 	// Execute transaction function
 	err := fn(tx)
 	if err != nil {
 		return err
 	}
-	
+
 	// Commit the transaction
 	return tx.commitInternal()
 }
@@ -518,14 +518,14 @@ func (cow *COWTree) toMapInterface() map[interface{}]interface{} {
 	if cow.root == nil {
 		return make(map[interface{}]interface{})
 	}
-	
+
 	return cow.nodeToMap(cow.root)
 }
 
 // nodeToMap recursively converts a COW node to a map
 func (cow *COWTree) nodeToMap(node *COWNode) map[interface{}]interface{} {
 	result := make(map[interface{}]interface{})
-	
+
 	switch v := node.value.(type) {
 	case map[interface{}]interface{}:
 		for k, val := range v {
@@ -562,7 +562,7 @@ func (cow *COWTree) nodeToMap(node *COWNode) map[interface{}]interface{} {
 			}
 		}
 	}
-	
+
 	return result
 }
 
@@ -586,19 +586,19 @@ type cowTreeTransaction struct {
 func (tx *cowTreeTransaction) Get(path ...string) (interface{}, error) {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	pathStr := joinPath(path...)
-	
+
 	// Check if we have a pending change
 	if value, ok := tx.changes[pathStr]; ok {
 		return value, nil
 	}
-	
+
 	// Check if it's deleted
 	if tx.deletes[pathStr] {
 		return nil, fmt.Errorf("path deleted in transaction: %v", path)
 	}
-	
+
 	// Get from snapshot
 	return tx.snapshot.Find(path...)
 }
@@ -607,11 +607,11 @@ func (tx *cowTreeTransaction) Get(path ...string) (interface{}, error) {
 func (tx *cowTreeTransaction) Set(value interface{}, path ...string) error {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	pathStr := joinPath(path...)
 	tx.changes[pathStr] = value
 	delete(tx.deletes, pathStr)
-	
+
 	return nil
 }
 
@@ -619,11 +619,11 @@ func (tx *cowTreeTransaction) Set(value interface{}, path ...string) error {
 func (tx *cowTreeTransaction) Delete(path ...string) error {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	pathStr := joinPath(path...)
 	tx.deletes[pathStr] = true
 	delete(tx.changes, pathStr)
-	
+
 	return nil
 }
 
@@ -631,7 +631,7 @@ func (tx *cowTreeTransaction) Delete(path ...string) error {
 func (tx *cowTreeTransaction) Rollback() {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	tx.changes = make(map[string]interface{})
 	tx.deletes = make(map[string]bool)
 }
@@ -645,7 +645,7 @@ func (tx *cowTreeTransaction) Commit() error {
 func (tx *cowTreeTransaction) commitInternal() error {
 	tx.mu.Lock()
 	defer tx.mu.Unlock()
-	
+
 	// Apply all changes to the original tree
 	for pathStr, value := range tx.changes {
 		path := splitPath(pathStr)
@@ -653,13 +653,12 @@ func (tx *cowTreeTransaction) commitInternal() error {
 			return err
 		}
 	}
-	
+
 	// Apply all deletes
 	for pathStr := range tx.deletes {
 		path := splitPath(pathStr)
 		_ = tx.tree.deleteInternal(path...) // Ignore errors for non-existent paths
 	}
-	
+
 	return nil
 }
-

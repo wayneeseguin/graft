@@ -166,8 +166,8 @@ environment: production
 
 	// Create development configuration
 	devConfig, _ := engine.Merge(ctx, baseDoc, devDoc).Execute()
-	
-	// Create production configuration  
+
+	// Create production configuration
 	prodConfig, _ := engine.Merge(ctx, baseDoc, prodDoc).Execute()
 
 	fmt.Println("Development configuration:")

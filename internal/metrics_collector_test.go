@@ -11,7 +11,7 @@ import (
 func TestMetricsCollector(t *testing.T) {
 	t.Run("basic collector creation", func(t *testing.T) {
 		mc := NewMetricsCollector()
-		
+
 		// Verify all metric families are created
 		if mc.ParseOperations == nil {
 			t.Error("ParseOperations should be initialized")
@@ -30,7 +30,7 @@ func TestMetricsCollector(t *testing.T) {
 		if mc.ParseOperations.Type != MetricTypeCounter {
 			t.Errorf("expected ParseOperations to be counter, got %s", mc.ParseOperations.Type)
 		}
-		
+
 		if mc.ParseDuration.Type != MetricTypeHistogram {
 			t.Errorf("expected ParseDuration to be histogram, got %s", mc.ParseDuration.Type)
 		}
@@ -40,10 +40,10 @@ func TestMetricsCollector(t *testing.T) {
 		mc := NewMetricsCollector()
 		start := time.Now()
 		time.Sleep(1 * time.Millisecond)
-		
+
 		// Record successful parse
 		mc.RecordParseOperation(start, nil)
-		
+
 		parseOps := mc.ParseOperations.GetOrCreate(nil).(*Counter)
 		if parseOps.Get() != 1 {
 			t.Errorf("expected 1 parse operation, got %d", parseOps.Get())
@@ -61,7 +61,7 @@ func TestMetricsCollector(t *testing.T) {
 		// Record parse with error
 		testErr := &testError{"parse error"}
 		mc.RecordParseOperation(start, testErr)
-		
+
 		if parseOps.Get() != 2 {
 			t.Errorf("expected 2 parse operations after error, got %d", parseOps.Get())
 		}
@@ -81,9 +81,9 @@ func TestMetricsCollector(t *testing.T) {
 		mc := NewMetricsCollector()
 		start := time.Now()
 		time.Sleep(1 * time.Millisecond)
-		
+
 		mc.RecordEvalOperation(start, nil)
-		
+
 		evalOps := mc.EvalOperations.GetOrCreate(nil).(*Counter)
 		if evalOps.Get() != 1 {
 			t.Errorf("expected 1 eval operation, got %d", evalOps.Get())
@@ -99,7 +99,7 @@ func TestMetricsCollector(t *testing.T) {
 	t.Run("operator call recording", func(t *testing.T) {
 		mc := NewMetricsCollector()
 		start := time.Now()
-		
+
 		mc.RecordOperatorCall("grab", start, nil)
 		mc.RecordOperatorCall("concat", start, nil)
 		mc.RecordOperatorCall("grab", start, nil)
@@ -128,7 +128,7 @@ func TestMetricsCollector(t *testing.T) {
 
 	t.Run("cache metrics recording", func(t *testing.T) {
 		mc := NewMetricsCollector()
-		
+
 		// Record cache operations
 		mc.RecordCacheHit("memory")
 		mc.RecordCacheHit("memory")
@@ -137,7 +137,7 @@ func TestMetricsCollector(t *testing.T) {
 		mc.UpdateCacheSize("memory", 1024)
 
 		memoryLabels := map[string]string{"cache": "memory"}
-		
+
 		cacheHits := mc.CacheHits.GetOrCreate(memoryLabels).(*Counter)
 		if cacheHits.Get() != 2 {
 			t.Errorf("expected 2 cache hits, got %d", cacheHits.Get())
@@ -162,7 +162,7 @@ func TestMetricsCollector(t *testing.T) {
 	t.Run("external call recording", func(t *testing.T) {
 		mc := NewMetricsCollector()
 		start := time.Now()
-		
+
 		mc.RecordExternalCall("vault", start, nil)
 		mc.RecordExternalCall("aws", start, &testError{"connection failed"})
 		mc.UpdateConnectionsActive("vault", 3)
@@ -194,7 +194,7 @@ func TestMetricsCollector(t *testing.T) {
 
 	t.Run("resource metrics", func(t *testing.T) {
 		mc := NewMetricsCollector()
-		
+
 		mc.UpdateResourceMetrics(1024*1024, 5000, 50)
 		mc.RecordGCPause(5 * time.Millisecond)
 
@@ -225,7 +225,7 @@ func TestMetricsCollector(t *testing.T) {
 
 	t.Run("throughput metrics", func(t *testing.T) {
 		mc := NewMetricsCollector()
-		
+
 		mc.RecordDocument(1024)
 		mc.RecordDocument(2048)
 		mc.UpdateOperationsPerSecond(150.5)
@@ -248,7 +248,7 @@ func TestMetricsCollector(t *testing.T) {
 
 	t.Run("custom metrics", func(t *testing.T) {
 		mc := NewMetricsCollector()
-		
+
 		// Register custom metric
 		customFamily := mc.RegisterCustomMetric("custom_test_metric", "A test metric", MetricTypeCounter)
 		if customFamily == nil {
@@ -279,9 +279,9 @@ func TestMetricsCollector(t *testing.T) {
 		mc.RegisterCustomMetric("custom2", "Custom 2", MetricTypeGauge)
 
 		allFamilies := mc.GetAllMetricFamilies()
-		
+
 		// Should include all standard families plus custom ones
-		expectedMinimum := 22 + 2 // standard families + 2 custom  
+		expectedMinimum := 22 + 2 // standard families + 2 custom
 		if len(allFamilies) < expectedMinimum {
 			t.Errorf("expected at least %d families, got %d", expectedMinimum, len(allFamilies))
 		}
@@ -300,7 +300,7 @@ func TestMetricsCollector(t *testing.T) {
 
 	t.Run("reset functionality", func(t *testing.T) {
 		mc := NewMetricsCollector()
-		
+
 		// Add some data
 		mc.RecordParseOperation(time.Now(), nil)
 		mc.RecordCacheHit("memory")
@@ -345,7 +345,7 @@ func TestMetricsCollectorConcurrency(t *testing.T) {
 	t.Run("concurrent parse recording", func(t *testing.T) {
 		mc := NewMetricsCollector()
 		var wg sync.WaitGroup
-		
+
 		goroutines := 50
 		recordsPerGoroutine := 100
 
@@ -371,7 +371,7 @@ func TestMetricsCollectorConcurrency(t *testing.T) {
 	t.Run("concurrent operator recording", func(t *testing.T) {
 		mc := NewMetricsCollector()
 		var wg sync.WaitGroup
-		
+
 		operators := []string{"grab", "concat", "vault", "calc"}
 		recordsPerOperator := 250
 
@@ -400,9 +400,9 @@ func TestMetricsCollectorConcurrency(t *testing.T) {
 	t.Run("concurrent cache metrics", func(t *testing.T) {
 		mc := NewMetricsCollector()
 		var wg sync.WaitGroup
-		
+
 		operations := 1000
-		
+
 		// Mix of hits and misses
 		for i := 0; i < operations; i++ {
 			wg.Add(2)
@@ -434,7 +434,7 @@ func TestMetricsCollectorConcurrency(t *testing.T) {
 	t.Run("concurrent custom metrics", func(t *testing.T) {
 		mc := NewMetricsCollector()
 		var wg sync.WaitGroup
-		
+
 		// Register custom metrics concurrently
 		for i := 0; i < 50; i++ {
 			wg.Add(1)
@@ -442,7 +442,7 @@ func TestMetricsCollectorConcurrency(t *testing.T) {
 				defer wg.Done()
 				metricName := fmt.Sprintf("custom_metric_%d", id)
 				family := mc.RegisterCustomMetric(metricName, "Test metric", MetricTypeCounter)
-				
+
 				// Use the metric
 				metric := family.GetOrCreate(nil).(*Counter)
 				metric.Inc()
@@ -463,7 +463,7 @@ func TestGlobalMetricsCollector(t *testing.T) {
 	t.Run("global initialization", func(t *testing.T) {
 		// Reset global state
 		globalMetricsCollector = nil
-		
+
 		mc1 := GetMetricsCollector()
 		if mc1 == nil {
 			t.Fatal("global metrics collector should be initialized")
@@ -478,14 +478,14 @@ func TestGlobalMetricsCollector(t *testing.T) {
 	t.Run("convenience functions", func(t *testing.T) {
 		// Reset global state
 		globalMetricsCollector = nil
-		
+
 		// Test cache metrics recording
 		RecordCacheMetrics("test_cache", true)
 		RecordCacheMetrics("test_cache", false)
 
 		mc := GetMetricsCollector()
 		labels := map[string]string{"cache": "test_cache"}
-		
+
 		hits := mc.CacheHits.GetOrCreate(labels).(*Counter)
 		if hits.Get() != 1 {
 			t.Errorf("expected 1 cache hit, got %d", hits.Get())
@@ -500,7 +500,7 @@ func TestGlobalMetricsCollector(t *testing.T) {
 	t.Run("time operation function", func(t *testing.T) {
 		// Reset global state
 		globalMetricsCollector = nil
-		
+
 		// Test parse operation timing
 		err := TimeOperation("parse", nil, func() error {
 			time.Sleep(1 * time.Millisecond)
@@ -553,7 +553,7 @@ func TestGlobalMetricsCollector(t *testing.T) {
 func TestMetricsCollectorErrorTypes(t *testing.T) {
 	t.Run("various error types", func(t *testing.T) {
 		mc := NewMetricsCollector()
-		
+
 		// Record different types of errors
 		mc.RecordError("parse", &testError{"syntax error"})
 		mc.RecordError("eval", &testError{"runtime error"})
@@ -573,7 +573,7 @@ func TestMetricsCollectorErrorTypes(t *testing.T) {
 
 	t.Run("multiple errors of same type", func(t *testing.T) {
 		mc := NewMetricsCollector()
-		
+
 		// Record multiple parse errors
 		for i := 0; i < 5; i++ {
 			mc.RecordError("parse", &testError{"parse error"})

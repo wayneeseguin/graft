@@ -74,7 +74,7 @@ func TestArithmeticWithParentheses(t *testing.T) {
 				t.Fatalf("Expected Replace response type, got %v for expression %s", result.Type, tc.expression)
 			}
 			if result.Value != tc.expected {
-				t.Fatalf("Expected %v (%T), got %v (%T) for expression %s", 
+				t.Fatalf("Expected %v (%T), got %v (%T) for expression %s",
 					tc.expected, tc.expected, result.Value, result.Value, tc.expression)
 			}
 		})

@@ -182,7 +182,7 @@ mixed:
 
 			mixed, _ := result.GetSlice("mixed")
 			So(len(mixed), ShouldEqual, 2) // Replaced, not merged
-			
+
 			first := mixed[0].(map[interface{}]interface{})
 			So(first["name"], ShouldEqual, "new")
 			So(first["value"], ShouldEqual, 100)

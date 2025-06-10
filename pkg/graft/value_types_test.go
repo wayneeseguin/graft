@@ -10,7 +10,7 @@ func TestValue(t *testing.T) {
 		if v.Type() != StringValue {
 			t.Errorf("expected StringValue, got %v", v.Type())
 		}
-		
+
 		str, err := v.AsString()
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
@@ -18,7 +18,7 @@ func TestValue(t *testing.T) {
 		if str != "hello" {
 			t.Errorf("expected 'hello', got '%s'", str)
 		}
-		
+
 		// Should fail to convert to int
 		_, err = v.AsInt()
 		if err == nil {
@@ -31,7 +31,7 @@ func TestValue(t *testing.T) {
 		if v.Type() != IntValue {
 			t.Errorf("expected IntValue, got %v", v.Type())
 		}
-		
+
 		i, err := v.AsInt()
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
@@ -39,7 +39,7 @@ func TestValue(t *testing.T) {
 		if i != 42 {
 			t.Errorf("expected 42, got %d", i)
 		}
-		
+
 		// Should convert to int64
 		i64, err := v.AsInt64()
 		if err != nil {
@@ -48,7 +48,7 @@ func TestValue(t *testing.T) {
 		if i64 != 42 {
 			t.Errorf("expected 42, got %d", i64)
 		}
-		
+
 		// Should convert to float64
 		f, err := v.AsFloat64()
 		if err != nil {
@@ -57,7 +57,7 @@ func TestValue(t *testing.T) {
 		if f != 42.0 {
 			t.Errorf("expected 42.0, got %f", f)
 		}
-		
+
 		// Should convert to string
 		str, err := v.AsString()
 		if err != nil {
@@ -73,7 +73,7 @@ func TestValue(t *testing.T) {
 		if v.Type() != Float64Value {
 			t.Errorf("expected Float64Value, got %v", v.Type())
 		}
-		
+
 		f, err := v.AsFloat64()
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
@@ -81,7 +81,7 @@ func TestValue(t *testing.T) {
 		if f != 3.14 {
 			t.Errorf("expected 3.14, got %f", f)
 		}
-		
+
 		// Should not convert to int (not a whole number)
 		_, err = v.AsInt()
 		if err == nil {
@@ -94,7 +94,7 @@ func TestValue(t *testing.T) {
 		if v.Type() != BoolValue {
 			t.Errorf("expected BoolValue, got %v", v.Type())
 		}
-		
+
 		b, err := v.AsBool()
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
@@ -102,7 +102,7 @@ func TestValue(t *testing.T) {
 		if !b {
 			t.Errorf("expected true, got %v", b)
 		}
-		
+
 		// Should convert to string
 		str, err := v.AsString()
 		if err != nil {
@@ -119,7 +119,7 @@ func TestValue(t *testing.T) {
 		if v.Type() != SliceValue {
 			t.Errorf("expected SliceValue, got %v", v.Type())
 		}
-		
+
 		slice, err := v.AsSlice()
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
@@ -141,7 +141,7 @@ func TestValue(t *testing.T) {
 		if v.Type() != MapValue {
 			t.Errorf("expected MapValue, got %v", v.Type())
 		}
-		
+
 		m, err := v.AsMap()
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
@@ -163,7 +163,7 @@ func TestValue(t *testing.T) {
 		if v.Type() != MapValue {
 			t.Errorf("expected MapValue, got %v", v.Type())
 		}
-		
+
 		m, err := v.AsMap()
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
@@ -181,17 +181,17 @@ func TestValue(t *testing.T) {
 		if v.Type() != NilValue {
 			t.Errorf("expected NilValue, got %v", v.Type())
 		}
-		
+
 		if !v.IsNil() {
 			t.Error("expected IsNil to return true")
 		}
-		
+
 		// All conversions should fail
 		_, err := v.AsString()
 		if err == nil {
 			t.Error("expected error when converting nil to string")
 		}
-		
+
 		_, err = v.AsInt()
 		if err == nil {
 			t.Error("expected error when converting nil to int")
@@ -202,11 +202,11 @@ func TestValue(t *testing.T) {
 func TestTypedResponse(t *testing.T) {
 	t.Run("Create and convert", func(t *testing.T) {
 		tr := NewTypedResponse(Replace, "hello")
-		
+
 		if tr.Type != Replace {
 			t.Errorf("expected Replace action, got %v", tr.Type)
 		}
-		
+
 		str, err := tr.Value.AsString()
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
@@ -214,7 +214,7 @@ func TestTypedResponse(t *testing.T) {
 		if str != "hello" {
 			t.Errorf("expected 'hello', got '%s'", str)
 		}
-		
+
 		// Convert to legacy format
 		legacy := tr.ToLegacyResponse()
 		if legacy.Type != Replace {
@@ -223,7 +223,7 @@ func TestTypedResponse(t *testing.T) {
 		if legacy.Value != "hello" {
 			t.Errorf("expected 'hello', got '%v'", legacy.Value)
 		}
-		
+
 		// Convert back from legacy
 		tr2 := NewResponseFromLegacy(legacy)
 		str2, err := tr2.Value.AsString()

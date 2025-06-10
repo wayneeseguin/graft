@@ -38,7 +38,7 @@ func (b *BooleanOperatorBase) Phase() graft.OperatorPhase {
 func (b *BooleanOperatorBase) Dependencies(ev *graft.Evaluator, args []*graft.Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
 	deps := make([]*tree.Cursor, 0, len(auto))
 	deps = append(deps, auto...)
-	
+
 	// Collect dependencies from all arguments
 	// This ensures we catch dependencies in nested expressions
 	for _, arg := range args {
@@ -46,7 +46,7 @@ func (b *BooleanOperatorBase) Dependencies(ev *graft.Evaluator, args []*graft.Ex
 			deps = append(deps, arg.Dependencies(ev, locs)...)
 		}
 	}
-	
+
 	return deps
 }
 

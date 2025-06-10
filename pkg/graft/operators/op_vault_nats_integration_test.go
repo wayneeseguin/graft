@@ -19,7 +19,7 @@ func TestVaultNatsIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	
+
 	Convey("Vault and NATS Operator Integration", t, func() {
 		// Start test NATS server
 		ns, url := startTestNATSServer()
@@ -79,7 +79,7 @@ cache:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}
@@ -142,7 +142,7 @@ database:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}
@@ -190,7 +190,7 @@ secrets:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}
@@ -237,7 +237,7 @@ services:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}
@@ -296,7 +296,7 @@ staging:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}
@@ -332,7 +332,7 @@ config:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}
@@ -363,7 +363,7 @@ func TestVaultNatsComplexIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	
+
 	Convey("Complex Vault and NATS Integration Scenarios", t, func() {
 		// Start test NATS server
 		ns, url := startTestNATSServer()
@@ -427,7 +427,7 @@ application:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}
@@ -492,7 +492,7 @@ tls:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}
@@ -562,7 +562,7 @@ services:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}

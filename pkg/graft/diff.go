@@ -1,11 +1,11 @@
 package graft
 
 import (
+	"github.com/geofffranks/yaml"
+	fmt "github.com/wayneeseguin/graft/internal/utils/ansi"
 	"regexp"
 	"sort"
 	"strings"
-	"github.com/geofffranks/yaml"
-	fmt "github.com/wayneeseguin/graft/internal/utils/ansi"
 )
 
 func pad1(pad, s string) string {

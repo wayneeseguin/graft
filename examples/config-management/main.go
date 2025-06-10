@@ -23,15 +23,15 @@ func main() {
 
 	// Simulate different environments
 	environments := []string{"development", "staging", "production"}
-	
+
 	for _, env := range environments {
 		fmt.Printf("Generating configuration for: %s\n", env)
 		config := generateConfig(engine, env)
-		
+
 		// Save to file
 		filename := fmt.Sprintf("config-%s.yaml", env)
 		saveConfig(engine, config, filename)
-		
+
 		// Display key configuration values
 		displayKeyConfig(config, env)
 		fmt.Println()
@@ -184,12 +184,12 @@ func displayKeyConfig(config graft.Document, env string) {
 	dbUrl, _ := config.GetString("database.url")
 	serverAddr, _ := config.GetString("server.bind_address")
 	logLevel, _ := config.GetString("logging.level")
-	
+
 	fmt.Printf("  Application: %s\n", appName)
 	fmt.Printf("  Database: %s\n", dbUrl)
 	fmt.Printf("  Server: %s\n", serverAddr)
 	fmt.Printf("  Log Level: %s\n", logLevel)
-	
+
 	// Show environment-specific features
 	switch env {
 	case "development":

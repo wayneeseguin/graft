@@ -248,7 +248,7 @@ func TestExprError_Constructors(t *testing.T) {
 	t.Run("WrapError", func(t *testing.T) {
 		original := errors.New("original error")
 		wrapped := WrapError(original, TypeError, pos)
-		
+
 		if wrapped.Type != TypeError {
 			t.Errorf("expected TypeError, got %v", wrapped.Type)
 		}
@@ -265,7 +265,7 @@ func TestExprError_Constructors(t *testing.T) {
 			Type:    SyntaxError,
 			Message: "base error",
 		}
-		
+
 		withCtx := err.WithContext("while parsing expression")
 		if withCtx.Context != "while parsing expression" {
 			t.Errorf("expected context to be set")
@@ -289,7 +289,7 @@ func TestExprError_RealWorldScenarios(t *testing.T) {
 				Column: 20,
 			},
 		}
-		
+
 		outerErr := &ExprError{
 			Type:    ExprOperatorError,
 			Message: "concat operator failed",
@@ -299,7 +299,7 @@ func TestExprError_RealWorldScenarios(t *testing.T) {
 			},
 			Nested: innerErr,
 		}
-		
+
 		errMsg := outerErr.Error()
 		if !strings.Contains(errMsg, "concat operator failed") {
 			t.Error("should contain outer error message")
@@ -317,7 +317,7 @@ func TestExprError_RealWorldScenarios(t *testing.T) {
   networks:
     - name: default
       static_ips: (( static_ips 0 1 2 ))`
-		
+
 		err := &ExprError{
 			Type:    ReferenceError,
 			Message: "meta.version not found",
@@ -328,7 +328,7 @@ func TestExprError_RealWorldScenarios(t *testing.T) {
 			},
 			Source: source,
 		}
-		
+
 		errMsg := err.Error()
 		if !strings.Contains(errMsg, "deployment.yml:3:14") {
 			t.Error("should contain file position")
@@ -353,7 +353,7 @@ func BenchmarkExprError_Error(b *testing.B) {
 		Source: strings.Repeat("line of yaml content\n", 100),
 		Nested: errors.New("underlying type conversion error"),
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = err.Error()
@@ -365,7 +365,7 @@ func BenchmarkExprError_SimpleError(b *testing.B) {
 		Type:    SyntaxError,
 		Message: "unexpected token",
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = err.Error()

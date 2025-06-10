@@ -2,9 +2,9 @@ package parser
 
 import (
 	"fmt"
-	"unsafe"
-	"github.com/wayneeseguin/graft/pkg/graft"
 	"github.com/wayneeseguin/graft/internal/utils/tree"
+	"github.com/wayneeseguin/graft/pkg/graft"
+	"unsafe"
 )
 
 // OperatorRegistry holds operator metadata for the parser
@@ -46,14 +46,14 @@ func (r *OperatorRegistry) Names() []string {
 
 // ErrorRecoveryContext manages error recovery during parsing
 type ErrorRecoveryContext struct {
-	errors []error
+	errors    []error
 	maxErrors int
 }
 
 // NewErrorRecoveryContext creates a new error recovery context
 func NewErrorRecoveryContext(maxErrors int) *ErrorRecoveryContext {
 	return &ErrorRecoveryContext{
-		errors: []error{},
+		errors:    []error{},
 		maxErrors: maxErrors,
 	}
 }
@@ -96,7 +96,7 @@ func evaluateOperatorCall(expr *graft.Expr, ev *graft.Evaluator) (*graft.Respons
 	// Phase 1: Simple stub implementation
 	// In later phases, this will properly evaluate nested operator calls
 	return &graft.Response{
-		Type: graft.Replace,
+		Type:  graft.Replace,
 		Value: nil,
 	}, nil
 }
@@ -151,38 +151,38 @@ var OpRegistry = graft.OpRegistry
 
 // Constants
 const (
-	SyntaxError = graft.SyntaxError
-	Reference = graft.Reference
-	LogicalOr = graft.LogicalOr
+	SyntaxError  = graft.SyntaxError
+	Reference    = graft.Reference
+	LogicalOr    = graft.LogicalOr
 	OperatorCall = graft.OperatorCall
-	Literal = graft.Literal
-	EnvVar = graft.EnvVar
-	EvalPhase = graft.EvalPhase
-	VaultGroup = graft.VaultGroup
-	VaultChoice = graft.VaultChoice
+	Literal      = graft.Literal
+	EnvVar       = graft.EnvVar
+	EvalPhase    = graft.EvalPhase
+	VaultGroup   = graft.VaultGroup
+	VaultChoice  = graft.VaultChoice
 )
 
 // Precedence levels for operators
 type Precedence int
 
 const (
-	PrecedenceNone Precedence = iota
-	PrecedenceOr              // ||
-	PrecedenceAnd             // &&
-	PrecedenceEquality        // == !=
-	PrecedenceComparison      // < > <= >=
-	PrecedenceAddition        // + -
-	PrecedenceMultiplication  // * / %
-	PrecedenceUnary           // ! -
-	PrecedencePostfix         // function calls
+	PrecedenceNone           Precedence = iota
+	PrecedenceOr                        // ||
+	PrecedenceAnd                       // &&
+	PrecedenceEquality                  // == !=
+	PrecedenceComparison                // < > <= >=
+	PrecedenceAddition                  // + -
+	PrecedenceMultiplication            // * / %
+	PrecedenceUnary                     // ! -
+	PrecedencePostfix                   // function calls
 )
 
 // Aliases for compatibility
 const (
-	PrecedenceAdditive = PrecedenceAddition
+	PrecedenceAdditive       = PrecedenceAddition
 	PrecedenceMultiplicative = PrecedenceMultiplication
-	PrecedenceLowest = PrecedenceNone
-	PrecedenceTernary = PrecedenceOr // Ternary has same precedence as Or
+	PrecedenceLowest         = PrecedenceNone
+	PrecedenceTernary        = PrecedenceOr // Ternary has same precedence as Or
 )
 
 // Associativity represents operator associativity
@@ -194,15 +194,14 @@ const (
 	AssociativityLeft = LeftAssociative // Alias
 )
 
-
 // OperatorInfo holds metadata about an operator
 type OperatorInfo struct {
-	Name         string
-	Precedence   Precedence
+	Name          string
+	Precedence    Precedence
 	Associativity Associativity
-	MinArgs      int
-	MaxArgs      int
-	Phase        graft.OperatorPhase
+	MinArgs       int
+	MaxArgs       int
+	Phase         graft.OperatorPhase
 }
 
 // WarningError represents a non-fatal error that should be treated as a warning
@@ -228,7 +227,6 @@ func parseOpcallWithParser(phase graft.OperatorPhase, src string) (*graft.Opcall
 	return ParseOpcall(phase, src)
 }
 
-
 // NewOperatorCall creates a new operator call expression
 func NewOperatorCall(op string, args []*graft.Expr) *graft.Expr {
 	return NewOperatorCallWithPos(op, args, graft.Position{})
@@ -239,14 +237,14 @@ func NewOperatorCallWithPos(op string, args []*graft.Expr, pos graft.Position) *
 	expr := &graft.Expr{
 		Type:     graft.OperatorCall,
 		Name:     op,
-		Operator: op,  // Set both Name and Operator for compatibility
+		Operator: op, // Set both Name and Operator for compatibility
 		Pos:      pos,
 	}
-	
+
 	// Create a minimal Opcall structure to store args
 	// We use reflection to set the private args field
 	opcall := &graft.Opcall{}
-	
+
 	// Use a type assertion and struct literal to create opcall with args
 	// This is a workaround since we can't access private fields directly
 	type opcallWithArgs struct {
@@ -256,13 +254,13 @@ func NewOperatorCallWithPos(op string, args []*graft.Expr, pos graft.Position) *
 		op        graft.Operator
 		args      []*graft.Expr
 	}
-	
+
 	// Create a new opcall with args set
 	opcallPtr := (*opcallWithArgs)(unsafe.Pointer(opcall)) // #nosec G103 - required for efficient struct field access
 	opcallPtr.args = args
-	
+
 	expr.Call = opcall
-	
+
 	// Also set Left/Right for backward compatibility
 	if len(args) >= 1 {
 		expr.Left = args[0]
@@ -270,7 +268,7 @@ func NewOperatorCallWithPos(op string, args []*graft.Expr, pos graft.Position) *
 	if len(args) >= 2 {
 		expr.Right = args[1]
 	}
-	
+
 	return expr
 }
 

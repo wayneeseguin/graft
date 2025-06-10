@@ -1,20 +1,20 @@
 package parser
 
 import (
-	"testing"
-	"regexp"
 	"fmt"
+	"regexp"
+	"testing"
 )
 
 func TestRegexPatterns(t *testing.T) {
 	input := "(( vault@production \"secret/path:key\" ))"
-	
+
 	patterns := []string{
-		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*(?:@[a-zA-Z][a-zA-Z0-9_-]*)?)\((.*)\)\s*\)\)$`, // (( op@target(x,y,z) )) - no space between op and (
-		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*(?:@[a-zA-Z][a-zA-Z0-9_-]*)?)\s+(\(.*\))\s*\)\)$`, // (( op@target (x,y,z) )) - space between op and (
-		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*(?:@[a-zA-Z][a-zA-Z0-9_-]*)?)(?:\s+(.*))?\s*\)\)$`,     // (( op@target x y z ))
+		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*(?:@[a-zA-Z][a-zA-Z0-9_-]*)?)\((.*)\)\s*\)\)$`,     // (( op@target(x,y,z) )) - no space between op and (
+		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*(?:@[a-zA-Z][a-zA-Z0-9_-]*)?)\s+(\(.*\))\s*\)\)$`,  // (( op@target (x,y,z) )) - space between op and (
+		`^\(\(\s*([a-zA-Z][a-zA-Z0-9_-]*(?:@[a-zA-Z][a-zA-Z0-9_-]*)?)(?:\s+(.*))?\s*\)\)$`, // (( op@target x y z ))
 	}
-	
+
 	for i, pattern := range patterns {
 		re := regexp.MustCompile(pattern)
 		if re.MatchString(input) {
@@ -27,6 +27,6 @@ func TestRegexPatterns(t *testing.T) {
 			return
 		}
 	}
-	
+
 	fmt.Printf("No pattern matched for input: %s\n", input)
 }

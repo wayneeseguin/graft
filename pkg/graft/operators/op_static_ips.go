@@ -475,11 +475,11 @@ func (s StaticIPOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		// check to see if the address is already claimed
 		ip := pool[offset]
 		DEBUG("     [%d]: checking to see if %s is already claimed", i, ip)
-		
+
 		// Get engine for IP tracking
 		engine := graft.GetEngine(ev)
 		usedIPs := engine.GetOperatorState().GetUsedIPs()
-		
+
 		if thief, taken := usedIPs[ip]; taken {
 			DEBUG("     [%d]: %s is in use by %s\n", i, ip, thief)
 			return nil, ansi.Errorf("@R{tried to use IP '}@c{%s}@R{', but that address is already allocated to} @c{%s}", ip, thief)

@@ -13,7 +13,7 @@ import (
 func TestSort(t *testing.T) {
 	// Disable ANSI colors for testing
 	ansi.Color(false)
-	
+
 	Convey("that the sort operator returns the current value during evaluation", t, func() {
 		op := &operators.SortOperator{}
 		testData := map[interface{}]interface{}{"foobar": []interface{}{3, 1, 2}}

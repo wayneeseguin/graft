@@ -2,8 +2,8 @@ package graft
 
 import (
 	"fmt"
-	"strings"
 	"github.com/wayneeseguin/graft/internal/utils/ansi"
+	"strings"
 )
 
 // ExprError represents an error that occurred during expression parsing or evaluation
@@ -38,13 +38,13 @@ type Position struct {
 // Error implements the error interface
 func (e *ExprError) Error() string {
 	var parts []string
-	
+
 	// Add error type prefix
 	prefix := e.typeString()
 	if prefix != "" {
 		parts = append(parts, ansi.Sprintf("@*R{%s}", prefix))
 	}
-	
+
 	// Add position information
 	if e.Position.Line > 0 {
 		loc := fmt.Sprintf("%d:%d", e.Position.Line, e.Position.Column)
@@ -53,13 +53,13 @@ func (e *ExprError) Error() string {
 		}
 		parts = append(parts, ansi.Sprintf("@Y{%s}", loc))
 	}
-	
+
 	// Add main message
 	parts = append(parts, e.Message)
-	
+
 	// Build error message
 	msg := strings.Join(parts, ": ")
-	
+
 	// Add source context if available
 	if e.Source != "" && e.Position.Line > 0 {
 		lines := strings.Split(e.Source, "\n")
@@ -67,12 +67,12 @@ func (e *ExprError) Error() string {
 			msg += "\n\n" + e.formatSourceContext(lines)
 		}
 	}
-	
+
 	// Add nested error
 	if e.Nested != nil {
 		msg += "\n  caused by: " + e.Nested.Error()
 	}
-	
+
 	return msg
 }
 
@@ -105,9 +105,9 @@ func (e *ExprError) formatSourceContext(lines []string) string {
 	if lineIdx < 0 || lineIdx >= len(lines) {
 		return ""
 	}
-	
+
 	var context strings.Builder
-	
+
 	// Show up to 2 lines before and after
 	start := lineIdx - 2
 	if start < 0 {
@@ -117,7 +117,7 @@ func (e *ExprError) formatSourceContext(lines []string) string {
 	if end > len(lines) {
 		end = len(lines)
 	}
-	
+
 	// Add line numbers and content
 	for i := start; i < end; i++ {
 		lineNum := fmt.Sprintf("%4d | ", i+1)
@@ -126,11 +126,11 @@ func (e *ExprError) formatSourceContext(lines []string) string {
 			context.WriteString(ansi.Sprintf("@*W{%s}", lineNum))
 			context.WriteString(lines[i])
 			context.WriteString("\n")
-			
+
 			// Add error indicator
 			spaces := strings.Repeat(" ", len(lineNum)+e.Position.Column-1)
 			context.WriteString(ansi.Sprintf("@R{%s^}", spaces))
-			
+
 			// Add context message if provided
 			if e.Context != "" {
 				context.WriteString(ansi.Sprintf(" @R{%s}", e.Context))
@@ -140,7 +140,7 @@ func (e *ExprError) formatSourceContext(lines []string) string {
 			context.WriteString(ansi.Sprintf("@K{%s%s}\n", lineNum, lines[i]))
 		}
 	}
-	
+
 	return context.String()
 }
 
@@ -159,14 +159,14 @@ func (el *ExprErrorList) Error() string {
 	if len(el.Errors) == 0 {
 		return "no errors"
 	}
-	
+
 	var msgs []string
 	msgs = append(msgs, fmt.Sprintf("Found %d errors:", len(el.Errors)))
-	
+
 	for i, err := range el.Errors {
 		msgs = append(msgs, fmt.Sprintf("\n[%d] %s", i+1, err.Error()))
 	}
-	
+
 	return strings.Join(msgs, "\n")
 }
 
@@ -243,12 +243,12 @@ func WrapError(err error, errType ExprErrorType, pos Position) *ExprError {
 	if err == nil {
 		return nil
 	}
-	
+
 	// If it's already an ExprError, preserve it
 	if exprErr, ok := err.(*ExprError); ok {
 		return exprErr
 	}
-	
+
 	return &ExprError{
 		Type:     errType,
 		Message:  err.Error(),
@@ -259,8 +259,8 @@ func WrapError(err error, errType ExprErrorType, pos Position) *ExprError {
 
 // ErrorRecoveryContext helps the parser recover from errors
 type ErrorRecoveryContext struct {
-	Errors     *ExprErrorList
-	MaxErrors  int
+	Errors      *ExprErrorList
+	MaxErrors   int
 	StopOnFirst bool
 }
 
@@ -275,11 +275,11 @@ func NewErrorRecoveryContext(maxErrors int) *ErrorRecoveryContext {
 // RecordError records an error and returns whether parsing should continue
 func (erc *ErrorRecoveryContext) RecordError(err *ExprError) bool {
 	erc.Errors.Add(err)
-	
+
 	if erc.StopOnFirst {
 		return false
 	}
-	
+
 	return len(erc.Errors.Errors) < erc.MaxErrors
 }
 
@@ -293,10 +293,10 @@ func (erc *ErrorRecoveryContext) GetError() error {
 	if !erc.HasErrors() {
 		return nil
 	}
-	
+
 	if len(erc.Errors.Errors) == 1 {
 		return erc.Errors.Errors[0]
 	}
-	
+
 	return erc.Errors
 }

@@ -68,7 +68,7 @@ func TestCacheAnalytics(t *testing.T) {
 		Convey("should record evictions correctly", func() {
 			// First create the cache by recording a hit
 			analytics.RecordHit("test_cache", "key1")
-			
+
 			analytics.RecordEviction("test_cache", 5, "capacity")
 			analytics.RecordEviction("test_cache", 2, "ttl")
 			analytics.RecordEviction("test_cache", 1, "capacity")
@@ -294,7 +294,7 @@ func TestCacheEffectivenessScore(t *testing.T) {
 			analytics.RecordMiss("poor_cache", "key2", 600*time.Millisecond) // Slow
 			analytics.RecordHit("poor_cache", "key3")
 			analytics.RecordEviction("poor_cache", 100, "capacity") // Many evictions
-			analytics.UpdateSize("poor_cache", 100, 100) // 100% full
+			analytics.UpdateSize("poor_cache", 100, 100)            // 100% full
 
 			score := analytics.GetEffectivenessScore()
 			So(score, ShouldBeLessThan, 0.5) // Should be low

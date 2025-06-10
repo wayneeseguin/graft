@@ -41,11 +41,11 @@ func (EmptyOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 		if args[0].Type == Reference && args[0].Reference != nil {
 			refName := args[0].Reference.String()
 			DEBUG("reference '%s' couldn't be resolved, checking if it's a type name", refName)
-			
+
 			// Extract just the last part of the reference (e.g., "hash" from "$.hash")
 			parts := strings.Split(refName, ".")
 			typeName := parts[len(parts)-1]
-			
+
 			switch strings.ToLower(typeName) {
 			case "hash", "map":
 				DEBUG("treating unresolved reference 'hash' as type name")
@@ -67,7 +67,7 @@ func (EmptyOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 				}, nil
 			}
 		}
-		
+
 		DEBUG("failed to resolve expression to a concrete value")
 		DEBUG("error was: %s", err)
 		return nil, err

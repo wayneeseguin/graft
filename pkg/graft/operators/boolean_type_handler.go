@@ -10,7 +10,7 @@ func NewBooleanTypeHandler() *BooleanTypeHandler {
 	handler := &BooleanTypeHandler{
 		BaseTypeHandler: NewBaseTypeHandler(80), // Medium-high priority
 	}
-	
+
 	// Support boolean operations with mixed types for logical operations
 	// Equality will use strict checking, but logical operations use truthiness
 	handler.AddSupportedTypes(
@@ -19,7 +19,7 @@ func NewBooleanTypeHandler() *BooleanTypeHandler {
 		TypePair{A: TypeBool, B: TypeString},
 		TypePair{A: TypeBool, B: TypeNull},
 	)
-	
+
 	return handler
 }
 
@@ -28,11 +28,11 @@ func (h *BooleanTypeHandler) Add(a, b interface{}) (interface{}, error) {
 	// Boolean OR operation: true + true = true, true + false = true, etc.
 	aBool, aOk := toBool(a)
 	bBool, bOk := toBool(b)
-	
+
 	if aOk && bOk {
 		return aBool || bBool, nil
 	}
-	
+
 	return nil, NotImplementedError("add", a, b)
 }
 
@@ -46,11 +46,11 @@ func (h *BooleanTypeHandler) Multiply(a, b interface{}) (interface{}, error) {
 	// Boolean AND operation: true * true = true, true * false = false, etc.
 	aBool, aOk := toBool(a)
 	bBool, bOk := toBool(b)
-	
+
 	if aOk && bOk {
 		return aBool && bBool, nil
 	}
-	
+
 	return nil, NotImplementedError("multiply", a, b)
 }
 
@@ -68,17 +68,17 @@ func (h *BooleanTypeHandler) Modulo(a, b interface{}) (interface{}, error) {
 func (h *BooleanTypeHandler) Equal(a, b interface{}) (bool, error) {
 	aBool, aOk := toBool(a)
 	bBool, bOk := toBool(b)
-	
+
 	if aOk && bOk {
 		return aBool == bBool, nil
 	}
-	
+
 	// For strict type checking, booleans are only equal to other booleans
 	// Return false for different types (no truthiness conversion for equality)
 	if aOk || bOk {
 		return false, nil
 	}
-	
+
 	return false, NotImplementedError("equal", a, b)
 }
 
@@ -92,12 +92,12 @@ func (h *BooleanTypeHandler) NotEqual(a, b interface{}) (bool, error) {
 func (h *BooleanTypeHandler) Less(a, b interface{}) (bool, error) {
 	aBool, aOk := toBool(a)
 	bBool, bOk := toBool(b)
-	
+
 	if aOk && bOk {
 		// false < true, true < false is false
 		return !aBool && bBool, nil
 	}
-	
+
 	return false, NotImplementedError("less", a, b)
 }
 
@@ -105,12 +105,12 @@ func (h *BooleanTypeHandler) Less(a, b interface{}) (bool, error) {
 func (h *BooleanTypeHandler) Greater(a, b interface{}) (bool, error) {
 	aBool, aOk := toBool(a)
 	bBool, bOk := toBool(b)
-	
+
 	if aOk && bOk {
 		// true > false, false > true is false
 		return aBool && !bBool, nil
 	}
-	
+
 	return false, NotImplementedError("greater", a, b)
 }
 
@@ -125,7 +125,6 @@ func (h *BooleanTypeHandler) GreaterOrEqual(a, b interface{}) (bool, error) {
 	less, err := h.Less(a, b)
 	return !less, err
 }
-
 
 // toBool converts a value to boolean if possible
 func toBool(val interface{}) (bool, bool) {

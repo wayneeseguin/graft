@@ -84,16 +84,16 @@ func TestTypeRegistry(t *testing.T) {
 
 		Convey("registers handlers sorted by priority", func() {
 			registry := NewTypeRegistry()
-			
+
 			// Create mock handlers with different priorities
 			handler1 := &mockHandler{priority: 10}
 			handler2 := &mockHandler{priority: 20}
 			handler3 := &mockHandler{priority: 15}
-			
+
 			registry.Register(handler1)
 			registry.Register(handler2)
 			registry.Register(handler3)
-			
+
 			So(len(registry.handlers), ShouldEqual, 3)
 			// Should be sorted by priority (highest first)
 			So(registry.handlers[0], ShouldEqual, handler2) // priority 20
@@ -103,19 +103,19 @@ func TestTypeRegistry(t *testing.T) {
 
 		Convey("finds appropriate handler", func() {
 			registry := NewTypeRegistry()
-			
+
 			handler := &mockHandler{
 				priority: 10,
 				canHandleFunc: func(a, b OperandType) bool {
 					return a == TypeInt && b == TypeInt
 				},
 			}
-			
+
 			registry.Register(handler)
-			
+
 			found := registry.FindHandler(TypeInt, TypeInt)
 			So(found, ShouldEqual, handler)
-			
+
 			notFound := registry.FindHandler(TypeString, TypeString)
 			So(notFound, ShouldBeNil)
 		})
@@ -132,17 +132,17 @@ func TestBaseTypeHandler(t *testing.T) {
 
 		Convey("adds supported type pairs", func() {
 			handler := NewBaseTypeHandler(10)
-			
+
 			handler.AddSupportedTypes(
 				TypePair{A: TypeInt, B: TypeInt},
 				TypePair{A: TypeInt, B: TypeFloat},
 			)
-			
+
 			// Should support both directions for each pair
 			So(handler.CanHandle(TypeInt, TypeInt), ShouldBeTrue)
 			So(handler.CanHandle(TypeInt, TypeFloat), ShouldBeTrue)
 			So(handler.CanHandle(TypeFloat, TypeInt), ShouldBeTrue) // Reverse
-			
+
 			// Should not support other combinations
 			So(handler.CanHandle(TypeString, TypeString), ShouldBeFalse)
 			So(handler.CanHandle(TypeInt, TypeString), ShouldBeFalse)

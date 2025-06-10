@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	
+
 	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
@@ -19,7 +19,7 @@ func ExampleBasicMerge() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	// Parse YAML documents
 	doc1, _ := engine.ParseYAML([]byte(`
 name: myapp
@@ -27,7 +27,7 @@ version: 1.0
 config:
   database: postgres
 `))
-	
+
 	doc2, _ := engine.ParseYAML([]byte(`
 config:
   cache: redis
@@ -35,13 +35,13 @@ config:
 deployment:
   replicas: 3
 `))
-	
+
 	// Merge documents
 	result, err := engine.Merge(context.Background(), doc1, doc2).Execute()
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	// Convert back to YAML
 	output, _ := engine.ToYAML(result)
 	fmt.Println(string(output))
@@ -50,7 +50,7 @@ deployment:
 // ExampleWithOperators demonstrates using graft operators
 func ExampleWithOperators() {
 	engine, _ := CreateDefaultEngine()
-	
+
 	doc, _ := engine.ParseYAML([]byte(`
 database:
   host: (( concat "db-" environment ))
@@ -63,13 +63,13 @@ meta:
     
 environment: production
 `))
-	
+
 	// Evaluate operators
 	result, err := engine.Evaluate(context.Background(), doc)
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	output, _ := engine.ToYAML(result)
 	fmt.Println(string(output))
 	// Output:
@@ -86,7 +86,7 @@ environment: production
 // ExampleWithPruning demonstrates selective key removal
 func ExampleWithPruning() {
 	engine, _ := CreateDefaultEngine()
-	
+
 	doc1, _ := engine.ParseYAML([]byte(`
 app:
   name: myapp
@@ -95,14 +95,14 @@ secrets:
   api_key: secret123
   db_password: secret456
 `))
-	
+
 	doc2, _ := engine.ParseYAML([]byte(`
 app:
   environment: production
 secrets:
   jwt_secret: secret789
 `))
-	
+
 	// Merge and prune secrets
 	result, err := engine.Merge(context.Background(), doc1, doc2).
 		WithPrune("secrets").
@@ -110,7 +110,7 @@ secrets:
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	output, _ := engine.ToYAML(result)
 	fmt.Println(string(output))
 	// Output:
@@ -123,7 +123,7 @@ secrets:
 // ExampleWithCherryPick demonstrates selective key inclusion
 func ExampleWithCherryPick() {
 	engine, _ := CreateDefaultEngine()
-	
+
 	doc, _ := engine.ParseYAML([]byte(`
 app:
   name: myapp
@@ -138,7 +138,7 @@ metadata:
   created_by: admin
   created_at: 2023-01-01
 `))
-	
+
 	// Only keep app and deployment sections
 	result, err := engine.Merge(context.Background(), doc).
 		WithCherryPick("app", "deployment").
@@ -146,7 +146,7 @@ metadata:
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	output, _ := engine.ToYAML(result)
 	fmt.Println(string(output))
 }
@@ -154,25 +154,25 @@ metadata:
 // ExampleCustomOperator demonstrates registering a custom operator
 func ExampleCustomOperator() {
 	engine, _ := CreateDefaultEngine()
-	
+
 	// Register a custom operator
 	customOp := &CustomUppercaseOperator{}
 	err := engine.RegisterOperator("uppercase", customOp)
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	doc, _ := engine.ParseYAML([]byte(`
 app:
   name: (( uppercase "myapp" ))
   title: (( uppercase "My Application" ))
 `))
-	
+
 	result, err := engine.Evaluate(context.Background(), doc)
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	output, _ := engine.ToYAML(result)
 	fmt.Println(string(output))
 }
@@ -180,7 +180,7 @@ app:
 // ExampleDocumentManipulation demonstrates the Document interface
 func ExampleDocumentManipulation() {
 	engine, _ := CreateDefaultEngine()
-	
+
 	doc, _ := engine.ParseYAML([]byte(`
 app:
   name: myapp
@@ -189,22 +189,22 @@ app:
       host: localhost
       port: 5432
 `))
-	
+
 	// Get values using paths
 	appName, _ := doc.Get("app.name")
 	fmt.Printf("App name: %s\n", appName)
-	
+
 	dbHost, _ := doc.Get("app.config.database.host")
 	fmt.Printf("DB host: %s\n", dbHost)
-	
+
 	// Set values
 	_ = doc.Set("app.version", "2.0")
 	_ = doc.Set("app.config.database.ssl", true)
-	
+
 	// Get all top-level keys
 	keys := doc.Keys()
 	fmt.Printf("Top-level keys: %v\n", keys)
-	
+
 	// Convert back to YAML
 	output, _ := engine.ToYAML(doc)
 	fmt.Println(string(output))
@@ -227,19 +227,19 @@ func ExampleConfiguredEngine() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	// Use the configured engine
 	doc, _ := engine.ParseYAML([]byte(`
 database:
   host: (( awsparam "/myapp/prod/db/host" ))
   password: (( awssecret "myapp/prod/db:password" ))
 `))
-	
+
 	result, err := engine.Evaluate(context.Background(), doc)
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	output, _ := engine.ToYAML(result)
 	fmt.Println(string(output))
 }
@@ -259,7 +259,7 @@ database:
 // 		log.Fatal(err)
 // 	}
 // 	fmt.Println(string(output))
-// 	
+//
 // 	// Quick merge from files
 // 	output, err = QuickMergeFiles("base.yml", "production.yml")
 // 	if err != nil {
@@ -283,7 +283,7 @@ func (o *CustomUppercaseOperator) Run(ev *Evaluator, args []*Expr) (*Response, e
 	if len(args) != 1 {
 		return nil, NewOperatorError("uppercase", "requires exactly one argument", nil)
 	}
-	
+
 	value := args[0].String()
 	return &Response{
 		Type:  Replace,

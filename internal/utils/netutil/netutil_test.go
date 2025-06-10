@@ -20,14 +20,14 @@ func TestIPAdd(t *testing.T) {
 		{"IPv4 cross multiple boundaries", "192.168.1.1", 256, "192.168.2.1"},
 		{"IPv4 large offset", "10.0.0.0", 65536, "10.1.0.0"},
 		{"IPv4 from zero", "0.0.0.0", 16843009, "1.1.1.1"},
-		
+
 		// IPv6 tests
 		{"IPv6 simple add", "2001:db8::1", 1, "2001:db8::2"},
 		{"IPv6 add zero", "2001:db8::1", 0, "2001:db8::1"},
 		{"IPv6 add negative", "2001:db8::10", -5, "2001:db8::b"},
 		{"IPv6 cross boundary", "2001:db8::ffff", 1, "2001:db8::1:0"},
 		{"IPv6 large offset", "2001:db8::", 65536, "2001:db8::1:0"},
-		
+
 		// Edge cases
 		{"IPv4 max address", "255.255.255.254", 1, "255.255.255.255"},
 		{"IPv4 negative from start", "10.0.0.5", -5, "10.0.0.0"},

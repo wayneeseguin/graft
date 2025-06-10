@@ -3,8 +3,8 @@ package graft
 import (
 	"testing"
 
-	"github.com/wayneeseguin/graft/internal/utils/tree"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 func TestIsUnderPath(t *testing.T) {
@@ -17,22 +17,22 @@ func TestIsUnderPath(t *testing.T) {
 					},
 				},
 			}
-			
+
 			So(ev.isUnderPath("params", "params"), ShouldBeTrue)
 			So(ev.isUnderPath("params.username", "params"), ShouldBeTrue)
 			So(ev.isUnderPath("params.username", "params.username"), ShouldBeTrue)
 		})
-		
+
 		Convey("Should not match unrelated paths", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{},
 			}
-			
+
 			So(ev.isUnderPath("meta", "params"), ShouldBeFalse)
 			So(ev.isUnderPath("params", "params.username"), ShouldBeFalse) // Shorter path
 			So(ev.isUnderPath("other.field", "params"), ShouldBeFalse)
 		})
-		
+
 		Convey("Should handle nested paths correctly", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{
@@ -43,12 +43,12 @@ func TestIsUnderPath(t *testing.T) {
 					},
 				},
 			}
-			
+
 			So(ev.isUnderPath("meta.environment.name", "meta"), ShouldBeTrue)
 			So(ev.isUnderPath("meta.environment.name", "meta.environment"), ShouldBeTrue)
 			So(ev.isUnderPath("meta.environment", "meta.environment.name"), ShouldBeFalse)
 		})
-		
+
 		Convey("Should handle numeric array indices", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{
@@ -58,13 +58,13 @@ func TestIsUnderPath(t *testing.T) {
 					},
 				},
 			}
-			
+
 			So(ev.isUnderPath("instances.0", "instances"), ShouldBeTrue)
 			So(ev.isUnderPath("instances.1", "instances"), ShouldBeTrue)
 			So(ev.isUnderPath("instances.0.port", "instances.0"), ShouldBeTrue)
 			So(ev.isUnderPath("instances.1.port", "instances.0"), ShouldBeFalse)
 		})
-		
+
 		Convey("Should handle named array entries", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{
@@ -74,29 +74,29 @@ func TestIsUnderPath(t *testing.T) {
 					},
 				},
 			}
-			
+
 			// Named entries should match their numeric indices
 			So(ev.isUnderPath("jobs.0", "jobs.web-server"), ShouldBeTrue)
 			So(ev.isUnderPath("jobs.web-server", "jobs.0"), ShouldBeTrue)
 			So(ev.isUnderPath("jobs.1", "jobs.api-server"), ShouldBeTrue)
 			So(ev.isUnderPath("jobs.0.instances", "jobs.web-server"), ShouldBeTrue)
-			
+
 			// Wrong matches should fail
 			So(ev.isUnderPath("jobs.0", "jobs.api-server"), ShouldBeFalse)
 			So(ev.isUnderPath("jobs.1", "jobs.web-server"), ShouldBeFalse)
 		})
-		
+
 		Convey("Should handle invalid paths gracefully", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{},
 			}
-			
+
 			// Invalid path syntax should return false
 			So(ev.isUnderPath("", "params"), ShouldBeFalse)
 			So(ev.isUnderPath("params", ""), ShouldBeFalse)
 			So(ev.isUnderPath("", ""), ShouldBeFalse)
 		})
-		
+
 		Convey("Should handle mixed path types", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{
@@ -111,13 +111,13 @@ func TestIsUnderPath(t *testing.T) {
 					},
 				},
 			}
-			
+
 			// Mix of named and numeric indices
 			So(ev.isUnderPath("networks.0.subnets.0", "networks.default"), ShouldBeTrue)
 			So(ev.isUnderPath("networks.default.subnets.1", "networks.0"), ShouldBeTrue)
 			So(ev.isUnderPath("networks.0.subnets.1.range", "networks.default.subnets"), ShouldBeTrue)
 		})
-		
+
 		Convey("Should handle edge cases", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{
@@ -128,12 +128,12 @@ func TestIsUnderPath(t *testing.T) {
 					},
 				},
 			}
-			
+
 			// Single character paths
 			So(ev.isUnderPath("a", "a"), ShouldBeTrue)
 			So(ev.isUnderPath("a.b", "a"), ShouldBeTrue)
 			So(ev.isUnderPath("a.b.c", "a"), ShouldBeTrue)
-			
+
 			// Path with numbers as keys (not indices)
 			ev.Tree = map[interface{}]interface{}{
 				"123": map[interface{}]interface{}{
@@ -142,7 +142,7 @@ func TestIsUnderPath(t *testing.T) {
 			}
 			So(ev.isUnderPath("123.456", "123"), ShouldBeTrue)
 		})
-		
+
 		Convey("Should handle deeply nested structures", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{
@@ -165,23 +165,23 @@ func TestIsUnderPath(t *testing.T) {
 					},
 				},
 			}
-			
+
 			// Deep path matching
 			So(ev.isUnderPath("level1.level2.0.level3.level4.0.data.value", "level1"), ShouldBeTrue)
 			So(ev.isUnderPath("level1.level2.first.level3.level4.item1.data", "level1.level2"), ShouldBeTrue)
 			So(ev.isUnderPath("level1.level2.0.level3", "level1.level2.first"), ShouldBeTrue)
-			
+
 			// Mixed numeric and named indices
 			So(ev.isUnderPath("level1.level2.first.level3.level4.0", "level1.level2.0.level3"), ShouldBeTrue)
 		})
-		
+
 		Convey("Should handle complex real-world structures", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{
 					"instance_groups": []interface{}{
 						map[interface{}]interface{}{
 							"name": "web",
-							"azs": []interface{}{"z1", "z2"},
+							"azs":  []interface{}{"z1", "z2"},
 							"jobs": []interface{}{
 								map[interface{}]interface{}{
 									"name": "nginx",
@@ -189,7 +189,7 @@ func TestIsUnderPath(t *testing.T) {
 										"port": 80,
 										"ssl": map[interface{}]interface{}{
 											"enabled": true,
-											"cert": "(( vault secret/certs:cert ))",
+											"cert":    "(( vault secret/certs:cert ))",
 										},
 									},
 								},
@@ -197,7 +197,7 @@ func TestIsUnderPath(t *testing.T) {
 						},
 						map[interface{}]interface{}{
 							"name": "database",
-							"azs": []interface{}{"z1"},
+							"azs":  []interface{}{"z1"},
 							"jobs": []interface{}{
 								map[interface{}]interface{}{
 									"name": "postgres",
@@ -210,19 +210,19 @@ func TestIsUnderPath(t *testing.T) {
 					},
 				},
 			}
-			
+
 			// Cherry-pick specific instance group
 			So(ev.isUnderPath("instance_groups.0.jobs.0.properties.ssl.cert", "instance_groups.web"), ShouldBeTrue)
 			So(ev.isUnderPath("instance_groups.database.jobs.postgres.properties.port", "instance_groups.1"), ShouldBeTrue)
-			
+
 			// Cross-matching numeric and named
 			So(ev.isUnderPath("instance_groups.web.jobs.nginx", "instance_groups.0.jobs.0"), ShouldBeTrue)
-			
+
 			// Should not match different instance groups
 			So(ev.isUnderPath("instance_groups.0.jobs", "instance_groups.database"), ShouldBeFalse)
 			So(ev.isUnderPath("instance_groups.database.jobs", "instance_groups.web"), ShouldBeFalse)
 		})
-		
+
 		Convey("Should handle arrays within arrays", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{
@@ -238,7 +238,7 @@ func TestIsUnderPath(t *testing.T) {
 					},
 				},
 			}
-			
+
 			// Note: This might not work as expected with current implementation
 			// as tree.Cursor might not handle nested arrays well
 			So(ev.isUnderPath("matrix.0", "matrix"), ShouldBeTrue)
@@ -254,24 +254,24 @@ func TestSegmentsMatchWithContext(t *testing.T) {
 				Tree: map[interface{}]interface{}{},
 			}
 			cursor := &tree.Cursor{}
-			
+
 			So(ev.segmentsMatchWithContext("params", "params", cursor), ShouldBeTrue)
 			So(ev.segmentsMatchWithContext("0", "0", cursor), ShouldBeTrue)
 			So(ev.segmentsMatchWithContext("web-server", "web-server", cursor), ShouldBeTrue)
 		})
-		
+
 		Convey("Should match numeric indices correctly", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{},
 			}
 			cursor := &tree.Cursor{}
-			
+
 			So(ev.segmentsMatchWithContext("0", "0", cursor), ShouldBeTrue)
 			So(ev.segmentsMatchWithContext("1", "1", cursor), ShouldBeTrue)
 			So(ev.segmentsMatchWithContext("0", "1", cursor), ShouldBeFalse)
 			So(ev.segmentsMatchWithContext("10", "10", cursor), ShouldBeTrue)
 		})
-		
+
 		Convey("Should match named entries with numeric indices", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{
@@ -281,22 +281,22 @@ func TestSegmentsMatchWithContext(t *testing.T) {
 					},
 				},
 			}
-			
+
 			// Create cursor pointing to jobs array
 			cursor := &tree.Cursor{}
 			cursor.Push("jobs")
-			
+
 			// Numeric index should match named entry
 			So(ev.segmentsMatchWithContext("0", "web", cursor), ShouldBeTrue)
 			So(ev.segmentsMatchWithContext("web", "0", cursor), ShouldBeTrue)
 			So(ev.segmentsMatchWithContext("1", "api", cursor), ShouldBeTrue)
 			So(ev.segmentsMatchWithContext("api", "1", cursor), ShouldBeTrue)
-			
+
 			// Wrong matches
 			So(ev.segmentsMatchWithContext("0", "api", cursor), ShouldBeFalse)
 			So(ev.segmentsMatchWithContext("1", "web", cursor), ShouldBeFalse)
 		})
-		
+
 		Convey("Should handle arrays with id field", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{
@@ -306,15 +306,15 @@ func TestSegmentsMatchWithContext(t *testing.T) {
 					},
 				},
 			}
-			
+
 			cursor := &tree.Cursor{}
 			cursor.Push("resources")
-			
+
 			// Should match by id field
 			So(ev.segmentsMatchWithContext("0", "db-1", cursor), ShouldBeTrue)
 			So(ev.segmentsMatchWithContext("1", "cache-1", cursor), ShouldBeTrue)
 		})
-		
+
 		Convey("Should handle non-array contexts", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{
@@ -323,27 +323,27 @@ func TestSegmentsMatchWithContext(t *testing.T) {
 					},
 				},
 			}
-			
+
 			cursor := &tree.Cursor{}
 			cursor.Push("config")
-			
+
 			// When not in array context, only exact matches work
 			So(ev.segmentsMatchWithContext("port", "port", cursor), ShouldBeTrue)
 			So(ev.segmentsMatchWithContext("0", "port", cursor), ShouldBeFalse)
 			So(ev.segmentsMatchWithContext("port", "0", cursor), ShouldBeFalse)
 		})
-		
+
 		Convey("Should handle empty cursor", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{},
 			}
 			cursor := &tree.Cursor{}
-			
+
 			// With empty cursor, only exact matches work
 			So(ev.segmentsMatchWithContext("test", "test", cursor), ShouldBeTrue)
 			So(ev.segmentsMatchWithContext("0", "test", cursor), ShouldBeFalse)
 		})
-		
+
 		Convey("Should handle missing name fields", func() {
 			ev := &Evaluator{
 				Tree: map[interface{}]interface{}{
@@ -353,10 +353,10 @@ func TestSegmentsMatchWithContext(t *testing.T) {
 					},
 				},
 			}
-			
+
 			cursor := &tree.Cursor{}
 			cursor.Push("items")
-			
+
 			// Without name fields, numeric indices don't match names
 			So(ev.segmentsMatchWithContext("0", "something", cursor), ShouldBeFalse)
 			So(ev.segmentsMatchWithContext("1", "simple-string", cursor), ShouldBeFalse)

@@ -128,19 +128,19 @@ middleware:
 				services, err := result.GetSlice("services")
 				So(err, ShouldBeNil)
 				So(len(services), ShouldEqual, 1)
-				
+
 				service := services[0].(map[interface{}]interface{})
 				So(service["name"], ShouldEqual, "cache")
 				So(service["port"], ShouldEqual, 6379)
 			})
-			
+
 			Convey("And middleware array should be replaced due to mixed types", func() {
 				// When arrays contain mixed types (strings and objects), graft replaces
 				// instead of merging because it can't match simple strings to objects
 				middleware, err := result.GetSlice("middleware")
 				So(err, ShouldBeNil)
 				So(len(middleware), ShouldEqual, 3) // cors, metrics, tracing
-				
+
 				// Verify the content
 				corsMiddleware := middleware[0].(map[interface{}]interface{})
 				So(corsMiddleware["name"], ShouldEqual, "cors")
@@ -149,7 +149,7 @@ middleware:
 				So(middleware[2], ShouldEqual, "tracing")
 			})
 		})
-		
+
 		Convey("When merging with ReplaceArrays strategy", func() {
 			baseDoc, err := engine.ParseYAML(baseConfig)
 			So(err, ShouldBeNil)

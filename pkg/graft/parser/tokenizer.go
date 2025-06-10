@@ -17,21 +17,21 @@ const (
 	TokenEnvVar
 	TokenOpenParen
 	TokenCloseParen
-	TokenPlus       // Future
-	TokenMinus      // Future
-	TokenMultiply   // Future
-	TokenDivide     // Future
-	TokenModulo     // Future
-	TokenEquals     // Future
-	TokenNotEquals  // Future
-	TokenLessThan   // Future
-	TokenGreaterThan // Future
-	TokenLessEqual   // Future: <=
+	TokenPlus         // Future
+	TokenMinus        // Future
+	TokenMultiply     // Future
+	TokenDivide       // Future
+	TokenModulo       // Future
+	TokenEquals       // Future
+	TokenNotEquals    // Future
+	TokenLessThan     // Future
+	TokenGreaterThan  // Future
+	TokenLessEqual    // Future: <=
 	TokenGreaterEqual // Future: >=
-	TokenQuestion    // Future: ? (for ternary)
-	TokenColon       // Future: : (for ternary)
-	TokenPipe        // | for vault choice sub-operator
-	TokenAt          // @ for operator targets (e.g., vault@production)
+	TokenQuestion     // Future: ? (for ternary)
+	TokenColon        // Future: : (for ternary)
+	TokenPipe         // | for vault choice sub-operator
+	TokenAt           // @ for operator targets (e.g., vault@production)
 	TokenEOF
 	TokenUnknown
 )
@@ -121,22 +121,22 @@ func NewTokenizer(input string) *Tokenizer {
 func (t *Tokenizer) Tokenize() []Token {
 	t.tokens = make([]Token, 0, cap(t.tokens)) // Reuse existing capacity
 	var current strings.Builder
-	
+
 	for t.pos < len(t.input) {
 		ch := t.input[t.pos]
-		
+
 		if t.escaped {
 			t.handleEscaped(&current, ch)
 			t.advance()
 			continue
 		}
-		
+
 		if ch == '\\' {
 			t.escaped = true
 			t.advance()
 			continue
 		}
-		
+
 		if ch == '"' {
 			if t.inQuotes {
 				// End of quoted string
@@ -153,13 +153,13 @@ func (t *Tokenizer) Tokenize() []Token {
 			t.advance()
 			continue
 		}
-		
+
 		if t.inQuotes {
 			current.WriteByte(ch)
 			t.advance()
 			continue
 		}
-		
+
 		// Not in quotes - check for special characters and operators
 		switch ch {
 		case ' ', '\t', '\n', '\r':
@@ -169,22 +169,22 @@ func (t *Tokenizer) Tokenize() []Token {
 				t.col = 0
 			}
 			t.advance()
-			
+
 		case ',':
 			t.flushCurrent(&current)
 			t.addToken(",", TokenComma)
 			t.advance()
-			
+
 		case '(':
 			t.flushCurrent(&current)
 			t.addToken("(", TokenOpenParen)
 			t.advance()
-			
+
 		case ')':
 			t.flushCurrent(&current)
 			t.addToken(")", TokenCloseParen)
 			t.advance()
-			
+
 		case '|':
 			// Check for ||
 			if t.peek() == '|' {
@@ -200,7 +200,7 @@ func (t *Tokenizer) Tokenize() []Token {
 				t.addToken("|", TokenPipe)
 				t.advance()
 			}
-			
+
 		case '&':
 			// Check for && (future)
 			if t.peek() == '&' {
@@ -212,7 +212,7 @@ func (t *Tokenizer) Tokenize() []Token {
 				current.WriteByte(ch)
 				t.advance()
 			}
-			
+
 		case '=':
 			// Check for ==
 			if t.peek() == '=' {
@@ -224,7 +224,7 @@ func (t *Tokenizer) Tokenize() []Token {
 				current.WriteByte(ch)
 				t.advance()
 			}
-			
+
 		case '!':
 			// Check for !=
 			if t.peek() == '=' {
@@ -238,7 +238,7 @@ func (t *Tokenizer) Tokenize() []Token {
 				t.addToken("!", TokenOperator)
 				t.advance()
 			}
-			
+
 		case '<':
 			// Check for <=
 			if t.peek() == '=' {
@@ -251,7 +251,7 @@ func (t *Tokenizer) Tokenize() []Token {
 				t.addToken("<", TokenLessThan)
 				t.advance()
 			}
-			
+
 		case '>':
 			// Check for >=
 			if t.peek() == '=' {
@@ -264,12 +264,12 @@ func (t *Tokenizer) Tokenize() []Token {
 				t.addToken(">", TokenGreaterThan)
 				t.advance()
 			}
-			
+
 		case '+':
 			t.flushCurrent(&current)
 			t.addToken("+", TokenPlus)
 			t.advance()
-			
+
 		case '-':
 			// Check if this is part of an operator name or a standalone minus
 			if current.Len() > 0 && t.isOperatorChar(t.peek()) {
@@ -281,27 +281,27 @@ func (t *Tokenizer) Tokenize() []Token {
 				t.addToken("-", TokenMinus)
 				t.advance()
 			}
-			
+
 		case '*':
 			t.flushCurrent(&current)
 			t.addToken("*", TokenMultiply)
 			t.advance()
-			
+
 		case '/':
 			t.flushCurrent(&current)
 			t.addToken("/", TokenDivide)
 			t.advance()
-			
+
 		case '%':
 			t.flushCurrent(&current)
 			t.addToken("%", TokenModulo)
 			t.advance()
-			
+
 		case '?':
 			t.flushCurrent(&current)
 			t.addToken("?", TokenQuestion)
 			t.advance()
-			
+
 		case ':':
 			// Special handling for colons within operator names (e.g., vault:nocache)
 			if current.Len() > 0 && t.isOperatorChar(t.peek()) {
@@ -313,7 +313,7 @@ func (t *Tokenizer) Tokenize() []Token {
 				t.addToken(":", TokenColon)
 				t.advance()
 			}
-			
+
 		case '@':
 			// @ for operator targets (e.g., vault@production)
 			// Check if this is part of an operator@target expression
@@ -326,13 +326,13 @@ func (t *Tokenizer) Tokenize() []Token {
 				t.addToken("@", TokenAt)
 				t.advance()
 			}
-			
+
 		default:
 			current.WriteByte(ch)
 			t.advance()
 		}
 	}
-	
+
 	t.flushCurrent(&current)
 	return t.tokens
 }
@@ -353,8 +353,8 @@ func (t *Tokenizer) peek() byte {
 
 // isOperatorChar checks if a character could be part of an operator name
 func (t *Tokenizer) isOperatorChar(ch byte) bool {
-	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || 
-		   (ch >= '0' && ch <= '9') || ch == '-' || ch == '_'
+	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+		(ch >= '0' && ch <= '9') || ch == '-' || ch == '_'
 }
 
 // handleEscaped handles escaped characters
@@ -391,14 +391,14 @@ func (t *Tokenizer) classifyToken(value string) TokenType {
 	if strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`) {
 		return TokenLiteral
 	}
-	
+
 	// Check if it's an environment variable
 	// Environment variables start with $ followed by a letter or underscore
 	// This excludes $.something which is a reference to root
 	if strings.HasPrefix(value, "$") && len(value) > 1 && value[1] != '.' {
 		return TokenEnvVar
 	}
-	
+
 	// Check for special literals first (before operator check)
 	// For booleans, we need exact case matching
 	switch value {
@@ -409,7 +409,7 @@ func (t *Tokenizer) classifyToken(value string) TokenType {
 	case "True", "False":
 		return TokenLiteral
 	}
-	
+
 	// For nil values, check specific cases
 	switch value {
 	case "nil", "null", "~":
@@ -419,12 +419,12 @@ func (t *Tokenizer) classifyToken(value string) TokenType {
 	case "NIL", "NULL":
 		return TokenLiteral
 	}
-	
+
 	// Check if it's a registered operator
 	if IsRegisteredOperator(value) {
 		return TokenOperator
 	}
-	
+
 	// Check if it's an operator with modifiers (e.g., "vault:nocache")
 	if strings.Contains(value, ":") {
 		parts := strings.Split(value, ":")
@@ -432,7 +432,7 @@ func (t *Tokenizer) classifyToken(value string) TokenType {
 			return TokenOperator
 		}
 	}
-	
+
 	// Check if it's an operator with target (e.g., "vault@production")
 	if strings.Contains(value, "@") {
 		parts := strings.SplitN(value, "@", 2)
@@ -440,12 +440,12 @@ func (t *Tokenizer) classifyToken(value string) TokenType {
 			return TokenOperator
 		}
 	}
-	
+
 	// Check if it's a number
 	if isNumericString(value) {
 		return TokenLiteral
 	}
-	
+
 	// Default to reference
 	return TokenReference
 }
@@ -455,12 +455,12 @@ func isNumericString(s string) bool {
 	if s == "" {
 		return false
 	}
-	
+
 	// Handle negative numbers
 	if s[0] == '-' || s[0] == '+' {
 		s = s[1:]
 	}
-	
+
 	hasDecimal := false
 	for i, ch := range s {
 		if ch == '.' {
@@ -472,7 +472,7 @@ func isNumericString(s string) bool {
 			return false
 		}
 	}
-	
+
 	// Must have at least one digit
 	return len(s) > 0 && s != "."
 }
@@ -482,7 +482,7 @@ func (t *Tokenizer) addToken(value string, tokType TokenType) {
 	// For operators added directly, calculate position based on value length
 	pos := t.pos - len(value)
 	col := t.col - len(value)
-	
+
 	t.addTokenAt(value, tokType, pos, col)
 }
 
@@ -494,7 +494,7 @@ func (t *Tokenizer) addTokenAt(value string, tokType TokenType, pos, col int) {
 			value = InternString(value)
 		}
 	}
-	
+
 	t.tokens = append(t.tokens, Token{
 		Value: value,
 		Type:  tokType,

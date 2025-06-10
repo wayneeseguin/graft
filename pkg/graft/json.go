@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/geofffranks/simpleyaml"
+	"github.com/wayneeseguin/graft/internal/utils/ansi"
 	"io"
 	"os"
-	"github.com/wayneeseguin/graft/internal/utils/ansi"
-	"github.com/geofffranks/simpleyaml"
 )
 
 func jsonifyData(data []byte, strict bool) (string, error) {

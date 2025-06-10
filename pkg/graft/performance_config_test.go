@@ -1,4 +1,5 @@
 // TODO: Performance config tests removed - PerformanceConfig and related types not implemented
+//go:build ignore
 // +build ignore
 
 package graft

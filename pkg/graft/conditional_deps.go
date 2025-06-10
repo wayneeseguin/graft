@@ -23,7 +23,7 @@ type TrackedDependency struct {
 // ConditionalDependencies enhances the Expr type to track conditional dependencies
 func (e *Expr) ConditionalDependencies(ev *Evaluator, locs []*tree.Cursor) []*TrackedDependency {
 	deps := []*TrackedDependency{}
-	
+
 	switch e.Type {
 	case Reference:
 		if e.Reference != nil {
@@ -32,7 +32,7 @@ func (e *Expr) ConditionalDependencies(ev *Evaluator, locs []*tree.Cursor) []*Tr
 				Type: UnconditionalDependency,
 			})
 		}
-		
+
 	case OperatorCall:
 		if e.Call != nil {
 			// Get raw dependencies from the operator call
@@ -45,7 +45,7 @@ func (e *Expr) ConditionalDependencies(ev *Evaluator, locs []*tree.Cursor) []*Tr
 				})
 			}
 		}
-		
+
 	case LogicalOr:
 		// For || operator, track dependencies specially
 		if e.Left != nil {
@@ -53,12 +53,12 @@ func (e *Expr) ConditionalDependencies(ev *Evaluator, locs []*tree.Cursor) []*Tr
 			leftDeps := e.Left.ConditionalDependencies(ev, locs)
 			deps = append(deps, leftDeps...)
 		}
-		
+
 		if e.Right != nil {
 			// Right side dependencies are conditional
 			// They're only evaluated if left side fails
 			rightDeps := e.Right.ConditionalDependencies(ev, locs)
-			
+
 			// Check if left side is a literal - if so, right side won't execute
 			if e.Left != nil && e.Left.Type == Literal {
 				// Mark all right-side dependencies as conditional
@@ -66,10 +66,10 @@ func (e *Expr) ConditionalDependencies(ev *Evaluator, locs []*tree.Cursor) []*Tr
 					dep.Type = ConditionalDependency
 				}
 			}
-			
+
 			deps = append(deps, rightDeps...)
 		}
-		
+
 	default:
 		// For other types, check left and right expressions
 		if e.Left != nil {
@@ -79,7 +79,7 @@ func (e *Expr) ConditionalDependencies(ev *Evaluator, locs []*tree.Cursor) []*Tr
 			deps = append(deps, e.Right.ConditionalDependencies(ev, locs)...)
 		}
 	}
-	
+
 	return deps
 }
 

@@ -2,7 +2,7 @@ package graft
 
 import (
 	"fmt"
-	
+
 	"github.com/cppforlife/go-patch/patch"
 )
 

@@ -16,10 +16,10 @@ func NewMixedTypeHandler() *MixedTypeHandler {
 	handler := &MixedTypeHandler{
 		BaseTypeHandler: NewBaseTypeHandler(10), // Lower priority than specific type handlers
 	}
-	
+
 	// This handler can handle any type combination that other handlers don't support
 	// It uses CanHandle override instead of AddSupportedTypes
-	
+
 	return handler
 }
 
@@ -39,11 +39,11 @@ func (h *MixedTypeHandler) Add(a, b interface{}) (interface{}, error) {
 	if b == nil {
 		return a, nil
 	}
-	
+
 	// Try to convert to strings and concatenate as a fallback
 	aStr := toString(a)
 	bStr := toString(b)
-	
+
 	return aStr + bStr, nil
 }
 
@@ -68,7 +68,7 @@ func (h *MixedTypeHandler) Subtract(a, b interface{}) (interface{}, error) {
 	if b == nil {
 		return a, nil // a - null = a
 	}
-	
+
 	return nil, NotImplementedError("subtract", a, b)
 }
 
@@ -78,7 +78,7 @@ func (h *MixedTypeHandler) Multiply(a, b interface{}) (interface{}, error) {
 	if a == nil || b == nil {
 		return nil, nil
 	}
-	
+
 	return nil, NotImplementedError("multiply", a, b)
 }
 
@@ -91,7 +91,7 @@ func (h *MixedTypeHandler) Divide(a, b interface{}) (interface{}, error) {
 	if b == nil {
 		return nil, fmt.Errorf("division by null")
 	}
-	
+
 	return nil, NotImplementedError("divide", a, b)
 }
 
@@ -104,7 +104,7 @@ func (h *MixedTypeHandler) Modulo(a, b interface{}) (interface{}, error) {
 	if b == nil {
 		return nil, fmt.Errorf("modulo by null")
 	}
-	
+
 	return nil, NotImplementedError("modulo", a, b)
 }
 
@@ -117,7 +117,7 @@ func (h *MixedTypeHandler) Equal(a, b interface{}) (bool, error) {
 	if a == nil || b == nil {
 		return false, nil
 	}
-	
+
 	// Try type coercion for common cases
 	if canCoerceToNumber(a) && canCoerceToNumber(b) {
 		aNum, aErr := toNumeric(a)
@@ -129,12 +129,12 @@ func (h *MixedTypeHandler) Equal(a, b interface{}) (bool, error) {
 			return aFloat == bFloat, nil
 		}
 	}
-	
+
 	// Try string comparison as fallback
 	if canCoerceToString(a) && canCoerceToString(b) {
 		return toString(a) == toString(b), nil
 	}
-	
+
 	// Use deep equality as final fallback
 	return reflect.DeepEqual(a, b), nil
 }
@@ -160,7 +160,7 @@ func (h *MixedTypeHandler) Less(a, b interface{}) (bool, error) {
 	if b == nil {
 		return false, nil
 	}
-	
+
 	// Try numeric comparison
 	if canCoerceToNumber(a) && canCoerceToNumber(b) {
 		aNum, aErr := toNumeric(a)
@@ -169,14 +169,14 @@ func (h *MixedTypeHandler) Less(a, b interface{}) (bool, error) {
 			return compareNumbers(aNum, bNum) < 0, nil
 		}
 	}
-	
+
 	// Try string comparison only if both are actually strings or string-like
 	aStr, aIsStr := a.(string)
 	bStr, bIsStr := b.(string)
 	if aIsStr && bIsStr {
 		return aStr < bStr, nil
 	}
-	
+
 	return false, NotImplementedError("less", a, b)
 }
 
@@ -192,7 +192,7 @@ func (h *MixedTypeHandler) Greater(a, b interface{}) (bool, error) {
 	if b == nil {
 		return true, nil
 	}
-	
+
 	// Try numeric comparison
 	if canCoerceToNumber(a) && canCoerceToNumber(b) {
 		aNum, aErr := toNumeric(a)
@@ -201,14 +201,14 @@ func (h *MixedTypeHandler) Greater(a, b interface{}) (bool, error) {
 			return compareNumbers(aNum, bNum) > 0, nil
 		}
 	}
-	
+
 	// Try string comparison only if both are actually strings or string-like
 	aStr, aIsStr := a.(string)
 	bStr, bIsStr := b.(string)
 	if aIsStr && bIsStr {
 		return aStr > bStr, nil
 	}
-	
+
 	return false, NotImplementedError("greater", a, b)
 }
 
@@ -218,7 +218,7 @@ func (h *MixedTypeHandler) LessOrEqual(a, b interface{}) (bool, error) {
 	if err == nil && equal {
 		return true, nil
 	}
-	
+
 	return h.Less(a, b)
 }
 
@@ -228,7 +228,7 @@ func (h *MixedTypeHandler) GreaterOrEqual(a, b interface{}) (bool, error) {
 	if err == nil && equal {
 		return true, nil
 	}
-	
+
 	return h.Greater(a, b)
 }
 
@@ -239,7 +239,7 @@ func toString(val interface{}) string {
 	if val == nil {
 		return ""
 	}
-	
+
 	switch v := val.(type) {
 	case string:
 		return v
@@ -264,7 +264,7 @@ func canCoerceToNumber(val interface{}) bool {
 	if val == nil {
 		return false
 	}
-	
+
 	switch v := val.(type) {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
 		return true
@@ -289,7 +289,7 @@ func canCoerceToString(val interface{}) bool {
 func compareNumbers(a, b interface{}) int {
 	aFloat := convertToFloat64(a)
 	bFloat := convertToFloat64(b)
-	
+
 	if aFloat < bFloat {
 		return -1
 	} else if aFloat > bFloat {

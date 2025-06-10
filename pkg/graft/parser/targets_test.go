@@ -1,9 +1,9 @@
 package parser
 
 import (
-	"testing"
 	"github.com/wayneeseguin/graft/internal/utils/tree"
 	"github.com/wayneeseguin/graft/pkg/graft"
+	"testing"
 )
 
 // mockOperator is a simple mock for testing
@@ -27,11 +27,11 @@ func TestTokenizeTargetSyntax(t *testing.T) {
 	defer func() {
 		// Clean up
 		delete(graft.OpRegistry, "vault")
-		delete(graft.OpRegistry, "nats") 
+		delete(graft.OpRegistry, "nats")
 		delete(graft.OpRegistry, "awsparam")
 		delete(graft.OpRegistry, "awssecret")
 	}()
-	
+
 	// Test tokenization of @ symbol
 	tests := []struct {
 		input    string
@@ -54,15 +54,15 @@ func TestTokenizeTargetSyntax(t *testing.T) {
 	for _, test := range tests {
 		tokenizer := NewTokenizer(test.input)
 		tokens := tokenizer.Tokenize()
-		
+
 		if len(tokens) != len(test.expected) {
 			t.Errorf("Input '%s': expected %d tokens, got %d", test.input, len(test.expected), len(tokens))
 			continue
 		}
-		
+
 		for i, expectedType := range test.expected {
 			if tokens[i].Type != expectedType {
-				t.Errorf("Input '%s': token %d expected type %v, got %v (value: %s)", 
+				t.Errorf("Input '%s': token %d expected type %v, got %v (value: %s)",
 					test.input, i, expectedType, tokens[i].Type, tokens[i].Value)
 			}
 		}
@@ -78,30 +78,30 @@ func TestParseOperatorWithTarget(t *testing.T) {
 	defer func() {
 		// Clean up
 		delete(graft.OpRegistry, "vault")
-		delete(graft.OpRegistry, "nats") 
+		delete(graft.OpRegistry, "nats")
 		delete(graft.OpRegistry, "awsparam")
 		delete(graft.OpRegistry, "awssecret")
 	}()
-	
-	// Test parsing operator@target expressions  
+
+	// Test parsing operator@target expressions
 	tests := []struct {
-		input        string
+		input         string
 		shouldSucceed bool
 	}{
 		{
-			input:        "(( vault@production \"secret/path:key\" ))",
+			input:         "(( vault@production \"secret/path:key\" ))",
 			shouldSucceed: true,
 		},
 		{
-			input:        "(( nats@staging \"kv.bucket.key\" ))",
+			input:         "(( nats@staging \"kv.bucket.key\" ))",
 			shouldSucceed: true,
 		},
 		{
-			input:        "(( vault \"secret/path:key\" ))",
+			input:         "(( vault \"secret/path:key\" ))",
 			shouldSucceed: true,
 		},
 		{
-			input:        "(( awsparam@prod \"parameter-name\" ))",
+			input:         "(( awsparam@prod \"parameter-name\" ))",
 			shouldSucceed: true,
 		},
 	}
@@ -109,18 +109,18 @@ func TestParseOperatorWithTarget(t *testing.T) {
 	for _, test := range tests {
 		// Test ParseOpcall function directly
 		opcall, err := ParseOpcall(EvalPhase, test.input)
-		
+
 		if test.shouldSucceed {
 			if err != nil {
 				t.Errorf("Input '%s': expected success but got error: %v", test.input, err)
 				continue
 			}
-			
+
 			if opcall == nil {
 				t.Errorf("Input '%s': expected opcall but got nil", test.input)
 				continue
 			}
-			
+
 			// Just verify that we can parse the expression successfully
 			// The actual target extraction can be tested separately
 			t.Logf("Successfully parsed '%s'", test.input)
@@ -135,9 +135,9 @@ func TestParseOperatorWithTarget(t *testing.T) {
 func TestParseOpcallWithTarget(t *testing.T) {
 	// Test the ParseOpcall function directly
 	tests := []struct {
-		input          string
-		expectedOp     string
-		shouldSucceed  bool
+		input         string
+		expectedOp    string
+		shouldSucceed bool
 	}{
 		{
 			input:         "(( vault@production \"secret/path:key\" ))",
@@ -153,13 +153,13 @@ func TestParseOpcallWithTarget(t *testing.T) {
 
 	for _, test := range tests {
 		opcall, err := ParseOpcall(EvalPhase, test.input)
-		
+
 		if test.shouldSucceed {
 			if err != nil {
 				t.Errorf("Input '%s': expected success but got error: %v", test.input, err)
 				continue
 			}
-			
+
 			if opcall == nil {
 				t.Errorf("Input '%s': expected opcall but got nil", test.input)
 				continue

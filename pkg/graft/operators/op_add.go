@@ -17,12 +17,12 @@ func performAddition(left, right interface{}) (interface{}, error) {
 	// First try type-aware addition
 	leftType := GetOperandType(left)
 	rightType := GetOperandType(right)
-	
+
 	handler := GetGlobalTypeRegistry().FindHandler(leftType, rightType)
 	if handler != nil {
 		return handler.Add(left, right)
 	}
-	
+
 	// Fall back to legacy arithmetic
 	return performArithmetic(left, right, "+")
 }

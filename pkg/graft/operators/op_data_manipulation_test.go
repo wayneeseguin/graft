@@ -97,29 +97,29 @@ func TestGrabOperator(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				op := GrabOperator{}
 				ev := &Evaluator{Tree: tt.tree}
-				
+
 				cursor, err := tree.ParseCursor(tt.path)
 				if err != nil {
 					t.Fatalf("failed to parse cursor: %v", err)
 				}
-				
+
 				args := []*Expr{
 					{Type: Reference, Reference: cursor},
 				}
-				
+
 				resp, err := op.Run(ev, args)
-				
+
 				if tt.wantErr {
 					if err == nil {
 						t.Error("expected error but got none")
 					}
 					return
 				}
-				
+
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				
+
 				if resp.Value != tt.expected {
 					t.Errorf("expected %v, got %v", tt.expected, resp.Value)
 				}
@@ -134,31 +134,31 @@ func TestGrabOperator(t *testing.T) {
 			"key1": "value1",
 			"key2": "value2",
 		}}
-		
+
 		cursor1, _ := tree.ParseCursor("key1")
 		cursor2, _ := tree.ParseCursor("key2")
-		
+
 		args := []*Expr{
 			{Type: Reference, Reference: cursor1},
 			{Type: Reference, Reference: cursor2},
 			{Type: Literal, Literal: "literal"},
 		}
-		
+
 		resp, err := op.Run(ev, args)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		
+
 		result, ok := resp.Value.([]interface{})
 		if !ok {
 			t.Fatalf("expected array, got %T", resp.Value)
 		}
-		
+
 		expected := []interface{}{"value1", "value2", "literal"}
 		if len(result) != len(expected) {
 			t.Errorf("expected length %d, got %d", len(expected), len(result))
 		}
-		
+
 		for i, v := range expected {
 			if i < len(result) && result[i] != v {
 				t.Errorf("at index %d: expected %v, got %v", i, v, result[i])
@@ -170,7 +170,7 @@ func TestGrabOperator(t *testing.T) {
 		t.Run("empty path", func(t *testing.T) {
 			op := GrabOperator{}
 			ev := &Evaluator{Tree: map[interface{}]interface{}{}}
-			
+
 			_, err := op.Run(ev, []*Expr{})
 			if err == nil {
 				t.Error("expected error for empty arguments")
@@ -180,16 +180,16 @@ func TestGrabOperator(t *testing.T) {
 		t.Run("literal arguments pass through", func(t *testing.T) {
 			op := GrabOperator{}
 			ev := &Evaluator{Tree: map[interface{}]interface{}{}}
-			
+
 			args := []*Expr{
 				{Type: Literal, Literal: "literal value"},
 			}
-			
+
 			resp, err := op.Run(ev, args)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			
+
 			if resp.Value != "literal value" {
 				t.Errorf("expected literal value to pass through, got %v", resp.Value)
 			}
@@ -198,14 +198,14 @@ func TestGrabOperator(t *testing.T) {
 		t.Run("too many arguments", func(t *testing.T) {
 			op := GrabOperator{}
 			ev := &Evaluator{Tree: map[interface{}]interface{}{}}
-			
+
 			cursor, _ := tree.ParseCursor("path")
 			args := []*Expr{
 				{Type: Reference, Reference: cursor},
 				{Type: Literal, Literal: "fallback1"},
 				{Type: Literal, Literal: "fallback2"},
 			}
-			
+
 			_, err := op.Run(ev, args)
 			if err == nil {
 				t.Error("expected error for too many arguments")
@@ -216,19 +216,19 @@ func TestGrabOperator(t *testing.T) {
 	t.Run("dependencies", func(t *testing.T) {
 		op := GrabOperator{}
 		ev := &Evaluator{}
-		
+
 		cursor1, _ := tree.ParseCursor("foo.bar")
 		cursor2, _ := tree.ParseCursor("baz.qux")
-		
+
 		args := []*Expr{
 			{Type: Reference, Reference: cursor1},
 		}
-		
+
 		locs := []*tree.Cursor{}
 		auto := []*tree.Cursor{cursor2}
-		
+
 		deps := op.Dependencies(ev, args, locs, auto)
-		
+
 		// Should include the referenced path in dependencies
 		found := false
 		for _, dep := range deps {
@@ -237,7 +237,7 @@ func TestGrabOperator(t *testing.T) {
 				break
 			}
 		}
-		
+
 		if !found {
 			t.Error("expected foo.bar in dependencies")
 		}
@@ -279,17 +279,17 @@ func TestConcatOperator(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				op := ConcatOperator{}
 				ev := &Evaluator{}
-				
+
 				args := make([]*Expr, len(tt.args))
 				for i, arg := range tt.args {
 					args[i] = &Expr{Type: Literal, Literal: arg}
 				}
-				
+
 				resp, err := op.Run(ev, args)
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				
+
 				if resp.Value != tt.expected {
 					t.Errorf("expected %q, got %q", tt.expected, resp.Value)
 				}
@@ -334,17 +334,17 @@ func TestConcatOperator(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				op := ConcatOperator{}
 				ev := &Evaluator{}
-				
+
 				args := make([]*Expr, len(tt.args))
 				for i, arg := range tt.args {
 					args[i] = &Expr{Type: Literal, Literal: arg}
 				}
-				
+
 				resp, err := op.Run(ev, args)
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				
+
 				if resp.Value != tt.expected {
 					t.Errorf("expected %q, got %q", tt.expected, resp.Value)
 				}
@@ -380,17 +380,17 @@ func TestConcatOperator(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				op := ConcatOperator{}
 				ev := &Evaluator{}
-				
+
 				args := make([]*Expr, len(tt.args))
 				for i, arg := range tt.args {
 					args[i] = &Expr{Type: Literal, Literal: arg}
 				}
-				
+
 				resp, err := op.Run(ev, args)
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				
+
 				if resp.Value != tt.expected {
 					t.Errorf("expected %q, got %q", tt.expected, resp.Value)
 				}
@@ -402,7 +402,7 @@ func TestConcatOperator(t *testing.T) {
 		t.Run("no arguments", func(t *testing.T) {
 			op := ConcatOperator{}
 			ev := &Evaluator{}
-			
+
 			_, err := op.Run(ev, []*Expr{})
 			if err == nil {
 				t.Error("expected error for no arguments")
@@ -412,17 +412,17 @@ func TestConcatOperator(t *testing.T) {
 		t.Run("maps converted to string", func(t *testing.T) {
 			op := ConcatOperator{}
 			ev := &Evaluator{}
-			
+
 			args := []*Expr{
 				{Type: Literal, Literal: map[interface{}]interface{}{"a": 1}},
 				{Type: Literal, Literal: "string"},
 			}
-			
+
 			resp, err := op.Run(ev, args)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			
+
 			// Maps get converted to string representation
 			result := resp.Value.(string)
 			if !strings.Contains(result, "string") {
@@ -438,11 +438,11 @@ func TestInjectOperator(t *testing.T) {
 		t.Run("inject valid map", func(t *testing.T) {
 			op := InjectOperator{}
 			ev := &Evaluator{Tree: map[interface{}]interface{}{}}
-			
+
 			args := []*Expr{
 				{Type: Literal, Literal: map[interface{}]interface{}{"key": "value"}},
 			}
-			
+
 			_, err := op.Run(ev, args)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -452,11 +452,11 @@ func TestInjectOperator(t *testing.T) {
 		t.Run("inject nil causes error", func(t *testing.T) {
 			op := InjectOperator{}
 			ev := &Evaluator{Tree: map[interface{}]interface{}{}}
-			
+
 			args := []*Expr{
 				{Type: Literal, Literal: nil},
 			}
-			
+
 			_, err := op.Run(ev, args)
 			if err == nil {
 				t.Error("expected error for nil argument")
@@ -466,11 +466,11 @@ func TestInjectOperator(t *testing.T) {
 		t.Run("inject non-map value causes error", func(t *testing.T) {
 			op := InjectOperator{}
 			ev := &Evaluator{Tree: map[interface{}]interface{}{}}
-			
+
 			args := []*Expr{
 				{Type: Literal, Literal: "not a map"},
 			}
-			
+
 			_, err := op.Run(ev, args)
 			if err == nil {
 				t.Error("expected error for non-map argument")
@@ -481,7 +481,7 @@ func TestInjectOperator(t *testing.T) {
 	t.Run("argument validation", func(t *testing.T) {
 		op := InjectOperator{}
 		ev := &Evaluator{}
-		
+
 		// No arguments
 		_, err := op.Run(ev, []*Expr{})
 		if err == nil {
@@ -529,22 +529,22 @@ func TestDeferOperator(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				op := DeferOperator{}
 				ev := &Evaluator{}
-				
+
 				args := []*Expr{
 					{Type: Literal, Literal: tt.value},
 				}
-				
+
 				resp, err := op.Run(ev, args)
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				
+
 				// Defer operator returns the YAML representation
 				result, ok := resp.Value.(string)
 				if !ok {
 					t.Fatalf("expected string, got %T", resp.Value)
 				}
-				
+
 				if result != tt.expected {
 					t.Errorf("expected %q, got %q", tt.expected, result)
 				}
@@ -556,24 +556,24 @@ func TestDeferOperator(t *testing.T) {
 		t.Run("defer map", func(t *testing.T) {
 			op := DeferOperator{}
 			ev := &Evaluator{}
-			
+
 			args := []*Expr{
 				{Type: Literal, Literal: map[interface{}]interface{}{
 					"key": "value",
 					"num": int64(42),
 				}},
 			}
-			
+
 			resp, err := op.Run(ev, args)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			
+
 			result, ok := resp.Value.(string)
 			if !ok {
 				t.Fatalf("expected string, got %T", resp.Value)
 			}
-			
+
 			// Should be a graft expression
 			if !strings.HasPrefix(result, "((") || !strings.HasSuffix(result, "))") {
 				t.Errorf("expected graft expression format, got %q", result)
@@ -583,21 +583,21 @@ func TestDeferOperator(t *testing.T) {
 		t.Run("defer array", func(t *testing.T) {
 			op := DeferOperator{}
 			ev := &Evaluator{}
-			
+
 			args := []*Expr{
 				{Type: Literal, Literal: []interface{}{"a", "b", "c"}},
 			}
-			
+
 			resp, err := op.Run(ev, args)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			
+
 			result, ok := resp.Value.(string)
 			if !ok {
 				t.Fatalf("expected string, got %T", resp.Value)
 			}
-			
+
 			// Should be a graft expression
 			if !strings.HasPrefix(result, "((") || !strings.HasSuffix(result, "))") {
 				t.Errorf("expected graft expression format, got %q", result)
@@ -609,17 +609,17 @@ func TestDeferOperator(t *testing.T) {
 		t.Run("defer operator expression", func(t *testing.T) {
 			op := DeferOperator{}
 			ev := &Evaluator{}
-			
+
 			// Create an expression that looks like an operator
 			args := []*Expr{
 				{Type: Literal, Literal: "(( grab meta.value ))"},
 			}
-			
+
 			resp, err := op.Run(ev, args)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			
+
 			// Should wrap the string in a defer expression
 			expected := `(( "(( grab meta.value ))" ))`
 			if resp.Value != expected {
@@ -631,13 +631,13 @@ func TestDeferOperator(t *testing.T) {
 	t.Run("argument validation", func(t *testing.T) {
 		op := DeferOperator{}
 		ev := &Evaluator{}
-		
+
 		// No arguments
 		_, err := op.Run(ev, []*Expr{})
 		if err == nil {
 			t.Error("expected error for no arguments")
 		}
-		
+
 		// Multiple arguments are allowed for defer
 		_, err = op.Run(ev, []*Expr{
 			{Type: Literal, Literal: "value"},
@@ -668,7 +668,7 @@ func TestDataOperators_Performance(t *testing.T) {
 
 		op := GrabOperator{}
 		ev := &Evaluator{Tree: data}
-		
+
 		cursor, _ := tree.ParseCursor("level0.level1.level2.level3.level4.level5.level6.level7.level8.level9.value")
 		args := []*Expr{
 			{Type: Reference, Reference: cursor},
@@ -689,14 +689,14 @@ func TestDataOperators_Performance(t *testing.T) {
 			}
 		}
 		elapsed := time.Since(start)
-		
+
 		t.Logf("grab deep path: %d ns/op", elapsed.Nanoseconds()/int64(iterations))
 	})
 
 	t.Run("concat performance", func(t *testing.T) {
 		op := ConcatOperator{}
 		ev := &Evaluator{}
-		
+
 		// Test concatenating many strings
 		args := make([]*Expr, 100)
 		for i := 0; i < 100; i++ {
@@ -718,7 +718,7 @@ func TestDataOperators_Performance(t *testing.T) {
 			}
 		}
 		elapsed := time.Since(start)
-		
+
 		t.Logf("concat 100 strings: %d ns/op", elapsed.Nanoseconds()/int64(iterations))
 	})
 }

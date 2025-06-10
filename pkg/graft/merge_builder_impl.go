@@ -12,18 +12,18 @@ import (
 
 // mergeBuilderImpl implements the MergeBuilder interface
 type mergeBuilderImpl struct {
-	engine           Engine
-	ctx              context.Context
-	docs             []Document
-	pruneKeys        []string
-	cherryPickKeys   []string
-	skipEvaluation   bool
-	goPatch          bool
-	fallbackAppend   bool
-	arrayStrategy    ArrayMergeStrategy
-	error            error // Stores any error from construction
-	mergeMetadata    *merger.MergeMetadata // Accumulated metadata from merges
-	patchOps         []patch.Ops // Store parsed go-patch operations
+	engine         Engine
+	ctx            context.Context
+	docs           []Document
+	pruneKeys      []string
+	cherryPickKeys []string
+	skipEvaluation bool
+	goPatch        bool
+	fallbackAppend bool
+	arrayStrategy  ArrayMergeStrategy
+	error          error                 // Stores any error from construction
+	mergeMetadata  *merger.MergeMetadata // Accumulated metadata from merges
+	patchOps       []patch.Ops           // Store parsed go-patch operations
 }
 
 // WithPrune adds keys to remove from the final output
@@ -31,7 +31,7 @@ func (m *mergeBuilderImpl) WithPrune(keys ...string) MergeBuilder {
 	if m.error != nil {
 		return m // Propagate error
 	}
-	
+
 	newBuilder := *m // Copy the builder
 	newBuilder.pruneKeys = append(m.pruneKeys, keys...)
 	return &newBuilder
@@ -42,7 +42,7 @@ func (m *mergeBuilderImpl) WithCherryPick(keys ...string) MergeBuilder {
 	if m.error != nil {
 		return m // Propagate error
 	}
-	
+
 	newBuilder := *m // Copy the builder
 	newBuilder.cherryPickKeys = append(m.cherryPickKeys, keys...)
 	return &newBuilder
@@ -53,7 +53,7 @@ func (m *mergeBuilderImpl) SkipEvaluation() MergeBuilder {
 	if m.error != nil {
 		return m // Propagate error
 	}
-	
+
 	newBuilder := *m // Copy the builder
 	newBuilder.skipEvaluation = true
 	return &newBuilder
@@ -64,7 +64,7 @@ func (m *mergeBuilderImpl) EnableGoPatch() MergeBuilder {
 	if m.error != nil {
 		return m // Propagate error
 	}
-	
+
 	newBuilder := *m // Copy the builder
 	newBuilder.goPatch = true
 	return &newBuilder
@@ -75,7 +75,7 @@ func (m *mergeBuilderImpl) FallbackAppend() MergeBuilder {
 	if m.error != nil {
 		return m // Propagate error
 	}
-	
+
 	newBuilder := *m // Copy the builder
 	newBuilder.fallbackAppend = true
 	newBuilder.arrayStrategy = AppendArrays
@@ -87,7 +87,7 @@ func (m *mergeBuilderImpl) WithArrayMergeStrategy(strategy ArrayMergeStrategy) M
 	if m.error != nil {
 		return m // Propagate error
 	}
-	
+
 	newBuilder := *m // Copy the builder
 	newBuilder.arrayStrategy = strategy
 	// Update fallbackAppend based on strategy
@@ -121,7 +121,7 @@ func (m *mergeBuilderImpl) Execute() (Document, error) {
 		// For single documents, we need to validate arrays even without merging
 		// to match legacy behavior for Issue #172
 		data := m.docs[0].RawData().(map[interface{}]interface{})
-		
+
 		// Check if we need to use the merger:
 		// 1. If there are array operators AND we're not skipping evaluation
 		// 2. If there are arrays with maps (for validation warnings) AND we're not skipping evaluation
@@ -130,13 +130,13 @@ func (m *mergeBuilderImpl) Execute() (Document, error) {
 		useArrayOperators := m.hasArrayOperators(data) && !m.skipEvaluation
 		hasArraysWithMaps := m.hasArraysWithMaps(data) && !m.skipEvaluation
 		hasPruneOps := m.hasPruneOperators(data) && !m.skipEvaluation
-		
+
 		if useArrayOperators || hasArraysWithMaps || hasPruneOps {
 			// Process through merger for validation and/or array operators
 			mergerInstance := &merger.Merger{
 				AppendByDefault: m.fallbackAppend,
 			}
-			
+
 			// Create an empty base and merge our document into it
 			// This triggers the array validation logic
 			base := make(map[interface{}]interface{})
@@ -152,10 +152,10 @@ func (m *mergeBuilderImpl) Execute() (Document, error) {
 				}
 				return nil, err
 			}
-			
+
 			return m.applyPostProcessing(NewDocument(base))
 		}
-		
+
 		// No special processing needed, just clone
 		result := m.docs[0].Clone()
 		return m.applyPostProcessing(result)
@@ -201,7 +201,7 @@ func (m *mergeBuilderImpl) mergeDocuments() (Document, error) {
 		mergerInstance := &merger.Merger{
 			AppendByDefault: m.fallbackAppend,
 		}
-		
+
 		// Create an empty base and merge our first document into it
 		emptyBase := make(map[interface{}]interface{})
 		err := mergerInstance.Merge(emptyBase, baseData)
@@ -216,7 +216,7 @@ func (m *mergeBuilderImpl) mergeDocuments() (Document, error) {
 			}
 			return nil, err
 		}
-		
+
 		// Collect metadata from the merge
 		metadata := mergerInstance.GetMetadata()
 		if metadata != nil && (len(metadata.PrunePaths) > 0 || len(metadata.SortPaths) > 0) {
@@ -232,7 +232,7 @@ func (m *mergeBuilderImpl) mergeDocuments() (Document, error) {
 				m.mergeMetadata.SortPaths[k] = v
 			}
 		}
-		
+
 		// Use the processed result
 		result = emptyBase
 	}
@@ -269,20 +269,20 @@ func (m *mergeBuilderImpl) mergeInto(base, overlay map[interface{}]interface{}) 
 	// 3. There are prune operators in either base or overlay (they need special handling during merge)
 	// Note: When skipEvaluation is true, we need to preserve operators in the output,
 	// so we use a custom merge approach for arrays with operators
-	needLegacyMerger := (!m.skipEvaluation && m.hasArrayOperators(overlay)) || 
-		m.hasArraysWithMaps(overlay) || 
+	needLegacyMerger := (!m.skipEvaluation && m.hasArrayOperators(overlay)) ||
+		m.hasArraysWithMaps(overlay) ||
 		m.hasPruneOperators(overlay) ||
-		m.hasPruneOperators(base) ||  // Also check base for prune operators
+		m.hasPruneOperators(base) || // Also check base for prune operators
 		m.hasSortOperators(overlay)
-	
+
 	if needLegacyMerger {
 		mergerInstance := &merger.Merger{
 			AppendByDefault: m.fallbackAppend,
 		}
-		
+
 		// Create a copy of base to merge into
 		baseCopy := deepCopyMap(base)
-		
+
 		// Perform the merge
 		err := mergerInstance.Merge(baseCopy, overlay)
 		if err != nil {
@@ -296,7 +296,7 @@ func (m *mergeBuilderImpl) mergeInto(base, overlay map[interface{}]interface{}) 
 			}
 			return err
 		}
-		
+
 		// Collect metadata from the merge
 		metadata := mergerInstance.GetMetadata()
 		if metadata != nil && (len(metadata.PrunePaths) > 0 || len(metadata.SortPaths) > 0) {
@@ -312,18 +312,18 @@ func (m *mergeBuilderImpl) mergeInto(base, overlay map[interface{}]interface{}) 
 				m.mergeMetadata.SortPaths[k] = v
 			}
 		}
-		
+
 		// Copy result back to base
 		for key, value := range baseCopy {
 			base[key] = value
 		}
 		return nil
 	}
-	
+
 	// Use simple merging for cases without array operators
 	for key, overlayValue := range overlay {
 		baseValue, exists := base[key]
-		
+
 		if !exists {
 			// Key doesn't exist in base, add it
 			base[key] = deepCopyValue(overlayValue)
@@ -342,7 +342,7 @@ func (m *mergeBuilderImpl) mergeInto(base, overlay map[interface{}]interface{}) 
 			base[key] = merged
 		}
 	}
-	
+
 	return nil
 }
 
@@ -361,7 +361,7 @@ func (m *mergeBuilderImpl) mergeValues(base, overlay interface{}) (interface{}, 
 	// Handle map merging
 	baseMap, baseIsMap := base.(map[interface{}]interface{})
 	overlayMap, overlayIsMap := overlay.(map[interface{}]interface{})
-	
+
 	if baseIsMap && overlayIsMap {
 		result := deepCopyMap(baseMap)
 		err := m.mergeInto(result, overlayMap)
@@ -374,13 +374,13 @@ func (m *mergeBuilderImpl) mergeValues(base, overlay interface{}) (interface{}, 
 	// Handle array merging
 	baseArray, baseIsArray := base.([]interface{})
 	overlayArray, overlayIsArray := overlay.([]interface{})
-	
+
 	if baseIsArray && overlayIsArray {
 		// Special handling when skipEvaluation is true and array has operators
 		if m.skipEvaluation && m.arrayHasOperators(overlayArray) {
 			return m.mergeArraysPreservingOperators(baseArray, overlayArray), nil
 		}
-		
+
 		switch m.arrayStrategy {
 		case AppendArrays:
 			// Append arrays
@@ -415,7 +415,7 @@ func (m *mergeBuilderImpl) mergeArraysWithOperators(base, overlay []interface{})
 	// Use the existing merger package to handle array operators
 	baseMap := map[interface{}]interface{}{"array": base}
 	overlayMap := map[interface{}]interface{}{"array": overlay}
-	
+
 	result, err := merger.Merge(baseMap, overlayMap)
 	if err != nil {
 		// Preserve the original error message from the merger, but need to adjust path context
@@ -423,7 +423,7 @@ func (m *mergeBuilderImpl) mergeArraysWithOperators(base, overlay []interface{})
 		// For now, preserve as-is since the test might need updating for the new API
 		return nil, err
 	}
-	
+
 	// Extract the merged array
 	mergedArray, exists := result["array"]
 	if !exists {
@@ -439,7 +439,7 @@ func (m *mergeBuilderImpl) mergeArraysWithOperators(base, overlay []interface{})
 			return deepCopyValue(overlay), nil
 		}
 	}
-	
+
 	return mergedArray, nil
 }
 
@@ -589,7 +589,7 @@ func (m *mergeBuilderImpl) applyPostProcessing(doc Document) (Document, error) {
 			m.engine.GetOperatorState().AddPathToSort(path, order)
 		}
 	}
-	
+
 	// Apply evaluation if not skipped
 	if !m.skipEvaluation {
 		evaluated, err := m.applyEvaluation(result)
@@ -604,7 +604,7 @@ func (m *mergeBuilderImpl) applyPostProcessing(doc Document) (Document, error) {
 	// 2. Keys marked for pruning during evaluation via (( prune )) operator
 	allPruneKeys := make([]string, len(m.pruneKeys))
 	copy(allPruneKeys, m.pruneKeys)
-	
+
 	if m.engine != nil {
 		// Add keys marked for pruning during evaluation
 		evalPruneKeys := m.engine.GetOperatorState().GetKeysToPrune()
@@ -640,7 +640,7 @@ func (m *mergeBuilderImpl) applyPostProcessing(doc Document) (Document, error) {
 func (m *mergeBuilderImpl) applyGoPatch(doc Document) (Document, error) {
 	// Get the raw data
 	data := doc.RawData()
-	
+
 	// Apply each set of patch operations in order
 	for _, ops := range m.patchOps {
 		var err error
@@ -651,7 +651,7 @@ func (m *mergeBuilderImpl) applyGoPatch(doc Document) (Document, error) {
 			return nil, err
 		}
 	}
-	
+
 	// Ensure the result is a map
 	resultMap, ok := data.(map[interface{}]interface{})
 	if !ok {
@@ -665,7 +665,7 @@ func (m *mergeBuilderImpl) applyGoPatch(doc Document) (Document, error) {
 			return nil, fmt.Errorf("go-patch operations resulted in non-map data")
 		}
 	}
-	
+
 	return NewDocument(resultMap), nil
 }
 
@@ -689,7 +689,7 @@ func (m *mergeBuilderImpl) applyPruning(doc Document) (Document, error) {
 func (m *mergeBuilderImpl) applyCherryPicking(doc Document) (Document, error) {
 	data := doc.RawData().(map[interface{}]interface{})
 	result := make(map[interface{}]interface{})
-	
+
 	// Group cherry-pick paths by their parent
 	type arraySelection struct {
 		indices map[int]bool
@@ -701,11 +701,11 @@ func (m *mergeBuilderImpl) applyCherryPicking(doc Document) (Document, error) {
 	// First pass: categorize and group paths
 	for _, keyPath := range m.cherryPickKeys {
 		parts := strings.Split(keyPath, ".")
-		
+
 		if len(parts) >= 2 {
 			parentPath := strings.Join(parts[:len(parts)-1], ".")
 			lastPart := parts[len(parts)-1]
-			
+
 			parentValue, err := m.extractKey(data, parentPath)
 			if err == nil {
 				if arr, isArray := parentValue.([]interface{}); isArray {
@@ -739,18 +739,18 @@ func (m *mergeBuilderImpl) applyCherryPicking(doc Document) (Document, error) {
 				}
 			}
 		}
-		
+
 		// Not an array path or couldn't handle it
 		regularPaths = append(regularPaths, keyPath)
 	}
-	
+
 	// Second pass: extract array elements in their original order
 	for parentPath, selection := range arrayPaths {
 		parentValue, _ := m.extractKey(data, parentPath)
 		arr := parentValue.([]interface{})
-		
+
 		selectedItems := []interface{}{}
-		
+
 		// Iterate through the array in reverse order
 		// This matches the expected test behavior where higher indices come first
 		for i := len(arr) - 1; i >= 0; i-- {
@@ -760,7 +760,7 @@ func (m *mergeBuilderImpl) applyCherryPicking(doc Document) (Document, error) {
 				selectedItems = append(selectedItems, item)
 				continue
 			}
-			
+
 			// Check if this item has a name that's selected
 			if len(selection.names) > 0 {
 				for name := range selection.names {
@@ -771,13 +771,13 @@ func (m *mergeBuilderImpl) applyCherryPicking(doc Document) (Document, error) {
 				}
 			}
 		}
-		
+
 		err := m.setKey(result, parentPath, selectedItems)
 		if err != nil {
 			return nil, err
 		}
 	}
-	
+
 	// Handle regular paths
 	for _, path := range regularPaths {
 		value, err := m.extractKey(data, path)
@@ -815,7 +815,6 @@ func (m *mergeBuilderImpl) applyCherryPicking(doc Document) (Document, error) {
 	return NewDocument(result), nil
 }
 
-
 // applyEvaluation runs operator evaluation on the document
 func (m *mergeBuilderImpl) applyEvaluation(doc Document) (Document, error) {
 	// Use the engine's evaluate method if available
@@ -831,7 +830,7 @@ func (m *mergeBuilderImpl) applyEvaluation(doc Document) (Document, error) {
 
 	// Fallback: create basic evaluator (this should not happen in practice)
 	data := doc.RawData().(map[interface{}]interface{})
-	
+
 	// Create evaluator
 	evaluator := &Evaluator{
 		Tree: data,
@@ -853,7 +852,7 @@ func (m *mergeBuilderImpl) removeKey(data map[interface{}]interface{}, keyPath s
 	if keyPath == "" {
 		return nil
 	}
-	
+
 	// Split path by dots
 	parts := strings.Split(keyPath, ".")
 	if len(parts) == 1 {
@@ -861,12 +860,12 @@ func (m *mergeBuilderImpl) removeKey(data map[interface{}]interface{}, keyPath s
 		delete(data, keyPath)
 		return nil
 	}
-	
+
 	// Navigate to the parent of the target
 	var current interface{} = data
 	for i := 0; i < len(parts)-1; i++ {
 		part := parts[i]
-		
+
 		switch v := current.(type) {
 		case map[interface{}]interface{}:
 			value, exists := v[part]
@@ -898,10 +897,10 @@ func (m *mergeBuilderImpl) removeKey(data map[interface{}]interface{}, keyPath s
 			return NewValidationError(fmt.Sprintf("cannot navigate path '%s' at segment %d: '%s' is not a map or array", keyPath, i, part))
 		}
 	}
-	
+
 	// Now remove the final key/index
 	finalPart := parts[len(parts)-1]
-	
+
 	switch parent := current.(type) {
 	case map[interface{}]interface{}:
 		// Simple map key deletion
@@ -916,13 +915,13 @@ func (m *mergeBuilderImpl) removeKey(data map[interface{}]interface{}, keyPath s
 			// Index out of bounds, nothing to remove
 			return nil
 		}
-		
+
 		// Need to update the parent container that holds this array
 		// Go back one level to find the parent map
 		if len(parts) < 2 {
 			return NewValidationError("cannot prune array element at root level")
 		}
-		
+
 		// Re-navigate to get the parent map
 		var parentContainer interface{} = data
 		for i := 0; i < len(parts)-2; i++ {
@@ -933,7 +932,7 @@ func (m *mergeBuilderImpl) removeKey(data map[interface{}]interface{}, keyPath s
 				}
 			}
 		}
-		
+
 		// Now update the array in its parent map
 		if parentMap, ok := parentContainer.(map[interface{}]interface{}); ok {
 			arrayKey := parts[len(parts)-2]
@@ -946,7 +945,7 @@ func (m *mergeBuilderImpl) removeKey(data map[interface{}]interface{}, keyPath s
 	default:
 		return NewValidationError(fmt.Sprintf("cannot remove from type %T at path '%s'", current, keyPath))
 	}
-	
+
 	return nil
 }
 
@@ -963,7 +962,7 @@ func isNumericIndex(s string) (int, bool) {
 func findNamedArrayEntry(arr []interface{}, name string) (interface{}, int, bool) {
 	// Check common identifier keys in order of preference
 	identifierKeys := []string{"name", "id", "key"}
-	
+
 	for idx, entry := range arr {
 		// Only check map entries
 		switch v := entry.(type) {
@@ -981,7 +980,7 @@ func findNamedArrayEntry(arr []interface{}, name string) (interface{}, int, bool
 			}
 		}
 	}
-	
+
 	return nil, -1, false
 }
 
@@ -990,10 +989,10 @@ func (m *mergeBuilderImpl) extractKey(data map[interface{}]interface{}, keyPath 
 	if keyPath == "" {
 		return nil, NewValidationError("empty key path")
 	}
-	
+
 	// Split path by dots
 	parts := strings.Split(keyPath, ".")
-	
+
 	// Navigate through the structure
 	var current interface{} = data
 	for i, part := range parts {
@@ -1033,7 +1032,7 @@ func (m *mergeBuilderImpl) extractKey(data map[interface{}]interface{}, keyPath 
 			}
 		}
 	}
-	
+
 	return deepCopyValue(current), nil
 }
 
@@ -1042,21 +1041,21 @@ func (m *mergeBuilderImpl) setKey(data map[interface{}]interface{}, keyPath stri
 	if keyPath == "" {
 		return NewValidationError("empty key path")
 	}
-	
+
 	// Split path by dots
 	parts := strings.Split(keyPath, ".")
-	
+
 	// For simple keys, just set directly
 	if len(parts) == 1 {
 		data[keyPath] = value
 		return nil
 	}
-	
+
 	// Navigate to the parent map and set the final key
 	current := data
 	for i := 0; i < len(parts)-1; i++ {
 		part := parts[i]
-		
+
 		if next, exists := current[part]; exists {
 			switch v := next.(type) {
 			case map[interface{}]interface{}:
@@ -1079,7 +1078,7 @@ func (m *mergeBuilderImpl) setKey(data map[interface{}]interface{}, keyPath stri
 			current = newMap
 		}
 	}
-	
+
 	// Set the final value
 	finalKey := parts[len(parts)-1]
 	current[finalKey] = value
@@ -1124,9 +1123,9 @@ func (m *mergeBuilderImpl) mergeArraysPreservingOperators(base, overlay []interf
 	// base: [route, (( append )), cell]
 	// overlay: [cc_bridge, (( prepend )), consul]
 	// expected: [consul, cc_bridge, (( append )), cell]
-	
+
 	var result []interface{}
-	
+
 	// Check for prepend operator in overlay
 	prependIdx := -1
 	for i, item := range overlay {
@@ -1135,16 +1134,16 @@ func (m *mergeBuilderImpl) mergeArraysPreservingOperators(base, overlay []interf
 			break
 		}
 	}
-	
+
 	if prependIdx >= 0 {
 		// Items after prepend in overlay go to the beginning (in order)
 		afterPrepend := overlay[prependIdx+1:]
 		result = append(result, afterPrepend...)
-		
+
 		// Items before prepend in overlay
 		beforePrepend := overlay[:prependIdx]
 		result = append(result, beforePrepend...)
-		
+
 		// Now handle base array
 		// Look for append operator in base
 		appendIdx := -1
@@ -1154,14 +1153,14 @@ func (m *mergeBuilderImpl) mergeArraysPreservingOperators(base, overlay []interf
 				break
 			}
 		}
-		
+
 		if appendIdx >= 0 {
 			// Preserve the append operator and items after it
 			result = append(result, base[appendIdx:]...)
 		}
 	} else {
 		// No prepend, check for other operators
-		
+
 		// Check for replace
 		for _, item := range overlay {
 			if str, ok := item.(string); ok && strings.TrimSpace(str) == "(( replace ))" {
@@ -1169,7 +1168,7 @@ func (m *mergeBuilderImpl) mergeArraysPreservingOperators(base, overlay []interf
 				return deepCopyArray(overlay)
 			}
 		}
-		
+
 		// Check for append in overlay
 		appendIdx := -1
 		for i, item := range overlay {
@@ -1178,7 +1177,7 @@ func (m *mergeBuilderImpl) mergeArraysPreservingOperators(base, overlay []interf
 				break
 			}
 		}
-		
+
 		if appendIdx >= 0 {
 			// Start with base
 			result = append(result, base...)
@@ -1189,7 +1188,7 @@ func (m *mergeBuilderImpl) mergeArraysPreservingOperators(base, overlay []interf
 			result = deepCopyArray(overlay)
 		}
 	}
-	
+
 	return result
 }
 

@@ -2,10 +2,10 @@ package graft
 
 import (
 	"fmt"
+	"github.com/wayneeseguin/graft/internal/utils/ansi"
+	"github.com/wayneeseguin/graft/log"
 	"sort"
 	"strings"
-	"github.com/wayneeseguin/graft/log"
-	"github.com/wayneeseguin/graft/internal/utils/ansi"
 )
 
 // MultiError ...
@@ -42,18 +42,18 @@ func (e *MultiError) Append(err error) {
 	}
 }
 
-//WarningError should produce a warning message to stderr if the context set for
+// WarningError should produce a warning message to stderr if the context set for
 // the error fits the context the error was caught in.
 type WarningError struct {
 	warning string
 	context ErrorContext
 }
 
-//An ErrorContext is a flag or set of flags representing the contexts that
+// An ErrorContext is a flag or set of flags representing the contexts that
 // an error should have a special meaning in.
 type ErrorContext uint
 
-//Bitwise-or these together to represent several contexts
+// Bitwise-or these together to represent several contexts
 const (
 	eContextAll          = 0
 	eContextDefaultMerge = 1 << iota
@@ -61,7 +61,7 @@ const (
 
 var dontPrintWarning bool
 
-//NewWarningError returns a new WarningError object that has the given warning
+// NewWarningError returns a new WarningError object that has the given warning
 // message and context(s) assigned. Assigning no context should mean that all
 // contexts are active. Ansi library enabled.
 func NewWarningError(context ErrorContext, warning string, args ...interface{}) (err WarningError) {
@@ -70,25 +70,25 @@ func NewWarningError(context ErrorContext, warning string, args ...interface{}) 
 	return
 }
 
-//SilenceWarnings when called with true will make it so that warnings will not
+// SilenceWarnings when called with true will make it so that warnings will not
 // print when Warn is called. Calling it with false will make warnings visible
 // again. Warnings will print by default.
 func SilenceWarnings(should bool) {
 	dontPrintWarning = should
 }
 
-//Error will return the configured warning message as a string
+// Error will return the configured warning message as a string
 func (e WarningError) Error() string {
 	return e.warning
 }
 
-//HasContext returns true if the WarningError was configured with the given context (or all).
+// HasContext returns true if the WarningError was configured with the given context (or all).
 // False otherwise.
 func (e WarningError) HasContext(context ErrorContext) bool {
 	return e.context == 0 || (context&e.context > 0)
 }
 
-//Warn prints the configured warning to stderr.
+// Warn prints the configured warning to stderr.
 func (e WarningError) Warn() {
 	if !dontPrintWarning {
 		log.PrintfStdErr(ansi.Sprintf("@Y{warning:} %s\n", e.warning))
@@ -122,22 +122,22 @@ type ErrorType string
 const (
 	// ParseError indicates a YAML/JSON parsing error
 	ParseError ErrorType = "parse_error"
-	
+
 	// MergeError indicates an error during document merging
 	MergeError ErrorType = "merge_error"
-	
+
 	// EvaluationError indicates an error during operator evaluation
 	EvaluationError ErrorType = "evaluation_error"
-	
+
 	// OperatorError indicates an error with a specific operator
 	OperatorError ErrorType = "operator_error"
-	
+
 	// ConfigurationError indicates an invalid configuration
 	ConfigurationError ErrorType = "configuration_error"
-	
+
 	// ValidationError indicates invalid input or state
 	ValidationError ErrorType = "validation_error"
-	
+
 	// ExternalError indicates an error from external services (Vault, AWS)
 	ExternalError ErrorType = "external_error"
 )

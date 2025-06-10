@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wayneeseguin/graft/pkg/graft/parser"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wayneeseguin/graft/pkg/graft/parser"
 )
 
 func TestCacheKeyGeneration(t *testing.T) {

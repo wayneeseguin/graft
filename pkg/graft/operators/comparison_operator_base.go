@@ -115,7 +115,7 @@ func (c *ComparisonOperatorBase) Run(ev *graft.Evaluator, args []*graft.Expr) (*
 func (c *ComparisonOperatorBase) performLegacyComparison(left, right interface{}) (bool, error) {
 	// Use the original ComparisonOperator logic
 	op := &ComparisonOperator{op: c.op}
-	
+
 	switch c.op {
 	case "==":
 		return op.equal(left, right), nil
@@ -137,7 +137,7 @@ func (c *ComparisonOperatorBase) performLegacyComparison(left, right interface{}
 			return cmp >= 0, nil
 		}
 	}
-	
+
 	return false, fmt.Errorf("unknown comparison operator: %s", c.op)
 }
 

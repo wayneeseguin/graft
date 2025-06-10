@@ -8,17 +8,17 @@ import (
 type Precedence int
 
 const (
-	PrecedenceLowest Precedence = iota
-	PrecedenceTernary           // ? : (lowest precedence)
-	PrecedenceOr                // ||
-	PrecedenceAnd               // &&
-	PrecedenceEquality          // == !=
-	PrecedenceComparison        // < > <= >=
-	PrecedenceAdditive          // + -
-	PrecedenceMultiplicative    // * / %
-	PrecedenceUnary             // ! - (future)
-	PrecedenceCall              // operator calls
-	PrecedenceHighest           // literals, references, parentheses
+	PrecedenceLowest         Precedence = iota
+	PrecedenceTernary                   // ? : (lowest precedence)
+	PrecedenceOr                        // ||
+	PrecedenceAnd                       // &&
+	PrecedenceEquality                  // == !=
+	PrecedenceComparison                // < > <= >=
+	PrecedenceAdditive                  // + -
+	PrecedenceMultiplicative            // * / %
+	PrecedenceUnary                     // ! - (future)
+	PrecedenceCall                      // operator calls
+	PrecedenceHighest                   // literals, references, parentheses
 )
 
 // Associativity rules for operators
@@ -63,13 +63,13 @@ func NewOperatorRegistry() *OperatorRegistry {
 	registry := &OperatorRegistry{
 		operators: make(map[string]*OperatorInfo),
 	}
-	
+
 	// Populate with all known operators
 	for name, info := range OperatorInfoRegistry {
 		infoCopy := info // Copy to avoid pointer issues
 		registry.operators[name] = &infoCopy
 	}
-	
+
 	return registry
 }
 
@@ -417,16 +417,16 @@ func ValidateOperatorArgs(opName string, argCount int) error {
 	if !ok {
 		return fmt.Errorf("unknown operator: %s", opName)
 	}
-	
+
 	if argCount < info.MinArgs {
-		return fmt.Errorf("operator %s requires at least %d arguments, got %d", 
+		return fmt.Errorf("operator %s requires at least %d arguments, got %d",
 			opName, info.MinArgs, argCount)
 	}
-	
+
 	if info.MaxArgs != -1 && argCount > info.MaxArgs {
-		return fmt.Errorf("operator %s accepts at most %d arguments, got %d", 
+		return fmt.Errorf("operator %s accepts at most %d arguments, got %d",
 			opName, info.MaxArgs, argCount)
 	}
-	
+
 	return nil
 }

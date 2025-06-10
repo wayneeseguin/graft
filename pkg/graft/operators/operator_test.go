@@ -18,12 +18,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	vaultkv "github.com/cloudfoundry-community/vaultkv"
 	"github.com/geofffranks/simpleyaml"
+	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wayneeseguin/graft/internal/utils/ansi"
 	"github.com/wayneeseguin/graft/internal/utils/tree"
-	. "github.com/smartystreets/goconvey/convey"
 	"github.com/wayneeseguin/graft/pkg/graft"
-	vaultkv "github.com/cloudfoundry-community/vaultkv"
 )
 
 // TestEngine implements the minimal Engine interface for testing AWS operators
@@ -41,48 +41,56 @@ func (e *TestEngine) GetOperatorState() graft.OperatorState {
 }
 
 func (e *TestEngine) GetAWSSession() *session.Session { return e.session }
-func (e *TestEngine) GetSecretsManagerClient() secretsmanageriface.SecretsManagerAPI { return e.mockSecretsManager }
+func (e *TestEngine) GetSecretsManagerClient() secretsmanageriface.SecretsManagerAPI {
+	return e.mockSecretsManager
+}
 func (e *TestEngine) GetParameterStoreClient() ssmiface.SSMAPI {
 	return e.mockSSM
 }
 func (e *TestEngine) GetAWSSecretsCache() map[string]string { return e.awsSecretsCache }
-func (e *TestEngine) SetAWSSecretCache(key, value string) { e.awsSecretsCache[key] = value }
-func (e *TestEngine) GetAWSParamsCache() map[string]string { return e.awsParamsCache }
-func (e *TestEngine) SetAWSParamCache(key, value string) { e.awsParamsCache[key] = value }
-func (e *TestEngine) IsAWSSkipped() bool { return e.skipAws }
+func (e *TestEngine) SetAWSSecretCache(key, value string)   { e.awsSecretsCache[key] = value }
+func (e *TestEngine) GetAWSParamsCache() map[string]string  { return e.awsParamsCache }
+func (e *TestEngine) SetAWSParamCache(key, value string)    { e.awsParamsCache[key] = value }
+func (e *TestEngine) IsAWSSkipped() bool                    { return e.skipAws }
 
 // Stub methods for other OperatorState interface methods
-func (e *TestEngine) GetVaultClient() *vaultkv.KV { return nil }
-func (e *TestEngine) GetVaultCache() map[string]map[string]interface{} { return nil }
+func (e *TestEngine) GetVaultClient() *vaultkv.KV                            { return nil }
+func (e *TestEngine) GetVaultCache() map[string]map[string]interface{}       { return nil }
 func (e *TestEngine) SetVaultCache(path string, data map[string]interface{}) {}
-func (e *TestEngine) AddVaultRef(path string, keys []string) {}
-func (e *TestEngine) IsVaultSkipped() bool { return true }
-func (e *TestEngine) GetUsedIPs() map[string]string { return nil }
-func (e *TestEngine) SetUsedIP(key, ip string) {}
-func (e *TestEngine) AddKeyToPrune(key string) {}
-func (e *TestEngine) GetKeysToPrune() []string { return nil }
-func (e *TestEngine) AddPathToSort(path, order string) {}
-func (e *TestEngine) GetPathsToSort() map[string]string { return nil }
+func (e *TestEngine) AddVaultRef(path string, keys []string)                 {}
+func (e *TestEngine) IsVaultSkipped() bool                                   { return true }
+func (e *TestEngine) GetUsedIPs() map[string]string                          { return nil }
+func (e *TestEngine) SetUsedIP(key, ip string)                               {}
+func (e *TestEngine) AddKeyToPrune(key string)                               {}
+func (e *TestEngine) GetKeysToPrune() []string                               { return nil }
+func (e *TestEngine) AddPathToSort(path, order string)                       {}
+func (e *TestEngine) GetPathsToSort() map[string]string                      { return nil }
 
 // Stub methods for Engine interface
-func (e *TestEngine) ParseYAML(data []byte) (graft.Document, error) { return nil, nil }
-func (e *TestEngine) ParseJSON(data []byte) (graft.Document, error) { return nil, nil }
-func (e *TestEngine) ParseFile(path string) (graft.Document, error) { return nil, nil }
+func (e *TestEngine) ParseYAML(data []byte) (graft.Document, error)        { return nil, nil }
+func (e *TestEngine) ParseJSON(data []byte) (graft.Document, error)        { return nil, nil }
+func (e *TestEngine) ParseFile(path string) (graft.Document, error)        { return nil, nil }
 func (e *TestEngine) ParseReader(reader io.Reader) (graft.Document, error) { return nil, nil }
-func (e *TestEngine) Merge(ctx context.Context, docs ...graft.Document) graft.MergeBuilder { return nil }
+func (e *TestEngine) Merge(ctx context.Context, docs ...graft.Document) graft.MergeBuilder {
+	return nil
+}
 func (e *TestEngine) MergeFiles(ctx context.Context, paths ...string) graft.MergeBuilder { return nil }
-func (e *TestEngine) MergeReaders(ctx context.Context, readers ...io.Reader) graft.MergeBuilder { return nil }
-func (e *TestEngine) Evaluate(ctx context.Context, doc graft.Document) (graft.Document, error) { return nil, nil }
-func (e *TestEngine) ToYAML(doc graft.Document) ([]byte, error) { return nil, nil }
-func (e *TestEngine) ToJSON(doc graft.Document) ([]byte, error) { return nil, nil }
+func (e *TestEngine) MergeReaders(ctx context.Context, readers ...io.Reader) graft.MergeBuilder {
+	return nil
+}
+func (e *TestEngine) Evaluate(ctx context.Context, doc graft.Document) (graft.Document, error) {
+	return nil, nil
+}
+func (e *TestEngine) ToYAML(doc graft.Document) ([]byte, error)                      { return nil, nil }
+func (e *TestEngine) ToJSON(doc graft.Document) ([]byte, error)                      { return nil, nil }
 func (e *TestEngine) ToJSONIndent(doc graft.Document, indent string) ([]byte, error) { return nil, nil }
-func (e *TestEngine) RegisterOperator(name string, op graft.Operator) error { return nil }
-func (e *TestEngine) UnregisterOperator(name string) error { return nil }
-func (e *TestEngine) ListOperators() []string { return nil }
-func (e *TestEngine) GetOperator(name string) (graft.Operator, bool) { return nil, false }
-func (e *TestEngine) WithLogger(logger graft.Logger) graft.Engine { return e }
-func (e *TestEngine) WithVaultClient(client graft.VaultClient) graft.Engine { return e }
-func (e *TestEngine) WithAWSConfig(config graft.AWSConfig) graft.Engine { return e }
+func (e *TestEngine) RegisterOperator(name string, op graft.Operator) error          { return nil }
+func (e *TestEngine) UnregisterOperator(name string) error                           { return nil }
+func (e *TestEngine) ListOperators() []string                                        { return nil }
+func (e *TestEngine) GetOperator(name string) (graft.Operator, bool)                 { return nil, false }
+func (e *TestEngine) WithLogger(logger graft.Logger) graft.Engine                    { return e }
+func (e *TestEngine) WithVaultClient(client graft.VaultClient) graft.Engine          { return e }
+func (e *TestEngine) WithAWSConfig(config graft.AWSConfig) graft.Engine              { return e }
 
 // setEvaluatorEngine uses unsafe to set the private engine field
 func setEvaluatorEngine(ev *graft.Evaluator, engine graft.Engine) {
@@ -3461,7 +3469,7 @@ meta:
 
 	Convey("File Operator", t, func() {
 		op := FileOperator{}
-		
+
 		// Find the repository root by looking for go.mod
 		basedir, _ := os.Getwd()
 		repoRoot := basedir
@@ -3477,11 +3485,11 @@ meta:
 			}
 			repoRoot = parent
 		}
-		
+
 		// Use absolute paths based on repository root
 		testFilePath := filepath.Join(repoRoot, "assets/file_operator/test.txt")
 		sampleFilePath := filepath.Join(repoRoot, "assets/file_operator/sample.txt")
-		
+
 		ev := &Evaluator{
 			Tree: YAML(
 				fmt.Sprintf(`meta:
@@ -4687,7 +4695,7 @@ meta:
 			})
 			So(err, ShouldBeNil)
 			So(r, ShouldNotBeNil)
-			
+
 			So(r.Type, ShouldEqual, Replace)
 			So(r.Value.(string), ShouldEqual, "foo:bar,wom:bat")
 		})
@@ -4699,7 +4707,7 @@ meta:
 			})
 			So(err, ShouldBeNil)
 			So(r, ShouldNotBeNil)
-			
+
 			So(r.Type, ShouldEqual, Replace)
 			So(r.Value.(string), ShouldEqual, "foo:bar | wom:bat")
 		})
@@ -4713,7 +4721,7 @@ meta:
 			})
 			So(err, ShouldBeNil)
 			So(r, ShouldNotBeNil)
-			
+
 			So(r.Type, ShouldEqual, Replace)
 			So(r.Value.(string), ShouldEqual, "prefix,foo:bar,wom:bat,suffix")
 		})
@@ -4726,7 +4734,7 @@ meta:
 			})
 			So(err, ShouldBeNil)
 			So(r, ShouldNotBeNil)
-			
+
 			So(r.Type, ShouldEqual, Replace)
 			// meta.somestanza produces "foo:bar,wom:bat"
 			// meta.authorities is a list that should append its items
@@ -5182,7 +5190,7 @@ meta:
 			awsSecretsCache:    make(map[string]string),
 			skipAws:            false,
 		}
-		
+
 		// Set the engine on the evaluator
 		setEvaluatorEngine(ev, testEngine)
 

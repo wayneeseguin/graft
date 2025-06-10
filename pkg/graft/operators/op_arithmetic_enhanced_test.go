@@ -261,7 +261,7 @@ func TestArithmeticOperators_EdgeCases(t *testing.T) {
 				}
 
 				if resp.Value != tt.expected {
-					t.Errorf("expected %v (%T), got %v (%T)", 
+					t.Errorf("expected %v (%T), got %v (%T)",
 						tt.expected, tt.expected, resp.Value, resp.Value)
 				}
 			})
@@ -424,7 +424,7 @@ func TestArithmeticOperators_ErrorHandling(t *testing.T) {
 						return
 					}
 					if resp.Value != tt.expectResult {
-						t.Errorf("expected %v (%T), got %v (%T)", 
+						t.Errorf("expected %v (%T), got %v (%T)",
 							tt.expectResult, tt.expectResult, resp.Value, resp.Value)
 					}
 				}
@@ -532,7 +532,7 @@ func TestArithmeticOperators_ComplexExpressions(t *testing.T) {
 	t.Run("deeply nested operations", func(t *testing.T) {
 		// Test expression like: ((((1 + 2) * 3) - 4) / 2)
 		// Expected: (((3) * 3) - 4) / 2 = (9 - 4) / 2 = 5 / 2 = 2.5
-		
+
 		// Build nested expression programmatically
 		// This tests that operators handle nested expressions correctly
 		ev := &graft.Evaluator{

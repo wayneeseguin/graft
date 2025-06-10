@@ -2,12 +2,12 @@ package parser
 
 import (
 	"fmt"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
+	"github.com/wayneeseguin/graft/pkg/graft"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
-	"github.com/wayneeseguin/graft/pkg/graft"
-	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // UseParser is a feature flag to enable the new parser
@@ -32,20 +32,20 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 			Source:   originalSrc,
 		}
 	}
-	
-	inner := strings.TrimSpace(src[2:len(src)-2])
+
+	inner := strings.TrimSpace(src[2 : len(src)-2])
 	if inner == "" {
 		return nil, nil
 	}
-	
+
 	DEBUG("ParseOpcall: parsing '%s' (inner: '%s') in phase %v", src, inner, phase)
-	
+
 	// Check for special patterns that should be ignored
 	// ((!something)) - spiff-like bang notation
 	if strings.HasPrefix(inner, "!") {
 		return nil, nil
 	}
-	
+
 	// Try traditional operator patterns first
 	// But skip if the expression contains arithmetic/comparison operators
 	// EXCEPT for defer which needs special handling to preserve || in arguments
@@ -54,10 +54,10 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 	hasSpecialCharsOutsideQuotes := hasSpecialCharsOutsideQuotes(inner)
 	if isDeferOp || !hasSpecialCharsOutsideQuotes {
 		patterns := []string{
-			`^([a-zA-Z][a-zA-Z0-9_@-]*)\s*$`,         // op (no args) - includes @ for targets
-			`^([a-zA-Z][a-zA-Z0-9_@-]*)\s+(.*)$`,     // op args - includes @ for targets
+			`^([a-zA-Z][a-zA-Z0-9_@-]*)\s*$`,     // op (no args) - includes @ for targets
+			`^([a-zA-Z][a-zA-Z0-9_@-]*)\s+(.*)$`, // op args - includes @ for targets
 		}
-		
+
 		for _, pattern := range patterns {
 			re := regexp.MustCompile(pattern)
 			if m := re.FindStringSubmatch(inner); m != nil {
@@ -66,7 +66,7 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 				if len(m) > 2 {
 					argStr = strings.TrimSpace(m[2])
 				}
-				
+
 				// Check if it's a valid operator
 				// For operators with targets (e.g., vault@production), extract base operator name
 				baseOpName := opname
@@ -74,66 +74,66 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 					parts := strings.SplitN(opname, "@", 2)
 					baseOpName = parts[0]
 				}
-				
+
 				op := OperatorFor(baseOpName)
 				if op == nil {
 					// Unknown operator - skip
-						return nil, nil
+					return nil, nil
 				}
 				if _, ok := op.(*NullOperator); ok && argStr == "" {
 					// Not a real operator with no arguments - might be BOSH variable
 					return nil, nil
 				}
-				
+
 				// Check phase
 				if op.Phase() != phase {
 					// Wrong phase - ignore this operator
 					return nil, nil
 				}
-				
+
 				// Special handling for defer operator - use legacy parsing
 				if opname == "defer" && argStr != "" {
 					// For defer, we want to use the legacy argument parsing to preserve the original behavior
 					// This means we parse it like the old argify function would
 					return parseOpcallLegacyArgs(op, argStr, src, phase)
 				}
-				
+
 				// Parse arguments with the parser
 				args, err := ParseArguments(phase, argStr)
 				if err != nil {
 					return nil, err
 				}
-				
+
 				return graft.NewOpcall(op, args, src), nil
 			}
 		}
 	}
-	
+
 	// If no traditional operator pattern matched, try parsing as an expression
 	// This handles arithmetic expressions, comparisons, etc.
 	registry := createFullOperatorRegistry()
-	
+
 	tokenizer := NewTokenizer(inner)
 	tokens := tokenizer.Tokenize()
-	
+
 	DEBUG("ParseOpcall: tokenized '%s' into %d tokens", inner, len(tokens))
 	for i, tok := range tokens {
 		DEBUG("ParseOpcall:   token[%d]: '%s' (type=%v)", i, tok.Value, tok.Type)
 	}
-	
+
 	if len(tokens) == 0 {
 		return nil, nil
 	}
-	
+
 	parser := NewParser(tokens, registry).WithSource(originalSrc)
 	expr, err := parser.Parse()
 	if err != nil {
 		DEBUG("ParseOpcall: parser.Parse() error: %v", err)
 		return nil, err
 	}
-	
+
 	DEBUG("ParseOpcall: parsed expression type: %v", expr.Type)
-	
+
 	// Handle the parsed expression
 	if expr.Type == OperatorCall {
 		// It's an operator call (could be arithmetic, comparison, etc.)
@@ -143,14 +143,14 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 		for i, arg := range args {
 			DEBUG("ParseOpcall:   arg[%d]: type=%v, value=%v", i, arg.Type, arg.String())
 		}
-		
+
 		// For operators with targets (e.g., vault@production), extract base operator name
 		baseOpName := opname
 		if strings.Contains(opname, "@") {
 			parts := strings.SplitN(opname, "@", 2)
 			baseOpName = parts[0]
 		}
-		
+
 		op := OperatorFor(baseOpName)
 		if op == nil {
 			// Unknown operator
@@ -162,17 +162,17 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 			DEBUG("ParseOpcall: null operator '%s'", opname)
 			return nil, nil
 		}
-		
+
 		// Check phase
 		if op.Phase() != phase {
 			DEBUG("ParseOpcall: operator '%s' is in phase %v, wanted %v", opname, op.Phase(), phase)
 			return nil, nil
 		}
-		
+
 		DEBUG("ParseOpcall: returning operator '%s' with %d args", opname, len(args))
 		return graft.NewOpcall(op, args, src), nil
 	}
-	
+
 	// If it's just a simple reference and looks like a BOSH varname, ignore it
 	if expr.Type == Reference && expr.Reference != nil {
 		path := expr.Reference.String()
@@ -181,11 +181,11 @@ func ParseOpcall(phase OperatorPhase, src string) (*Opcall, error) {
 			return nil, nil
 		}
 	}
-	
+
 	// For other expression types (that aren't simple operator calls),
 	// we need to create a synthetic operator to evaluate them
 	// This includes LogicalOr expressions and direct literals
-	
+
 	// Create an expression wrapper operator that just evaluates the expression
 	return graft.NewOpcall(&ExpressionWrapperOperator{expr: expr}, []*Expr{}, src), nil
 }
@@ -195,23 +195,23 @@ func ParseArguments(phase OperatorPhase, src string) ([]*Expr, error) {
 	if src == "" {
 		return []*Expr{}, nil
 	}
-	
+
 	// Create operator registry with all known operators
 	registry := createOperatorRegistry()
-	
+
 	// For operators like concat that take multiple space-separated arguments,
 	// we can now use ParseMultiple to handle them properly
-	
+
 	// Use the parser to parse multiple arguments
 	tokenizer := NewTokenizer(src)
 	tokens := tokenizer.Tokenize()
-	
+
 	parser := NewParser(tokens, registry).WithSource(src)
 	args, err := parser.ParseMultiple()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Process expressions similar to the original argify
 	var final []*Expr
 	for _, e := range args {
@@ -224,7 +224,7 @@ func ParseArguments(phase OperatorPhase, src string) ([]*Expr, error) {
 				fmt.Fprintf(os.Stdout, "warning: %s\n", err)
 			}
 		}
-		
+
 		// Special case: preserve LogicalOr expressions for operators that can handle them
 		if e.Type == LogicalOr && reduced.Type != LogicalOr {
 			final = append(final, e) // Use original instead of reduced
@@ -232,21 +232,21 @@ func ParseArguments(phase OperatorPhase, src string) ([]*Expr, error) {
 			final = append(final, reduced)
 		}
 	}
-	
+
 	return final, nil
 }
 
 // createOperatorRegistry creates a registry with all known operators
 func createOperatorRegistry() *OperatorRegistry {
 	registry := NewOperatorRegistry()
-	
+
 	// Register all operators from the actual OpRegistry
 	for name, op := range OpRegistry {
 		// Determine min/max args based on operator type
 		// This is a heuristic approach since operators don't declare their arg counts
 		minArgs := 1
 		maxArgs := -1 // unlimited by default
-		
+
 		// Special cases based on known operators
 		switch name {
 		case "calc", "empty", "grab", "param", "defer", "stringify", "negate", "null":
@@ -279,10 +279,10 @@ func createOperatorRegistry() *OperatorRegistry {
 			minArgs = 1
 			maxArgs = 1
 		}
-		
+
 		// Get the phase from the operator
 		phase := op.Phase()
-		
+
 		// Register the operator
 		registry.Register(&OperatorInfo{
 			Name:       name,
@@ -292,7 +292,7 @@ func createOperatorRegistry() *OperatorRegistry {
 			Phase:      phase,
 		})
 	}
-	
+
 	return registry
 }
 
@@ -307,7 +307,7 @@ func IntegrateParser() {
 	if !UseParser {
 		return
 	}
-	
+
 	// Override the global ParseOpcall function
 	// This would require making ParseOpcall a variable, which is a bigger change
 	// For now, we'll need to update call sites individually
@@ -363,20 +363,20 @@ func (op *ExpressionWrapperOperator) Run(ev *Evaluator, args []*Expr) (*Response
 func parseOpcallLegacyArgs(op Operator, argStr string, src string, phase OperatorPhase) (*Opcall, error) {
 	// Use a simplified version of the legacy argify function
 	// The legacy argify builds a LogicalOr expression when it sees ||
-	
+
 	var final []*Expr
 	var left, opExpr *Expr
-	
+
 	// Split by whitespace, handling quoted strings
 	tokens := splitLegacyArgs(argStr)
-	
+
 	pop := func() {
 		if left != nil {
 			final = append(final, left)
 			left = nil
 		}
 	}
-	
+
 	push := func(e *Expr) {
 		if left == nil {
 			left = e
@@ -392,7 +392,7 @@ func parseOpcallLegacyArgs(op Operator, argStr string, src string, phase Operato
 		left = opExpr
 		opExpr = nil
 	}
-	
+
 	for _, token := range tokens {
 		if token == "||" {
 			if left == nil || opExpr != nil {
@@ -403,13 +403,13 @@ func parseOpcallLegacyArgs(op Operator, argStr string, src string, phase Operato
 			}
 			continue
 		}
-		
+
 		var expr *Expr
-		
+
 		// Check for quoted string
 		if strings.HasPrefix(token, `"`) && strings.HasSuffix(token, `"`) && len(token) >= 2 {
 			// Remove quotes
-			literal := token[1:len(token)-1]
+			literal := token[1 : len(token)-1]
 			expr = &Expr{Type: Literal, Literal: literal}
 		} else if strings.HasPrefix(token, "$") {
 			// Environment variable
@@ -442,16 +442,16 @@ func parseOpcallLegacyArgs(op Operator, argStr string, src string, phase Operato
 				expr = &Expr{Type: Literal, Literal: token}
 			}
 		}
-		
+
 		push(expr)
 	}
-	
+
 	pop()
 	if left != nil || opExpr != nil {
 		// Incomplete expression
 		return nil, fmt.Errorf("syntax error near: %s", argStr)
 	}
-	
+
 	return graft.NewOpcall(op, final, src), nil
 }
 
@@ -461,20 +461,20 @@ func splitLegacyArgs(src string) []string {
 	var current strings.Builder
 	inQuotes := false
 	escaped := false
-	
+
 	for _, ch := range src {
 		if escaped {
 			current.WriteRune(ch)
 			escaped = false
 			continue
 		}
-		
+
 		if ch == '\\' {
 			current.WriteRune(ch)
 			escaped = true
 			continue
 		}
-		
+
 		if ch == '"' {
 			current.WriteRune(ch)
 			if inQuotes {
@@ -488,12 +488,12 @@ func splitLegacyArgs(src string) []string {
 			}
 			continue
 		}
-		
+
 		if inQuotes {
 			current.WriteRune(ch)
 			continue
 		}
-		
+
 		// Outside quotes
 		if ch == ' ' || ch == '\t' {
 			if current.Len() > 0 {
@@ -504,12 +504,12 @@ func splitLegacyArgs(src string) []string {
 			current.WriteRune(ch)
 		}
 	}
-	
+
 	// Add any remaining token
 	if current.Len() > 0 {
 		tokens = append(tokens, current.String())
 	}
-	
+
 	return tokens
 }
 
@@ -517,23 +517,23 @@ func splitLegacyArgs(src string) []string {
 func hasSpecialCharsOutsideQuotes(s string) bool {
 	inQuotes := false
 	escaped := false
-	
+
 	for i, ch := range s {
 		if escaped {
 			escaped = false
 			continue
 		}
-		
+
 		if ch == '\\' {
 			escaped = true
 			continue
 		}
-		
+
 		if ch == '"' {
 			inQuotes = !inQuotes
 			continue
 		}
-		
+
 		if !inQuotes {
 			// Check for special chars outside quotes
 			if strings.ContainsRune("+-*/%<>=!&|?:", ch) {
@@ -552,6 +552,6 @@ func hasSpecialCharsOutsideQuotes(s string) bool {
 			}
 		}
 	}
-	
+
 	return false
 }

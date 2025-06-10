@@ -9,14 +9,14 @@ import (
 
 // ParserMemoizationCache caches parsing results to avoid re-parsing common patterns
 type ParserMemoizationCache struct {
-	exprCache    map[string]*MemoizedExpr
-	tokenCache   map[string][]Token
-	mu           sync.RWMutex
-	maxSize      int
-	ttl          time.Duration
-	hits         int64
-	misses       int64
-	evictions    int64
+	exprCache  map[string]*MemoizedExpr
+	tokenCache map[string][]Token
+	mu         sync.RWMutex
+	maxSize    int
+	ttl        time.Duration
+	hits       int64
+	misses     int64
+	evictions  int64
 }
 
 // MemoizedExpr represents a cached expression with metadata
@@ -41,10 +41,10 @@ var GlobalParserCache = NewParserMemoizationCache(10000, 30*time.Minute)
 // NewParserMemoizationCache creates a new parser memoization cache
 func NewParserMemoizationCache(maxSize int, ttl time.Duration) *ParserMemoizationCache {
 	return &ParserMemoizationCache{
-		exprCache: make(map[string]*MemoizedExpr),
+		exprCache:  make(map[string]*MemoizedExpr),
 		tokenCache: make(map[string][]Token),
-		maxSize:   maxSize,
-		ttl:       ttl,
+		maxSize:    maxSize,
+		ttl:        ttl,
 	}
 }
 
@@ -58,20 +58,20 @@ func (c *ParserMemoizationCache) CacheKey(input string, operatorRegistry *Operat
 func (c *ParserMemoizationCache) GetExpression(key string) (*Expr, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	cached, exists := c.exprCache[key]
 	if !exists {
 		c.misses++
 		return nil, false
 	}
-	
+
 	// Check TTL
 	if time.Since(cached.Timestamp) > c.ttl {
 		// Expired, but don't remove here (would need write lock)
 		c.misses++
 		return nil, false
 	}
-	
+
 	c.hits++
 	cached.HitCount++
 	return cached.Expr, true
@@ -81,12 +81,12 @@ func (c *ParserMemoizationCache) GetExpression(key string) (*Expr, bool) {
 func (c *ParserMemoizationCache) SetExpression(key string, expr *Expr) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	// Check if we need to evict
 	if len(c.exprCache) >= c.maxSize {
 		c.evictLRU()
 	}
-	
+
 	c.exprCache[key] = &MemoizedExpr{
 		Expr:      expr,
 		Timestamp: time.Now(),
@@ -98,12 +98,12 @@ func (c *ParserMemoizationCache) SetExpression(key string, expr *Expr) {
 func (c *ParserMemoizationCache) GetTokens(key string) ([]Token, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	tokens, exists := c.tokenCache[key]
 	if !exists {
 		return nil, false
 	}
-	
+
 	// Copy tokens to prevent modification
 	result := make([]Token, len(tokens))
 	copy(result, tokens)
@@ -114,12 +114,12 @@ func (c *ParserMemoizationCache) GetTokens(key string) ([]Token, bool) {
 func (c *ParserMemoizationCache) SetTokens(key string, tokens []Token) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	// Check if we need to evict from token cache
 	if len(c.tokenCache) >= c.maxSize {
 		c.evictTokensLRU()
 	}
-	
+
 	// Store a copy to prevent external modification
 	cached := make([]Token, len(tokens))
 	copy(cached, tokens)
@@ -131,17 +131,17 @@ func (c *ParserMemoizationCache) evictLRU() {
 	var oldestKey string
 	var oldestTime time.Time
 	var lowestHitCount int64 = -1
-	
+
 	// Find the oldest entry with lowest hit count
 	for key, cached := range c.exprCache {
-		if oldestKey == "" || cached.Timestamp.Before(oldestTime) || 
-		   (cached.Timestamp.Equal(oldestTime) && (lowestHitCount == -1 || cached.HitCount < lowestHitCount)) {
+		if oldestKey == "" || cached.Timestamp.Before(oldestTime) ||
+			(cached.Timestamp.Equal(oldestTime) && (lowestHitCount == -1 || cached.HitCount < lowestHitCount)) {
 			oldestKey = key
 			oldestTime = cached.Timestamp
 			lowestHitCount = cached.HitCount
 		}
 	}
-	
+
 	if oldestKey != "" {
 		delete(c.exprCache, oldestKey)
 		c.evictions++
@@ -161,13 +161,13 @@ func (c *ParserMemoizationCache) evictTokensLRU() {
 func (c *ParserMemoizationCache) GetMetrics() ParserCacheMetrics {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	total := c.hits + c.misses
 	hitRate := 0.0
 	if total > 0 {
 		hitRate = float64(c.hits) / float64(total)
 	}
-	
+
 	return ParserCacheMetrics{
 		Hits:      c.hits,
 		Misses:    c.misses,
@@ -181,7 +181,7 @@ func (c *ParserMemoizationCache) GetMetrics() ParserCacheMetrics {
 func (c *ParserMemoizationCache) Clear() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	c.exprCache = make(map[string]*MemoizedExpr)
 	c.tokenCache = make(map[string][]Token)
 	c.hits = 0
@@ -193,7 +193,7 @@ func (c *ParserMemoizationCache) Clear() {
 func (c *ParserMemoizationCache) CleanupExpired() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
+
 	now := time.Now()
 	for key, cached := range c.exprCache {
 		if now.Sub(cached.Timestamp) > c.ttl {
@@ -214,7 +214,7 @@ func NewMemoizedParser(input string, registry *OperatorRegistry) *MemoizedParser
 	// Check cache for tokens first
 	cache := GlobalParserCache
 	key := cache.CacheKey(input, registry)
-	
+
 	var tokens []Token
 	if cachedTokens, found := cache.GetTokens(key); found {
 		tokens = cachedTokens
@@ -224,13 +224,13 @@ func NewMemoizedParser(input string, registry *OperatorRegistry) *MemoizedParser
 		tokens = tokenizer.Tokenize()
 		cache.SetTokens(key, tokens)
 	}
-	
+
 	parser := NewParser(tokens, registry)
-	
+
 	return &MemoizedParser{
 		Parser: parser,
-		cache:          cache,
-		input:          input,
+		cache:  cache,
+		input:  input,
 	}
 }
 
@@ -238,21 +238,21 @@ func NewMemoizedParser(input string, registry *OperatorRegistry) *MemoizedParser
 func (mp *MemoizedParser) Parse() (*Expr, error) {
 	// Generate cache key
 	key := mp.cache.CacheKey(mp.input, mp.registry)
-	
+
 	// Check cache first
 	if expr, found := mp.cache.GetExpression(key); found {
 		return expr, nil
 	}
-	
+
 	// Parse normally
 	expr, err := mp.Parser.Parse()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Cache successful result
 	mp.cache.SetExpression(key, expr)
-	
+
 	return expr, nil
 }
 
@@ -260,17 +260,17 @@ func (mp *MemoizedParser) Parse() (*Expr, error) {
 func (p *Parser) WithMemoization(input string) *MemoizedParser {
 	return &MemoizedParser{
 		Parser: p,
-		cache:          GlobalParserCache,
-		input:          input,
+		cache:  GlobalParserCache,
+		input:  input,
 	}
 }
 
 // Common expression pattern detection for better caching
 type ExpressionPattern struct {
-	Pattern     string
-	Frequency   int64
-	LastSeen    time.Time
-	CacheHits   int64
+	Pattern   string
+	Frequency int64
+	LastSeen  time.Time
+	CacheHits int64
 }
 
 // PatternTracker tracks common expression patterns for cache optimization
@@ -288,10 +288,10 @@ var GlobalPatternTracker = &PatternTracker{
 func (pt *PatternTracker) RecordPattern(input string) {
 	pt.mu.Lock()
 	defer pt.mu.Unlock()
-	
+
 	// Normalize pattern (remove specific values, keep structure)
 	pattern := pt.NormalizePattern(input)
-	
+
 	if existing, found := pt.patterns[pattern]; found {
 		existing.Frequency++
 		existing.LastSeen = time.Now()
@@ -308,10 +308,10 @@ func (pt *PatternTracker) RecordPattern(input string) {
 func (pt *PatternTracker) NormalizePattern(input string) string {
 	// Simple pattern normalization: replace quoted strings and numbers with placeholders
 	normalized := input
-	
+
 	// Replace quoted strings
 	normalized = strings.ReplaceAll(normalized, `"[^"]*"`, `"STRING"`)
-	
+
 	// Replace numbers (simple regex-like replacement)
 	for i := 0; i < len(normalized); i++ {
 		if normalized[i] >= '0' && normalized[i] <= '9' {
@@ -325,7 +325,7 @@ func (pt *PatternTracker) NormalizePattern(input string) string {
 			}
 		}
 	}
-	
+
 	return normalized
 }
 
@@ -333,12 +333,12 @@ func (pt *PatternTracker) NormalizePattern(input string) string {
 func (pt *PatternTracker) GetTopPatterns(limit int) []*ExpressionPattern {
 	pt.mu.RLock()
 	defer pt.mu.RUnlock()
-	
+
 	patterns := make([]*ExpressionPattern, 0, len(pt.patterns))
 	for _, pattern := range pt.patterns {
 		patterns = append(patterns, pattern)
 	}
-	
+
 	// Simple bubble sort by frequency (good enough for small sets)
 	for i := 0; i < len(patterns)-1; i++ {
 		for j := 0; j < len(patterns)-i-1; j++ {
@@ -347,10 +347,10 @@ func (pt *PatternTracker) GetTopPatterns(limit int) []*ExpressionPattern {
 			}
 		}
 	}
-	
+
 	if limit > 0 && limit < len(patterns) {
 		patterns = patterns[:limit]
 	}
-	
+
 	return patterns
 }

@@ -31,7 +31,7 @@ func (pm *ProfileManager) ListProfiles() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading profiles directory: %w", err)
 	}
-	
+
 	var profiles []string
 	for _, entry := range entries {
 		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".yaml") {
@@ -39,35 +39,35 @@ func (pm *ProfileManager) ListProfiles() ([]string, error) {
 			profiles = append(profiles, profileName)
 		}
 	}
-	
+
 	return profiles, nil
 }
 
 // LoadProfile loads a profile by name
 func (pm *ProfileManager) LoadProfile(profileName string) (*Config, error) {
 	profilePath := filepath.Join("profiles", profileName+".yaml")
-	
+
 	data, err := profilesFS.ReadFile(profilePath)
 	if err != nil {
 		return nil, fmt.Errorf("reading profile %s: %w", profileName, err)
 	}
-	
+
 	// Start with default config
 	config := DefaultConfig()
-	
+
 	// Parse the profile configuration
 	if err := yaml.Unmarshal(data, config); err != nil {
 		return nil, fmt.Errorf("parsing profile %s: %w", profileName, err)
 	}
-	
+
 	// Set the profile name
 	config.Profile = profileName
-	
+
 	// Validate the configuration
 	if err := Validate(config); err != nil {
 		return nil, fmt.Errorf("validating profile %s: %w", profileName, err)
 	}
-	
+
 	return config, nil
 }
 
@@ -77,11 +77,11 @@ func (pm *ProfileManager) ApplyProfile(profileName string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Merge with current configuration
 	current := pm.manager.Get()
 	merged := MergeConfigs(current, profile)
-	
+
 	// Update configuration
 	return pm.manager.Update(func(cfg *Config) {
 		*cfg = *merged
@@ -94,15 +94,15 @@ func (pm *ProfileManager) CompareProfiles(profile1, profile2 string) (map[string
 	if err != nil {
 		return nil, fmt.Errorf("loading profile %s: %w", profile1, err)
 	}
-	
+
 	cfg2, err := pm.LoadProfile(profile2)
 	if err != nil {
 		return nil, fmt.Errorf("loading profile %s: %w", profile2, err)
 	}
-	
+
 	// Compare configurations
 	differences := make(map[string]interface{})
-	
+
 	// Compare performance settings
 	if cfg1.Performance.Cache.ExpressionCacheSize != cfg2.Performance.Cache.ExpressionCacheSize {
 		differences["performance.cache.expression_cache_size"] = map[string]int{
@@ -110,23 +110,23 @@ func (pm *ProfileManager) CompareProfiles(profile1, profile2 string) (map[string
 			profile2: cfg2.Performance.Cache.ExpressionCacheSize,
 		}
 	}
-	
+
 	if cfg1.Performance.Concurrency.MaxWorkers != cfg2.Performance.Concurrency.MaxWorkers {
 		differences["performance.concurrency.max_workers"] = map[string]int{
 			profile1: cfg1.Performance.Concurrency.MaxWorkers,
 			profile2: cfg2.Performance.Concurrency.MaxWorkers,
 		}
 	}
-	
+
 	if cfg1.Performance.Memory.MaxHeapSize != cfg2.Performance.Memory.MaxHeapSize {
 		differences["performance.memory.max_heap_size"] = map[string]int64{
 			profile1: cfg1.Performance.Memory.MaxHeapSize,
 			profile2: cfg2.Performance.Memory.MaxHeapSize,
 		}
 	}
-	
+
 	// Add more comparisons as needed
-	
+
 	return differences, nil
 }
 
@@ -136,11 +136,11 @@ func (pm *ProfileManager) RecommendProfile(characteristics ProfileCharacteristic
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Score each profile
 	bestProfile := "default"
 	bestScore := 0
-	
+
 	for _, profile := range profiles {
 		score := pm.scoreProfile(profile, characteristics)
 		if score > bestScore {
@@ -148,7 +148,7 @@ func (pm *ProfileManager) RecommendProfile(characteristics ProfileCharacteristic
 			bestProfile = profile
 		}
 	}
-	
+
 	return bestProfile, nil
 }
 
@@ -164,9 +164,9 @@ type ProfileCharacteristics struct {
 type DocumentSize string
 
 const (
-	DocumentSizeSmall  DocumentSize = "small"   // < 1KB
-	DocumentSizeMedium DocumentSize = "medium"  // 1KB - 100KB
-	DocumentSizeLarge  DocumentSize = "large"   // > 100KB
+	DocumentSizeSmall  DocumentSize = "small"  // < 1KB
+	DocumentSizeMedium DocumentSize = "medium" // 1KB - 100KB
+	DocumentSizeLarge  DocumentSize = "large"  // > 100KB
 )
 
 type DocumentCount string
@@ -204,7 +204,7 @@ const (
 // scoreProfile scores how well a profile matches the characteristics
 func (pm *ProfileManager) scoreProfile(profileName string, characteristics ProfileCharacteristics) int {
 	score := 0
-	
+
 	switch profileName {
 	case "small_docs":
 		if characteristics.DocumentSize == DocumentSizeSmall {
@@ -213,7 +213,7 @@ func (pm *ProfileManager) scoreProfile(profileName string, characteristics Profi
 		if characteristics.DocumentCount == DocumentCountMany || characteristics.DocumentCount == DocumentCountMass {
 			score += 2
 		}
-		
+
 	case "large_docs":
 		if characteristics.DocumentSize == DocumentSizeLarge {
 			score += 3
@@ -221,7 +221,7 @@ func (pm *ProfileManager) scoreProfile(profileName string, characteristics Profi
 		if characteristics.MemoryBudget == MemoryBudgetHigh {
 			score += 2
 		}
-		
+
 	case "high_concurrency":
 		if characteristics.ConcurrencyLevel == ConcurrencyLevelHigh {
 			score += 3
@@ -229,7 +229,7 @@ func (pm *ProfileManager) scoreProfile(profileName string, characteristics Profi
 		if characteristics.DocumentCount == DocumentCountMass {
 			score += 2
 		}
-		
+
 	case "low_memory":
 		if characteristics.MemoryBudget == MemoryBudgetLow {
 			score += 3
@@ -237,12 +237,12 @@ func (pm *ProfileManager) scoreProfile(profileName string, characteristics Profi
 		if characteristics.DocumentSize == DocumentSizeSmall {
 			score += 1
 		}
-		
+
 	case "default":
 		// Default gets a base score
 		score = 1
 	}
-	
+
 	return score
 }
 
@@ -254,12 +254,12 @@ func (pm *ProfileManager) GetCurrentProfile() string {
 // CreateCustomProfile creates a custom profile based on current configuration
 func (pm *ProfileManager) CreateCustomProfile(name string) (*Config, error) {
 	current := pm.manager.Get()
-	
+
 	// Create a new configuration based on current
 	custom := *current
 	custom.Profile = name
 	custom.Version = "custom"
-	
+
 	return &custom, nil
 }
 
@@ -314,7 +314,7 @@ func GetDefaultProfiles() map[string]*Config {
 			},
 			Features: make(map[string]bool),
 		},
-		
+
 		"small_docs": {
 			Version: "1.0",
 			Profile: "small_docs",
@@ -332,14 +332,14 @@ func GetDefaultProfiles() map[string]*Config {
 				EnableCaching:  true,
 				EnableParallel: true,
 				Cache: CacheConfig{
-					ExpressionCacheSize: 50000,  // Larger cache for many small docs
+					ExpressionCacheSize: 50000, // Larger cache for many small docs
 					OperatorCacheSize:   25000,
 					FileCacheSize:       1000,
 					TTL:                 10 * time.Minute,
 					EnableWarmup:        true,
 				},
 				Concurrency: ConcurrencyConfig{
-					MaxWorkers:     0, // auto
+					MaxWorkers:     0,    // auto
 					QueueSize:      5000, // Larger queue
 					BatchSize:      50,   // Larger batches
 					EnableAdaptive: true,
@@ -351,7 +351,7 @@ func GetDefaultProfiles() map[string]*Config {
 				},
 			},
 		},
-		
+
 		"large_docs": {
 			Version: "1.0",
 			Profile: "large_docs",
@@ -359,7 +359,7 @@ func GetDefaultProfiles() map[string]*Config {
 				EnableCaching:  true,
 				EnableParallel: false, // Single threaded for large docs
 				Cache: CacheConfig{
-					ExpressionCacheSize: 1000,  // Smaller cache
+					ExpressionCacheSize: 1000, // Smaller cache
 					OperatorCacheSize:   500,
 					FileCacheSize:       10,
 					TTL:                 2 * time.Minute,
@@ -377,7 +377,7 @@ func GetDefaultProfiles() map[string]*Config {
 				},
 			},
 		},
-		
+
 		"high_concurrency": {
 			Version: "1.0",
 			Profile: "high_concurrency",
@@ -404,7 +404,7 @@ func GetDefaultProfiles() map[string]*Config {
 				},
 			},
 		},
-		
+
 		"low_memory": {
 			Version: "1.0",
 			Profile: "low_memory",
@@ -425,8 +425,8 @@ func GetDefaultProfiles() map[string]*Config {
 				},
 				Memory: MemoryConfig{
 					MaxHeapSize:     256 * 1024 * 1024, // 256MB limit
-					GCPercent:       25,                 // Very frequent GC
-					EnablePooling:   false,              // Disable pooling
+					GCPercent:       25,                // Very frequent GC
+					EnablePooling:   false,             // Disable pooling
 					StringInterning: false,
 				},
 			},

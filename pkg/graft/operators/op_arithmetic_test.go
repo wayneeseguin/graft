@@ -14,10 +14,10 @@ import (
 func testArithmetic(input string, key string, expected interface{}) {
 	y, err := simpleyaml.NewYaml([]byte(input))
 	So(err, ShouldBeNil)
-	
+
 	data, err := y.Map()
 	So(err, ShouldBeNil)
-	
+
 	ev := &graft.Evaluator{Tree: data}
 	err = ev.RunPhase(graft.EvalPhase)
 	So(err, ShouldBeNil)
@@ -28,10 +28,10 @@ func testArithmetic(input string, key string, expected interface{}) {
 func testArithmeticError(input string, expectedError string) {
 	y, err := simpleyaml.NewYaml([]byte(input))
 	So(err, ShouldBeNil)
-	
+
 	data, err := y.Map()
 	So(err, ShouldBeNil)
-	
+
 	ev := &graft.Evaluator{Tree: data}
 	err = ev.RunPhase(graft.EvalPhase)
 	So(err, ShouldNotBeNil)
@@ -400,4 +400,3 @@ average: (( sum / 2 ))
 		})
 	})
 }
-

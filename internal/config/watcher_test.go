@@ -77,7 +77,7 @@ func (m *MockLogger) GetCounts() (info, error, debug int64) {
 // TestFileWatcher_Creation tests the creation of file watcher
 func TestFileWatcher_Creation(t *testing.T) {
 	manager := NewManager()
-	
+
 	t.Run("with default logger", func(t *testing.T) {
 		fw := NewFileWatcher(manager, nil)
 		if fw == nil {
@@ -91,7 +91,7 @@ func TestFileWatcher_Creation(t *testing.T) {
 		}
 		fw.Stop()
 	})
-	
+
 	t.Run("with custom logger", func(t *testing.T) {
 		logger := &MockLogger{}
 		fw := NewFileWatcher(manager, logger)
@@ -113,7 +113,7 @@ func TestFileWatcher_Watch(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmpDir)
-	
+
 	configPath := filepath.Join(tmpDir, "test-config.yaml")
 	configContent := `
 performance:
@@ -123,21 +123,21 @@ performance:
 	if err := ioutil.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	manager := NewManager()
 	logger := &MockLogger{}
 	fw := NewFileWatcher(manager, logger)
 	fw.SetInterval(100 * time.Millisecond) // Fast interval for testing
-	
+
 	t.Run("watch existing file", func(t *testing.T) {
 		err := fw.Watch(configPath)
 		if err != nil {
 			t.Fatalf("failed to watch file: %v", err)
 		}
-		
+
 		// Wait for initial watch to start
 		time.Sleep(50 * time.Millisecond)
-		
+
 		messages := logger.GetMessages()
 		found := false
 		for _, msg := range messages {
@@ -149,10 +149,10 @@ performance:
 		if !found {
 			t.Error("expected log message about starting to watch")
 		}
-		
+
 		fw.Stop()
 	})
-	
+
 	t.Run("watch non-existent file", func(t *testing.T) {
 		fw2 := NewFileWatcher(manager, logger)
 		err := fw2.Watch(filepath.Join(tmpDir, "non-existent.yaml"))
@@ -170,7 +170,7 @@ func TestFileWatcher_FileModification(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmpDir)
-	
+
 	configPath := filepath.Join(tmpDir, "test-config.yaml")
 	initialContent := `
 performance:
@@ -180,23 +180,23 @@ performance:
 	if err := ioutil.WriteFile(configPath, []byte(initialContent), 0644); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	manager := NewManager()
 	if err := manager.Load(configPath); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	logger := &MockLogger{}
 	fw := NewFileWatcher(manager, logger)
 	fw.SetInterval(100 * time.Millisecond)
-	
+
 	if err := fw.Watch(configPath); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// Wait for watcher to start
 	time.Sleep(150 * time.Millisecond)
-	
+
 	// Modify the file
 	modifiedContent := `
 performance:
@@ -208,17 +208,17 @@ performance:
 	if err := ioutil.WriteFile(configPath, []byte(modifiedContent), 0644); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// Wait for change detection
 	time.Sleep(200 * time.Millisecond)
-	
+
 	fw.Stop()
-	
+
 	// Check logs
 	messages := logger.GetMessages()
 	foundChange := false
 	foundReload := false
-	
+
 	for _, msg := range messages {
 		if msg.Level == "INFO" && strings.Contains(msg.Message, "Config file changed") {
 			foundChange = true
@@ -227,18 +227,18 @@ performance:
 			foundReload = true
 		}
 	}
-	
+
 	if !foundChange {
 		t.Error("expected log message about config file change")
 	}
 	if !foundReload {
 		t.Error("expected log message about successful reload")
 	}
-	
+
 	// Verify the config was actually reloaded
 	currentConfig := manager.Get()
 	if currentConfig.Performance.Cache.ExpressionCacheSize != 2000 {
-		t.Errorf("expected cache size to be 2000, got %d", 
+		t.Errorf("expected cache size to be 2000, got %d",
 			currentConfig.Performance.Cache.ExpressionCacheSize)
 	}
 }
@@ -250,45 +250,45 @@ func TestFileWatcher_FileDeleted(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmpDir)
-	
+
 	configPath := filepath.Join(tmpDir, "test-config.yaml")
 	if err := ioutil.WriteFile(configPath, []byte("test: value"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	manager := NewManager()
 	logger := &MockLogger{}
 	fw := NewFileWatcher(manager, logger)
 	fw.SetInterval(100 * time.Millisecond)
-	
+
 	if err := fw.Watch(configPath); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// Wait for watcher to start
 	time.Sleep(150 * time.Millisecond)
-	
+
 	// Delete the file
 	if err := os.Remove(configPath); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// Wait for deletion detection
 	time.Sleep(200 * time.Millisecond)
-	
+
 	fw.Stop()
-	
+
 	// Check logs
 	messages := logger.GetMessages()
 	foundDeletion := false
-	
+
 	for _, msg := range messages {
 		if msg.Level == "ERROR" && strings.Contains(msg.Message, "Config file no longer exists") {
 			foundDeletion = true
 			break
 		}
 	}
-	
+
 	if !foundDeletion {
 		t.Error("expected error log about deleted file")
 	}
@@ -301,62 +301,62 @@ func TestFileWatcher_DirectoryWatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmpDir)
-	
+
 	// Create initial config files
 	config1 := filepath.Join(tmpDir, "config1.yaml")
 	config2 := filepath.Join(tmpDir, "config2.yaml")
-	
+
 	if err := ioutil.WriteFile(config1, []byte("test: 1"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	if err := ioutil.WriteFile(config2, []byte("test: 2"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	manager := NewManager()
 	logger := &MockLogger{}
 	fw := NewFileWatcher(manager, logger)
 	fw.SetInterval(100 * time.Millisecond)
-	
+
 	t.Run("watch directory with pattern", func(t *testing.T) {
 		err := fw.WatchDirectory(tmpDir, "*.yaml")
 		if err != nil {
 			t.Fatalf("failed to watch directory: %v", err)
 		}
-		
+
 		// Wait for initial scan
 		time.Sleep(150 * time.Millisecond)
-		
+
 		// Create a new file
 		config3 := filepath.Join(tmpDir, "config3.yaml")
 		if err := ioutil.WriteFile(config3, []byte("test: 3"), 0644); err != nil {
 			t.Fatal(err)
 		}
-		
+
 		// Modify existing file
 		time.Sleep(10 * time.Millisecond)
 		if err := ioutil.WriteFile(config1, []byte("test: modified"), 0644); err != nil {
 			t.Fatal(err)
 		}
-		
+
 		// Wait for changes to be detected
 		time.Sleep(200 * time.Millisecond)
-		
+
 		// Delete a file
 		if err := os.Remove(config2); err != nil {
 			t.Fatal(err)
 		}
-		
+
 		// Wait for deletion to be detected
 		time.Sleep(200 * time.Millisecond)
-		
+
 		fw.Stop()
-		
+
 		// Check logs
 		messages := logger.GetMessages()
 		foundModified := false
 		foundDeleted := false
-		
+
 		for _, msg := range messages {
 			if msg.Level == "INFO" && strings.Contains(msg.Message, "Config file changed in directory") {
 				foundModified = true
@@ -365,7 +365,7 @@ func TestFileWatcher_DirectoryWatch(t *testing.T) {
 				foundDeleted = true
 			}
 		}
-		
+
 		if !foundModified {
 			t.Error("expected log about modified file")
 		}
@@ -382,54 +382,54 @@ func TestFileWatcher_ConcurrentAccess(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmpDir)
-	
+
 	configPath := filepath.Join(tmpDir, "test-config.yaml")
 	if err := ioutil.WriteFile(configPath, []byte("test: value"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	manager := NewManager()
 	logger := &MockLogger{}
 	fw := NewFileWatcher(manager, logger)
 	fw.SetInterval(50 * time.Millisecond)
-	
+
 	if err := fw.Watch(configPath); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// Run concurrent modifications
 	var wg sync.WaitGroup
 	errors := make(chan error, 10)
-	
+
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			
+
 			// Modify file
 			content := fmt.Sprintf("test: %d", id)
 			if err := ioutil.WriteFile(configPath, []byte(content), 0644); err != nil {
 				errors <- err
 				return
 			}
-			
+
 			time.Sleep(60 * time.Millisecond)
 		}(i)
 	}
-	
+
 	wg.Wait()
 	close(errors)
-	
+
 	// Check for errors
 	for err := range errors {
 		t.Errorf("concurrent modification error: %v", err)
 	}
-	
+
 	// Let watcher process changes
 	time.Sleep(200 * time.Millisecond)
-	
+
 	fw.Stop()
-	
+
 	// Verify no panics and logger received messages
 	info, errCount, _ := logger.GetCounts()
 	if info == 0 {
@@ -447,20 +447,20 @@ func TestFileWatcher_LargeConfigPerformance(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(tmpDir)
-	
+
 	// Create a large config file
 	configPath := filepath.Join(tmpDir, "large-config.yaml")
 	largeConfig := generateLargeConfig(1000) // 1000 entries
-	
+
 	if err := ioutil.WriteFile(configPath, []byte(largeConfig), 0644); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	manager := NewManager()
 	logger := &MockLogger{}
 	fw := NewFileWatcher(manager, logger)
 	fw.SetInterval(100 * time.Millisecond)
-	
+
 	// Measure initial load time
 	start := time.Now()
 	if err := manager.Load(configPath); err != nil {
@@ -468,31 +468,31 @@ func TestFileWatcher_LargeConfigPerformance(t *testing.T) {
 	}
 	loadDuration := time.Since(start)
 	t.Logf("Initial load of large config took: %v", loadDuration)
-	
+
 	// Start watching
 	if err := fw.Watch(configPath); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// Wait for watcher to start
 	time.Sleep(150 * time.Millisecond)
-	
+
 	// Modify the large file
 	modifiedConfig := generateLargeConfig(1100) // Add 100 more entries
 	reloadStart := time.Now()
-	
+
 	if err := ioutil.WriteFile(configPath, []byte(modifiedConfig), 0644); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// Wait for reload
 	time.Sleep(300 * time.Millisecond)
 	reloadDuration := time.Since(reloadStart)
-	
+
 	fw.Stop()
-	
+
 	t.Logf("Reload of modified large config took: %v", reloadDuration)
-	
+
 	// Check that reload happened
 	messages := logger.GetMessages()
 	foundReload := false
@@ -502,11 +502,11 @@ func TestFileWatcher_LargeConfigPerformance(t *testing.T) {
 			break
 		}
 	}
-	
+
 	if !foundReload {
 		t.Error("expected successful reload of large config")
 	}
-	
+
 	// Performance assertions
 	if loadDuration > 5*time.Second {
 		t.Errorf("initial load too slow: %v", loadDuration)
@@ -533,7 +533,7 @@ func TestChangeDetector(t *testing.T) {
 			"feature3": true,
 		},
 	}
-	
+
 	t.Run("detect modified values", func(t *testing.T) {
 		newConfig := &Config{
 			Performance: PerformanceConfig{
@@ -550,20 +550,20 @@ func TestChangeDetector(t *testing.T) {
 				"feature3": true,
 			},
 		}
-		
+
 		detector := NewChangeDetector(oldConfig, newConfig)
 		changes := detector.DetectChanges()
-		
+
 		expectedChanges := 3 // cache size, max workers, feature2
 		if len(changes) != expectedChanges {
 			t.Errorf("expected %d changes, got %d", expectedChanges, len(changes))
 		}
-		
+
 		// Verify specific changes
 		foundCacheChange := false
 		foundWorkerChange := false
 		foundFeatureChange := false
-		
+
 		for _, change := range changes {
 			switch change.Path {
 			case "performance.cache.expression_cache_size":
@@ -583,12 +583,12 @@ func TestChangeDetector(t *testing.T) {
 				}
 			}
 		}
-		
+
 		if !foundCacheChange || !foundWorkerChange || !foundFeatureChange {
 			t.Error("expected changes not found")
 		}
 	})
-	
+
 	t.Run("detect added features", func(t *testing.T) {
 		newConfig := &Config{
 			Performance: oldConfig.Performance,
@@ -599,10 +599,10 @@ func TestChangeDetector(t *testing.T) {
 				"feature4": true, // New
 			},
 		}
-		
+
 		detector := NewChangeDetector(oldConfig, newConfig)
 		changes := detector.DetectChanges()
-		
+
 		foundNewFeature := false
 		for _, change := range changes {
 			if change.Path == "features.feature4" && change.Type == ChangeTypeAdd {
@@ -612,12 +612,12 @@ func TestChangeDetector(t *testing.T) {
 				}
 			}
 		}
-		
+
 		if !foundNewFeature {
 			t.Error("expected new feature to be detected")
 		}
 	})
-	
+
 	t.Run("detect deleted features", func(t *testing.T) {
 		newConfig := &Config{
 			Performance: oldConfig.Performance,
@@ -627,10 +627,10 @@ func TestChangeDetector(t *testing.T) {
 				"feature3": true,
 			},
 		}
-		
+
 		detector := NewChangeDetector(oldConfig, newConfig)
 		changes := detector.DetectChanges()
-		
+
 		foundDeletedFeature := false
 		for _, change := range changes {
 			if change.Path == "features.feature2" && change.Type == ChangeTypeDelete {
@@ -640,7 +640,7 @@ func TestChangeDetector(t *testing.T) {
 				}
 			}
 		}
-		
+
 		if !foundDeletedFeature {
 			t.Error("expected deleted feature to be detected")
 		}
@@ -666,19 +666,19 @@ func BenchmarkFileWatcher_CheckChanges(b *testing.B) {
 		b.Fatal(err)
 	}
 	defer os.RemoveAll(tmpDir)
-	
+
 	configPath := filepath.Join(tmpDir, "bench-config.yaml")
 	if err := ioutil.WriteFile(configPath, []byte("test: value"), 0644); err != nil {
 		b.Fatal(err)
 	}
-	
+
 	manager := NewManager()
 	fw := NewFileWatcher(manager, nil)
 	fw.watchedPath = configPath
 	fw.lastModTime = time.Now().Add(-time.Hour)
-	
+
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		_ = fw.checkForChanges()
 	}
@@ -688,18 +688,18 @@ func BenchmarkChangeDetector_LargeConfig(b *testing.B) {
 	// Create configs with many features
 	oldFeatures := make(map[string]bool)
 	newFeatures := make(map[string]bool)
-	
+
 	for i := 0; i < 1000; i++ {
 		key := fmt.Sprintf("feature_%d", i)
 		oldFeatures[key] = i%2 == 0
 		newFeatures[key] = i%3 == 0 // Different pattern for changes
 	}
-	
+
 	oldConfig := &Config{Features: oldFeatures}
 	newConfig := &Config{Features: newFeatures}
-	
+
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		detector := NewChangeDetector(oldConfig, newConfig)
 		_ = detector.DetectChanges()

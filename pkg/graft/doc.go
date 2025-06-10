@@ -111,16 +111,16 @@ Graft provides comprehensive testing utilities:
 
 	func TestConfig(t *testing.T) {
 		helper := NewTestHelper(t)
-		
+
 		config := helper.ParseYAMLString(`
 		app:
 		  name: "test"
 		  port: 8080
 		`)
-		
+
 		helper.AssertPathString(config, "app.name", "test")
 		helper.AssertPathInt(config, "app.port", 8080)
-		
+
 		// Test merging and evaluation
 		result := helper.MustMergeAndEvaluate(base, override)
 		helper.AssertPathString(result, "computed.value", "expected")

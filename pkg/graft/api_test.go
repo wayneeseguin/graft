@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wayneeseguin/graft/internal/utils/tree"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 func TestEngine_ParseYAML(t *testing.T) {
@@ -203,11 +203,11 @@ func TestEngine_Evaluate(t *testing.T) {
 	Convey("Given an Engine instance", t, func() {
 		engine, err := NewEngine()
 		So(err, ShouldBeNil)
-		
+
 		// Save original operators
 		originalConcat := OpRegistry["concat"]
 		originalGrab := OpRegistry["grab"]
-		
+
 		// Restore original operators when test completes
 		defer func() {
 			if originalConcat != nil {
@@ -217,15 +217,14 @@ func TestEngine_Evaluate(t *testing.T) {
 				OpRegistry["grab"] = originalGrab
 			}
 		}()
-		
+
 		// Register test operators
 		OpRegistry["concat"] = TestConcatOperator{}
 		OpRegistry["grab"] = TestGrabOperator{}
-		
+
 		// Also register with the engine
 		engine.RegisterOperator("concat", TestConcatOperator{})
 		engine.RegisterOperator("grab", TestGrabOperator{})
-		
 
 		Convey("When evaluating a document with operators", func() {
 			doc, err := engine.ParseYAML([]byte(`
@@ -329,21 +328,21 @@ func TestEngine_Context(t *testing.T) {
 	Convey("Given an Engine instance", t, func() {
 		engine, err := NewEngine()
 		So(err, ShouldBeNil)
-		
+
 		// Save original operator
 		originalConcat := OpRegistry["concat"]
-		
+
 		// Restore original operator when test completes
 		defer func() {
 			if originalConcat != nil {
 				OpRegistry["concat"] = originalConcat
 			}
 		}()
-		
+
 		// Register test operators
 		OpRegistry["concat"] = TestConcatOperator{}
-		
-		// Also register with the engine  
+
+		// Also register with the engine
 		engine.RegisterOperator("concat", TestConcatOperator{})
 
 		doc, err := engine.ParseYAML([]byte(`
@@ -365,6 +364,7 @@ name: (( concat "app-" "test" ))
 		})
 	})
 }
+
 // Test operators for the API tests
 
 // TestConcatOperator is a simple concat operator for testing
@@ -397,14 +397,14 @@ func (op TestConcatOperator) Run(ev *Evaluator, args []*Expr) (*Response, error)
 		}
 		parts = append(parts, ToString(val))
 	}
-	
+
 	return &Response{
 		Type:  Replace,
 		Value: strings.Join(parts, ""),
 	}, nil
 }
 
-// TestGrabOperator is a simple grab operator for testing  
+// TestGrabOperator is a simple grab operator for testing
 type TestGrabOperator struct{}
 
 func (op TestGrabOperator) Setup() error {
@@ -429,12 +429,12 @@ func (op TestGrabOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	if len(args) != 1 {
 		return nil, NewOperatorError("grab", "requires exactly 1 argument", nil)
 	}
-	
+
 	val, err := args[0].Evaluate(ev.Tree)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &Response{
 		Type:  Replace,
 		Value: val,

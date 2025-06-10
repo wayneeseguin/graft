@@ -1,4 +1,5 @@
 // TODO: Vault default tests removed - accessing internal kv variable from operators package
+//go:build ignore
 // +build ignore
 
 package graft
@@ -191,4 +192,3 @@ password: (( vault "secret/anything:password" || "skipped-default" ))
 		})
 	})
 }
-

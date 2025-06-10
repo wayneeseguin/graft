@@ -46,44 +46,44 @@ var SkipAws bool
 
 // AwsTarget represents an AWS target configuration
 type AwsTarget struct {
-	Region                string        `yaml:"region"`
-	Profile               string        `yaml:"profile"`
-	Role                  string        `yaml:"role"`
-	AccessKeyID           string        `yaml:"access_key_id"`
-	SecretAccessKey       string        `yaml:"secret_access_key"`
-	SessionToken          string        `yaml:"session_token"`
-	Endpoint              string        `yaml:"endpoint"`
-	S3ForcePathStyle      bool          `yaml:"s3_force_path_style"`
-	DisableSSL            bool          `yaml:"disable_ssl"`
-	MaxRetries            int           `yaml:"max_retries"`
-	HTTPTimeout           time.Duration `yaml:"http_timeout"`
-	CacheTTL              time.Duration `yaml:"cache_ttl"`
-	AssumeRoleDuration    time.Duration `yaml:"assume_role_duration"`
-	ExternalID            string        `yaml:"external_id"`
-	SessionName           string        `yaml:"session_name"`
-	MfaSerial             string        `yaml:"mfa_serial"`
-	AuditLogging          bool          `yaml:"audit_logging"`
+	Region             string        `yaml:"region"`
+	Profile            string        `yaml:"profile"`
+	Role               string        `yaml:"role"`
+	AccessKeyID        string        `yaml:"access_key_id"`
+	SecretAccessKey    string        `yaml:"secret_access_key"`
+	SessionToken       string        `yaml:"session_token"`
+	Endpoint           string        `yaml:"endpoint"`
+	S3ForcePathStyle   bool          `yaml:"s3_force_path_style"`
+	DisableSSL         bool          `yaml:"disable_ssl"`
+	MaxRetries         int           `yaml:"max_retries"`
+	HTTPTimeout        time.Duration `yaml:"http_timeout"`
+	CacheTTL           time.Duration `yaml:"cache_ttl"`
+	AssumeRoleDuration time.Duration `yaml:"assume_role_duration"`
+	ExternalID         string        `yaml:"external_id"`
+	SessionName        string        `yaml:"session_name"`
+	MfaSerial          string        `yaml:"mfa_serial"`
+	AuditLogging       bool          `yaml:"audit_logging"`
 }
 
 // AwsClientPool manages AWS sessions and clients for different targets
 type AwsClientPool struct {
-	mu                   sync.RWMutex
-	sessions             map[string]*session.Session
+	mu                    sync.RWMutex
+	sessions              map[string]*session.Session
 	secretsManagerClients map[string]secretsmanageriface.SecretsManagerAPI
 	parameterStoreClients map[string]ssmiface.SSMAPI
-	configs              map[string]*AwsTarget
-	secretsCache         map[string]map[string]string // target -> secret -> value
-	paramsCache          map[string]map[string]string // target -> param -> value
+	configs               map[string]*AwsTarget
+	secretsCache          map[string]map[string]string // target -> secret -> value
+	paramsCache           map[string]map[string]string // target -> param -> value
 }
 
 // Global client pool for target-aware AWS connections
 var awsTargetPool = &AwsClientPool{
-	sessions:             make(map[string]*session.Session),
+	sessions:              make(map[string]*session.Session),
 	secretsManagerClients: make(map[string]secretsmanageriface.SecretsManagerAPI),
 	parameterStoreClients: make(map[string]ssmiface.SSMAPI),
-	configs:              make(map[string]*AwsTarget),
-	secretsCache:         make(map[string]map[string]string),
-	paramsCache:          make(map[string]map[string]string),
+	configs:               make(map[string]*AwsTarget),
+	secretsCache:          make(map[string]map[string]string),
+	paramsCache:           make(map[string]map[string]string),
 }
 
 // GetSession returns an AWS session for the specified target
@@ -260,7 +260,7 @@ func (acp *AwsClientPool) createSessionFromConfig(config *AwsTarget) (*session.S
 	if config.AccessKeyID != "" && config.SecretAccessKey != "" {
 		options.Config.Credentials = credentials.NewStaticCredentials(
 			config.AccessKeyID,
-			config.SecretAccessKey, 
+			config.SecretAccessKey,
 			config.SessionToken,
 		)
 	}
@@ -542,7 +542,7 @@ func (o AwsOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 	// Extract target information (placeholder for now)
 	targetName := o.extractTarget(ev, args)
-	
+
 	var value string
 	if !SkipAws {
 		if targetName != "" {
@@ -614,7 +614,7 @@ func (o AwsOperator) getValueFromTarget(targetName, key string, params url.Value
 
 	// Check cache first with target-aware key
 	_ = o.getCacheKey(targetName, o.variant, key)
-	
+
 	if o.variant == "awsparam" {
 		cache := awsTargetPool.GetParamCache(targetName)
 		if val, cached := cache[key]; cached {
@@ -746,7 +746,7 @@ func (o AwsOperator) getAwsSecretFromEngine(engine graft.Engine, awsSession *ses
 	return value, nil
 }
 
-// getAwsParamFromEngine fetches a parameter using the engine context  
+// getAwsParamFromEngine fetches a parameter using the engine context
 func (o AwsOperator) getAwsParamFromEngine(engine graft.Engine, awsSession *session.Session, param string) (string, error) {
 	cache := engine.GetOperatorState().GetAWSParamsCache()
 	if val, cached := cache[param]; cached {

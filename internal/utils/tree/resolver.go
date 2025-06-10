@@ -12,7 +12,7 @@ func listFind(l []interface{}, fields []string, key string) (interface{}, uint64
 		for i, v := range l {
 			// Convert index to uint64 safely
 			idx := uint64(i) // #nosec G115 - i is from range loop, always >= 0
-			
+
 			switch v.(type) {
 			case map[string]interface{}:
 				value, ok := v.(map[string]interface{})[field]

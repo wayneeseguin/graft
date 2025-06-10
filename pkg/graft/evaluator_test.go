@@ -43,7 +43,7 @@ func TestEvaluator(t *testing.T) {
 			if test != "" {
 				Convey(test, func() {
 					ev := &Evaluator{Tree: YAML(input), DataflowOrder: "insertion"}
-					
+
 					// Create and set an engine to ensure operators are registered
 					engine, err := CreateDefaultEngine()
 					So(err, ShouldBeNil)
@@ -1662,7 +1662,7 @@ meta:
 			// Create an engine to ensure operators are registered
 			engine, err := CreateDefaultEngine()
 			So(err, ShouldBeNil)
-			
+
 			ev := &Evaluator{
 				Tree: YAML(`
 meta:
@@ -1681,7 +1681,7 @@ meta:
 			// Create an engine to track IP state across operator calls
 			engine, err := CreateDefaultEngine()
 			So(err, ShouldBeNil)
-			
+
 			ev := &Evaluator{
 				Tree: YAML(
 					`jobs:
@@ -1702,7 +1702,7 @@ networks:
     - static: [192.168.1.2 - 192.168.1.30]
 `),
 			}
-			
+
 			// Set the engine so that all static_ips operators share the same engine state
 			ev.SetEngine(engine)
 

@@ -33,7 +33,7 @@ func (JoinOperator) Dependencies(ev *Evaluator, args []*Expr, _ []*tree.Cursor, 
 		if arg == nil {
 			continue
 		}
-		
+
 		// For reference arguments, we need to check if they point to lists
 		// and expand them to individual element dependencies
 		if arg.Type == Reference && arg.Reference != nil {
@@ -135,13 +135,13 @@ func (JoinOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 					keys = append(keys, fmt.Sprintf("%v", k))
 				}
 				sort.Strings(keys)
-				
+
 				// Join key:value pairs
 				for _, k := range keys {
 					pair := fmt.Sprintf("%s:%v", k, v[k])
 					*list = append(*list, pair)
 				}
-				
+
 			case map[string]interface{}:
 				DEBUG("     [%d]: resolved to a map", i)
 				// Sort keys for consistent output
@@ -150,7 +150,7 @@ func (JoinOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 					keys = append(keys, k)
 				}
 				sort.Strings(keys)
-				
+
 				// Join key:value pairs
 				for _, k := range keys {
 					pair := fmt.Sprintf("%s:%v", k, v[k])

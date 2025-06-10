@@ -78,7 +78,7 @@ func (StringifyOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 
 	result := string(output)
 	// Keep the trailing newline that yaml.Marshal adds for complex types
-	
+
 	return &Response{
 		Type:  Replace,
 		Value: result,

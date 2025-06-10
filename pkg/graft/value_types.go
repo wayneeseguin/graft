@@ -10,34 +10,34 @@ import (
 type Value interface {
 	// Type returns the underlying type of the value
 	Type() ValueType
-	
+
 	// Raw returns the raw interface{} value for backward compatibility
 	Raw() interface{}
-	
+
 	// String returns the string representation
 	String() string
-	
+
 	// IsNil returns true if the value is nil
 	IsNil() bool
-	
+
 	// AsString attempts to convert the value to a string
 	AsString() (string, error)
-	
+
 	// AsInt attempts to convert the value to an int
 	AsInt() (int, error)
-	
+
 	// AsInt64 attempts to convert the value to an int64
 	AsInt64() (int64, error)
-	
+
 	// AsFloat64 attempts to convert the value to a float64
 	AsFloat64() (float64, error)
-	
+
 	// AsBool attempts to convert the value to a bool
 	AsBool() (bool, error)
-	
+
 	// AsSlice attempts to convert the value to a slice
 	AsSlice() ([]interface{}, error)
-	
+
 	// AsMap attempts to convert the value to a map
 	AsMap() (map[string]interface{}, error)
 }
@@ -92,7 +92,7 @@ func NewValue(v interface{}) Value {
 	if v == nil {
 		return &valueImpl{value: nil, vtype: NilValue}
 	}
-	
+
 	switch val := v.(type) {
 	case string:
 		return &valueImpl{value: val, vtype: StringValue}
@@ -153,7 +153,7 @@ func (v *valueImpl) AsString() (string, error) {
 	if v.IsNil() {
 		return "", fmt.Errorf("cannot convert nil to string")
 	}
-	
+
 	switch v.vtype {
 	case StringValue:
 		return v.value.(string), nil
@@ -175,7 +175,7 @@ func (v *valueImpl) AsInt() (int, error) {
 	if v.IsNil() {
 		return 0, fmt.Errorf("cannot convert nil to int")
 	}
-	
+
 	switch v.vtype {
 	case IntValue:
 		return v.value.(int), nil
@@ -201,7 +201,7 @@ func (v *valueImpl) AsInt64() (int64, error) {
 	if v.IsNil() {
 		return 0, fmt.Errorf("cannot convert nil to int64")
 	}
-	
+
 	switch v.vtype {
 	case IntValue:
 		return int64(v.value.(int)), nil
@@ -223,7 +223,7 @@ func (v *valueImpl) AsFloat64() (float64, error) {
 	if v.IsNil() {
 		return 0, fmt.Errorf("cannot convert nil to float64")
 	}
-	
+
 	switch v.vtype {
 	case IntValue:
 		return float64(v.value.(int)), nil
@@ -241,7 +241,7 @@ func (v *valueImpl) AsBool() (bool, error) {
 	if v.IsNil() {
 		return false, fmt.Errorf("cannot convert nil to bool")
 	}
-	
+
 	switch v.vtype {
 	case BoolValue:
 		return v.value.(bool), nil
@@ -255,7 +255,7 @@ func (v *valueImpl) AsSlice() ([]interface{}, error) {
 	if v.IsNil() {
 		return nil, fmt.Errorf("cannot convert nil to slice")
 	}
-	
+
 	switch v.vtype {
 	case SliceValue:
 		return v.value.([]interface{}), nil
@@ -269,7 +269,7 @@ func (v *valueImpl) AsMap() (map[string]interface{}, error) {
 	if v.IsNil() {
 		return nil, fmt.Errorf("cannot convert nil to map")
 	}
-	
+
 	switch v.vtype {
 	case MapValue:
 		return v.value.(map[string]interface{}), nil

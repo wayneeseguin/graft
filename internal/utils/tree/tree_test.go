@@ -84,29 +84,29 @@ func TestParseCursor(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cursor, err := ParseCursor(tt.input)
-			
+
 			if tt.hasError {
 				if err == nil {
 					t.Errorf("expected error for input %q", tt.input)
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error for input %q: %v", tt.input, err)
 				return
 			}
-			
+
 			// Handle nil vs empty slice comparison
-			if (cursor.Nodes == nil && tt.expected != nil) || 
-			   (cursor.Nodes != nil && tt.expected == nil) || 
-			   !reflect.DeepEqual(cursor.Nodes, tt.expected) {
-				
+			if (cursor.Nodes == nil && tt.expected != nil) ||
+				(cursor.Nodes != nil && tt.expected == nil) ||
+				!reflect.DeepEqual(cursor.Nodes, tt.expected) {
+
 				// For empty slices, just check length
 				if len(cursor.Nodes) == 0 && len(tt.expected) == 0 {
 					return // This is okay
 				}
-				
+
 				t.Errorf("ParseCursor(%q) = %v (len=%d), want %v (len=%d)", tt.input, cursor.Nodes, len(cursor.Nodes), tt.expected, len(tt.expected))
 			}
 		})
@@ -115,20 +115,20 @@ func TestParseCursor(t *testing.T) {
 
 func TestCursorMethods(t *testing.T) {
 	cursor := &Cursor{Nodes: []string{"root", "child", "grandchild"}}
-	
+
 	t.Run("Copy", func(t *testing.T) {
 		copy := cursor.Copy()
 		if !reflect.DeepEqual(cursor.Nodes, copy.Nodes) {
 			t.Error("copy should have same nodes")
 		}
-		
+
 		// Modify original, copy should be unaffected
 		cursor.Push("newchild")
 		if reflect.DeepEqual(cursor.Nodes, copy.Nodes) {
 			t.Error("copy should be independent of original")
 		}
 	})
-	
+
 	t.Run("String", func(t *testing.T) {
 		// Use a fresh cursor since the previous test modified the original
 		freshCursor := &Cursor{Nodes: []string{"root", "child", "grandchild"}}
@@ -137,13 +137,13 @@ func TestCursorMethods(t *testing.T) {
 			t.Errorf("String() = %q, want %q", freshCursor.String(), expected)
 		}
 	})
-	
+
 	t.Run("Depth", func(t *testing.T) {
 		if cursor.Depth() != 4 { // After Push above
 			t.Errorf("Depth() = %d, want %d", cursor.Depth(), 4)
 		}
 	})
-	
+
 	t.Run("Pop", func(t *testing.T) {
 		cursor := &Cursor{Nodes: []string{"root", "child", "grandchild"}}
 		last := cursor.Pop()
@@ -154,7 +154,7 @@ func TestCursorMethods(t *testing.T) {
 			t.Errorf("after Pop(), length = %d, want %d", len(cursor.Nodes), 2)
 		}
 	})
-	
+
 	t.Run("Push", func(t *testing.T) {
 		cursor := &Cursor{Nodes: []string{"root"}}
 		cursor.Push("child")
@@ -163,23 +163,23 @@ func TestCursorMethods(t *testing.T) {
 			t.Errorf("after Push(), nodes = %v, want %v", cursor.Nodes, expected)
 		}
 	})
-	
+
 	t.Run("Parent", func(t *testing.T) {
 		cursor := &Cursor{Nodes: []string{"root", "child", "grandchild"}}
 		if cursor.Parent() != "child" {
 			t.Errorf("Parent() = %q, want %q", cursor.Parent(), "child")
 		}
-		
+
 		// Test with too few nodes
 		shortCursor := &Cursor{Nodes: []string{"root"}}
 		if shortCursor.Parent() != "" {
 			t.Errorf("Parent() for short cursor = %q, want %q", shortCursor.Parent(), "")
 		}
 	})
-	
+
 	t.Run("Component", func(t *testing.T) {
 		cursor := &Cursor{Nodes: []string{"root", "child", "grandchild"}}
-		
+
 		// Test negative offsets (from end)
 		if cursor.Component(-1) != "grandchild" {
 			t.Errorf("Component(-1) = %q, want %q", cursor.Component(-1), "grandchild")
@@ -190,7 +190,7 @@ func TestCursorMethods(t *testing.T) {
 		if cursor.Component(-3) != "root" {
 			t.Errorf("Component(-3) = %q, want %q", cursor.Component(-3), "root")
 		}
-		
+
 		// Test out of bounds
 		if cursor.Component(-10) != "" {
 			t.Errorf("Component(-10) = %q, want %q", cursor.Component(-10), "")
@@ -298,13 +298,13 @@ func TestResolve(t *testing.T) {
 	data := map[interface{}]interface{}{
 		"root": map[interface{}]interface{}{
 			"child": map[interface{}]interface{}{
-				"value": "test",
+				"value":  "test",
 				"number": 42,
 			},
 			"list": []interface{}{
 				"item0",
 				map[interface{}]interface{}{
-					"name": "item1",
+					"name":  "item1",
 					"value": "named_item",
 				},
 				"item2",
@@ -381,7 +381,7 @@ func TestResolve(t *testing.T) {
 			}
 
 			result, err := cursor.Resolve(data)
-			
+
 			if tt.hasError {
 				if err == nil {
 					t.Errorf("expected error for path %q", tt.path)
@@ -399,12 +399,12 @@ func TestResolve(t *testing.T) {
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error for path %q: %v", tt.path, err)
 				return
 			}
-			
+
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("Resolve(%q) = %v, want %v", tt.path, result, tt.expected)
 			}
@@ -449,19 +449,19 @@ func TestFind(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := Find(data, tt.path)
-			
+
 			if tt.hasError {
 				if err == nil {
 					t.Errorf("expected error for path %q", tt.path)
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error for path %q: %v", tt.path, err)
 				return
 			}
-			
+
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("Find(%q) = %v, want %v", tt.path, result, tt.expected)
 			}
@@ -507,19 +507,19 @@ func TestFindString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := FindString(data, tt.path)
-			
+
 			if tt.hasError {
 				if err == nil {
 					t.Errorf("expected error for path %q", tt.path)
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("unexpected error for path %q: %v", tt.path, err)
 				return
 			}
-			
+
 			if result != tt.expected {
 				t.Errorf("FindString(%q) = %q, want %q", tt.path, result, tt.expected)
 			}
@@ -537,7 +537,7 @@ func TestNumber(t *testing.T) {
 		if result != 42 {
 			t.Errorf("Int64() = %d, want %d", result, 42)
 		}
-		
+
 		// Test non-integer
 		n = Number(42.5)
 		_, err = n.Int64()
@@ -545,7 +545,7 @@ func TestNumber(t *testing.T) {
 			t.Error("expected error for non-integer value")
 		}
 	})
-	
+
 	t.Run("Float64", func(t *testing.T) {
 		n := Number(42.5)
 		result := n.Float64()
@@ -553,7 +553,7 @@ func TestNumber(t *testing.T) {
 			t.Errorf("Float64() = %f, want %f", result, 42.5)
 		}
 	})
-	
+
 	t.Run("String", func(t *testing.T) {
 		// Integer number
 		n := Number(42.0)
@@ -561,7 +561,7 @@ func TestNumber(t *testing.T) {
 		if result != "42" {
 			t.Errorf("String() = %q, want %q", result, "42")
 		}
-		
+
 		// Float number
 		n = Number(42.5)
 		result = n.String()
@@ -582,7 +582,7 @@ func TestErrors(t *testing.T) {
 			t.Errorf("SyntaxError.Error() = %q, want %q", err.Error(), expected)
 		}
 	})
-	
+
 	t.Run("TypeMismatchError", func(t *testing.T) {
 		err := TypeMismatchError{
 			Path:   []string{"root", "child"},
@@ -600,7 +600,7 @@ func TestErrors(t *testing.T) {
 			t.Error("TypeMismatchError.Error() should contain path information")
 		}
 	})
-	
+
 	t.Run("NotFoundError", func(t *testing.T) {
 		err := NotFoundError{
 			Path: []string{"root", "missing"},
@@ -652,7 +652,7 @@ func stripANSI(s string) string {
 func BenchmarkParseCursor(b *testing.B) {
 	path := "root.child.grandchild.deeply.nested.path[0].name"
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		ParseCursor(path)
 	}
@@ -666,10 +666,10 @@ func BenchmarkResolve(b *testing.B) {
 			},
 		},
 	}
-	
+
 	cursor, _ := ParseCursor("root.child.value")
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		cursor.Resolve(data)
 	}

@@ -61,7 +61,7 @@ func TestCacheReporter(t *testing.T) {
 			So(output, ShouldContainSubstring, "another_cache")
 			So(output, ShouldContainSubstring, "Hit Rate")
 			So(output, ShouldContainSubstring, "66.7%") // test_cache hit rate
-			So(output, ShouldContainSubstring, "50.0%")  // another_cache hit rate
+			So(output, ShouldContainSubstring, "50.0%") // another_cache hit rate
 
 			// Check hot keys section
 			So(output, ShouldContainSubstring, "Hot Keys")
@@ -80,7 +80,7 @@ func TestCacheReporter(t *testing.T) {
 
 			So(err, ShouldBeNil)
 			output := buf.String()
-			
+
 			// Should truncate long keys with ellipsis
 			So(output, ShouldContainSubstring, "...")
 		})
@@ -345,15 +345,15 @@ func TestCacheReporterDiffReport(t *testing.T) {
 
 		Convey("should show significant changes only", func() {
 			// Setup scenarios with minor and major changes
-			analytics1.RecordHit("minor_change", "key1")  // 1 hit
+			analytics1.RecordHit("minor_change", "key1")                       // 1 hit
 			analytics1.RecordMiss("minor_change", "key2", 50*time.Millisecond) // 1 miss -> 50% hit rate
 
-			analytics1.RecordHit("major_change", "key1") // 1 hit
+			analytics1.RecordHit("major_change", "key1")                       // 1 hit
 			analytics1.RecordMiss("major_change", "key2", 50*time.Millisecond) // 1 miss
 			analytics1.RecordMiss("major_change", "key3", 50*time.Millisecond) // 1 miss -> 33.3% hit rate
 
 			// Minor change: Create scenario with <1% difference
-			// Previous: 50% (1 hit, 1 miss), Current: ~50.5% (100 hits, 99 misses) 
+			// Previous: 50% (1 hit, 1 miss), Current: ~50.5% (100 hits, 99 misses)
 			for i := 0; i < 100; i++ {
 				analytics2.RecordHit("minor_change", fmt.Sprintf("hit_%d", i))
 			}

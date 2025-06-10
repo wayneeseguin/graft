@@ -7,14 +7,14 @@ import (
 	"io"
 	"strings"
 	"sync"
-	
+
 	"github.com/wayneeseguin/graft/log"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
-	"github.com/wayneeseguin/graft/internal/utils/tree"
 	vaultkv "github.com/cloudfoundry-community/vaultkv"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 	"gopkg.in/yaml.v3"
 )
 
@@ -57,42 +57,42 @@ func convertStringMapToInterfaceMap(input interface{}) interface{} {
 type DefaultEngine struct {
 	// Configuration
 	config EngineConfig
-	
+
 	// Operator registry
 	operators map[string]Operator
 	opMutex   sync.RWMutex
-	
+
 	// Vault state
 	vaultKV          *vaultkv.KV
 	vaultSecretCache map[string]map[string]interface{}
 	vaultRefs        map[string][]string
 	vaultMutex       sync.RWMutex
 	skipVault        bool
-	
+
 	// AWS state
 	awsSession           *session.Session
 	secretsManagerClient secretsmanageriface.SecretsManagerAPI
 	parameterstoreClient ssmiface.SSMAPI
 	awsSecretsCache      map[string]string
 	awsParamsCache       map[string]string
-	awsMutex            sync.RWMutex
-	skipAws             bool
-	
+	awsMutex             sync.RWMutex
+	skipAws              bool
+
 	// Static IPs state
-	usedIPs   map[string]string
-	ipMutex   sync.RWMutex
-	
+	usedIPs map[string]string
+	ipMutex sync.RWMutex
+
 	// Prune state
 	keysToPrune []string
 	pruneMutex  sync.RWMutex
-	
+
 	// Sort state
 	pathsToSort map[string]string
 	sortMutex   sync.RWMutex
-	
+
 	// Parser configuration
 	useEnhancedParser bool
-	
+
 	// Metrics and monitoring
 	metrics *EngineMetrics
 }
@@ -100,37 +100,37 @@ type DefaultEngine struct {
 // EngineConfig holds configuration for the engine
 type EngineConfig struct {
 	// Vault configuration
-	VaultAddr      string
-	VaultToken     string
-	VaultSkipTLS   bool
-	SkipVault      bool
-	
+	VaultAddr    string
+	VaultToken   string
+	VaultSkipTLS bool
+	SkipVault    bool
+
 	// AWS configuration
-	AWSRegion    string
-	AWSProfile   string
-	SkipAWS      bool
-	
+	AWSRegion  string
+	AWSProfile string
+	SkipAWS    bool
+
 	// Parser configuration
 	UseEnhancedParser bool
-	
+
 	// Performance configuration
-	EnableCaching    bool
-	CacheSize        int
-	EnableParallel   bool
-	MaxWorkers       int
-	
+	EnableCaching  bool
+	CacheSize      int
+	EnableParallel bool
+	MaxWorkers     int
+
 	// Dataflow configuration
-	DataflowOrder    string // "alphabetical" (default) or "insertion"
+	DataflowOrder string // "alphabetical" (default) or "insertion"
 }
 
 // EngineMetrics tracks engine performance metrics
 type EngineMetrics struct {
-	OperatorCalls   map[string]int64
-	CacheHits       int64
-	CacheMisses     int64
-	VaultCalls      int64
-	AWSCalls        int64
-	mu              sync.RWMutex
+	OperatorCalls map[string]int64
+	CacheHits     int64
+	CacheMisses   int64
+	VaultCalls    int64
+	AWSCalls      int64
+	mu            sync.RWMutex
 }
 
 // NewDefaultEngine creates a new default engine with default configuration
@@ -141,35 +141,35 @@ func NewDefaultEngine() *DefaultEngine {
 // NewDefaultEngineWithConfig creates a new default engine with custom configuration
 func NewDefaultEngineWithConfig(config EngineConfig) *DefaultEngine {
 	e := &DefaultEngine{
-		config:           config,
-		operators:        make(map[string]Operator),
-		vaultSecretCache: make(map[string]map[string]interface{}),
-		vaultRefs:        make(map[string][]string),
-		awsSecretsCache:  make(map[string]string),
-		awsParamsCache:   make(map[string]string),
-		usedIPs:         make(map[string]string),
-		pathsToSort:     make(map[string]string),
-		skipVault:       config.SkipVault,
-		skipAws:         config.SkipAWS,
+		config:            config,
+		operators:         make(map[string]Operator),
+		vaultSecretCache:  make(map[string]map[string]interface{}),
+		vaultRefs:         make(map[string][]string),
+		awsSecretsCache:   make(map[string]string),
+		awsParamsCache:    make(map[string]string),
+		usedIPs:           make(map[string]string),
+		pathsToSort:       make(map[string]string),
+		skipVault:         config.SkipVault,
+		skipAws:           config.SkipAWS,
 		useEnhancedParser: config.UseEnhancedParser,
 		metrics: &EngineMetrics{
 			OperatorCalls: make(map[string]int64),
 		},
 	}
-	
+
 	// Register default operators
 	e.registerDefaultOperators()
-	
+
 	// Initialize vault if configured
 	if !config.SkipVault && config.VaultAddr != "" {
 		e.initializeVault()
 	}
-	
+
 	// Initialize AWS if configured
 	if !config.SkipAWS && config.AWSRegion != "" {
 		e.initializeAWS()
 	}
-	
+
 	return e
 }
 
@@ -189,11 +189,11 @@ func DefaultEngineConfig() EngineConfig {
 func (e *DefaultEngine) RegisterOperator(name string, op Operator) error {
 	e.opMutex.Lock()
 	defer e.opMutex.Unlock()
-	
+
 	if _, exists := e.operators[name]; exists {
 		return fmt.Errorf("operator %s already registered", name)
 	}
-	
+
 	e.operators[name] = op
 	return nil
 }
@@ -202,12 +202,12 @@ func (e *DefaultEngine) RegisterOperator(name string, op Operator) error {
 func (e *DefaultEngine) GetOperator(name string) (Operator, bool) {
 	e.opMutex.RLock()
 	defer e.opMutex.RUnlock()
-	
+
 	// First check engine's registry
 	if op, exists := e.operators[name]; exists {
 		return op, true
 	}
-	
+
 	// Fall back to global registry for backward compatibility
 	op, exists := OpRegistry[name]
 	return op, exists
@@ -225,7 +225,7 @@ func (e *DefaultEngine) GetVaultCache() map[string]map[string]interface{} {
 	// Return a copy to avoid concurrent modification
 	e.vaultMutex.RLock()
 	defer e.vaultMutex.RUnlock()
-	
+
 	cache := make(map[string]map[string]interface{})
 	for k, v := range e.vaultSecretCache {
 		cache[k] = v
@@ -242,13 +242,13 @@ func (e *DefaultEngine) SetVaultCache(path string, data map[string]interface{}) 
 func (e *DefaultEngine) AddVaultRef(path string, keys []string) {
 	e.vaultMutex.Lock()
 	defer e.vaultMutex.Unlock()
-	
+
 	// Update internal vault refs
 	if e.vaultRefs[path] == nil {
 		e.vaultRefs[path] = []string{}
 	}
 	e.vaultRefs[path] = append(e.vaultRefs[path], keys...)
-	
+
 	// Also update global VaultRefs for backward compatibility with vaultinfo command
 	if SkipVault || e.skipVault {
 		if VaultRefs[path] == nil {
@@ -284,7 +284,7 @@ func (e *DefaultEngine) GetParameterStoreClient() ssmiface.SSMAPI {
 func (e *DefaultEngine) GetAWSSecretsCache() map[string]string {
 	e.awsMutex.RLock()
 	defer e.awsMutex.RUnlock()
-	
+
 	cache := make(map[string]string)
 	for k, v := range e.awsSecretsCache {
 		cache[k] = v
@@ -301,7 +301,7 @@ func (e *DefaultEngine) SetAWSSecretCache(key, value string) {
 func (e *DefaultEngine) GetAWSParamsCache() map[string]string {
 	e.awsMutex.RLock()
 	defer e.awsMutex.RUnlock()
-	
+
 	cache := make(map[string]string)
 	for k, v := range e.awsParamsCache {
 		cache[k] = v
@@ -322,7 +322,7 @@ func (e *DefaultEngine) IsAWSSkipped() bool {
 func (e *DefaultEngine) GetUsedIPs() map[string]string {
 	e.ipMutex.RLock()
 	defer e.ipMutex.RUnlock()
-	
+
 	ips := make(map[string]string)
 	for k, v := range e.usedIPs {
 		ips[k] = v
@@ -345,7 +345,7 @@ func (e *DefaultEngine) AddKeyToPrune(key string) {
 func (e *DefaultEngine) GetKeysToPrune() []string {
 	e.pruneMutex.RLock()
 	defer e.pruneMutex.RUnlock()
-	
+
 	keys := make([]string, len(e.keysToPrune))
 	copy(keys, e.keysToPrune)
 	return keys
@@ -360,7 +360,7 @@ func (e *DefaultEngine) AddPathToSort(path, order string) {
 func (e *DefaultEngine) GetPathsToSort() map[string]string {
 	e.sortMutex.RLock()
 	defer e.sortMutex.RUnlock()
-	
+
 	paths := make(map[string]string)
 	for k, v := range e.pathsToSort {
 		paths[k] = v
@@ -389,10 +389,10 @@ func (e *DefaultEngine) initializeAWS() {
 func (e *DefaultEngine) createEvaluator(t map[interface{}]interface{}) *Evaluator {
 	here, _ := tree.ParseCursor("$")
 	return &Evaluator{
-		Tree: t,
-		Deps: map[string][]tree.Cursor{},
-		Here: here,
-		engine: e,
+		Tree:          t,
+		Deps:          map[string][]tree.Cursor{},
+		Here:          here,
+		engine:        e,
 		DataflowOrder: e.config.DataflowOrder,
 	}
 }
@@ -404,10 +404,10 @@ func (e *DefaultEngine) evaluate(ctx context.Context, ev *Evaluator) error {
 		return ctx.Err()
 	default:
 	}
-	
+
 	// Set the engine on the evaluator
 	ev.engine = Engine(e)
-	
+
 	// Run evaluation phases
 	for _, phase := range []OperatorPhase{MergePhase, ParamPhase, EvalPhase} {
 		// Check context cancellation before each phase
@@ -416,12 +416,12 @@ func (e *DefaultEngine) evaluate(ctx context.Context, ev *Evaluator) error {
 			return ctx.Err()
 		default:
 		}
-		
+
 		if err := ev.RunPhase(phase); err != nil {
 			return err
 		}
 	}
-	
+
 	// Post-processing: apply operator-level pruning
 	prunePaths := e.GetKeysToPrune()
 	log.DEBUG("Engine: Found %d prune paths to process: %v", len(prunePaths), prunePaths)
@@ -437,7 +437,7 @@ func (e *DefaultEngine) evaluate(ctx context.Context, ev *Evaluator) error {
 		// Update the evaluator tree with the pruned document
 		ev.Tree = doc.RawData().(map[interface{}]interface{})
 	}
-	
+
 	// Post-processing: apply sort operations
 	sortPaths := e.GetPathsToSort()
 	log.DEBUG("Engine: Found %d sort paths to process: %v", len(sortPaths), sortPaths)
@@ -446,14 +446,14 @@ func (e *DefaultEngine) evaluate(ctx context.Context, ev *Evaluator) error {
 			// Remove the "$." prefix if present
 			cleanPath := strings.TrimPrefix(path, "$.")
 			log.DEBUG("Engine: Sorting path '%s' by key '%s'", cleanPath, sortKey)
-			
+
 			// Navigate to the list at the path
 			value, err := getValueAtPath(ev.Tree, cleanPath)
 			if err != nil {
 				log.DEBUG("Engine: Failed to get value at path '%s': %v", cleanPath, err)
 				continue
 			}
-			
+
 			// Check if it's a list
 			if list, ok := value.([]interface{}); ok {
 				// Sort the list in place
@@ -469,7 +469,7 @@ func (e *DefaultEngine) evaluate(ctx context.Context, ev *Evaluator) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -481,18 +481,18 @@ func (e *DefaultEngine) ParseYAML(data []byte) (Document, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
-	
+
 	// First parse as generic interface to check document type
 	var genericResult interface{}
 	err := yaml.Unmarshal(data, &genericResult)
 	if err != nil {
 		return nil, NewParseError("failed to parse YAML", err)
 	}
-	
+
 	if genericResult == nil {
 		return nil, nil
 	}
-	
+
 	// Check that root is a map/hash - handle both v2 and v3 map types
 	switch result := genericResult.(type) {
 	case map[interface{}]interface{}:
@@ -513,23 +513,23 @@ func (e *DefaultEngine) ParseJSON(data []byte) (Document, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
-	
+
 	var result map[string]interface{}
 	err := json.Unmarshal(data, &result)
 	if err != nil {
 		return nil, NewParseError("failed to parse JSON", err)
 	}
-	
+
 	if result == nil {
 		return nil, nil
 	}
-	
+
 	// Convert to map[interface{}]interface{}
 	converted := make(map[interface{}]interface{})
 	for k, v := range result {
 		converted[k] = v
 	}
-	
+
 	return NewDocument(converted), nil
 }
 
@@ -550,7 +550,7 @@ func (e *DefaultEngine) Merge(ctx context.Context, docs ...Document) MergeBuilde
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	
+
 	return &mergeBuilderImpl{
 		engine: e,
 		ctx:    ctx,
@@ -575,28 +575,28 @@ func (e *DefaultEngine) Evaluate(ctx context.Context, doc Document) (Document, e
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	
+
 	// Get the raw data
 	data, ok := doc.RawData().(map[interface{}]interface{})
 	if !ok {
 		return nil, fmt.Errorf("document data is not a map")
 	}
-	
+
 	// Create evaluator
 	ev := e.createEvaluator(data)
-	
+
 	// Extract cherry-pick paths from context if present
 	if cherryPickPaths := GetCherryPickPaths(ctx); cherryPickPaths != nil && len(cherryPickPaths) > 0 {
 		ev.CherryPickPaths = cherryPickPaths
 		ev.Only = cherryPickPaths // Also set the original field for backward compatibility
 	}
-	
+
 	// Run evaluation
 	err := e.evaluate(ctx, ev)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Return evaluated document
 	return NewDocument(ev.Tree), nil
 }
@@ -623,7 +623,7 @@ func (e *DefaultEngine) ToJSONIndent(doc Document, indent string) ([]byte, error
 func (e *DefaultEngine) UnregisterOperator(name string) error {
 	e.opMutex.Lock()
 	defer e.opMutex.Unlock()
-	
+
 	delete(e.operators, name)
 	return nil
 }
@@ -632,14 +632,14 @@ func (e *DefaultEngine) UnregisterOperator(name string) error {
 func (e *DefaultEngine) ListOperators() []string {
 	e.opMutex.RLock()
 	defer e.opMutex.RUnlock()
-	
+
 	names := make([]string, 0, len(e.operators)+len(OpRegistry))
-	
+
 	// Add engine-specific operators
 	for name := range e.operators {
 		names = append(names, name)
 	}
-	
+
 	// Add global operators
 	for name := range OpRegistry {
 		// Check if not already in the list
@@ -654,7 +654,7 @@ func (e *DefaultEngine) ListOperators() []string {
 			names = append(names, name)
 		}
 	}
-	
+
 	return names
 }
 
@@ -696,7 +696,7 @@ func createEngineFromOptions(opts *EngineOptions) (Engine, error) {
 	if opts.MaxConcurrency < 0 {
 		return nil, NewConfigurationError("concurrency must be non-negative")
 	}
-	
+
 	// Create engine config from options
 	config := EngineConfig{
 		VaultAddr:         opts.VaultAddress,
@@ -709,10 +709,10 @@ func createEngineFromOptions(opts *EngineOptions) (Engine, error) {
 		MaxWorkers:        opts.MaxConcurrency,
 		DataflowOrder:     opts.DataflowOrder,
 	}
-	
+
 	// Create the engine
 	engine := NewDefaultEngineWithConfig(config)
-	
+
 	// Register custom operators if any
 	if opts.CustomOperators != nil {
 		for name, op := range opts.CustomOperators {
@@ -721,6 +721,6 @@ func createEngineFromOptions(opts *EngineOptions) (Engine, error) {
 			}
 		}
 	}
-	
+
 	return engine, nil
 }

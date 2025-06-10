@@ -7,10 +7,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	
+
 	"github.com/wayneeseguin/graft/internal/utils/ansi"
 	"github.com/wayneeseguin/graft/internal/utils/tree"
-	
+
 	"github.com/wayneeseguin/graft/log"
 	"github.com/wayneeseguin/graft/pkg/graft/merger"
 )
@@ -27,15 +27,15 @@ type Evaluator struct {
 	Only []string
 
 	pointer *interface{}
-	
+
 	// Reference to the engine (for accessing registries and state)
 	engine interface{} // Using interface{} to avoid circular dependency
-	
+
 	// DataflowOrder controls the ordering of operations in dataflow output
 	// "alphabetical" (default) - sort operations alphabetically by path
 	// "insertion" - maintain the order operations were discovered
 	DataflowOrder string
-	
+
 	// CherryPickPaths contains the paths to cherry-pick during evaluation.
 	// When set, only operators under these paths and their dependencies will be evaluated.
 	// This enables selective evaluation, significantly improving performance for large documents
@@ -83,7 +83,7 @@ func nameOfObj(o interface{}, def string) string {
 // DataFlow ...
 func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 	ev.Here = &tree.Cursor{}
-	
+
 	log.DEBUG("DataFlow: starting phase %v", phase)
 
 	all := map[string]*Opcall{}
@@ -125,7 +125,7 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 
 	// Track visited nodes to prevent infinite loops
 	visited := make(map[uintptr]bool)
-	
+
 	scan = func(o interface{}) {
 		switch v := o.(type) {
 		case map[interface{}]interface{}:
@@ -135,7 +135,7 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 				return // Skip already visited nodes
 			}
 			visited[ptr] = true
-			
+
 			// Sort keys for deterministic iteration order (for reproducible tests)
 			keys := make([]string, 0, len(v))
 			keyToInterface := make(map[string]interface{})
@@ -145,7 +145,7 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 				keyToInterface[keyStr] = k
 			}
 			sort.Strings(keys)
-			
+
 			for _, keyStr := range keys {
 				originalKey := keyToInterface[keyStr]
 				val := v[originalKey]
@@ -153,7 +153,7 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 				check(val)
 				ev.Here.Pop()
 			}
-			
+
 			delete(visited, ptr) // Clean up after visiting
 
 		case map[string]interface{}:
@@ -163,21 +163,21 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 				return // Skip already visited nodes
 			}
 			visited[ptr] = true
-			
+
 			// Sort keys for deterministic iteration order (for reproducible tests)
 			keys := make([]string, 0, len(v))
 			for k := range v {
 				keys = append(keys, k)
 			}
 			sort.Strings(keys)
-			
+
 			for _, k := range keys {
 				val := v[k]
 				ev.Here.Push(k)
 				check(val)
 				ev.Here.Pop()
 			}
-			
+
 			delete(visited, ptr) // Clean up after visiting
 
 		case []interface{}:
@@ -187,7 +187,7 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 				return // Skip already visited nodes
 			}
 			visited[ptr] = true
-			
+
 			for i, val := range v {
 				name := nameOfObj(val, fmt.Sprintf("%d", i))
 				op, _ := ParseOpcallCompat(phase, name)
@@ -199,7 +199,7 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 				check(val)
 				ev.Here.Pop()
 			}
-			
+
 			delete(visited, ptr) // Clean up after visiting
 		}
 	}
@@ -238,13 +238,13 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 						if len(parent.Nodes) == 0 {
 							break
 						}
-						
+
 						// Try parent path as-is
 						if b, found := all[parent.String()]; found {
 							g = append(g, []*Opcall{b, a})
 							break
 						}
-						
+
 						// Try canonical parent path
 						if canon, err := parent.Canonical(ev.Tree); err == nil {
 							if b, found := all[canon.String()]; found {
@@ -436,12 +436,12 @@ func (ev *Evaluator) DataFlow(phase OperatorPhase) ([]*Opcall, error) {
 					break
 				}
 			}
-			
+
 			if !called {
 				freeNodeMap[k] = node
 			}
 		}
-		
+
 		// Then return them in a deterministic order based on sortedKeys
 		// but only include nodes that are actually free
 		l := []*Opcall{}
@@ -892,7 +892,7 @@ func (ev *Evaluator) isUnderPath(opPath, cherryPath string) bool {
 	if opPath == "" || cherryPath == "" {
 		return false
 	}
-	
+
 	// Parse both paths into cursors
 	opCursor, err := tree.ParseCursor(opPath)
 	if err != nil {
@@ -902,17 +902,17 @@ func (ev *Evaluator) isUnderPath(opPath, cherryPath string) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	// Check if either cursor has no nodes
 	if len(opCursor.Nodes) == 0 || len(cherryCursor.Nodes) == 0 {
 		return false
 	}
-	
+
 	// Check if opCursor starts with cherryCursor
 	if len(opCursor.Nodes) < len(cherryCursor.Nodes) {
 		return false
 	}
-	
+
 	// Compare each segment with context
 	currentPath := &tree.Cursor{}
 	for i, cherryNode := range cherryCursor.Nodes {
@@ -922,7 +922,7 @@ func (ev *Evaluator) isUnderPath(opPath, cherryPath string) bool {
 		// Build up the current path as we go
 		currentPath.Push(opCursor.Nodes[i])
 	}
-	
+
 	return true
 }
 
@@ -932,16 +932,16 @@ func (ev *Evaluator) segmentsMatchWithContext(opSegment, cherrySegment string, c
 	if opSegment == cherrySegment {
 		return true
 	}
-	
+
 	// Check if both are numeric indices
 	opIdx, opErr := strconv.Atoi(opSegment)
 	cherryIdx, cherryErr := strconv.Atoi(cherrySegment)
-	
+
 	// Both are numeric - they should match exactly
 	if opErr == nil && cherryErr == nil {
 		return opIdx == cherryIdx
 	}
-	
+
 	// One is numeric and one is not - check if they refer to the same array element
 	if (opErr == nil) != (cherryErr == nil) {
 		// Try to resolve the current path to get the actual array
@@ -985,7 +985,7 @@ func (ev *Evaluator) segmentsMatchWithContext(opSegment, cherrySegment string, c
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -997,7 +997,7 @@ func (ev *Evaluator) segmentsMatch(opSegment, cherrySegment string) bool {
 
 // filterOperatorsForCherryPick filters operators to only those needed for cherry-picked paths.
 // This implements the selective evaluation strategy:
-// 
+//
 // 1. First identifies all operators under cherry-picked paths
 // 2. Then recursively collects all their dependencies (transitive closure)
 // 3. Returns only the operators that are needed for evaluation
@@ -1008,12 +1008,12 @@ func (ev *Evaluator) filterOperatorsForCherryPick(all map[string]*Opcall) map[st
 	if len(ev.CherryPickPaths) == 0 {
 		return all // No filtering needed
 	}
-	
+
 	needed := make(map[string]bool)
 	result := make(map[string]*Opcall)
-	
+
 	log.DEBUG("filterOperatorsForCherryPick: Filtering operators for cherry-pick paths: %v", ev.CherryPickPaths)
-	
+
 	// Step 1: Mark operators under cherry-picked paths
 	for path := range all {
 		for _, cherryPath := range ev.CherryPickPaths {
@@ -1024,30 +1024,30 @@ func (ev *Evaluator) filterOperatorsForCherryPick(all map[string]*Opcall) map[st
 			}
 		}
 	}
-	
+
 	// If no operators were found under cherry-pick paths, include all operators
 	// This handles cases where cherry-pick paths don't contain operators directly
 	if len(needed) == 0 {
 		log.DEBUG("filterOperatorsForCherryPick: No operators found under cherry-pick paths, including all")
 		return all
 	}
-	
+
 	// Step 2: Collect transitive dependencies - but only check operators in the dependency list
 	// We need to look at what the needed operators depend on, not what depends on them
 	changed := true
 	iterations := 0
 	maxIterations := 100 // Prevent infinite loops
-	
+
 	for changed && iterations < maxIterations {
 		changed = false
 		iterations++
-		
+
 		// Create a snapshot of currently needed paths to iterate over
 		currentNeeded := make([]string, 0, len(needed))
 		for path := range needed {
 			currentNeeded = append(currentNeeded, path)
 		}
-		
+
 		// For each needed operator, add its dependencies
 		for _, path := range currentNeeded {
 			if op, exists := all[path]; exists {
@@ -1056,7 +1056,7 @@ func (ev *Evaluator) filterOperatorsForCherryPick(all map[string]*Opcall) map[st
 				for _, dep := range deps {
 					// Try to resolve the dependency to a canonical path
 					depPath := dep.String()
-					
+
 					// Check if this dependency corresponds to an operator
 					if _, isOp := all[depPath]; isOp && !needed[depPath] {
 						needed[depPath] = true
@@ -1067,19 +1067,19 @@ func (ev *Evaluator) filterOperatorsForCherryPick(all map[string]*Opcall) map[st
 			}
 		}
 	}
-	
+
 	if iterations >= maxIterations {
 		log.DEBUG("filterOperatorsForCherryPick: Warning - reached maximum iterations while collecting dependencies")
 	}
-	
+
 	// Step 3: Build filtered result
 	for path, op := range all {
 		if needed[path] {
 			result[path] = op
 		}
 	}
-	
+
 	log.DEBUG("filterOperatorsForCherryPick: Filtered from %d to %d operators", len(all), len(result))
-	
+
 	return result
 }

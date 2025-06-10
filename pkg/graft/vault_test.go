@@ -1,4 +1,5 @@
 // TODO: Vault tests removed - accessing internal kv variable from operators package
+//go:build ignore
 // +build ignore
 
 package graft
@@ -25,7 +26,7 @@ import (
 func TestVault(t *testing.T) {
 	// Disable ANSI colors for testing
 	ansi.Color(false)
-	
+
 	YAML := func(s string) map[interface{}]interface{} {
 		y, err := simpleyaml.NewYaml([]byte(s))
 		So(err, ShouldBeNil)

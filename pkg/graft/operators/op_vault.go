@@ -50,23 +50,23 @@ func (vcp *VaultClientPool) GetClient(targetName string, engine graft.Engine) (*
 	if client, exists := vcp.clients[targetName]; exists {
 		return client, nil
 	}
-	
+
 	// Get target configuration
 	config, err := vcp.getTargetConfig(targetName, engine)
 	if err != nil {
 		return nil, fmt.Errorf("vault target '%s' not found: %v", targetName, err)
 	}
-	
+
 	// Create new client
 	client, err := createVaultClientFromConfig(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create vault client for target '%s': %v", targetName, err)
 	}
-	
+
 	// Store client for reuse
 	vcp.clients[targetName] = client
 	vcp.configs[targetName] = config
-	
+
 	return client, nil
 }
 
@@ -76,28 +76,28 @@ func (vcp *VaultClientPool) getTargetConfig(targetName string, engine graft.Engi
 	if config, exists := vcp.configs[targetName]; exists {
 		return config, nil
 	}
-	
+
 	// For now, try environment variables with target suffix
 	// In a full implementation, this would query the engine's configuration
 	envPrefix := fmt.Sprintf("VAULT_%s_", strings.ToUpper(targetName))
-	
+
 	config := &VaultTarget{
 		URL:       os.Getenv(envPrefix + "ADDR"),
 		Token:     os.Getenv(envPrefix + "TOKEN"),
 		Namespace: os.Getenv(envPrefix + "NAMESPACE"),
 	}
-	
+
 	// Check for skip verify
 	if skipStr := os.Getenv(envPrefix + "SKIP_VERIFY"); skipStr == "true" || skipStr == "1" {
 		config.SkipVerify = true
 	}
-	
+
 	// If no environment variables found, return error
 	if config.URL == "" || config.Token == "" {
-		return nil, fmt.Errorf("vault target '%s' configuration not found (expected %sADDR and %sTOKEN environment variables)", 
+		return nil, fmt.Errorf("vault target '%s' configuration not found (expected %sADDR and %sTOKEN environment variables)",
 			targetName, envPrefix, envPrefix)
 	}
-	
+
 	return config, nil
 }
 
@@ -107,12 +107,12 @@ func createVaultClientFromConfig(config *VaultTarget) (*vaultkv.KV, error) {
 	addr := os.ExpandEnv(config.URL)
 	token := os.ExpandEnv(config.Token)
 	namespace := os.ExpandEnv(config.Namespace)
-	
+
 	parsedURL, err := url.Parse(addr)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse Vault URL `%s': %s", addr, err)
 	}
-	
+
 	// Port handling
 	if parsedURL.Port() == "" {
 		if parsedURL.Scheme == "http" {
@@ -121,13 +121,13 @@ func createVaultClientFromConfig(config *VaultTarget) (*vaultkv.KV, error) {
 			parsedURL.Host = parsedURL.Host + ":443"
 		}
 	}
-	
+
 	// TLS configuration
 	roots, err := x509.SystemCertPool()
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve system root certificate authorities: %s", err)
 	}
-	
+
 	client := &vaultkv.Client{
 		AuthToken: token,
 		VaultURL:  parsedURL,
@@ -150,12 +150,12 @@ func createVaultClientFromConfig(config *VaultTarget) (*vaultkv.KV, error) {
 			},
 		},
 	}
-	
+
 	// Enable tracing if debug is on
 	if DebugOn() {
 		client.Trace = os.Stderr
 	}
-	
+
 	return client.NewKV(), nil
 }
 
@@ -164,7 +164,7 @@ func (o VaultOperator) extractTarget(ev *Evaluator, args []*Expr) string {
 	// For now, we'll implement a simple approach where target information
 	// could be stored in the engine state or extracted from the evaluator context.
 	// In a full implementation, this would access the parsed operator call's target field.
-	
+
 	// TODO: This is a placeholder implementation. In the complete implementation,
 	// the target would be available from the operator call context.
 	// For now, we'll return empty string (no target) to maintain backward compatibility.
@@ -243,7 +243,7 @@ func (p *vaultArgProcessor) detectMultiplePathArgs(ev *Evaluator) bool {
 	if p.hasDefault {
 		return false
 	}
-	
+
 	// Check if we have multiple arguments that look like vault paths
 	pathCount := 0
 	for _, arg := range p.args {
@@ -251,7 +251,7 @@ func (p *vaultArgProcessor) detectMultiplePathArgs(ev *Evaluator) bool {
 			pathCount++
 		}
 	}
-	
+
 	return pathCount > 1
 }
 
@@ -404,14 +404,14 @@ func (p *vaultArgProcessor) splitVaultPaths(path string) []string {
 	// Split by semicolon and trim whitespace
 	rawPaths := strings.Split(path, ";")
 	paths := make([]string, 0, len(rawPaths))
-	
+
 	for _, p := range rawPaths {
 		trimmed := strings.TrimSpace(p)
 		if trimmed != "" {
 			paths = append(paths, trimmed)
 		}
 	}
-	
+
 	return paths
 }
 
@@ -422,7 +422,7 @@ func (p *vaultArgProcessor) buildVaultPaths(ev *Evaluator) ([]string, error) {
 		// Multiple arguments mode - each arg is a separate path
 		// Last arg is the default unless there's a LogicalOr
 		paths := make([]string, 0)
-		
+
 		argsToProcess := p.args
 		if !p.hasDefault {
 			// Last argument might be a default value, check if it's a path
@@ -434,7 +434,7 @@ func (p *vaultArgProcessor) buildVaultPaths(ev *Evaluator) ([]string, error) {
 				p.defaultExpr = lastArg
 			}
 		}
-		
+
 		// Process each argument as a separate path
 		for i, arg := range argsToProcess {
 			path, err := p.resolveToString(ev, arg)
@@ -444,20 +444,20 @@ func (p *vaultArgProcessor) buildVaultPaths(ev *Evaluator) ([]string, error) {
 			}
 			paths = append(paths, path)
 		}
-		
+
 		DEBUG("  vault paths to try (multi-arg mode): %v", paths)
 		return paths, nil
 	}
-	
+
 	// Single concatenated path mode (classic)
 	path, err := p.buildVaultPath(ev)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Then split it into multiple paths if needed (semicolon mode)
 	paths := p.splitVaultPaths(path)
-	
+
 	DEBUG("  vault paths to try: %v", paths)
 	return paths, nil
 }
@@ -648,7 +648,7 @@ func (o VaultOperator) needsEnhancedParsing(args []*Expr) bool {
 		if arg == nil {
 			continue
 		}
-		
+
 		switch arg.Type {
 		case graft.VaultGroup, graft.VaultChoice:
 			return true
@@ -720,7 +720,7 @@ func (o VaultOperator) tryVaultPaths(ev *Evaluator, engine graft.Engine, paths [
 	var lastErr error
 	for i, key := range paths {
 		DEBUG("vault: trying path %d of %d: %s", i+1, len(paths), key)
-		
+
 		// Track vault references using engine context
 		engine.GetOperatorState().AddVaultRef(key, []string{ev.Here.String()})
 
@@ -734,11 +734,11 @@ func (o VaultOperator) tryVaultPaths(ev *Evaluator, engine graft.Engine, paths [
 				Value: secret,
 			}, nil
 		}
-		
+
 		// Remember the last error
 		lastErr = err
 		DEBUG("vault: path %d failed: %s", i+1, err)
-		
+
 		// For non-404 errors on single path, fail immediately
 		if len(paths) == 1 && !isVaultNotFound(err) {
 			break
@@ -762,7 +762,7 @@ func (o VaultOperator) tryVaultPaths(ev *Evaluator, engine graft.Engine, paths [
 	if lastErr != nil {
 		return nil, lastErr
 	}
-	
+
 	// This shouldn't happen, but just in case
 	return nil, fmt.Errorf("vault operator failed to retrieve secret")
 }
@@ -823,7 +823,7 @@ func (o VaultOperator) performVaultLookup(engine graft.Engine, key string, targe
 
 	var kv *vaultkv.KV
 	var err error
-	
+
 	if targetName != "" {
 		// Use target-specific client
 		kv, err = vaultClientPool.GetClient(targetName, engine)
@@ -839,7 +839,7 @@ func (o VaultOperator) performVaultLookup(engine graft.Engine, key string, targe
 			if SkipVault {
 				return "REDACTED", nil
 			}
-			
+
 			// Fall back to global initialization
 			if globalKV == nil {
 				err := initializeVaultClient()

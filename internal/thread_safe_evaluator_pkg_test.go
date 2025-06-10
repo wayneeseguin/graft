@@ -93,7 +93,7 @@ func TestThreadSafeEvaluatorImpl_Creation(t *testing.T) {
 func TestThreadSafeEvaluatorImpl_Evaluate(t *testing.T) {
 	t.Run("successful evaluation", func(t *testing.T) {
 		data := map[interface{}]interface{}{
-			"test": "value",
+			"test":   "value",
 			"number": 42,
 		}
 		tree := NewSafeTree(data)
@@ -290,7 +290,7 @@ func TestThreadSafeEvaluatorImpl_Subscribe(t *testing.T) {
 
 	t.Run("subscribe and notify", func(t *testing.T) {
 		progressCount := int64(0)
-		
+
 		listener := &SimpleEvaluationListener{
 			OnProgressFunc: func(progress EvaluationProgress) {
 				atomic.AddInt64(&progressCount, 1)
@@ -298,24 +298,24 @@ func TestThreadSafeEvaluatorImpl_Subscribe(t *testing.T) {
 		}
 
 		unsubscribe := evaluator.Subscribe(listener)
-		
+
 		// Trigger progress notification
 		evaluator.notifyProgress()
-		
+
 		// Wait a bit for async notification
 		time.Sleep(time.Millisecond * 10)
-		
+
 		if atomic.LoadInt64(&progressCount) != 1 {
 			t.Errorf("expected 1 progress notification, got %d", progressCount)
 		}
 
 		// Unsubscribe
 		unsubscribe()
-		
+
 		// Trigger another notification
 		evaluator.notifyProgress()
 		time.Sleep(time.Millisecond * 10)
-		
+
 		// Count should not increase
 		if atomic.LoadInt64(&progressCount) != 1 {
 			t.Errorf("expected no new notifications after unsubscribe, got %d", progressCount)
@@ -450,12 +450,12 @@ func TestThreadSafeOperatorAdapter(t *testing.T) {
 			wg.Add(1)
 			go func(idx int) {
 				defer wg.Done()
-				
+
 				ev := &graft.Evaluator{}
 				args := []*graft.Expr{
 					{Type: graft.Literal, Literal: idx},
 				}
-				
+
 				results[idx], errors[idx] = adapter.Run(ev, args)
 			}(i)
 		}
@@ -480,9 +480,9 @@ func TestMigrationHelper(t *testing.T) {
 		data := map[interface{}]interface{}{
 			"key": "value",
 		}
-		
+
 		helper := NewMigrationHelper(data)
-		
+
 		if helper == nil {
 			t.Fatal("expected helper to be created")
 		}
@@ -497,9 +497,9 @@ func TestMigrationHelper(t *testing.T) {
 	t.Run("get thread-safe evaluator", func(t *testing.T) {
 		data := map[interface{}]interface{}{}
 		helper := NewMigrationHelper(data)
-		
+
 		tsEval := helper.GetThreadSafeEvaluator()
-		
+
 		if tsEval == nil {
 			t.Fatal("expected thread-safe evaluator")
 		}
@@ -511,17 +511,17 @@ func TestMigrationHelper(t *testing.T) {
 	t.Run("migrate existing evaluator", func(t *testing.T) {
 		data := map[interface{}]interface{}{}
 		helper := NewMigrationHelper(data)
-		
+
 		// Create original evaluator with custom settings
 		originalEv := &graft.Evaluator{
 			Tree:     data,
 			SkipEval: true,
-			CheckOps: []*graft.Opcall{},  // Empty for testing
+			CheckOps: []*graft.Opcall{}, // Empty for testing
 			Only:     []string{"path1", "path2"},
 		}
-		
+
 		migratedEval := helper.MigrateEvaluator(originalEv)
-		
+
 		if migratedEval == nil {
 			t.Fatal("expected migrated evaluator")
 		}
@@ -536,9 +536,9 @@ func TestMigrationHelper(t *testing.T) {
 	t.Run("get compatible evaluator", func(t *testing.T) {
 		data := map[interface{}]interface{}{}
 		helper := NewMigrationHelper(data)
-		
+
 		compatEval := helper.GetCompatibleEvaluator()
-		
+
 		if compatEval == nil {
 			t.Fatal("expected compatible evaluator")
 		}
@@ -562,7 +562,7 @@ func BenchmarkThreadSafeEvaluator_Evaluate(b *testing.B) {
 	ctx := context.Background()
 
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		_ = evaluator.Evaluate(ctx)
 	}
@@ -577,7 +577,7 @@ func BenchmarkThreadSafeEvaluator_ConcurrentEvaluate(b *testing.B) {
 	ctx := context.Background()
 
 	b.ResetTimer()
-	
+
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			_ = evaluator.Evaluate(ctx)
@@ -594,7 +594,7 @@ func BenchmarkThreadSafeOperatorAdapter_Run(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		_, _ = adapter.Run(ev, args)
 	}
@@ -606,7 +606,7 @@ func BenchmarkThreadSafeOperatorAdapter_ConcurrentRun(b *testing.B) {
 	ev := &graft.Evaluator{}
 
 	b.ResetTimer()
-	
+
 	b.RunParallel(func(pb *testing.PB) {
 		i := 0
 		for pb.Next() {

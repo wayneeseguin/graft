@@ -3,7 +3,7 @@ package graft
 import (
 	"context"
 	"io"
-	
+
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager/secretsmanageriface"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
@@ -36,18 +36,24 @@ type MockEngine struct {
 	GetOperatorStateFunc   func() OperatorState
 
 	// Call tracking
-	ParseYAMLCalls          [][]byte
-	ParseJSONCalls          [][]byte
-	ParseFileCalls          []string
-	ParseReaderCalls        []io.Reader
-	MergeCalls              [][]Document
-	MergeFilesCalls         [][]string
-	MergeReadersCalls       [][]io.Reader
-	EvaluateCalls           []Document
-	ToYAMLCalls             []Document
-	ToJSONCalls             []Document
-	ToJSONIndentCalls       []struct{ Doc Document; Indent string }
-	RegisterOperatorCalls   []struct{ Name string; Op Operator }
+	ParseYAMLCalls    [][]byte
+	ParseJSONCalls    [][]byte
+	ParseFileCalls    []string
+	ParseReaderCalls  []io.Reader
+	MergeCalls        [][]Document
+	MergeFilesCalls   [][]string
+	MergeReadersCalls [][]io.Reader
+	EvaluateCalls     []Document
+	ToYAMLCalls       []Document
+	ToJSONCalls       []Document
+	ToJSONIndentCalls []struct {
+		Doc    Document
+		Indent string
+	}
+	RegisterOperatorCalls []struct {
+		Name string
+		Op   Operator
+	}
 	UnregisterOperatorCalls []string
 	ListOperatorsCalls      int
 	GetOperatorCalls        []string
@@ -75,8 +81,8 @@ func NewMockEngine() *MockEngine {
 		RegisterOperatorFunc:   func(name string, op Operator) error { return nil },
 		UnregisterOperatorFunc: func(name string) error { return nil },
 		ListOperatorsFunc:      func() []string { return []string{} },
-		WithLoggerFunc:       func(logger Logger) Engine { return &MockEngine{} },
-		WithVaultClientFunc:  func(client VaultClient) Engine { return &MockEngine{} },
+		WithLoggerFunc:         func(logger Logger) Engine { return &MockEngine{} },
+		WithVaultClientFunc:    func(client VaultClient) Engine { return &MockEngine{} },
 		WithAWSConfigFunc:      func(config AWSConfig) Engine { return &MockEngine{} },
 	}
 }
@@ -133,12 +139,18 @@ func (m *MockEngine) ToJSON(doc Document) ([]byte, error) {
 }
 
 func (m *MockEngine) ToJSONIndent(doc Document, indent string) ([]byte, error) {
-	m.ToJSONIndentCalls = append(m.ToJSONIndentCalls, struct{ Doc Document; Indent string }{doc, indent})
+	m.ToJSONIndentCalls = append(m.ToJSONIndentCalls, struct {
+		Doc    Document
+		Indent string
+	}{doc, indent})
 	return m.ToJSONIndentFunc(doc, indent)
 }
 
 func (m *MockEngine) RegisterOperator(name string, op Operator) error {
-	m.RegisterOperatorCalls = append(m.RegisterOperatorCalls, struct{ Name string; Op Operator }{name, op})
+	m.RegisterOperatorCalls = append(m.RegisterOperatorCalls, struct {
+		Name string
+		Op   Operator
+	}{name, op})
 	return m.RegisterOperatorFunc(name, op)
 }
 
@@ -180,50 +192,53 @@ func (m *MockEngine) GetOperatorState() OperatorState {
 // MockDocument provides a mock implementation of Document for testing
 type MockDocument struct {
 	// Control behavior
-	GetFunc              func(path string) (interface{}, error)
-	GetStringFunc        func(path string) (string, error)
-	GetIntFunc           func(path string) (int, error)
-	GetInt64Func         func(path string) (int64, error)
-	GetFloat64Func       func(path string) (float64, error)
-	GetBoolFunc          func(path string) (bool, error)
-	GetMapFunc           func(path string) (map[string]interface{}, error)
-	GetSliceFunc         func(path string) ([]interface{}, error)
-	GetStringSliceFunc   func(path string) ([]string, error)
+	GetFunc                func(path string) (interface{}, error)
+	GetStringFunc          func(path string) (string, error)
+	GetIntFunc             func(path string) (int, error)
+	GetInt64Func           func(path string) (int64, error)
+	GetFloat64Func         func(path string) (float64, error)
+	GetBoolFunc            func(path string) (bool, error)
+	GetMapFunc             func(path string) (map[string]interface{}, error)
+	GetSliceFunc           func(path string) ([]interface{}, error)
+	GetStringSliceFunc     func(path string) ([]string, error)
 	GetMapStringStringFunc func(path string) (map[string]string, error)
-	SetFunc              func(path string, value interface{}) error
-	DeleteFunc           func(path string) error
-	KeysFunc             func() []string
-	ToYAMLFunc           func() ([]byte, error)
-	ToJSONFunc           func() ([]byte, error)
-	RawDataFunc          func() interface{}
-	DeepCopyFunc         func() Document
-	CloneFunc            func() Document
-	PruneFunc            func(key string) Document
-	CherryPickFunc       func(keys ...string) Document
-	GetDataFunc          func() interface{}
+	SetFunc                func(path string, value interface{}) error
+	DeleteFunc             func(path string) error
+	KeysFunc               func() []string
+	ToYAMLFunc             func() ([]byte, error)
+	ToJSONFunc             func() ([]byte, error)
+	RawDataFunc            func() interface{}
+	DeepCopyFunc           func() Document
+	CloneFunc              func() Document
+	PruneFunc              func(key string) Document
+	CherryPickFunc         func(keys ...string) Document
+	GetDataFunc            func() interface{}
 
 	// Call tracking
-	GetCalls               []string
-	GetStringCalls         []string
-	GetIntCalls            []string
-	GetInt64Calls          []string
-	GetFloat64Calls        []string
-	GetBoolCalls           []string
-	GetMapCalls            []string
-	GetSliceCalls          []string
-	GetStringSliceCalls    []string
+	GetCalls                []string
+	GetStringCalls          []string
+	GetIntCalls             []string
+	GetInt64Calls           []string
+	GetFloat64Calls         []string
+	GetBoolCalls            []string
+	GetMapCalls             []string
+	GetSliceCalls           []string
+	GetStringSliceCalls     []string
 	GetMapStringStringCalls []string
-	SetCalls               []struct{ Path string; Value interface{} }
-	DeleteCalls            []string
-	KeysCalls              int
-	ToYAMLCalls            int
-	ToJSONCalls            int
-	RawDataCalls           int
-	DeepCopyCalls          int
-	CloneCalls             int
-	PruneCalls             []string
-	CherryPickCalls        [][]string
-	GetDataCalls           int
+	SetCalls                []struct {
+		Path  string
+		Value interface{}
+	}
+	DeleteCalls     []string
+	KeysCalls       int
+	ToYAMLCalls     int
+	ToJSONCalls     int
+	RawDataCalls    int
+	DeepCopyCalls   int
+	CloneCalls      int
+	PruneCalls      []string
+	CherryPickCalls [][]string
+	GetDataCalls    int
 
 	// Test data
 	TestData map[string]interface{}
@@ -234,23 +249,23 @@ func NewMockDocument() *MockDocument {
 	m := &MockDocument{
 		TestData: make(map[string]interface{}),
 		// Default implementations
-		GetFunc:              func(path string) (interface{}, error) { return nil, nil },
-		GetStringFunc:        func(path string) (string, error) { return "", nil },
-		GetIntFunc:           func(path string) (int, error) { return 0, nil },
-		GetInt64Func:         func(path string) (int64, error) { return 0, nil },
-		GetFloat64Func:       func(path string) (float64, error) { return 0, nil },
-		GetBoolFunc:          func(path string) (bool, error) { return false, nil },
-		GetMapFunc:           func(path string) (map[string]interface{}, error) { return make(map[string]interface{}), nil },
-		GetSliceFunc:         func(path string) ([]interface{}, error) { return []interface{}{}, nil },
-		GetStringSliceFunc:   func(path string) ([]string, error) { return []string{}, nil },
+		GetFunc:                func(path string) (interface{}, error) { return nil, nil },
+		GetStringFunc:          func(path string) (string, error) { return "", nil },
+		GetIntFunc:             func(path string) (int, error) { return 0, nil },
+		GetInt64Func:           func(path string) (int64, error) { return 0, nil },
+		GetFloat64Func:         func(path string) (float64, error) { return 0, nil },
+		GetBoolFunc:            func(path string) (bool, error) { return false, nil },
+		GetMapFunc:             func(path string) (map[string]interface{}, error) { return make(map[string]interface{}), nil },
+		GetSliceFunc:           func(path string) ([]interface{}, error) { return []interface{}{}, nil },
+		GetStringSliceFunc:     func(path string) ([]string, error) { return []string{}, nil },
 		GetMapStringStringFunc: func(path string) (map[string]string, error) { return make(map[string]string), nil },
-		SetFunc:              func(path string, value interface{}) error { return nil },
-		DeleteFunc:           func(path string) error { return nil },
-		KeysFunc:             func() []string { return []string{} },
-		ToYAMLFunc:           func() ([]byte, error) { return []byte{}, nil },
-		ToJSONFunc:           func() ([]byte, error) { return []byte{}, nil },
-		RawDataFunc:          func() interface{} { return make(map[interface{}]interface{}) },
-		GetDataFunc:          func() interface{} { return make(map[interface{}]interface{}) },
+		SetFunc:                func(path string, value interface{}) error { return nil },
+		DeleteFunc:             func(path string) error { return nil },
+		KeysFunc:               func() []string { return []string{} },
+		ToYAMLFunc:             func() ([]byte, error) { return []byte{}, nil },
+		ToJSONFunc:             func() ([]byte, error) { return []byte{}, nil },
+		RawDataFunc:            func() interface{} { return make(map[interface{}]interface{}) },
+		GetDataFunc:            func() interface{} { return make(map[interface{}]interface{}) },
 	}
 	// Self-referential functions need to be set after creation
 	m.DeepCopyFunc = func() Document { return NewMockDocument() }
@@ -312,7 +327,10 @@ func (m *MockDocument) GetMapStringString(path string) (map[string]string, error
 }
 
 func (m *MockDocument) Set(path string, value interface{}) error {
-	m.SetCalls = append(m.SetCalls, struct{ Path string; Value interface{} }{path, value})
+	m.SetCalls = append(m.SetCalls, struct {
+		Path  string
+		Value interface{}
+	}{path, value})
 	return m.SetFunc(path, value)
 }
 
@@ -380,11 +398,11 @@ type MockMergeBuilder struct {
 	// Call tracking
 	WithPruneCalls              [][]string
 	WithArrayMergeStrategyCalls []ArrayMergeStrategy
-	WithCherryPickCalls   [][]string
-	SkipEvaluationCalls   int
-	EnableGoPatchCalls    int
-	FallbackAppendCalls   int
-	ExecuteCalls          int
+	WithCherryPickCalls         [][]string
+	SkipEvaluationCalls         int
+	EnableGoPatchCalls          int
+	FallbackAppendCalls         int
+	ExecuteCalls                int
 }
 
 // NewMockMergeBuilder creates a new mock merge builder with sensible defaults
@@ -392,7 +410,7 @@ func NewMockMergeBuilder() *MockMergeBuilder {
 	mock := &MockMergeBuilder{
 		ExecuteFunc: func() (Document, error) { return &MockDocument{}, nil },
 	}
-	
+
 	// Self-returning methods
 	mock.WithPruneFunc = func(keys ...string) MergeBuilder { return mock }
 	mock.WithCherryPickFunc = func(keys ...string) MergeBuilder { return mock }
@@ -400,7 +418,7 @@ func NewMockMergeBuilder() *MockMergeBuilder {
 	mock.SkipEvaluationFunc = func() MergeBuilder { return mock }
 	mock.EnableGoPatchFunc = func() MergeBuilder { return mock }
 	mock.FallbackAppendFunc = func() MergeBuilder { return mock }
-	
+
 	return mock
 }
 
@@ -443,33 +461,33 @@ func (m *MockMergeBuilder) Execute() (Document, error) {
 // MockOperatorState provides a mock implementation of OperatorState for testing
 type MockOperatorState struct {
 	// Vault operations
-	GetVaultClientFunc    func() *vaultkv.KV
-	GetVaultCacheFunc     func() map[string]map[string]interface{}
-	SetVaultCacheFunc     func(path string, data map[string]interface{})
-	AddVaultRefFunc       func(path string, keys []string)
-	IsVaultSkippedFunc    func() bool
-	
+	GetVaultClientFunc func() *vaultkv.KV
+	GetVaultCacheFunc  func() map[string]map[string]interface{}
+	SetVaultCacheFunc  func(path string, data map[string]interface{})
+	AddVaultRefFunc    func(path string, keys []string)
+	IsVaultSkippedFunc func() bool
+
 	// AWS operations
-	GetAWSSessionFunc         func() *session.Session
+	GetAWSSessionFunc           func() *session.Session
 	GetSecretsManagerClientFunc func() secretsmanageriface.SecretsManagerAPI
 	GetParameterStoreClientFunc func() ssmiface.SSMAPI
-	GetAWSSecretsCacheFunc    func() map[string]string
-	SetAWSSecretCacheFunc     func(key, value string)
-	GetAWSParamsCacheFunc     func() map[string]string
-	SetAWSParamCacheFunc      func(key, value string)
-	IsAWSSkippedFunc          func() bool
-	
+	GetAWSSecretsCacheFunc      func() map[string]string
+	SetAWSSecretCacheFunc       func(key, value string)
+	GetAWSParamsCacheFunc       func() map[string]string
+	SetAWSParamCacheFunc        func(key, value string)
+	IsAWSSkippedFunc            func() bool
+
 	// Static IPs
 	GetUsedIPsFunc func() map[string]string
 	SetUsedIPFunc  func(key, ip string)
-	
+
 	// Prune operations
-	AddKeyToPruneFunc   func(key string)
-	GetKeysToPruneFunc  func() []string
-	
+	AddKeyToPruneFunc  func(key string)
+	GetKeysToPruneFunc func() []string
+
 	// Sort operations
-	AddPathToSortFunc   func(path, order string)
-	GetPathsToSortFunc  func() map[string]string
+	AddPathToSortFunc  func(path, order string)
+	GetPathsToSortFunc func() map[string]string
 }
 
 func (m *MockOperatorState) GetVaultClient() *vaultkv.KV {

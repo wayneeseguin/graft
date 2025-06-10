@@ -51,8 +51,6 @@ Graft was originally forked from the Geoff Franks's absolutely amazing work, the
 
 ## How do I get started?
 
-`graft` is available via Homebrew, just `brew tap starkandwayne/cf; brew install graft`
-
 Alternatively, you can download a [prebuilt binaries for 64-bit Linux, or Mac OS X][releases]
 
 ## 📚 Documentation

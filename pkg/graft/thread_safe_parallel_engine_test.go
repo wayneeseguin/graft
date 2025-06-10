@@ -1,4 +1,5 @@
 // TODO: Thread safe parallel engine tests removed - ExecutionTask and related types not implemented
+//go:build ignore
 // +build ignore
 
 package graft
@@ -8,7 +9,7 @@ import (
 	"sync"
 	"testing"
 	"time"
-	
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -19,11 +20,11 @@ func TestParallelExecutionEngine(t *testing.T) {
 				"data": "value",
 			},
 		})
-		
+
 		engine := NewParallelExecutionEngine(tree, 2)
 		engine.Start()
 		defer engine.Stop()
-		
+
 		Convey("Basic task execution", func() {
 			// Submit a get task
 			task := &ExecutionTask{
@@ -31,10 +32,10 @@ func TestParallelExecutionEngine(t *testing.T) {
 				Path:     []string{"test", "data"},
 				Operator: "get",
 			}
-			
+
 			err := engine.Submit(task)
 			So(err, ShouldBeNil)
-			
+
 			// Get result
 			result, ok := engine.GetResult()
 			So(ok, ShouldBeTrue)
@@ -42,7 +43,7 @@ func TestParallelExecutionEngine(t *testing.T) {
 			So(result.Error, ShouldBeNil)
 			So(result.Value, ShouldEqual, "value")
 		})
-		
+
 		Convey("Set and get operations", func() {
 			// Set a value
 			setTask := &ExecutionTask{
@@ -51,53 +52,53 @@ func TestParallelExecutionEngine(t *testing.T) {
 				Operator: "set",
 				Args:     []interface{}{"new-value"},
 			}
-			
+
 			err := engine.Submit(setTask)
 			So(err, ShouldBeNil)
-			
+
 			result, _ := engine.GetResult()
 			So(result.Error, ShouldBeNil)
-			
+
 			// Get the value
 			getTask := &ExecutionTask{
 				ID:       "get-1",
 				Path:     []string{"new", "key"},
 				Operator: "get",
 			}
-			
+
 			err = engine.Submit(getTask)
 			So(err, ShouldBeNil)
-			
+
 			result, _ = engine.GetResult()
 			So(result.Error, ShouldBeNil)
 			So(result.Value, ShouldEqual, "new-value")
 		})
-		
+
 		Convey("Delete operation", func() {
 			// Set a value
 			tree.Set("to-delete", "delete", "me")
-			
+
 			// Delete it
 			deleteTask := &ExecutionTask{
 				ID:       "delete-1",
 				Path:     []string{"delete", "me"},
 				Operator: "delete",
 			}
-			
+
 			err := engine.Submit(deleteTask)
 			So(err, ShouldBeNil)
-			
+
 			result, _ := engine.GetResult()
 			So(result.Error, ShouldBeNil)
-			
+
 			// Verify deletion
 			exists := tree.Exists("delete", "me")
 			So(exists, ShouldBeFalse)
 		})
-		
+
 		Convey("Update operation", func() {
 			tree.Set(10, "counter")
-			
+
 			updateTask := &ExecutionTask{
 				ID:       "update-1",
 				Path:     []string{"counter"},
@@ -111,31 +112,31 @@ func TestParallelExecutionEngine(t *testing.T) {
 					},
 				},
 			}
-			
+
 			err := engine.Submit(updateTask)
 			So(err, ShouldBeNil)
-			
+
 			result, _ := engine.GetResult()
 			So(result.Error, ShouldBeNil)
-			
+
 			// Verify update
 			value, _ := tree.Find("counter")
 			So(value, ShouldEqual, 15)
 		})
-		
+
 		Convey("Error handling", func() {
 			// Invalid operator
 			task := &ExecutionTask{
 				ID:       "error-1",
 				Operator: "invalid",
 			}
-			
+
 			engine.Submit(task)
 			result, _ := engine.GetResult()
 			So(result.Error, ShouldNotBeNil)
 			So(result.Error.Error(), ShouldContainSubstring, "unknown operator")
 		})
-		
+
 		Convey("Metrics tracking", func() {
 			// Submit multiple tasks
 			for i := 0; i < 5; i++ {
@@ -146,12 +147,12 @@ func TestParallelExecutionEngine(t *testing.T) {
 				}
 				engine.Submit(task)
 			}
-			
+
 			// Collect results
 			for i := 0; i < 5; i++ {
 				engine.GetResult()
 			}
-			
+
 			metrics := engine.GetMetrics()
 			So(metrics["tasks_queued"], ShouldBeGreaterThanOrEqualTo, 5)
 			So(metrics["tasks_executed"], ShouldBeGreaterThanOrEqualTo, 5)
@@ -168,10 +169,10 @@ func TestThreadSafeParallelEvaluatorEngine(t *testing.T) {
 				"value2": 20,
 			},
 		})
-		
+
 		evaluator := NewParallelEvaluator(tree, 4)
 		defer evaluator.Stop()
-		
+
 		Convey("Parallel operation execution", func() {
 			operations := []Operation{
 				{Type: "get", Path: []string{"data", "value1"}},
@@ -179,35 +180,35 @@ func TestThreadSafeParallelEvaluatorEngine(t *testing.T) {
 				{Type: "set", Path: []string{"data", "value3"}, Args: []interface{}{30}},
 				{Type: "get", Path: []string{"data", "value3"}},
 			}
-			
+
 			results, err := evaluator.EvaluateParallel(operations)
 			So(err, ShouldBeNil)
 			So(len(results), ShouldEqual, 4)
-			
+
 			// Check results
 			So(results[0].Error, ShouldBeNil)
 			So(results[0].Value, ShouldEqual, 10)
-			
+
 			So(results[1].Error, ShouldBeNil)
 			So(results[1].Value, ShouldEqual, 20)
-			
+
 			So(results[2].Error, ShouldBeNil)
-			
+
 			So(results[3].Error, ShouldBeNil)
 			So(results[3].Value, ShouldEqual, 30)
 		})
-		
+
 		Convey("Priority handling", func() {
 			// High priority operations should be processed first
 			operations := []Operation{
 				{Type: "get", Path: []string{"data", "value1"}, Priority: 1},
 				{Type: "get", Path: []string{"data", "value2"}, Priority: 10},
 			}
-			
+
 			results, err := evaluator.EvaluateParallel(operations)
 			So(err, ShouldBeNil)
 			So(len(results), ShouldEqual, 2)
-			
+
 			// Both should complete successfully
 			So(results[0].Error, ShouldBeNil)
 			So(results[1].Error, ShouldBeNil)
@@ -220,7 +221,7 @@ func TestParallelBatchProcessor(t *testing.T) {
 		tree := NewCOWTree(nil)
 		processor := NewParallelBatchProcessor(tree, 4, 10)
 		defer processor.Stop()
-		
+
 		Convey("Small batch processing", func() {
 			operations := make([]Operation, 5)
 			for i := 0; i < 5; i++ {
@@ -230,16 +231,16 @@ func TestParallelBatchProcessor(t *testing.T) {
 					Args: []interface{}{fmt.Sprintf("value%d", i)},
 				}
 			}
-			
+
 			results, err := processor.ProcessBatch(operations)
 			So(err, ShouldBeNil)
 			So(len(results), ShouldEqual, 5)
-			
+
 			for _, result := range results {
 				So(result.Error, ShouldBeNil)
 			}
 		})
-		
+
 		Convey("Large batch processing", func() {
 			operations := make([]Operation, 25)
 			for i := 0; i < 25; i++ {
@@ -249,11 +250,11 @@ func TestParallelBatchProcessor(t *testing.T) {
 					Args: []interface{}{i},
 				}
 			}
-			
+
 			results, err := processor.ProcessBatch(operations)
 			So(err, ShouldBeNil)
 			So(len(results), ShouldEqual, 25)
-			
+
 			// Verify all operations succeeded
 			successCount := 0
 			for _, result := range results {
@@ -271,10 +272,10 @@ func TestCOWParallelExecutor(t *testing.T) {
 		baseTree := NewCOWTree(map[interface{}]interface{}{
 			"shared": "initial",
 		})
-		
+
 		executor := NewCOWParallelExecutor(baseTree, 3)
 		defer executor.Stop()
-		
+
 		Convey("Isolated execution", func() {
 			// Each group modifies the same key differently
 			operationGroups := [][]Operation{
@@ -282,22 +283,22 @@ func TestCOWParallelExecutor(t *testing.T) {
 				{{Type: "set", Path: []string{"shared"}, Args: []interface{}{"group2"}}},
 				{{Type: "set", Path: []string{"shared"}, Args: []interface{}{"group3"}}},
 			}
-			
+
 			results, err := executor.ExecuteIsolated(operationGroups)
 			So(err, ShouldBeNil)
 			So(len(results), ShouldEqual, 3)
-			
+
 			// All groups should succeed
 			for _, groupResults := range results {
 				So(len(groupResults), ShouldEqual, 1)
 				So(groupResults[0].Error, ShouldBeNil)
 			}
-			
+
 			// Base tree should remain unchanged
 			value, _ := baseTree.Find("shared")
 			So(value, ShouldEqual, "initial")
 		})
-		
+
 		Convey("Error handling", func() {
 			// Too many operation groups
 			tooManyGroups := make([][]Operation, 5)
@@ -312,24 +313,24 @@ func TestConcurrentParallelExecution(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping concurrent parallel execution tests in short mode")
 	}
-	
+
 	Convey("Concurrent parallel execution", t, func() {
 		tree := NewCOWTree(nil)
-		
+
 		Convey("High concurrency stress test", func() {
 			engine := NewParallelExecutionEngine(tree, 8)
 			engine.Start()
 			defer engine.Stop()
-			
+
 			taskCount := 1000
 			var wg sync.WaitGroup
-			
+
 			// Submit tasks concurrently
 			for i := 0; i < 10; i++ {
 				wg.Add(1)
 				go func(workerID int) {
 					defer wg.Done()
-					
+
 					for j := 0; j < taskCount/10; j++ {
 						task := &ExecutionTask{
 							ID:       fmt.Sprintf("task-%d-%d", workerID, j),
@@ -337,16 +338,16 @@ func TestConcurrentParallelExecution(t *testing.T) {
 							Operator: "set",
 							Args:     []interface{}{j},
 						}
-						
+
 						engine.Submit(task)
 					}
 				}(i)
 			}
-			
+
 			// Collect results concurrently
 			resultCount := 0
 			done := make(chan struct{})
-			
+
 			go func() {
 				for resultCount < taskCount {
 					if result, ok := engine.GetResult(); ok {
@@ -358,38 +359,38 @@ func TestConcurrentParallelExecution(t *testing.T) {
 				}
 				close(done)
 			}()
-			
+
 			wg.Wait()
-			
+
 			select {
 			case <-done:
 				So(resultCount, ShouldEqual, taskCount)
 			case <-time.After(time.Second * 5):
 				t.Fatal("Timeout collecting results")
 			}
-			
+
 			metrics := engine.GetMetrics()
 			So(metrics["tasks_executed"], ShouldEqual, int64(taskCount))
 		})
-		
+
 		Convey("COW snapshot isolation", func() {
 			baseTree := NewCOWTree(map[interface{}]interface{}{
 				"counter": 0,
 			})
-			
+
 			// Create multiple snapshots and modify concurrently
 			snapshotCount := 10
 			var wg sync.WaitGroup
-			
+
 			for i := 0; i < snapshotCount; i++ {
 				wg.Add(1)
 				go func(id int) {
 					defer wg.Done()
-					
+
 					snapshot := baseTree.Copy()
 					evaluator := NewParallelEvaluator(snapshot, 1)
 					defer evaluator.Stop()
-					
+
 					// Each snapshot increments counter differently
 					for j := 0; j < 100; j++ {
 						ops := []Operation{{
@@ -404,18 +405,18 @@ func TestConcurrentParallelExecution(t *testing.T) {
 								},
 							},
 						}}
-						
+
 						evaluator.EvaluateParallel(ops)
 					}
-					
+
 					// Verify final value in snapshot
 					finalValue, _ := snapshot.Find("counter")
 					So(finalValue, ShouldEqual, 100)
 				}(i)
 			}
-			
+
 			wg.Wait()
-			
+
 			// Base tree should still have original value
 			baseValue, _ := baseTree.Find("counter")
 			So(baseValue, ShouldEqual, 0)
@@ -425,12 +426,12 @@ func TestConcurrentParallelExecution(t *testing.T) {
 
 func BenchmarkThreadSafeParallelExecution(b *testing.B) {
 	tree := NewCOWTree(nil)
-	
+
 	// Pre-populate tree
 	for i := 0; i < 1000; i++ {
 		tree.Set(i, "data", fmt.Sprintf("key%d", i))
 	}
-	
+
 	b.Run("Sequential", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			for j := 0; j < 100; j++ {
@@ -438,13 +439,13 @@ func BenchmarkThreadSafeParallelExecution(b *testing.B) {
 			}
 		}
 	})
-	
+
 	b.Run("Parallel-2", func(b *testing.B) {
 		evaluator := NewParallelEvaluator(tree, 2)
 		defer evaluator.Stop()
-		
+
 		b.ResetTimer()
-		
+
 		for i := 0; i < b.N; i++ {
 			ops := make([]Operation, 100)
 			for j := 0; j < 100; j++ {
@@ -456,13 +457,13 @@ func BenchmarkThreadSafeParallelExecution(b *testing.B) {
 			evaluator.EvaluateParallel(ops)
 		}
 	})
-	
+
 	b.Run("Parallel-4", func(b *testing.B) {
 		evaluator := NewParallelEvaluator(tree, 4)
 		defer evaluator.Stop()
-		
+
 		b.ResetTimer()
-		
+
 		for i := 0; i < b.N; i++ {
 			ops := make([]Operation, 100)
 			for j := 0; j < 100; j++ {
@@ -474,13 +475,13 @@ func BenchmarkThreadSafeParallelExecution(b *testing.B) {
 			evaluator.EvaluateParallel(ops)
 		}
 	})
-	
+
 	b.Run("Parallel-8", func(b *testing.B) {
 		evaluator := NewParallelEvaluator(tree, 8)
 		defer evaluator.Stop()
-		
+
 		b.ResetTimer()
-		
+
 		for i := 0; i < b.N; i++ {
 			ops := make([]Operation, 100)
 			for j := 0; j < 100; j++ {

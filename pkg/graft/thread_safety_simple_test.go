@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	
+
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -13,7 +13,7 @@ func TestBasicThreadSafety(t *testing.T) {
 	// Skip this entire test for now as it's causing issues with other tests
 	// TODO: Re-enable once thread safety is properly implemented
 	t.Skip("Temporarily disabled - causes test suite instability")
-	
+
 	Convey("Basic thread safety tests", t, func() {
 		Convey("Concurrent map writes cause panic", func() {
 			// Skip this test when running with race detector as it intentionally causes races
@@ -21,18 +21,18 @@ func TestBasicThreadSafety(t *testing.T) {
 				t.Skip("Skipping race condition test in short mode")
 				return
 			}
-			
+
 			defer func() {
 				if r := recover(); r != nil {
 					// Expected - concurrent map writes
 					So(r, ShouldNotBeNil)
 				}
 			}()
-			
+
 			// This will panic with concurrent map writes
 			m := make(map[string]interface{})
 			var wg sync.WaitGroup
-			
+
 			for i := 0; i < 10; i++ {
 				wg.Add(1)
 				go func(id int) {
@@ -41,15 +41,15 @@ func TestBasicThreadSafety(t *testing.T) {
 					m[fmt.Sprintf("key%d", id)] = id
 				}(i)
 			}
-			
+
 			wg.Wait()
 		})
-		
+
 		Convey("Safe concurrent access with mutex", func() {
 			m := make(map[string]interface{})
 			var mu sync.Mutex
 			var wg sync.WaitGroup
-			
+
 			for i := 0; i < 10; i++ {
 				wg.Add(1)
 				go func(id int) {
@@ -59,7 +59,7 @@ func TestBasicThreadSafety(t *testing.T) {
 					mu.Unlock()
 				}(i)
 			}
-			
+
 			wg.Wait()
 			So(len(m), ShouldEqual, 10)
 		})

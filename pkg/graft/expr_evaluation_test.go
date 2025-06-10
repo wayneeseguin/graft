@@ -208,12 +208,12 @@ func TestEvaluateExpr_EnvVar(t *testing.T) {
 	// Save and restore environment
 	oldVars := make(map[string]string)
 	testVars := map[string]string{
-		"TEST_STRING":  "test value",
-		"TEST_NUMBER":  "42",
-		"TEST_BOOL":    "true",
-		"TEST_JSON":    `{"key": "value"}`,
-		"TEST_YAML":    "key: value",
-		"TEST_LIST":    "[1, 2, 3]",
+		"TEST_STRING":    "test value",
+		"TEST_NUMBER":    "42",
+		"TEST_BOOL":      "true",
+		"TEST_JSON":      `{"key": "value"}`,
+		"TEST_YAML":      "key: value",
+		"TEST_LIST":      "[1, 2, 3]",
 		"TEST_MULTILINE": "line1\nline2\nline3",
 	}
 
@@ -350,7 +350,7 @@ func TestEvaluateExpr_LogicalOr(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			leftCursor, _ := tree.ParseCursor(tt.leftPath)
-			
+
 			expr := &Expr{
 				Type: LogicalOr,
 				Left: &Expr{

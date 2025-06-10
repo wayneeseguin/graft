@@ -24,7 +24,7 @@ func NewCOWEvaluator(data map[interface{}]interface{}) *COWEvaluator {
 func (ce *COWEvaluator) Evaluate(ctx context.Context) error {
 	ce.mu.Lock()
 	defer ce.mu.Unlock()
-	
+
 	// For now, this is a placeholder for full evaluation
 	// In Phase 5, we'll implement complete operator evaluation
 	return nil
@@ -51,10 +51,10 @@ func (ce *COWEvaluator) GetValue(path ...string) (interface{}, error) {
 func (ce *COWEvaluator) CreateSnapshot() *COWEvaluator {
 	ce.mu.RLock()
 	defer ce.mu.RUnlock()
-	
+
 	// COW copy is very fast - just shares the root
 	snapshot := ce.cowTree.Copy()
-	
+
 	return &COWEvaluator{
 		cowTree: snapshot,
 	}
@@ -80,7 +80,7 @@ type EnhancedMigrationHelper struct {
 func NewEnhancedMigrationHelper(data map[interface{}]interface{}) *EnhancedMigrationHelper {
 	cowTree := NewCOWTree(data)
 	cowEval := &COWEvaluator{cowTree: cowTree}
-	
+
 	return &EnhancedMigrationHelper{
 		cowTree:   cowTree,
 		cowEval:   cowEval,
@@ -102,10 +102,10 @@ func (emh *EnhancedMigrationHelper) GetThreadSafeTree() ThreadSafeTree {
 func (emh *EnhancedMigrationHelper) CreateSnapshot() *COWEvaluator {
 	emh.snapshotMu.Lock()
 	defer emh.snapshotMu.Unlock()
-	
+
 	snapshot := emh.cowEval.CreateSnapshot()
 	emh.snapshots = append(emh.snapshots, snapshot)
-	
+
 	return snapshot
 }
 
@@ -113,7 +113,7 @@ func (emh *EnhancedMigrationHelper) CreateSnapshot() *COWEvaluator {
 func (emh *EnhancedMigrationHelper) GetSnapshots() []*COWEvaluator {
 	emh.snapshotMu.RLock()
 	defer emh.snapshotMu.RUnlock()
-	
+
 	// Return a copy of the snapshots slice
 	result := make([]*COWEvaluator, len(emh.snapshots))
 	copy(result, emh.snapshots)
@@ -127,15 +127,15 @@ func (emh *EnhancedMigrationHelper) UpdateFromEvaluator(ev *Evaluator) error {
 	for k, v := range ev.Tree {
 		data[k] = v
 	}
-	
+
 	// Replace the entire COW tree with new data
 	emh.cowTree = NewCOWTree(data)
-	
+
 	// Re-wrap with COWEvaluator
 	emh.cowEval = &COWEvaluator{
 		cowTree: emh.cowTree,
 	}
-	
+
 	return nil
 }
 
@@ -143,17 +143,17 @@ func (emh *EnhancedMigrationHelper) UpdateFromEvaluator(ev *Evaluator) error {
 func (emh *EnhancedMigrationHelper) ExportToEvaluator() (*Evaluator, error) {
 	if cowTree, ok := emh.cowTree.(*COWTree); ok {
 		rawData := cowTree.toMapInterface()
-		
+
 		ev := &Evaluator{
 			Tree:     rawData,
 			SkipEval: false,
 			CheckOps: make([]*Opcall, 0),
 			Only:     []string{},
 		}
-		
+
 		return ev, nil
 	}
-	
+
 	return nil, fmt.Errorf("unsupported tree type for export")
 }
 
@@ -183,11 +183,11 @@ func (f *COWTreeFactory) CreateFromYAML(yamlData []byte) (ThreadSafeTree, error)
 
 // Performance monitoring for COW operations
 type COWPerformanceMonitor struct {
-	copyCount      int64
-	modifyCount    int64
-	sharedNodes    int64
-	clonedNodes    int64
-	mu             sync.RWMutex
+	copyCount   int64
+	modifyCount int64
+	sharedNodes int64
+	clonedNodes int64
+	mu          sync.RWMutex
 }
 
 // NewCOWPerformanceMonitor creates a performance monitor
@@ -213,12 +213,12 @@ func (pm *COWPerformanceMonitor) RecordModify() {
 func (pm *COWPerformanceMonitor) GetStats() map[string]int64 {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
-	
+
 	return map[string]int64{
-		"copies":      pm.copyCount,
-		"modifies":    pm.modifyCount,
-		"shared":      pm.sharedNodes,
-		"cloned":      pm.clonedNodes,
+		"copies":   pm.copyCount,
+		"modifies": pm.modifyCount,
+		"shared":   pm.sharedNodes,
+		"cloned":   pm.clonedNodes,
 	}
 }
 
@@ -234,12 +234,12 @@ func NewCOWTreeComparator() *COWTreeComparator {
 func (c *COWTreeComparator) Compare(tree1, tree2 ThreadSafeTree) (map[string]interface{}, error) {
 	// This is a simplified implementation
 	// A full implementation would provide detailed diff information
-	
+
 	if cow1, ok := tree1.(*COWTree); ok {
 		if cow2, ok := tree2.(*COWTree); ok {
 			version1 := cow1.GetVersion()
 			version2 := cow2.GetVersion()
-			
+
 			return map[string]interface{}{
 				"version1":  version1,
 				"version2":  version2,
@@ -247,6 +247,6 @@ func (c *COWTreeComparator) Compare(tree1, tree2 ThreadSafeTree) (map[string]int
 			}, nil
 		}
 	}
-	
+
 	return nil, fmt.Errorf("unsupported tree types for comparison")
 }

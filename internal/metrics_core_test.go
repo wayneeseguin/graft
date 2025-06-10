@@ -53,7 +53,7 @@ func TestCounter(t *testing.T) {
 	t.Run("concurrent operations", func(t *testing.T) {
 		counter := NewCounter("concurrent_test", nil)
 		var wg sync.WaitGroup
-		
+
 		goroutines := 100
 		incrementsPerGoroutine := 1000
 
@@ -78,7 +78,7 @@ func TestCounter(t *testing.T) {
 	t.Run("reset functionality", func(t *testing.T) {
 		counter := NewCounter("reset_test", nil)
 		counter.Add(42)
-		
+
 		if counter.Get() != 42 {
 			t.Errorf("expected 42 before reset, got %d", counter.Get())
 		}
@@ -137,7 +137,7 @@ func TestGauge(t *testing.T) {
 
 	t.Run("negative values", func(t *testing.T) {
 		gauge := NewGauge("negative_test", nil)
-		
+
 		gauge.Set(-100)
 		if gauge.Get() != -100 {
 			t.Errorf("expected -100, got %d", gauge.Get())
@@ -152,7 +152,7 @@ func TestGauge(t *testing.T) {
 	t.Run("concurrent operations", func(t *testing.T) {
 		gauge := NewGauge("concurrent_gauge", nil)
 		var wg sync.WaitGroup
-		
+
 		// Half increment, half decrement
 		operations := 1000
 		for i := 0; i < operations/2; i++ {
@@ -231,7 +231,7 @@ func TestHistogram(t *testing.T) {
 
 	t.Run("observe duration", func(t *testing.T) {
 		histogram := NewHistogram("duration_test", nil)
-		
+
 		start := time.Now()
 		time.Sleep(10 * time.Millisecond)
 		histogram.ObserveDuration(start)
@@ -262,7 +262,7 @@ func TestHistogram(t *testing.T) {
 
 	t.Run("value trimming", func(t *testing.T) {
 		histogram := NewHistogram("trim_test", nil)
-		
+
 		// Add more than 10000 values to test trimming
 		for i := 0; i < 12000; i++ {
 			histogram.Observe(float64(i))
@@ -282,7 +282,7 @@ func TestHistogram(t *testing.T) {
 	t.Run("concurrent observations", func(t *testing.T) {
 		histogram := NewHistogram("concurrent_hist", nil)
 		var wg sync.WaitGroup
-		
+
 		goroutines := 50
 		observationsPerGoroutine := 100
 
@@ -406,7 +406,7 @@ func TestMetricFamily(t *testing.T) {
 		// Get metrics with different labels
 		labels1 := map[string]string{"env": "prod", "service": "api"}
 		labels2 := map[string]string{"env": "dev", "service": "api"}
-		
+
 		metric1 := family.GetOrCreate(labels1)
 		metric2 := family.GetOrCreate(labels2)
 
@@ -482,7 +482,7 @@ func TestMetricFamily(t *testing.T) {
 
 	t.Run("family reset", func(t *testing.T) {
 		family := NewMetricFamily("reset_family", "Test", MetricTypeCounter)
-		
+
 		labels := map[string]string{"test": "value"}
 		metric := family.GetOrCreate(labels)
 		counter := metric.(*Counter)
@@ -493,7 +493,7 @@ func TestMetricFamily(t *testing.T) {
 		}
 
 		family.Reset()
-		
+
 		if counter.Get() != 0 {
 			t.Errorf("expected 0 after family reset, got %d", counter.Get())
 		}
@@ -501,14 +501,14 @@ func TestMetricFamily(t *testing.T) {
 
 	t.Run("invalid metric type", func(t *testing.T) {
 		family := NewMetricFamily("invalid_family", "Test", MetricType("invalid"))
-		
+
 		// Should panic on invalid type
 		defer func() {
 			if r := recover(); r == nil {
 				t.Error("expected panic for invalid metric type")
 			}
 		}()
-		
+
 		family.GetOrCreate(nil)
 	})
 }
@@ -543,7 +543,7 @@ func TestLabelsToKey(t *testing.T) {
 			"version": "1.0",
 		}
 		key := labelsToKey(labels)
-		
+
 		// Should be sorted by key name
 		expected := "env=prod,service=api,version=1.0"
 		if key != expected {
@@ -554,10 +554,10 @@ func TestLabelsToKey(t *testing.T) {
 	t.Run("consistent ordering", func(t *testing.T) {
 		labels1 := map[string]string{"b": "2", "a": "1", "c": "3"}
 		labels2 := map[string]string{"c": "3", "a": "1", "b": "2"}
-		
+
 		key1 := labelsToKey(labels1)
 		key2 := labelsToKey(labels2)
-		
+
 		if key1 != key2 {
 			t.Errorf("keys should be identical for same labels: %s vs %s", key1, key2)
 		}
@@ -569,7 +569,7 @@ func TestHelperFunctions(t *testing.T) {
 	t.Run("percentile function", func(t *testing.T) {
 		// Test with sorted array
 		values := []float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-		
+
 		p50 := percentile(values, 0.5)
 		if p50 != 5.0 {
 			t.Errorf("expected P50 5.0, got %f", p50)
@@ -595,9 +595,9 @@ func TestHelperFunctions(t *testing.T) {
 	t.Run("quicksort function", func(t *testing.T) {
 		values := []float64{3.5, 1.2, 4.8, 2.1, 5.9, 0.5}
 		expected := []float64{0.5, 1.2, 2.1, 3.5, 4.8, 5.9}
-		
+
 		quickSort(values)
-		
+
 		for i, v := range values {
 			if v != expected[i] {
 				t.Errorf("at index %d: expected %f, got %f", i, expected[i], v)
@@ -608,9 +608,9 @@ func TestHelperFunctions(t *testing.T) {
 	t.Run("quicksort strings", func(t *testing.T) {
 		strings := []string{"charlie", "alpha", "delta", "bravo"}
 		expected := []string{"alpha", "bravo", "charlie", "delta"}
-		
+
 		quickSortStrings(strings)
-		
+
 		for i, s := range strings {
 			if s != expected[i] {
 				t.Errorf("at index %d: expected %s, got %s", i, expected[i], s)

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	
+
 	"github.com/wayneeseguin/graft/internal/utils/tree"
 	"gopkg.in/yaml.v3"
 )
@@ -47,17 +47,17 @@ func (d *document) Get(path string) (interface{}, error) {
 	if path == "" || path == "$" {
 		return d.data, nil
 	}
-	
+
 	cursor, err := tree.ParseCursor(path)
 	if err != nil {
 		return nil, NewValidationError(fmt.Sprintf("invalid path '%s': %v", path, err))
 	}
-	
+
 	value, err := cursor.Resolve(d.data)
 	if err != nil {
 		return nil, NewEvaluationError(path, fmt.Sprintf("path not found: %v", err), err)
 	}
-	
+
 	return value, nil
 }
 
@@ -70,17 +70,17 @@ func (d *document) Set(path string, value interface{}) error {
 		}
 		return NewValidationError("cannot set root to non-map value")
 	}
-	
+
 	cursor, err := tree.ParseCursor(path)
 	if err != nil {
 		return NewValidationError(fmt.Sprintf("invalid path '%s': %v", path, err))
 	}
-	
+
 	err = d.ensurePathExists(cursor)
 	if err != nil {
 		return err
 	}
-	
+
 	// TODO: Implement cursor.Set method or alternative approach
 	return NewValidationError("Set operation not yet implemented")
 }
@@ -90,13 +90,13 @@ func (d *document) Delete(path string) error {
 	if path == "" || path == "$" {
 		return NewValidationError("cannot delete root")
 	}
-	
+
 	_, err := tree.ParseCursor(path)
 	if err != nil {
 		return NewValidationError(fmt.Sprintf("invalid path '%s': %v", path, err))
 	}
-	
-	// TODO: Implement cursor.Delete method or alternative approach  
+
+	// TODO: Implement cursor.Delete method or alternative approach
 	return NewValidationError("Delete operation not yet implemented")
 }
 
@@ -118,7 +118,7 @@ func (d *document) GetInt(path string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	
+
 	switch v := val.(type) {
 	case int:
 		return v, nil
@@ -170,7 +170,7 @@ func (d *document) GetMap(path string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	switch v := val.(type) {
 	case map[string]interface{}:
 		return v, nil
@@ -275,21 +275,21 @@ func deepCopy(src interface{}) interface{} {
 			dst[key] = deepCopy(value)
 		}
 		return dst
-		
+
 	case map[string]interface{}:
 		dst := make(map[string]interface{})
 		for key, value := range v {
 			dst[key] = deepCopy(value)
 		}
 		return dst
-		
+
 	case []interface{}:
 		dst := make([]interface{}, len(v))
 		for i, value := range v {
 			dst[i] = deepCopy(value)
 		}
 		return dst
-		
+
 	default:
 		// For primitive types and other types, return as-is
 		// This handles strings, numbers, booleans, etc.
@@ -302,14 +302,14 @@ func pathParts(path string) []string {
 	if path == "" || path == "$" {
 		return nil
 	}
-	
+
 	// Remove leading $ if present
 	if strings.HasPrefix(path, "$.") {
 		path = path[2:]
 	} else if path == "$" {
 		return nil
 	}
-	
+
 	return strings.Split(path, ".")
 }
 
@@ -318,18 +318,18 @@ func parseIndex(component string) (string, int, bool) {
 	if !strings.Contains(component, "[") {
 		return component, 0, false
 	}
-	
+
 	parts := strings.SplitN(component, "[", 2)
 	if len(parts) != 2 {
 		return component, 0, false
 	}
-	
+
 	indexStr := strings.TrimSuffix(parts[1], "]")
 	index, err := strconv.Atoi(indexStr)
 	if err != nil {
 		return component, 0, false
 	}
-	
+
 	return parts[0], index, true
 }
 
@@ -342,19 +342,19 @@ func CreateEmptyDocument() Document {
 func (d *document) Prune(key string) Document {
 	// Clone the document to avoid modifying the original
 	cloned := d.Clone().(*document)
-	
+
 	// Check if this is a path or a simple key
 	if strings.Contains(key, ".") {
 		// Handle nested path
 		segments := strings.Split(key, ".")
 		current := cloned.data
-		
+
 		// Navigate to the parent of the key to remove
 		var lastList []interface{}
 		var lastListKey string
 		for i := 0; i < len(segments)-1; i++ {
 			segment := segments[i]
-			
+
 			switch v := current[segment].(type) {
 			case map[interface{}]interface{}:
 				current = v
@@ -376,7 +376,7 @@ func (d *document) Prune(key string) Document {
 					// Try to navigate through the list by finding a named element
 					nextSegment := segments[i+1]
 					found := false
-					
+
 					// Try numeric index first
 					if index, err := strconv.Atoi(nextSegment); err == nil {
 						if index >= 0 && index < len(v) {
@@ -387,7 +387,7 @@ func (d *document) Prune(key string) Document {
 							}
 						}
 					}
-					
+
 					// If numeric index didn't work, try to find by name field
 					if !found {
 						for _, item := range v {
@@ -403,7 +403,7 @@ func (d *document) Prune(key string) Document {
 							}
 						}
 					}
-					
+
 					if !found {
 						// Can't find the named element in the list
 						return cloned
@@ -414,7 +414,7 @@ func (d *document) Prune(key string) Document {
 				return cloned
 			}
 		}
-		
+
 		// Remove the final key
 		finalSegment := segments[len(segments)-1]
 		if lastList != nil {
@@ -436,7 +436,7 @@ func (d *document) Prune(key string) Document {
 		// Simple key - remove from top level
 		delete(cloned.data, key)
 	}
-	
+
 	return cloned
 }
 
@@ -444,7 +444,7 @@ func (d *document) Prune(key string) Document {
 func (d *document) CherryPick(keys ...string) Document {
 	picked := make(map[interface{}]interface{})
 	errors := []error{}
-	
+
 	// Track list items with their indices for sorting
 	type listItemEntry struct {
 		listKey string
@@ -452,7 +452,7 @@ func (d *document) CherryPick(keys ...string) Document {
 		item    interface{}
 	}
 	listItems := make([]listItemEntry, 0)
-	
+
 	for _, keyPath := range keys {
 		// Check if this is a simple key or a path
 		if !strings.Contains(keyPath, ".") {
@@ -467,17 +467,17 @@ func (d *document) CherryPick(keys ...string) Document {
 		} else {
 			// Path-based cherry-pick
 			segments := strings.Split(keyPath, ".")
-			
+
 			// Special handling for list entries (e.g., "list.two" or "list.1")
 			if len(segments) == 2 {
 				listKey := segments[0]
 				listItemKey := segments[1]
-				
+
 				// Get the list
 				if listVal, exists := d.data[listKey]; exists {
 					if list, ok := listVal.([]interface{}); ok {
 						var foundItem interface{}
-						
+
 						// First, try to parse as numeric index
 						itemIndex := -1
 						if index, err := strconv.Atoi(listItemKey); err == nil {
@@ -506,7 +506,7 @@ func (d *document) CherryPick(keys ...string) Document {
 								}
 							}
 						}
-						
+
 						// If we found the item, track it with its index
 						if foundItem != nil && itemIndex >= 0 {
 							listItems = append(listItems, listItemEntry{
@@ -542,7 +542,7 @@ func (d *document) CherryPick(keys ...string) Document {
 			}
 		}
 	}
-	
+
 	// Sort list items by index in descending order (higher indices first)
 	for i := 0; i < len(listItems)-1; i++ {
 		for j := i + 1; j < len(listItems); j++ {
@@ -551,18 +551,18 @@ func (d *document) CherryPick(keys ...string) Document {
 			}
 		}
 	}
-	
+
 	// Group sorted items by list key
 	listsByKey := make(map[string][]interface{})
 	for _, entry := range listItems {
 		listsByKey[entry.listKey] = append(listsByKey[entry.listKey], entry.item)
 	}
-	
+
 	// Add all collected list items to the picked document
 	for listKey, items := range listsByKey {
 		picked[listKey] = items
 	}
-	
+
 	return NewDocument(picked)
 }
 
@@ -577,7 +577,7 @@ func (d *document) GetInt64(path string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	
+
 	switch v := val.(type) {
 	case int64:
 		return v, nil
@@ -599,7 +599,7 @@ func (d *document) GetFloat64(path string) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	
+
 	switch v := val.(type) {
 	case float64:
 		return v, nil
@@ -612,19 +612,18 @@ func (d *document) GetFloat64(path string) (float64, error) {
 	}
 }
 
-
 // GetStringSlice retrieves a string slice value at the given path
 func (d *document) GetStringSlice(path string) ([]string, error) {
 	val, err := d.Get(path)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	slice, ok := val.([]interface{})
 	if !ok {
 		return nil, fmt.Errorf("value at path %s is not a slice (got %T)", path, val)
 	}
-	
+
 	result := make([]string, 0, len(slice))
 	for i, item := range slice {
 		str, ok := item.(string)
@@ -642,7 +641,7 @@ func (d *document) GetMapStringString(path string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var rawMap map[interface{}]interface{}
 	switch v := val.(type) {
 	case map[string]interface{}:
@@ -656,7 +655,7 @@ func (d *document) GetMapStringString(path string) (map[string]string, error) {
 	default:
 		return nil, fmt.Errorf("value at path %s is not a map (got %T)", path, val)
 	}
-	
+
 	result := make(map[string]string)
 	for k, v := range rawMap {
 		key, ok := k.(string)

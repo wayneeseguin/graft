@@ -2,10 +2,10 @@ package parser
 
 import (
 	"fmt"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 	"os"
 	"strconv"
 	"strings"
-	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 // Parser implements a precedence-climbing parser for Graft expressions
@@ -25,7 +25,7 @@ func NewParser(tokens []Token, registry *OperatorRegistry) *Parser {
 	if !collectErrors {
 		maxErrors = 1
 	}
-	
+
 	return &Parser{
 		tokens:   tokens,
 		current:  0,
@@ -63,12 +63,12 @@ func (p *Parser) Parse() (*Expr, error) {
 	if len(p.tokens) == 0 {
 		return nil, p.syntaxError("no tokens to parse", Position{Line: 1, Column: 1})
 	}
-	
+
 	expr, err := p.parseExpression(PrecedenceLowest)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if !p.isAtEnd() {
 		err := p.syntaxError(fmt.Sprintf("unexpected token '%s' after expression", p.currentToken().Value), p.tokenPosition(p.currentToken()))
 		if !p.errors.RecordError(err) {
@@ -77,11 +77,11 @@ func (p *Parser) Parse() (*Expr, error) {
 		// Try to recover by skipping tokens
 		p.synchronize()
 	}
-	
+
 	if p.errors.HasErrors() {
 		return nil, p.errors.GetError()
 	}
-	
+
 	return expr, nil
 }
 
@@ -89,7 +89,7 @@ func (p *Parser) Parse() (*Expr, error) {
 func ParseExpression(input string, registry *OperatorRegistry) (*Expr, error) {
 	// Record pattern for analytics
 	GlobalPatternTracker.RecordPattern(input)
-	
+
 	// Use memoized parser
 	parser := NewMemoizedParser(input, registry)
 	return parser.Parse()
@@ -101,16 +101,16 @@ func (p *Parser) ParseMultiple() ([]*Expr, error) {
 	if len(p.tokens) == 0 {
 		return []*Expr{}, nil
 	}
-	
+
 	expressions := make([]*Expr, 0, 4) // Pre-allocate for typical arg counts
-	
+
 	for !p.isAtEnd() {
 		// Skip commas between arguments
 		if p.currentToken().Type == TokenComma {
 			p.advance()
 			continue
 		}
-		
+
 		// For operator arguments, we parse at the primary level
 		// This prevents operators from consuming multiple arguments
 		expr, err := p.parsePrimary()
@@ -119,7 +119,7 @@ func (p *Parser) ParseMultiple() ([]*Expr, error) {
 		}
 		expressions = append(expressions, expr)
 	}
-	
+
 	return expressions, nil
 }
 
@@ -129,53 +129,53 @@ func (p *Parser) parseExpression(minPrecedence Precedence) (*Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for !p.isAtEnd() {
 		// Check if current token is an infix operator
 		token := p.currentToken()
-		
+
 		// Handle ternary operator specially
 		if token.Type == TokenQuestion {
 			if minPrecedence > PrecedenceTernary {
 				break
 			}
-			
+
 			p.advance() // consume ?
-			
+
 			// Parse the true expression
 			trueExpr, err := p.parseExpression(PrecedenceTernary + 1)
 			if err != nil {
 				return nil, err
 			}
-			
+
 			// Expect :
 			if !p.consume(TokenColon) {
 				return nil, p.syntaxError("expected ':' in ternary expression", p.tokenPosition(p.currentToken()))
 			}
-			
+
 			// Parse the false expression
 			// Ternary is right-associative
 			falseExpr, err := p.parseExpression(PrecedenceTernary)
 			if err != nil {
 				return nil, err
 			}
-			
+
 			// Create a ternary operator call
 			left = NewOperatorCallWithPos("?:", []*Expr{left, trueExpr, falseExpr}, left.Pos)
 			continue
 		}
-		
+
 		// Note: TokenLogicalOr is now handled in the switch below as a binary operator
-		
+
 		// Handle comma (for function arguments)
 		if token.Type == TokenComma {
 			break // Let parent handle collecting arguments
 		}
-		
+
 		// Handle operators and arithmetic tokens
 		var opName string
 		isOperatorToken := false
-		
+
 		switch token.Type {
 		case TokenOperator:
 			opName = token.Value
@@ -220,7 +220,7 @@ func (p *Parser) parseExpression(minPrecedence Precedence) (*Expr, error) {
 			opName = "%"
 			isOperatorToken = true
 		}
-		
+
 		if isOperatorToken {
 			// Special handling for || which is not a registered operator
 			// but a special expression type (LogicalOr)
@@ -229,15 +229,15 @@ func (p *Parser) parseExpression(minPrecedence Precedence) (*Expr, error) {
 				if PrecedenceOr < minPrecedence {
 					break
 				}
-				
+
 				p.advance() // consume ||
-				
+
 				// || is right-associative
 				right, err := p.parseExpression(PrecedenceOr)
 				if err != nil {
 					return nil, err
 				}
-				
+
 				left = &Expr{
 					Type:  LogicalOr,
 					Left:  left,
@@ -246,40 +246,40 @@ func (p *Parser) parseExpression(minPrecedence Precedence) (*Expr, error) {
 				}
 				continue
 			}
-			
+
 			opInfo, ok := p.registry.Get(opName)
 			if !ok {
 				// Not a known operator, might be part of next expression
 				break
 			}
-			
+
 			if opInfo.Precedence < minPrecedence {
 				break
 			}
-			
+
 			// Check if this could be a binary operator
 			if p.canBeBinaryOperator(opInfo, left) {
 				nextPrecedence := opInfo.Precedence
 				if opInfo.Associativity == AssociativityLeft {
 					nextPrecedence++
 				}
-				
+
 				p.advance() // consume operator
 				right, err := p.parseExpression(nextPrecedence)
 				if err != nil {
 					return nil, err
 				}
-				
+
 				// Create binary operator expression
 				left = NewOperatorCallWithPos(opInfo.Name, []*Expr{left, right}, left.Pos)
 				continue
 			}
 		}
-		
+
 		// If we get here, we can't continue parsing
 		break
 	}
-	
+
 	return left, nil
 }
 
@@ -288,21 +288,21 @@ func (p *Parser) parsePrimary() (*Expr, error) {
 	if p.isAtEnd() {
 		return nil, p.syntaxError("unexpected end of expression", Position{Line: 1, Column: 1})
 	}
-	
+
 	token := p.currentToken()
-	
+
 	switch token.Type {
 	case TokenLiteral:
 		p.advance()
 		return p.parseLiteral(token.Value, p.tokenPosition(token))
-		
+
 	case TokenReference:
 		// Check if this is actually an operator
 		if _, ok := p.registry.Get(token.Value); ok {
 			// It's an operator, check if it has arguments
 			nextToken := p.peek()
-			if nextToken.Type == TokenCloseParen || nextToken.Type == TokenComma || 
-			   nextToken.Type == TokenEOF || p.isBinaryOperatorToken(nextToken.Type) {
+			if nextToken.Type == TokenCloseParen || nextToken.Type == TokenComma ||
+				nextToken.Type == TokenEOF || p.isBinaryOperatorToken(nextToken.Type) {
 				// No arguments follow, treat as reference
 				p.advance()
 				cursor, err := tree.ParseCursor(token.Value)
@@ -318,7 +318,7 @@ func (p *Parser) parsePrimary() (*Expr, error) {
 			// Has arguments, parse as operator call
 			return p.parseOperatorCall()
 		}
-		
+
 		// Not an operator, parse as reference
 		p.advance()
 		cursor, err := tree.ParseCursor(token.Value)
@@ -331,7 +331,7 @@ func (p *Parser) parsePrimary() (*Expr, error) {
 			Reference: cursor,
 			Pos:       p.tokenPosition(token),
 		}, nil
-		
+
 	case TokenEnvVar:
 		p.advance()
 		// Remove the $ prefix from environment variable
@@ -344,7 +344,7 @@ func (p *Parser) parsePrimary() (*Expr, error) {
 			Name: name,
 			Pos:  p.tokenPosition(token),
 		}, nil
-		
+
 	case TokenOpenParen:
 		p.advance() // consume (
 		expr, err := p.parseExpression(PrecedenceLowest)
@@ -355,7 +355,7 @@ func (p *Parser) parsePrimary() (*Expr, error) {
 			return nil, p.expectToken(TokenCloseParen, "to match opening parenthesis")
 		}
 		return expr, nil
-		
+
 	case TokenOperator:
 		// This could be a prefix operator, a function call, or a reference
 		// Check if it's a unary operator
@@ -367,12 +367,12 @@ func (p *Parser) parsePrimary() (*Expr, error) {
 			}
 			return NewOperatorCallWithPos("!", []*Expr{arg}, p.tokenPosition(token)), nil
 		}
-		
+
 		// Check if this looks like an operator call (has arguments)
 		// If the next token suggests this is not an operator call, treat as reference
 		nextToken := p.peek()
-		if nextToken.Type == TokenCloseParen || nextToken.Type == TokenComma || 
-		   nextToken.Type == TokenEOF || p.isBinaryOperatorToken(nextToken.Type) {
+		if nextToken.Type == TokenCloseParen || nextToken.Type == TokenComma ||
+			nextToken.Type == TokenEOF || p.isBinaryOperatorToken(nextToken.Type) {
 			// No arguments follow, so this is likely a reference
 			p.advance()
 			cursor, err := tree.ParseCursor(token.Value)
@@ -385,13 +385,13 @@ func (p *Parser) parsePrimary() (*Expr, error) {
 				Pos:       p.tokenPosition(token),
 			}, nil
 		}
-		
+
 		// Check if this is a registered operator
 		if _, ok := p.registry.Get(token.Value); ok {
 			// It's a registered operator, parse as operator call
 			return p.parseOperatorCall()
 		}
-		
+
 		// Otherwise treat as reference
 		p.advance()
 		cursor, err := tree.ParseCursor(token.Value)
@@ -403,7 +403,7 @@ func (p *Parser) parsePrimary() (*Expr, error) {
 			Reference: cursor,
 			Pos:       p.tokenPosition(token),
 		}, nil
-		
+
 	case TokenMinus:
 		// This could be a negative number or a minus operator
 		// For now, treat it as negative number if followed by a literal
@@ -412,11 +412,11 @@ func (p *Parser) parsePrimary() (*Expr, error) {
 			p.advance() // consume -
 			numToken := p.currentToken()
 			p.advance()
-			return p.parseLiteral("-" + numToken.Value, p.tokenPosition(token))
+			return p.parseLiteral("-"+numToken.Value, p.tokenPosition(token))
 		}
 		// Otherwise treat as operator
 		return p.parseOperatorCall()
-		
+
 	case TokenPlus, TokenMultiply, TokenDivide, TokenModulo:
 		// These should only appear as binary operators, not in primary position
 		return nil, p.syntaxError(fmt.Sprintf("unexpected operator '%s'", token.Value), p.tokenPosition(token))
@@ -430,11 +430,11 @@ func (p *Parser) parseOperatorCall() (*Expr, error) {
 	if p.isAtEnd() {
 		return nil, p.syntaxError("expected operator", Position{Line: 1, Column: 1})
 	}
-	
+
 	token := p.currentToken()
 	var opName string
 	var targetName string
-	
+
 	// Map token types to operator names
 	switch token.Type {
 	case TokenOperator, TokenReference:
@@ -461,22 +461,22 @@ func (p *Parser) parseOperatorCall() (*Expr, error) {
 			targetName = parts[1]
 		}
 	}
-	
+
 	// Extract operator name and modifiers
 	opNameParts := strings.Split(opName, ":")
 	baseOpName := opNameParts[0]
-	
+
 	opInfo, ok := p.registry.Get(baseOpName)
 	if !ok {
 		return nil, p.syntaxError(fmt.Sprintf("unknown operator '%s'", baseOpName), p.tokenPosition(token))
 	}
 	DEBUG("parser: parseOperatorCall for '%s', MinArgs=%d, MaxArgs=%d", baseOpName, opInfo.MinArgs, opInfo.MaxArgs)
-	
+
 	p.advance() // consume operator
-	
+
 	// Parse arguments
 	args := make([]*Expr, 0, 4) // Pre-allocate for typical arg counts
-	
+
 	// Determine if this is a function-style call
 	// Function style is when there's no space between operator and opening paren
 	// Since our tokenizer doesn't track whitespace, we'll use a heuristic:
@@ -489,11 +489,11 @@ func (p *Parser) parseOperatorCall() (*Expr, error) {
 	// 	operatorEndPos := token.Pos + len(opName)
 	// 	isFunctionStyle = (openParenPos == operatorEndPos)
 	// }
-	
+
 	if isFunctionStyle {
 		// Parse parenthesized arguments
 		p.advance() // consume (
-		
+
 		if !p.isAtEnd() && p.currentToken().Type != TokenCloseParen {
 			for {
 				arg, err := p.parseExpression(PrecedenceLowest)
@@ -501,13 +501,13 @@ func (p *Parser) parseOperatorCall() (*Expr, error) {
 					return nil, err
 				}
 				args = append(args, arg)
-				
+
 				if !p.consume(TokenComma) {
 					break
 				}
 			}
 		}
-		
+
 		if err := p.expectToken(TokenCloseParen, "after operator arguments"); err != nil {
 			return nil, err
 		}
@@ -522,11 +522,11 @@ func (p *Parser) parseOperatorCall() (*Expr, error) {
 			if token.Type == TokenLogicalOr || token.Type == TokenCloseParen || token.Type == TokenComma {
 				break
 			}
-			
+
 			// Special handling for operators that expect references
 			var arg *Expr
 			var err error
-			
+
 			if argIndex == 0 && p.isReferenceExpectingOperator(baseOpName) && token.Type == TokenOperator {
 				// First argument of grab, param, etc. should be treated as a reference
 				// even if it matches an operator name
@@ -546,36 +546,36 @@ func (p *Parser) parseOperatorCall() (*Expr, error) {
 					return nil, err
 				}
 			}
-			
+
 			args = append(args, arg)
 			argIndex++
-			
+
 			// Check if we've reached the maximum number of arguments
 			if opInfo.MaxArgs >= 0 && len(args) >= opInfo.MaxArgs {
 				DEBUG("parser: parseOperatorCall reached MaxArgs limit for '%s', stopping at %d args", baseOpName, len(args))
 				break
 			}
-			
+
 			// Continue parsing space-separated arguments
 		}
 	}
-	
+
 	// Validate argument count
 	if opInfo.MinArgs >= 0 && len(args) < opInfo.MinArgs {
-		return nil, p.syntaxError(fmt.Sprintf("operator '%s' requires at least %d arguments, got %d", baseOpName, opInfo.MinArgs, len(args)), 
+		return nil, p.syntaxError(fmt.Sprintf("operator '%s' requires at least %d arguments, got %d", baseOpName, opInfo.MinArgs, len(args)),
 			p.tokenPosition(p.currentToken()))
 	}
 	if opInfo.MaxArgs >= 0 && len(args) > opInfo.MaxArgs {
 		return nil, p.syntaxError(fmt.Sprintf("operator '%s' accepts at most %d arguments, got %d", baseOpName, opInfo.MaxArgs, len(args)),
 			p.tokenPosition(p.currentToken()))
 	}
-	
+
 	expr := NewOperatorCallWithPos(baseOpName, args, p.tokenPosition(token))
 	// Set the target if specified
 	if targetName != "" {
 		expr.Target = targetName
 	}
-	
+
 	// Parse operator modifiers (if any)
 	modifiers := p.parseOperatorModifiers(opName)
 	if len(modifiers) > 0 {
@@ -583,7 +583,7 @@ func (p *Parser) parseOperatorCall() (*Expr, error) {
 			SetModifierExpr(expr, fmt.Sprintf("%s:%v", modifier, value))
 		}
 	}
-	
+
 	return expr, nil
 }
 
@@ -599,7 +599,7 @@ func (p *Parser) parseLiteral(value string, pos Position) (*Expr, error) {
 			Pos:     pos,
 		}, nil
 	}
-	
+
 	// Try to parse as number (only for unquoted values)
 	if strings.Contains(value, ".") {
 		if f, err := strconv.ParseFloat(value, 64); err == nil {
@@ -616,7 +616,7 @@ func (p *Parser) parseLiteral(value string, pos Position) (*Expr, error) {
 			Pos:     pos,
 		}, nil
 	}
-	
+
 	// Check for special literals
 	switch strings.ToLower(value) {
 	case "null", "nil", "~":
@@ -638,7 +638,7 @@ func (p *Parser) parseLiteral(value string, pos Position) (*Expr, error) {
 			Pos:     pos,
 		}, nil
 	}
-	
+
 	// Default to string
 	return &Expr{
 		Type:    Literal,
@@ -709,16 +709,16 @@ func (p *Parser) parseLogicalOrExpression() (*Expr, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Check for || operator
 	for !p.isAtEnd() && p.currentToken().Type == TokenLogicalOr {
 		p.advance() // consume ||
-		
+
 		right, err := p.parsePrimary()
 		if err != nil {
 			return nil, err
 		}
-		
+
 		left = &Expr{
 			Type:  LogicalOr,
 			Left:  left,
@@ -726,7 +726,7 @@ func (p *Parser) parseLogicalOrExpression() (*Expr, error) {
 			Pos:   left.Pos,
 		}
 	}
-	
+
 	return left, nil
 }
 
@@ -779,22 +779,22 @@ func (p *Parser) tokenPosition(token Token) Position {
 // synchronize attempts to recover from a parse error by finding a safe synchronization point
 func (p *Parser) synchronize() {
 	p.advance()
-	
+
 	// Skip tokens until we find a safe stopping point
 	for !p.isAtEnd() {
 		token := p.currentToken()
-		
+
 		// Stop at these tokens which typically start new expressions
 		switch token.Type {
 		case TokenCloseParen, TokenComma, TokenLogicalOr:
 			return
 		}
-		
+
 		// Also stop if we see a new operator call
 		if token.Type == TokenOperator && p.peek().Type == TokenOpenParen {
 			return
 		}
-		
+
 		p.advance()
 	}
 }
@@ -802,16 +802,16 @@ func (p *Parser) synchronize() {
 // expectToken checks for an expected token and generates an error if not found
 func (p *Parser) expectToken(tokenType TokenType, context string) error {
 	if p.isAtEnd() {
-		return p.syntaxError(fmt.Sprintf("unexpected end of expression, expected %s %s", tokenTypeString(tokenType), context), 
+		return p.syntaxError(fmt.Sprintf("unexpected end of expression, expected %s %s", tokenTypeString(tokenType), context),
 			Position{Line: 1, Column: 1})
 	}
-	
+
 	token := p.currentToken()
 	if token.Type != tokenType {
 		return p.syntaxError(fmt.Sprintf("expected %s %s, got '%s'", tokenTypeString(tokenType), context, token.Value),
 			p.tokenPosition(token))
 	}
-	
+
 	p.advance()
 	return nil
 }
@@ -819,7 +819,7 @@ func (p *Parser) expectToken(tokenType TokenType, context string) error {
 // parseOperatorModifiers parses operator modifiers like :nocache
 func (p *Parser) parseOperatorModifiers(opName string) map[string]bool {
 	modifiers := make(map[string]bool)
-	
+
 	// Check if the operator name contains modifiers (format: "operator:modifier1:modifier2")
 	parts := strings.Split(opName, ":")
 	if len(parts) > 1 {
@@ -832,7 +832,7 @@ func (p *Parser) parseOperatorModifiers(opName string) map[string]bool {
 			}
 		}
 	}
-	
+
 	return modifiers
 }
 

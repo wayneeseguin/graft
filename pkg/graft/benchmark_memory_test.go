@@ -2,7 +2,7 @@ package graft_test
 
 import (
 	"testing"
-	
+
 	"github.com/wayneeseguin/graft/internal/utils/tree"
 	"github.com/wayneeseguin/graft/pkg/graft"
 	"github.com/wayneeseguin/graft/pkg/graft/operators"
@@ -12,7 +12,7 @@ import (
 func BenchmarkConcatOperatorMemory(b *testing.B) {
 	ev := &graft.Evaluator{
 		Tree: map[interface{}]interface{}{
-			"name": "test",
+			"name":  "test",
 			"value": "data",
 		},
 		Here: func() *tree.Cursor {
@@ -20,7 +20,7 @@ func BenchmarkConcatOperatorMemory(b *testing.B) {
 			return c
 		}(),
 	}
-	
+
 	// Create test expressions
 	args := []*graft.Expr{
 		{Type: graft.Literal, Literal: "prefix-"},
@@ -35,12 +35,12 @@ func BenchmarkConcatOperatorMemory(b *testing.B) {
 		}()},
 		{Type: graft.Literal, Literal: "-suffix"},
 	}
-	
+
 	op := operators.ConcatOperator{}
-	
+
 	b.ResetTimer()
 	b.ReportAllocs()
-	
+
 	for i := 0; i < b.N; i++ {
 		_, _ = op.Run(ev, args)
 	}
@@ -57,7 +57,7 @@ func BenchmarkJoinOperatorMemory(b *testing.B) {
 			return c
 		}(),
 	}
-	
+
 	// Create test expressions
 	args := []*graft.Expr{
 		{Type: graft.Literal, Literal: ", "},
@@ -66,12 +66,12 @@ func BenchmarkJoinOperatorMemory(b *testing.B) {
 			return c
 		}()},
 	}
-	
+
 	op := operators.JoinOperator{}
-	
+
 	b.ResetTimer()
 	b.ReportAllocs()
-	
+
 	for i := 0; i < b.N; i++ {
 		_, _ = op.Run(ev, args)
 	}
@@ -88,10 +88,10 @@ func BenchmarkTokenizerMemory(b *testing.B) {
 		"(( static_ips 0 1 2 ))",
 		"(( calc \"2 + 2 * 3\" ))",
 	}
-	
+
 	b.ResetTimer()
 	b.ReportAllocs()
-	
+
 	for i := 0; i < b.N; i++ {
 		for _, expr := range expressions {
 			tokenizer := NewEnhancedTokenizer(expr)
@@ -112,12 +112,12 @@ func BenchmarkParserMemory(b *testing.B) {
 		"static_ips 0 1 2",
 		"calc \"2 + 2 * 3\"",
 	}
-	
+
 	registry := createTestRegistry()
-	
+
 	b.ResetTimer()
 	b.ReportAllocs()
-	
+
 	for i := 0; i < b.N; i++ {
 		for _, expr := range expressions {
 			tokens := TokenizeExpression(expr)
@@ -136,12 +136,12 @@ func BenchmarkStringInterning(b *testing.B) {
 		"grab", "concat", "vault", "static_ips", "calc",
 		"join", "keys", "sort", "prune", "param",
 	}
-	
+
 	b.Run("WithoutInterning", func(b *testing.B) {
 		m := make(map[string]int)
 		b.ResetTimer()
 		b.ReportAllocs()
-		
+
 		for i := 0; i < b.N; i++ {
 			for _, op := range operators {
 				// Simulate creating new strings each time
@@ -150,12 +150,12 @@ func BenchmarkStringInterning(b *testing.B) {
 			}
 		}
 	})
-	
+
 	b.Run("WithInterning", func(b *testing.B) {
 		m := make(map[string]int)
 		b.ResetTimer()
 		b.ReportAllocs()
-		
+
 		for i := 0; i < b.N; i++ {
 			for _, op := range operators {
 				// Use interned strings
@@ -171,7 +171,7 @@ func BenchmarkLargeDocumentParsing(b *testing.B) {
 	// Build a large expression with many operators
 	var sb strings.Builder
 	sb.WriteString("concat ")
-	
+
 	for i := 0; i < 100; i++ {
 		if i > 0 {
 			sb.WriteString(" ")
@@ -180,13 +180,13 @@ func BenchmarkLargeDocumentParsing(b *testing.B) {
 		sb.WriteString(string(rune('0' + (i % 10))))
 		sb.WriteString("\"")
 	}
-	
+
 	expr := sb.String()
 	registry := createTestRegistry()
-	
+
 	b.ResetTimer()
 	b.ReportAllocs()
-	
+
 	for i := 0; i < b.N; i++ {
 		tokens := TokenizeExpression(expr)
 		parser := parser.NewEnhancedParser(tokens, registry)

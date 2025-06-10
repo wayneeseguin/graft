@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/wayneeseguin/graft/internal/utils/tree"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 func TestVaultArgProcessor(t *testing.T) {

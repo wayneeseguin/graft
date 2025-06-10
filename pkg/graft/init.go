@@ -2,10 +2,10 @@ package graft
 
 import (
 	"fmt"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
+	"github.com/wayneeseguin/graft/log"
 	"regexp"
 	"strings"
-	"github.com/wayneeseguin/graft/log"
-	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 func init() {
@@ -13,14 +13,14 @@ func init() {
 	if OpRegistry == nil {
 		OpRegistry = make(map[string]Operator)
 	}
-	
+
 	// TODO: Implement and register arithmetic operators
 	// RegisterOp("+", AddOperator{})
 	// RegisterOp("-", SubtractOperator{})
 	// RegisterOp("*", MultiplyOperator{})
 	// RegisterOp("/", DivideOperator{})
 	// RegisterOp("%", ModuloOperator{})
-	
+
 	// TODO: Implement and register comparison operators
 	// RegisterOp("==", ComparisonOperator{op: "=="})
 	// RegisterOp("!=", ComparisonOperator{op: "!="})
@@ -28,15 +28,15 @@ func init() {
 	// RegisterOp(">", ComparisonOperator{op: ">"})
 	// RegisterOp("<=", ComparisonOperator{op: "<="})
 	// RegisterOp(">=", ComparisonOperator{op: ">="})
-	
+
 	// TODO: Implement and register boolean operators
 	// RegisterOp("&&", BooleanAndOperator{})
 	// NOTE: || is not registered as an operator - it's handled specially as alternation in expressions
 	// RegisterOp("!", NegationOperator{})
-	
+
 	// TODO: Implement and register ternary operator
 	// RegisterOp("?:", TernaryOperator{})
-	
+
 	log.DEBUG("Operators initialized")
 }
 
@@ -97,7 +97,7 @@ func (NullOperator) Dependencies(ev *Evaluator, args []*Expr, locs []*tree.Curso
 func (n NullOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 	// For unknown operators, return the original operator call string unchanged
 	// This allows the template to be processed again later or remain as-is
-	
+
 	// Reconstruct the original operator call
 	var argStrings []string
 	for _, arg := range args {
@@ -112,7 +112,7 @@ func (n NullOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 			argStrings = append(argStrings, "...")
 		}
 	}
-	
+
 	var argsStr string
 	if len(argStrings) > 0 {
 		argsStr = " " + fmt.Sprintf("%v", argStrings[0])
@@ -120,9 +120,9 @@ func (n NullOperator) Run(ev *Evaluator, args []*Expr) (*Response, error) {
 			argsStr += " " + arg
 		}
 	}
-	
+
 	originalCall := fmt.Sprintf("(( %s%s ))", n.Missing, argsStr)
-	
+
 	return &Response{
 		Type:  Replace,
 		Value: originalCall,
@@ -158,7 +158,7 @@ func isPruneOperator(val interface{}) bool {
 		}
 		return matched
 	}
-	
+
 	// Also check for Opcall structures that represent prune operations
 	if opcall, ok := val.(*Opcall); ok {
 		if opcall != nil && opcall.op != nil {
@@ -172,7 +172,7 @@ func isPruneOperator(val interface{}) bool {
 			}
 		}
 	}
-	
+
 	DEBUG("isPruneOperator: not a prune operator: %T %v", val, val)
 	return false
 }
@@ -182,11 +182,11 @@ func Merge(dst, src interface{}) error {
 	// Deep merge implementation for maps
 	dstMap, dstOk := dst.(map[interface{}]interface{})
 	srcMap, srcOk := src.(map[interface{}]interface{})
-	
+
 	if !dstOk || !srcOk {
 		return fmt.Errorf("Merge: both arguments must be maps")
 	}
-	
+
 	// Deep merge all keys from src to dst
 	for k, srcVal := range srcMap {
 		if dstVal, exists := dstMap[k]; exists {
@@ -195,7 +195,7 @@ func Merge(dst, src interface{}) error {
 				DEBUG("Merge: preserving prune operator at key %v", k)
 				continue
 			}
-			
+
 			// If both are maps, merge recursively
 			if dstSubMap, dstIsMap := dstVal.(map[interface{}]interface{}); dstIsMap {
 				if srcSubMap, srcIsMap := srcVal.(map[interface{}]interface{}); srcIsMap {
@@ -210,7 +210,7 @@ func Merge(dst, src interface{}) error {
 		// Otherwise just copy the value
 		dstMap[k] = srcVal
 	}
-	
+
 	return nil
 }
 

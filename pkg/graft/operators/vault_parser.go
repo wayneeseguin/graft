@@ -254,13 +254,13 @@ func (p *VaultExpressionParser) shouldContinue(minPrecedence parser.Precedence) 
 	}
 
 	token := p.currentToken()
-	
+
 	// Check for explicit operators first
 	tokenPrecedence := parser.GetTokenPrecedence(token.Type)
 	if tokenPrecedence > parser.PrecedenceLowest {
 		return tokenPrecedence > minPrecedence
 	}
-	
+
 	// Check for space concatenation (implicit operator)
 	if p.shouldHandleSpaceConcatenation(token) {
 		// Space concatenation has lower precedence than most operators

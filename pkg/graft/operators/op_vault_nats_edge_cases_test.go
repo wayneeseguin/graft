@@ -21,7 +21,7 @@ func TestVaultNatsEdgeCases(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
-	
+
 	Convey("Vault and NATS Edge Cases and Error Scenarios", t, func() {
 		// Start test NATS server
 		ns, url := startTestNATSServer()
@@ -71,7 +71,7 @@ config:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}
@@ -129,7 +129,7 @@ items:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}
@@ -209,7 +209,7 @@ enhanced_config:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}
@@ -266,7 +266,7 @@ config:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}
@@ -289,7 +289,7 @@ config:
 			natsOp2 := &NatsOperator{}
 			err = natsOp2.Setup()
 			So(err, ShouldBeNil) // Setup doesn't connect
-			
+
 			// But Run should fail
 			args2 := []*graft.Expr{{Type: graft.Literal, Literal: "kv:network-test/test-key"}}
 			_, err = natsOp2.Run(ev, args2)
@@ -341,7 +341,7 @@ special:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}
@@ -394,7 +394,7 @@ values:
 				return err
 			}()
 			So(err, ShouldBeNil)
-			
+
 			ev := &graft.Evaluator{
 				Tree: yamlTree,
 			}

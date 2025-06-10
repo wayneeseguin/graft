@@ -145,9 +145,9 @@ func TestGetArrayModifications(t *testing.T) {
 		Convey("(( merge ))", func() {
 			//merge test cases go here
 			for input, shouldMatch := range map[string]bool{
-				"(( merge ))": true,
-				"((merge))":   true,
-				"((	merge	))": true,
+				"(( merge ))":          true,
+				"((merge))":            true,
+				"((	merge	))":          true,
 				"((  merge  ))":        true,
 				"((     merge))":       true,
 				"(( notmerge ))":       false,
@@ -172,9 +172,9 @@ func TestGetArrayModifications(t *testing.T) {
 		Convey("(( replace ))", func() {
 			//replace test cases go here
 			for input, shouldMatch := range map[string]bool{
-				"(( replace ))": true,
-				"((replace))":   true,
-				"((	replace	))": true,
+				"(( replace ))":          true,
+				"((replace))":            true,
+				"((	replace	))":          true,
 				"((  replace  ))":        true,
 				"((     replace))":       true,
 				"(( notreplace ))":       false,
@@ -199,9 +199,9 @@ func TestGetArrayModifications(t *testing.T) {
 		Convey("(( append ))", func() {
 			//append test cases go here
 			for input, shouldMatch := range map[string]bool{
-				"(( append ))": true,
-				"((append))":   true,
-				"((	append	))": true,
+				"(( append ))":          true,
+				"((append))":            true,
+				"((	append	))":          true,
 				"((  append  ))":        true,
 				"((     append))":       true,
 				"(( notappend ))":       false,
@@ -226,9 +226,9 @@ func TestGetArrayModifications(t *testing.T) {
 		Convey("(( prepend ))", func() {
 			//prepend test cases go here
 			for input, shouldMatch := range map[string]bool{
-				"(( prepend ))": true,
-				"((prepend))":   true,
-				"((	prepend	))": true,
+				"(( prepend ))":          true,
+				"((prepend))":            true,
+				"((	prepend	))":          true,
 				"((  prepend  ))":        true,
 				"((     prepend))":       true,
 				"(( notprepend ))":       false,
@@ -255,14 +255,14 @@ func TestGetArrayModifications(t *testing.T) {
 				for _, index := range []int{0, 10, 100} {
 					//index based insert cases go here
 					for input, shouldMatch := range map[string]bool{
-						fmt.Sprintf("(( insert %s %d ))", rel, index): true,
-						fmt.Sprintf("(( insert %s	 %d ))", rel, index): true,
-						fmt.Sprintf("(( insert	 %s %d ))", rel, index): true,
-						fmt.Sprintf("(( insert   %s   %d ))", rel, index): true,
-						fmt.Sprintf("((   insert %s %d ))", rel, index):   true,
-						fmt.Sprintf("(( insert %s %d   ))", rel, index):   true,
-						fmt.Sprintf("((    insert %s %d ))", rel, index):  true,
-						fmt.Sprintf("((   insert   %s   %d	 ))", rel, index): true,
+						fmt.Sprintf("(( insert %s %d ))", rel, index):          true,
+						fmt.Sprintf("(( insert %s	 %d ))", rel, index):         true,
+						fmt.Sprintf("(( insert	 %s %d ))", rel, index):         true,
+						fmt.Sprintf("(( insert   %s   %d ))", rel, index):      true,
+						fmt.Sprintf("((   insert %s %d ))", rel, index):        true,
+						fmt.Sprintf("(( insert %s %d   ))", rel, index):        true,
+						fmt.Sprintf("((    insert %s %d ))", rel, index):       true,
+						fmt.Sprintf("((   insert   %s   %d	 ))", rel, index):   true,
 						fmt.Sprintf("(( insert%s%d ))", rel, index):            false,
 						fmt.Sprintf("(( insert%s %d ))", rel, index):           false,
 						fmt.Sprintf("(( notinsert %s %d ))", rel, index):       false,
@@ -287,22 +287,22 @@ func TestGetArrayModifications(t *testing.T) {
 				for _, key := range []string{"", "foo"} {
 					//name based insert cases go here
 					for input, shouldMatch := range map[string]bool{
-						fmt.Sprintf(`(( insert %s %s "graft" ))`, rel, key): true,
-						fmt.Sprintf(`(( insert %s %s	 "graft" ))`, rel, key): true,
-						fmt.Sprintf(`(( insert	 %s %s "graft" ))`, rel, key): true,
+						fmt.Sprintf(`(( insert %s %s "graft" ))`, rel, key):                true,
+						fmt.Sprintf(`(( insert %s %s	 "graft" ))`, rel, key):               true,
+						fmt.Sprintf(`(( insert	 %s %s "graft" ))`, rel, key):               true,
 						fmt.Sprintf(`(( insert   %s %s   "graft" ))`, rel, key):            true,
 						fmt.Sprintf(`((   insert %s %s "graft" ))`, rel, key):              true,
 						fmt.Sprintf(`(( insert %s %s "graft"   ))`, rel, key):              true,
 						fmt.Sprintf(`((    insert %s %s "graft" ))`, rel, key):             true,
 						fmt.Sprintf(`(( insert %s    %s "graft" ))`, rel, key):             true,
 						fmt.Sprintf(`((    insert    %s    %s     "graft"   ))`, rel, key): true,
-						fmt.Sprintf(`((   insert   %s %s   "graft"	 ))`, rel, key): true,
-						fmt.Sprintf("(( insert%s%sgraft ))", rel, key):      false,
-						fmt.Sprintf("(( insert%s%s graft ))", rel, key):     false,
-						fmt.Sprintf("(( notinsert %s %s ))", rel, key):       false,
-						fmt.Sprintf("(( insertnot %s %s ))", rel, key):       false,
-						fmt.Sprintf("(( not even insert %s %s ))", rel, key): false,
-						fmt.Sprintf("(( somethingelse %s %s ))", rel, key):   false,
+						fmt.Sprintf(`((   insert   %s %s   "graft"	 ))`, rel, key):         true,
+						fmt.Sprintf("(( insert%s%sgraft ))", rel, key):                     false,
+						fmt.Sprintf("(( insert%s%s graft ))", rel, key):                    false,
+						fmt.Sprintf("(( notinsert %s %s ))", rel, key):                     false,
+						fmt.Sprintf("(( insertnot %s %s ))", rel, key):                     false,
+						fmt.Sprintf("(( not even insert %s %s ))", rel, key):               false,
+						fmt.Sprintf("(( somethingelse %s %s ))", rel, key):                 false,
 					} {
 						Convey(fmt.Sprintf("with case %s", input), func() {
 							results := getArrayModifications([]interface{}{input}, false)
@@ -330,20 +330,20 @@ func TestGetArrayModifications(t *testing.T) {
 			for _, key := range []string{"", "foo"} {
 				//name based delete cases go here
 				for input, shouldMatch := range map[string]bool{
-					fmt.Sprintf(`(( delete %s "graft" ))`, key): true,
-					fmt.Sprintf(`(( delete %s	 "graft" ))`, key): true,
-					fmt.Sprintf(`(( delete	 %s "graft" ))`, key): true,
-					fmt.Sprintf(`(( delete   %s   "graft" ))`, key): true,
-					fmt.Sprintf(`((   delete %s "graft" ))`, key):   true,
-					fmt.Sprintf(`(( delete %s "graft"   ))`, key):   true,
-					fmt.Sprintf(`(( delete %s "graft"    ))`, key):  true,
-					fmt.Sprintf(`((    delete %s "graft" ))`, key):  true,
+					fmt.Sprintf(`(( delete %s "graft" ))`, key):        true,
+					fmt.Sprintf(`(( delete %s	 "graft" ))`, key):       true,
+					fmt.Sprintf(`(( delete	 %s "graft" ))`, key):       true,
+					fmt.Sprintf(`(( delete   %s   "graft" ))`, key):    true,
+					fmt.Sprintf(`((   delete %s "graft" ))`, key):      true,
+					fmt.Sprintf(`(( delete %s "graft"   ))`, key):      true,
+					fmt.Sprintf(`(( delete %s "graft"    ))`, key):     true,
+					fmt.Sprintf(`((    delete %s "graft" ))`, key):     true,
 					fmt.Sprintf(`((   delete   %s   "graft"	 ))`, key): true,
-					fmt.Sprintf("(( delete%sgraft ))", key):     false,
-					fmt.Sprintf("(( notdelete %s ))", key):       false,
-					fmt.Sprintf("(( deletenot %s ))", key):       false,
-					fmt.Sprintf("(( not even delete %s ))", key): false,
-					fmt.Sprintf("(( somethingelse %s ))", key):   false,
+					fmt.Sprintf("(( delete%sgraft ))", key):            false,
+					fmt.Sprintf("(( notdelete %s ))", key):             false,
+					fmt.Sprintf("(( deletenot %s ))", key):             false,
+					fmt.Sprintf("(( not even delete %s ))", key):       false,
+					fmt.Sprintf("(( somethingelse %s ))", key):         false,
 				} {
 					Convey(fmt.Sprintf("with case %s", input), func() {
 						results := getArrayModifications([]interface{}{input}, false)
@@ -365,13 +365,13 @@ func TestGetArrayModifications(t *testing.T) {
 			}
 
 			for input, shouldMatch := range map[string]bool{
-				`(( delete  "MrSpiff" ))`: true,
-				`(( delete 	 "MrSpiff" ))`: true,
+				`(( delete  "MrSpiff" ))`:    true,
+				`(( delete 	 "MrSpiff" ))`:   true,
 				`((   delete  "MrSpiff" ))`:  true,
 				`(( delete  "MrSpiff"   ))`:  true,
 				`(( delete  "MrSpiff"    ))`: true,
 				`(( delete  MrSpiff ))`:      true,
-				`(( deletegraft ))`:         false,
+				`(( deletegraft ))`:          false,
 				`(( delete  Mr Spiff ))`:     false,
 				`(( delete  "" "MrSpiff" ))`: false,
 			} {
@@ -392,11 +392,11 @@ func TestGetArrayModifications(t *testing.T) {
 			for _, index := range []int{0, 10, 100} {
 				//index based delete cases go here
 				for input, shouldDelete := range map[string]bool{
-					fmt.Sprintf(`(( delete %d ))`, index):     true,
-					fmt.Sprintf(`(( delete     %d ))`, index): true,
-					fmt.Sprintf(`((   delete %d ))`, index):   true,
-					fmt.Sprintf(`(( delete %d   ))`, index):   true,
-					fmt.Sprintf(`((   delete     %d	 ))`, index): true,
+					fmt.Sprintf(`(( delete %d ))`, index):         true,
+					fmt.Sprintf(`(( delete     %d ))`, index):     true,
+					fmt.Sprintf(`((   delete %d ))`, index):       true,
+					fmt.Sprintf(`(( delete %d   ))`, index):       true,
+					fmt.Sprintf(`((   delete     %d	 ))`, index):  true,
 					fmt.Sprintf(`(( delete%d ))`, index):          false,
 					fmt.Sprintf(`(( notdelete %d))`, index):       false,
 					fmt.Sprintf(`(( deletenot %d))`, index):       false,
@@ -667,7 +667,7 @@ func TestMergeMap(t *testing.T) {
 func TestMergeArray(t *testing.T) {
 	// Disable ANSI colors for testing
 	ansi.Color(false)
-	
+
 	Convey("m.mergeArray", t, func() {
 		Convey("with initial element '(( prepend ))' prepends new data", func() {
 			orig := []interface{}{"first", "second"}

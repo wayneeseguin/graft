@@ -146,7 +146,7 @@ func (ob *OperationBatcher) groupOperations(operations []*DependencyNode) map[st
 		if op == nil {
 			continue
 		}
-		
+
 		if !ob.canBatch(op) {
 			// Non-batchable operations go in their own group
 			key := fmt.Sprintf("single_%s", op.ID)
@@ -166,7 +166,7 @@ func (ob *OperationBatcher) canBatch(op *DependencyNode) bool {
 	if op == nil {
 		return false
 	}
-	
+
 	// Check if operator type supports batching
 	batchableOps := map[string]bool{
 		"vault":      true,

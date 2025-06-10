@@ -10,12 +10,12 @@ import (
 // deepMerge recursively merges src into dst and returns the result
 func deepMerge(dst, src map[interface{}]interface{}) map[interface{}]interface{} {
 	result := make(map[interface{}]interface{})
-	
+
 	// Copy dst first
 	for k, v := range dst {
 		result[k] = deepCopy(v)
 	}
-	
+
 	// Then merge src
 	for key, srcVal := range src {
 		if dstVal, exists := result[key]; exists {
@@ -30,7 +30,7 @@ func deepMerge(dst, src map[interface{}]interface{}) map[interface{}]interface{}
 		// Otherwise, overwrite the value
 		result[key] = deepCopy(srcVal)
 	}
-	
+
 	return result
 }
 
@@ -193,14 +193,14 @@ func SortList(path string, list []interface{}, sortKey string) error {
 	if len(list) == 0 {
 		return nil
 	}
-	
+
 	// Type checking
 	var commonType string
 	hasInconsistentMaps := false
-	
+
 	for i, entry := range list {
 		var typeName string
-		
+
 		if entry == nil {
 			typeName = "nil"
 		} else {
@@ -217,7 +217,7 @@ func SortList(path string, list []interface{}, sortKey string) error {
 			case map[interface{}]interface{}:
 				// Always consider maps as maps for type checking
 				typeName = "map"
-				
+
 				// Check if it's a named-entry map
 				if sortKey != "" {
 					if _, hasKey := v[sortKey]; !hasKey {
@@ -244,7 +244,7 @@ func SortList(path string, list []interface{}, sortKey string) error {
 				}
 			}
 		}
-		
+
 		// Set or check common type
 		if i == 0 {
 			commonType = typeName
@@ -256,17 +256,17 @@ func SortList(path string, list []interface{}, sortKey string) error {
 			return fmt.Errorf("$.%s is a list with different types (not a list with homogeneous entry types)", path)
 		}
 	}
-	
+
 	// Check for inconsistent map entries
 	if commonType == "map" && hasInconsistentMaps && sortKey != "" {
 		return fmt.Errorf("$.%s is a list with map entries, where some do not contain %s (not a list with map entries each containing %s)", path, sortKey, sortKey)
 	}
-	
+
 	// Sort the list
 	sort.Slice(list, func(i, j int) bool {
 		return universalLess(list[i], list[j], sortKey)
 	})
-	
+
 	return nil
 }
 
@@ -275,17 +275,17 @@ func universalLess(a interface{}, b interface{}, key string) bool {
 	switch a.(type) {
 	case string:
 		return strings.Compare(a.(string), b.(string)) < 0
-		
+
 	case float64:
 		return a.(float64) < b.(float64)
-		
+
 	case int:
 		return a.(int) < b.(int)
-		
+
 	case map[interface{}]interface{}:
 		entryA, entryB := a.(map[interface{}]interface{}), b.(map[interface{}]interface{})
 		return universalLess(entryA[key], entryB[key], key)
 	}
-	
+
 	return false
 }

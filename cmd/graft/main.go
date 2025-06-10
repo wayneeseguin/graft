@@ -15,10 +15,10 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/wayneeseguin/graft/internal/utils/ansi"
 
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 	"github.com/wayneeseguin/graft/log"
 	"github.com/wayneeseguin/graft/pkg/graft"
 	_ "github.com/wayneeseguin/graft/pkg/graft/operators" // Register operators
-	"github.com/wayneeseguin/graft/internal/utils/tree"
 
 	"strings"
 
@@ -83,7 +83,7 @@ type mergeOpts struct {
 // checkForCycles detects circular references in the data structure
 func checkForCycles(root interface{}, maxDepth int) error {
 	visited := make(map[uintptr]bool)
-	
+
 	var check func(o interface{}, depth int) error
 	check = func(o interface{}, depth int) error {
 		if depth == 0 {
@@ -98,15 +98,15 @@ func checkForCycles(root interface{}, maxDepth int) error {
 				return ansi.Errorf("@*{Hit max recursion depth. You seem to have a self-referencing dataset}")
 			}
 			visited[ptr] = true
-			
+
 			for _, val := range v {
 				if err := check(val, depth-1); err != nil {
 					return err
 				}
 			}
-			
+
 			delete(visited, ptr) // Remove after visiting children
-			
+
 		case []interface{}:
 			// Check if we've seen this slice before (circular reference)
 			ptr := reflect.ValueOf(v).Pointer()
@@ -114,13 +114,13 @@ func checkForCycles(root interface{}, maxDepth int) error {
 				return ansi.Errorf("@*{Hit max recursion depth. You seem to have a self-referencing dataset}")
 			}
 			visited[ptr] = true
-			
+
 			for _, val := range v {
 				if err := check(val, depth-1); err != nil {
 					return err
 				}
 			}
-			
+
 			delete(visited, ptr) // Remove after visiting children
 		}
 
@@ -198,14 +198,14 @@ func main() {
 
 		log.TRACE("Converting the following data back to YML:")
 		log.TRACE("%#v", tree)
-		
+
 		// Check for cycles before attempting to marshal
 		if err := checkForCycles(tree, 4096); err != nil {
 			log.PrintfStdErr("%s\n", err.Error())
 			exit(2)
 			return
 		}
-		
+
 		merged, err := yaml.Marshal(tree)
 		if err != nil {
 			log.PrintfStdErr("Unable to convert merged result back to YAML: %s\nData:\n%#v", err.Error(), tree)
@@ -226,14 +226,14 @@ func main() {
 		for _, tree := range trees {
 			log.TRACE("Converting the following data back to YML:")
 			log.TRACE("%#v", tree)
-			
+
 			// Check for cycles before attempting to marshal
 			if err := checkForCycles(tree, 4096); err != nil {
 				log.PrintfStdErr("%s\n", err.Error())
 				exit(2)
 				return
 			}
-			
+
 			merged, err := yaml.Marshal(tree)
 			if err != nil {
 				log.PrintfStdErr("Unable to convert merged result back to YAML: %s\nData:\n%#v", err.Error(), tree)
@@ -572,21 +572,21 @@ func validatePath(data map[interface{}]interface{}, path string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	_, err = cursor.Resolve(data)
 	if err != nil {
 		// Check if the error is due to a missing parent path
 		// Walk through the path segments to find where it fails
 		parts := strings.Split(path, ".")
 		failedPath := ""
-		
+
 		for i, part := range parts {
 			if i == 0 {
 				failedPath = part
 			} else {
 				failedPath = strings.Join(parts[:i+1], ".")
 			}
-			
+
 			// Try to resolve up to this point
 			partialCursor, _ := tree.ParseCursor(failedPath)
 			if _, resolveErr := partialCursor.Resolve(data); resolveErr != nil {
@@ -594,11 +594,11 @@ func validatePath(data map[interface{}]interface{}, path string) error {
 				return ansi.Errorf("1 error(s) detected:\n - `$.%s` could not be found in the datastructure\n\n", failedPath)
 			}
 		}
-		
+
 		// If we couldn't find where it failed, report the full path
 		return ansi.Errorf("1 error(s) detected:\n - `$.%s` could not be found in the datastructure\n\n", path)
 	}
-	
+
 	return nil
 }
 
@@ -609,14 +609,14 @@ func mergeAllDocs(files []YamlFile, options mergeOpts) (map[interface{}]interfac
 		graft.WithConcurrency(10),
 		graft.WithEnhancedParser(true),
 	}
-	
+
 	// Set dataflow order if specified (default to alphabetical if not set)
 	dataflowOrder := options.DataflowOrder
 	if dataflowOrder == "" {
 		dataflowOrder = "alphabetical"
 	}
 	engineOpts = append(engineOpts, graft.WithDataflowOrder(dataflowOrder))
-	
+
 	engine, err := graft.NewEngine(engineOpts...)
 	if err != nil {
 		return nil, ansi.Errorf("@R{Failed to create graft engine}: %s", err.Error())
@@ -658,26 +658,26 @@ func mergeAllDocs(files []YamlFile, options mergeOpts) (map[interface{}]interfac
 
 	// Merge all documents
 	mergeBuilder := engine.Merge(nil, docs...)
-	
+
 	// Apply merge options
 	if options.FallbackAppend {
 		mergeBuilder = mergeBuilder.WithArrayMergeStrategy(graft.AppendArrays)
 	}
-	
+
 	if options.SkipEval {
 		mergeBuilder = mergeBuilder.SkipEvaluation()
 	}
-	
+
 	// Apply cherry-pick keys at the builder level
 	if len(options.CherryPick) > 0 {
 		mergeBuilder = mergeBuilder.WithCherryPick(options.CherryPick...)
 	}
-	
+
 	// Apply prune keys at the builder level
 	if len(options.Prune) > 0 {
 		mergeBuilder = mergeBuilder.WithPrune(options.Prune...)
 	}
-	
+
 	// Execute merge
 	merged, err := mergeBuilder.Execute()
 	if err != nil {

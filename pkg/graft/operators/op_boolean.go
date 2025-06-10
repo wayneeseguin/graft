@@ -81,7 +81,7 @@ func (OrElseOperator) Phase() graft.OperatorPhase {
 func (OrElseOperator) Dependencies(ev *graft.Evaluator, args []*graft.Expr, locs []*tree.Cursor, auto []*tree.Cursor) []*tree.Cursor {
 	deps := make([]*tree.Cursor, 0, len(auto))
 	deps = append(deps, auto...)
-	
+
 	// Always collect all dependencies for cycle detection
 	// The optimization logic (skipping dependencies after literals) should be
 	// handled at a higher level, not here.
@@ -90,7 +90,7 @@ func (OrElseOperator) Dependencies(ev *graft.Evaluator, args []*graft.Expr, locs
 			deps = append(deps, arg.Dependencies(ev, locs)...)
 		}
 	}
-	
+
 	return deps
 }
 

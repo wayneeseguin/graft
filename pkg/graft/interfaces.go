@@ -39,7 +39,7 @@ type Expr struct {
 	Type      ExprType
 	Operator  string
 	Name      string
-	Target    string  // Target for operator (e.g., "production" in "vault@production")
+	Target    string // Target for operator (e.g., "production" in "vault@production")
 	Left      *Expr
 	Right     *Expr
 	Literal   interface{}
@@ -68,7 +68,7 @@ const (
 	Subtraction
 	// Multiplication operator
 	Multiplication
-	// Division operator  
+	// Division operator
 	Division
 	// Modulo operator
 	Modulo
@@ -224,7 +224,7 @@ func containsLiteral(e *Expr) bool {
 	if e == nil {
 		return false
 	}
-	
+
 	switch e.Type {
 	case Literal:
 		// Any non-nil literal will cause short-circuit
@@ -242,7 +242,7 @@ func containsLiteral(e *Expr) bool {
 // Dependencies returns the dependencies for this expression
 func (e *Expr) Dependencies(ev *Evaluator, locs []*tree.Cursor) []*tree.Cursor {
 	deps := []*tree.Cursor{}
-	
+
 	switch e.Type {
 	case Reference:
 		if e.Reference != nil {
@@ -257,10 +257,10 @@ func (e *Expr) Dependencies(ev *Evaluator, locs []*tree.Cursor) []*tree.Cursor {
 		// 1. Left side is always evaluated (unconditional dependency)
 		// 2. Right side is only evaluated if left side fails
 		// 3. If left contains a literal, right side will never be evaluated
-		
+
 		if e.Left != nil {
 			deps = append(deps, e.Left.Dependencies(ev, locs)...)
-			
+
 			// Check if left side will always short-circuit (contains a literal)
 			if containsLiteral(e.Left) {
 				// Left side has a literal, so right side will never be evaluated
@@ -268,7 +268,7 @@ func (e *Expr) Dependencies(ev *Evaluator, locs []*tree.Cursor) []*tree.Cursor {
 				return deps
 			}
 		}
-		
+
 		// The right side is conditional - only evaluated if left side fails
 		// Include it for cycle detection, but only if left side might fail
 		if e.Right != nil {
@@ -276,7 +276,7 @@ func (e *Expr) Dependencies(ev *Evaluator, locs []*tree.Cursor) []*tree.Cursor {
 		}
 		return deps
 	}
-	
+
 	// Check left and right expressions for other expression types
 	if e.Left != nil {
 		deps = append(deps, e.Left.Dependencies(ev, locs)...)
@@ -284,7 +284,7 @@ func (e *Expr) Dependencies(ev *Evaluator, locs []*tree.Cursor) []*tree.Cursor {
 	if e.Right != nil {
 		deps = append(deps, e.Right.Dependencies(ev, locs)...)
 	}
-	
+
 	return deps
 }
 
@@ -293,7 +293,7 @@ func (e *Expr) String() string {
 	if e == nil {
 		return "<nil>"
 	}
-	
+
 	switch e.Type {
 	case Literal:
 		return fmt.Sprintf("%v", e.Literal)

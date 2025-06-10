@@ -14,12 +14,12 @@ func NewMapTypeHandler() *MapTypeHandler {
 	handler := &MapTypeHandler{
 		BaseTypeHandler: NewBaseTypeHandler(70), // Higher priority than numeric/string handlers
 	}
-	
+
 	// Add supported type combinations
 	handler.AddSupportedTypes(
 		TypePair{A: TypeMap, B: TypeMap}, // map + map, map == map, etc.
 	)
-	
+
 	return handler
 }
 
@@ -28,25 +28,25 @@ func NewMapTypeHandler() *MapTypeHandler {
 func (h *MapTypeHandler) Add(a, b interface{}) (interface{}, error) {
 	mapA, okA := convertToMap(a)
 	mapB, okB := convertToMap(b)
-	
+
 	if !okA || !okB {
 		return nil, NotImplementedError("add", a, b)
 	}
-	
+
 	// Create a new map with all entries from both maps
 	// If there are conflicts, the second map (b) takes precedence
 	result := make(map[interface{}]interface{})
-	
+
 	// Copy all entries from mapA
 	for k, v := range mapA {
 		result[k] = v
 	}
-	
+
 	// Merge entries from mapB, overwriting duplicates
 	for k, v := range mapB {
 		result[k] = v
 	}
-	
+
 	return result, nil
 }
 
@@ -74,29 +74,29 @@ func (h *MapTypeHandler) Modulo(a, b interface{}) (interface{}, error) {
 func (h *MapTypeHandler) Equal(a, b interface{}) (bool, error) {
 	mapA, okA := convertToMap(a)
 	mapB, okB := convertToMap(b)
-	
+
 	if !okA || !okB {
 		return false, NotImplementedError("equal", a, b)
 	}
-	
+
 	// Different number of keys means not equal
 	if len(mapA) != len(mapB) {
 		return false, nil
 	}
-	
+
 	// Check that all keys and values match
 	for k, vA := range mapA {
 		vB, exists := mapB[k]
 		if !exists {
 			return false, nil
 		}
-		
+
 		// Use deep equality check
 		if !reflect.DeepEqual(vA, vB) {
 			return false, nil
 		}
 	}
-	
+
 	return true, nil
 }
 
@@ -134,7 +134,7 @@ func convertToMap(val interface{}) (map[interface{}]interface{}, bool) {
 	if val == nil {
 		return nil, false
 	}
-	
+
 	switch m := val.(type) {
 	case map[interface{}]interface{}:
 		return m, true
@@ -151,7 +151,7 @@ func convertToMap(val interface{}) (map[interface{}]interface{}, bool) {
 		if rv.Kind() != reflect.Map {
 			return nil, false
 		}
-		
+
 		result := make(map[interface{}]interface{})
 		for _, key := range rv.MapKeys() {
 			result[key.Interface()] = rv.MapIndex(key).Interface()

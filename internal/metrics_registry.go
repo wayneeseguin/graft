@@ -148,7 +148,7 @@ func (r *MetricsRegistry) collectResources() {
 				heapObjects = 9223372036854775807
 			}
 			r.collector.UpdateResourceMetrics(
-				int64(heapAlloc), // #nosec G115 - bounds checked above
+				int64(heapAlloc),   // #nosec G115 - bounds checked above
 				int64(heapObjects), // #nosec G115 - bounds checked above
 				int64(stats.NumGoroutines),
 			)

@@ -26,11 +26,11 @@ func BenchmarkCurrentEvaluatorThreadSafety(b *testing.B) {
 		{"WriteHeavy", 10, 1000, 0.2},
 		{"ReadHeavy", 10, 1000, 0.95},
 	}
-	
+
 	for _, scenario := range scenarios {
 		b.Run(scenario.name, func(b *testing.B) {
 			data := generateTestTree(scenario.treeSize)
-			
+
 			b.ResetTimer()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
@@ -58,11 +58,11 @@ func BenchmarkMapVsSyncMap(b *testing.B) {
 	b.Run("RegularMap", func(b *testing.B) {
 		m := make(map[string]interface{})
 		var mu sync.RWMutex
-		
+
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
 				key := fmt.Sprintf("key%d", fastrand()%1000)
-				
+
 				if fastrand()%100 < 80 { // 80% reads
 					mu.RLock()
 					_ = m[key]
@@ -75,14 +75,14 @@ func BenchmarkMapVsSyncMap(b *testing.B) {
 			}
 		})
 	})
-	
+
 	b.Run("SyncMap", func(b *testing.B) {
 		var m sync.Map
-		
+
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
 				key := fmt.Sprintf("key%d", fastrand()%1000)
-				
+
 				if fastrand()%100 < 80 { // 80% reads
 					m.Load(key)
 				} else {
@@ -96,53 +96,53 @@ func BenchmarkMapVsSyncMap(b *testing.B) {
 // BenchmarkLockingStrategies compares different locking strategies
 func BenchmarkLockingStrategies(b *testing.B) {
 	const numShards = 32
-	
+
 	b.Run("GlobalLock", func(b *testing.B) {
 		data := make(map[string]interface{})
 		var mu sync.RWMutex
-		
+
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
 				key := fmt.Sprintf("key%d", fastrand()%1000)
-				
+
 				mu.Lock()
 				data[key] = fastrand()
 				mu.Unlock()
 			}
 		})
 	})
-	
+
 	b.Run("ShardedLocks", func(b *testing.B) {
 		type shard struct {
 			mu   sync.RWMutex
 			data map[string]interface{}
 		}
-		
+
 		shards := make([]shard, numShards)
 		for i := range shards {
 			shards[i].data = make(map[string]interface{})
 		}
-		
+
 		getShard := func(key string) *shard {
 			h := fnv32(key)
 			return &shards[h%numShards]
 		}
-		
+
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
 				key := fmt.Sprintf("key%d", fastrand()%1000)
 				s := getShard(key)
-				
+
 				s.mu.Lock()
 				s.data[key] = fastrand()
 				s.mu.Unlock()
 			}
 		})
 	})
-	
+
 	b.Run("LockFreeAtomic", func(b *testing.B) {
 		var counter int64
-		
+
 		b.RunParallel(func(pb *testing.PB) {
 			for pb.Next() {
 				atomic.AddInt64(&counter, 1)
@@ -162,9 +162,9 @@ func BenchmarkMemoryUsage(b *testing.B) {
 	measureMemory := func(name string, fn func()) {
 		var m1, m2 runtime.MemStats
 		runtime.ReadMemStats(&m1)
-		
+
 		fn()
-		
+
 		runtime.ReadMemStats(&m2)
 		b.Logf("%s: Alloc=%d KB, TotalAlloc=%d KB, Sys=%d KB, NumGC=%d",
 			name,
@@ -174,12 +174,12 @@ func BenchmarkMemoryUsage(b *testing.B) {
 			m2.NumGC-m1.NumGC,
 		)
 	}
-	
+
 	b.Run("ConcurrentTreeModification", func(b *testing.B) {
 		measureMemory("TreeMods", func() {
 			data := generateTestTree(10000)
 			var wg sync.WaitGroup
-			
+
 			for i := 0; i < 10; i++ {
 				wg.Add(1)
 				go func(id int) {
@@ -191,7 +191,7 @@ func BenchmarkMemoryUsage(b *testing.B) {
 					}
 				}(i)
 			}
-			
+
 			wg.Wait()
 		})
 	})
@@ -203,11 +203,11 @@ func generateTestTree(size int) map[interface{}]interface{} {
 	data := make(map[interface{}]interface{})
 	data["meta"] = make(map[interface{}]interface{})
 	meta := data["meta"].(map[interface{}]interface{})
-	
+
 	for i := 0; i < size; i++ {
 		meta[fmt.Sprintf("key%d", i)] = fmt.Sprintf("value%d", i)
 	}
-	
+
 	return data
 }
 

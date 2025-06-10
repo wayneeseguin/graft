@@ -54,7 +54,7 @@ func TestParallelEvaluatorIntegration(t *testing.T) {
 				key := fmt.Sprintf("item%d", i)
 				value := fmt.Sprintf("value%d", i)
 				refKey := fmt.Sprintf("ref%d", i)
-				
+
 				ev.Tree[key] = fmt.Sprintf("(( grab %s ))", refKey)
 				ev.Tree[refKey] = value
 			}
@@ -71,7 +71,7 @@ func TestParallelEvaluatorIntegration(t *testing.T) {
 		})
 
 		Convey("should handle errors in parallel operations", func() {
-			os.Setenv("GRAFT_PARALLEL", "true") 
+			os.Setenv("GRAFT_PARALLEL", "true")
 			defer os.Unsetenv("GRAFT_PARALLEL")
 
 			ev := &Evaluator{
@@ -167,7 +167,7 @@ func BenchmarkParallelExecution(b *testing.B) {
 		key := fmt.Sprintf("item%d", i)
 		value := fmt.Sprintf("value%d", i)
 		refKey := fmt.Sprintf("ref%d", i)
-		
+
 		ev.Tree[key] = fmt.Sprintf("(( grab %s ))", refKey)
 		ev.Tree[refKey] = value
 	}

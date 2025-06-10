@@ -6,7 +6,7 @@ import (
 
 	"github.com/geofffranks/simpleyaml"
 	. "github.com/smartystreets/goconvey/convey"
-	
+
 	"github.com/wayneeseguin/graft/pkg/graft"
 )
 
@@ -16,21 +16,21 @@ func TestTypeAwareBooleanOperators(t *testing.T) {
 		testBoolean := func(input string, key string, expected interface{}) {
 			y, err := simpleyaml.NewYaml([]byte(input))
 			So(err, ShouldBeNil)
-			
+
 			data, err := y.Map()
 			So(err, ShouldBeNil)
-			
+
 			// Create engine with boolean and comparison operators
 			config := graft.DefaultEngineConfig()
 			config.SkipVault = true
 			config.SkipAWS = true
 			engine := graft.NewDefaultEngineWithConfig(config)
-			
+
 			// Register boolean operators
 			engine.RegisterOperator("&&", NewTypeAwareAndOperator())
 			engine.RegisterOperator("||", NewTypeAwareOrOperator())
 			engine.RegisterOperator("!", NewTypeAwareNotOperator())
-			
+
 			// Register comparison operators
 			engine.RegisterOperator("==", NewTypeAwareEqualOperator())
 			engine.RegisterOperator("!=", NewTypeAwareNotEqualOperator())
@@ -38,13 +38,12 @@ func TestTypeAwareBooleanOperators(t *testing.T) {
 			engine.RegisterOperator(">", NewTypeAwareGreaterOperator())
 			engine.RegisterOperator("<=", NewTypeAwareLessOrEqualOperator())
 			engine.RegisterOperator(">=", NewTypeAwareGreaterOrEqualOperator())
-			
+
 			doc := graft.NewDocument(data)
 			result, err := engine.Evaluate(context.Background(), doc)
 			So(err, ShouldBeNil)
 			So(result.RawData().(map[interface{}]interface{})[key], ShouldEqual, expected)
 		}
-		
 
 		Convey("AND Operator (&&)", func() {
 			Convey("should return true when both operands are truthy", func() {
@@ -92,12 +91,12 @@ result2: (( five && five ))
 				config.SkipVault = true
 				config.SkipAWS = true
 				engine := graft.NewDefaultEngineWithConfig(config)
-				
+
 				// Register boolean operators
 				engine.RegisterOperator("&&", NewTypeAwareAndOperator())
 				engine.RegisterOperator("||", NewTypeAwareOrOperator())
 				engine.RegisterOperator("!", NewTypeAwareNotOperator())
-				
+
 				doc := graft.NewDocument(data)
 				result, err := engine.Evaluate(context.Background(), doc)
 				So(err, ShouldBeNil)
@@ -124,12 +123,12 @@ result2: (( hello && hello ))
 				config.SkipVault = true
 				config.SkipAWS = true
 				engine := graft.NewDefaultEngineWithConfig(config)
-				
+
 				// Register boolean operators
 				engine.RegisterOperator("&&", NewTypeAwareAndOperator())
 				engine.RegisterOperator("||", NewTypeAwareOrOperator())
 				engine.RegisterOperator("!", NewTypeAwareNotOperator())
-				
+
 				doc := graft.NewDocument(data)
 				result, err := engine.Evaluate(context.Background(), doc)
 				So(err, ShouldBeNil)
@@ -197,12 +196,12 @@ result2: (( !no ))
 				config.SkipVault = true
 				config.SkipAWS = true
 				engine := graft.NewDefaultEngineWithConfig(config)
-				
+
 				// Register boolean operators
 				engine.RegisterOperator("&&", NewTypeAwareAndOperator())
 				engine.RegisterOperator("||", NewTypeAwareOrOperator())
 				engine.RegisterOperator("!", NewTypeAwareNotOperator())
-				
+
 				doc := graft.NewDocument(data)
 				result, err := engine.Evaluate(context.Background(), doc)
 				So(err, ShouldBeNil)
@@ -229,12 +228,12 @@ result2: (( !five ))
 				config.SkipVault = true
 				config.SkipAWS = true
 				engine := graft.NewDefaultEngineWithConfig(config)
-				
+
 				// Register boolean operators
 				engine.RegisterOperator("&&", NewTypeAwareAndOperator())
 				engine.RegisterOperator("||", NewTypeAwareOrOperator())
 				engine.RegisterOperator("!", NewTypeAwareNotOperator())
-				
+
 				doc := graft.NewDocument(data)
 				result, err := engine.Evaluate(context.Background(), doc)
 				So(err, ShouldBeNil)
@@ -261,12 +260,12 @@ result2: (( !hello ))
 				config.SkipVault = true
 				config.SkipAWS = true
 				engine := graft.NewDefaultEngineWithConfig(config)
-				
+
 				// Register boolean operators
 				engine.RegisterOperator("&&", NewTypeAwareAndOperator())
 				engine.RegisterOperator("||", NewTypeAwareOrOperator())
 				engine.RegisterOperator("!", NewTypeAwareNotOperator())
-				
+
 				doc := graft.NewDocument(data)
 				result, err := engine.Evaluate(context.Background(), doc)
 				So(err, ShouldBeNil)
@@ -312,7 +311,7 @@ func TestTruthinessRules(t *testing.T) {
 			So(IsTruthy(""), ShouldBeFalse)
 			So(IsTruthy([]interface{}{}), ShouldBeFalse)
 			So(IsTruthy(map[string]interface{}{}), ShouldBeFalse)
-			
+
 			// Truthy values
 			So(IsTruthy(true), ShouldBeTrue)
 			So(IsTruthy(1), ShouldBeTrue)
@@ -320,7 +319,7 @@ func TestTruthinessRules(t *testing.T) {
 			So(IsTruthy(-1), ShouldBeTrue)
 			So(IsTruthy(3.14), ShouldBeTrue)
 			So(IsTruthy("hello"), ShouldBeTrue)
-			So(IsTruthy("0"), ShouldBeTrue) // String "0" is truthy
+			So(IsTruthy("0"), ShouldBeTrue)     // String "0" is truthy
 			So(IsTruthy("false"), ShouldBeTrue) // String "false" is truthy
 			So(IsTruthy([]interface{}{1, 2, 3}), ShouldBeTrue)
 			So(IsTruthy(map[string]interface{}{"key": "value"}), ShouldBeTrue)

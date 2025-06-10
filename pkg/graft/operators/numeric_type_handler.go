@@ -15,7 +15,7 @@ func NewNumericTypeHandler() *NumericTypeHandler {
 	handler := &NumericTypeHandler{
 		BaseTypeHandler: NewBaseTypeHandler(100), // High priority for numeric operations
 	}
-	
+
 	// Support int-int, int-float, float-int, and float-float combinations
 	handler.AddSupportedTypes(
 		TypePair{A: TypeInt, B: TypeInt},
@@ -23,7 +23,7 @@ func NewNumericTypeHandler() *NumericTypeHandler {
 		TypePair{A: TypeFloat, B: TypeInt},
 		TypePair{A: TypeFloat, B: TypeFloat},
 	)
-	
+
 	return handler
 }
 
@@ -62,12 +62,12 @@ func (h *NumericTypeHandler) Add(a, b interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert %v to numeric: %v", a, err)
 	}
-	
+
 	bNum, err := toNumeric(b)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert %v to numeric: %v", b, err)
 	}
-	
+
 	// If either operand is a float, result is float
 	if _, ok := aNum.(float64); ok {
 		return aNum.(float64) + toFloat(bNum), nil
@@ -75,17 +75,17 @@ func (h *NumericTypeHandler) Add(a, b interface{}) (interface{}, error) {
 	if _, ok := bNum.(float64); ok {
 		return toFloat(aNum) + bNum.(float64), nil
 	}
-	
+
 	// Both are integers
 	aInt := aNum.(int64)
 	bInt := bNum.(int64)
-	
+
 	// Check for overflow and convert to float if necessary
 	if (bInt > 0 && aInt > math.MaxInt64-bInt) || (bInt < 0 && aInt < math.MinInt64-bInt) {
 		// Convert to float to handle overflow
 		return float64(aInt) + float64(bInt), nil
 	}
-	
+
 	return aInt + bInt, nil
 }
 
@@ -95,12 +95,12 @@ func (h *NumericTypeHandler) Subtract(a, b interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert %v to numeric: %v", a, err)
 	}
-	
+
 	bNum, err := toNumeric(b)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert %v to numeric: %v", b, err)
 	}
-	
+
 	// If either operand is a float, result is float
 	if _, ok := aNum.(float64); ok {
 		return aNum.(float64) - toFloat(bNum), nil
@@ -108,16 +108,16 @@ func (h *NumericTypeHandler) Subtract(a, b interface{}) (interface{}, error) {
 	if _, ok := bNum.(float64); ok {
 		return toFloat(aNum) - bNum.(float64), nil
 	}
-	
+
 	// Both are integers
 	aInt := aNum.(int64)
 	bInt := bNum.(int64)
-	
+
 	// Check for overflow
 	if (bInt < 0 && aInt > math.MaxInt64+bInt) || (bInt > 0 && aInt < math.MinInt64+bInt) {
 		return nil, fmt.Errorf("integer overflow in subtraction: %d - %d", aInt, bInt)
 	}
-	
+
 	return aInt - bInt, nil
 }
 
@@ -127,12 +127,12 @@ func (h *NumericTypeHandler) Multiply(a, b interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert %v to numeric: %v", a, err)
 	}
-	
+
 	bNum, err := toNumeric(b)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert %v to numeric: %v", b, err)
 	}
-	
+
 	// If either operand is a float, result is float
 	if _, ok := aNum.(float64); ok {
 		return aNum.(float64) * toFloat(bNum), nil
@@ -140,11 +140,11 @@ func (h *NumericTypeHandler) Multiply(a, b interface{}) (interface{}, error) {
 	if _, ok := bNum.(float64); ok {
 		return toFloat(aNum) * bNum.(float64), nil
 	}
-	
+
 	// Both are integers
 	aInt := aNum.(int64)
 	bInt := bNum.(int64)
-	
+
 	// Check for overflow
 	if aInt != 0 && bInt != 0 {
 		result := aInt * bInt
@@ -153,7 +153,7 @@ func (h *NumericTypeHandler) Multiply(a, b interface{}) (interface{}, error) {
 		}
 		return result, nil
 	}
-	
+
 	return int64(0), nil
 }
 
@@ -163,17 +163,17 @@ func (h *NumericTypeHandler) Divide(a, b interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert %v to numeric: %v", a, err)
 	}
-	
+
 	bNum, err := toNumeric(b)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert %v to numeric: %v", b, err)
 	}
-	
+
 	bFloat := toFloat(bNum)
 	if bFloat == 0 {
 		return nil, fmt.Errorf("division by zero")
 	}
-	
+
 	return toFloat(aNum) / bFloat, nil
 }
 
@@ -183,27 +183,27 @@ func (h *NumericTypeHandler) Modulo(a, b interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert %v to numeric: %v", a, err)
 	}
-	
+
 	bNum, err := toNumeric(b)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert %v to numeric: %v", b, err)
 	}
-	
+
 	// Convert operands to integers, handling floats that represent whole numbers
 	aInt, err := toInteger(aNum)
 	if err != nil {
 		return nil, fmt.Errorf("not an integer")
 	}
-	
+
 	bInt, err := toInteger(bNum)
 	if err != nil {
 		return nil, fmt.Errorf("not an integer")
 	}
-	
+
 	if bInt == 0 {
 		return nil, fmt.Errorf("modulo by zero")
 	}
-	
+
 	return aInt % bInt, nil
 }
 
@@ -213,12 +213,12 @@ func (h *NumericTypeHandler) Equal(a, b interface{}) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("cannot convert %v to numeric: %v", a, err)
 	}
-	
+
 	bNum, err := toNumeric(b)
 	if err != nil {
 		return false, fmt.Errorf("cannot convert %v to numeric: %v", b, err)
 	}
-	
+
 	// Convert both to float for comparison to handle int-float comparisons
 	return toFloat(aNum) == toFloat(bNum), nil
 }
@@ -235,12 +235,12 @@ func (h *NumericTypeHandler) Less(a, b interface{}) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("cannot convert %v to numeric: %v", a, err)
 	}
-	
+
 	bNum, err := toNumeric(b)
 	if err != nil {
 		return false, fmt.Errorf("cannot convert %v to numeric: %v", b, err)
 	}
-	
+
 	// Convert both to float for comparison
 	return toFloat(aNum) < toFloat(bNum), nil
 }
@@ -251,12 +251,12 @@ func (h *NumericTypeHandler) Greater(a, b interface{}) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("cannot convert %v to numeric: %v", a, err)
 	}
-	
+
 	bNum, err := toNumeric(b)
 	if err != nil {
 		return false, fmt.Errorf("cannot convert %v to numeric: %v", b, err)
 	}
-	
+
 	// Convert both to float for comparison
 	return toFloat(aNum) > toFloat(bNum), nil
 }

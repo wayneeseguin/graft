@@ -15,17 +15,16 @@ func NewStringTypeHandler() *StringTypeHandler {
 	handler := &StringTypeHandler{
 		BaseTypeHandler: NewBaseTypeHandler(90), // High priority for string operations
 	}
-	
+
 	// Support string-string operations and string-int for multiplication
 	handler.AddSupportedTypes(
 		TypePair{A: TypeString, B: TypeString},
-		TypePair{A: TypeString, B: TypeInt},    // For repetition
-		TypePair{A: TypeInt, B: TypeString},    // For repetition (reversed)
+		TypePair{A: TypeString, B: TypeInt}, // For repetition
+		TypePair{A: TypeInt, B: TypeString}, // For repetition (reversed)
 	)
-	
+
 	return handler
 }
-
 
 // Add performs string concatenation
 func (h *StringTypeHandler) Add(a, b interface{}) (interface{}, error) {
@@ -37,7 +36,7 @@ func (h *StringTypeHandler) Add(a, b interface{}) (interface{}, error) {
 		// String + other type: convert to string and concatenate
 		return aStr + fmt.Sprintf("%v", b), nil
 	}
-	
+
 	return nil, NotImplementedError("add", a, b)
 }
 
@@ -63,7 +62,7 @@ func (h *StringTypeHandler) Multiply(a, b interface{}) (interface{}, error) {
 			return strings.Repeat(aStr, int(bInt)), nil
 		}
 	}
-	
+
 	// Int * string = repeated string (commutative)
 	if aInt, err := toInt(a); err == nil {
 		if bStr, bOk := b.(string); bOk {
@@ -79,7 +78,7 @@ func (h *StringTypeHandler) Multiply(a, b interface{}) (interface{}, error) {
 			return strings.Repeat(bStr, int(aInt)), nil
 		}
 	}
-	
+
 	return nil, NotImplementedError("multiply", a, b)
 }
 
@@ -97,16 +96,16 @@ func (h *StringTypeHandler) Modulo(a, b interface{}) (interface{}, error) {
 func (h *StringTypeHandler) Equal(a, b interface{}) (bool, error) {
 	aStr, aOk := a.(string)
 	bStr, bOk := b.(string)
-	
+
 	if aOk && bOk {
 		return aStr == bStr, nil
 	}
-	
+
 	// If one is string and other isn't, they're not equal
 	if aOk || bOk {
 		return false, nil
 	}
-	
+
 	return false, NotImplementedError("equal", a, b)
 }
 
@@ -120,11 +119,11 @@ func (h *StringTypeHandler) NotEqual(a, b interface{}) (bool, error) {
 func (h *StringTypeHandler) Less(a, b interface{}) (bool, error) {
 	aStr, aOk := a.(string)
 	bStr, bOk := b.(string)
-	
+
 	if aOk && bOk {
 		return aStr < bStr, nil
 	}
-	
+
 	return false, NotImplementedError("less", a, b)
 }
 
@@ -132,11 +131,11 @@ func (h *StringTypeHandler) Less(a, b interface{}) (bool, error) {
 func (h *StringTypeHandler) Greater(a, b interface{}) (bool, error) {
 	aStr, aOk := a.(string)
 	bStr, bOk := b.(string)
-	
+
 	if aOk && bOk {
 		return aStr > bStr, nil
 	}
-	
+
 	return false, NotImplementedError("greater", a, b)
 }
 

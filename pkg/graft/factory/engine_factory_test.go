@@ -10,10 +10,10 @@ import (
 
 func TestEngineFactory_CreateDefaultEngine(t *testing.T) {
 	tests := []struct {
-		name          string
-		envVars       map[string]string
-		expectPanic   bool
-		validateFunc  func(*testing.T, *graft.DefaultEngine)
+		name         string
+		envVars      map[string]string
+		expectPanic  bool
+		validateFunc func(*testing.T, *graft.DefaultEngine)
 	}{
 		{
 			name: "creates engine with no environment variables",
@@ -21,7 +21,7 @@ func TestEngineFactory_CreateDefaultEngine(t *testing.T) {
 				if engine == nil {
 					t.Fatal("expected engine to be created, got nil")
 				}
-				
+
 				// Verify essential operators are registered
 				testOperators := []string{"grab", "concat", "empty", "calc", "vault"}
 				for _, op := range testOperators {
@@ -87,7 +87,7 @@ func TestEngineFactory_CreateDefaultEngine(t *testing.T) {
 				originalEnv[key] = os.Getenv(key)
 				os.Setenv(key, value)
 			}
-			
+
 			// Cleanup environment after test
 			defer func() {
 				for key := range tt.envVars {
@@ -108,7 +108,7 @@ func TestEngineFactory_CreateDefaultEngine(t *testing.T) {
 			}
 
 			engine := NewDefaultEngine()
-			
+
 			if !tt.expectPanic && tt.validateFunc != nil {
 				tt.validateFunc(t, engine)
 			}
@@ -148,7 +148,7 @@ func TestEngineFactory_CreateWithInvalidConfig(t *testing.T) {
 			expectPanic: false,
 		},
 		{
-			name: "handles invalid vault address gracefully", 
+			name: "handles invalid vault address gracefully",
 			setupFunc: func() {
 				os.Setenv("VAULT_ADDR", "invalid-url")
 				os.Setenv("VAULT_TOKEN", "test-token")
@@ -162,7 +162,7 @@ func TestEngineFactory_CreateWithInvalidConfig(t *testing.T) {
 			// Save original environment
 			originalVaultAddr := os.Getenv("VAULT_ADDR")
 			originalVaultToken := os.Getenv("VAULT_TOKEN")
-			
+
 			// Cleanup
 			defer func() {
 				os.Setenv("VAULT_ADDR", originalVaultAddr)
@@ -180,7 +180,7 @@ func TestEngineFactory_CreateWithInvalidConfig(t *testing.T) {
 			}
 
 			engine := NewDefaultEngine()
-			
+
 			if !tt.expectPanic {
 				if engine == nil {
 					t.Error("expected engine to be created despite invalid config")
@@ -202,10 +202,10 @@ func TestEngineFactory_ConcurrentCreation(t *testing.T) {
 	os.Setenv("VAULT_ADDR", "http://localhost:8200")
 	os.Setenv("VAULT_TOKEN", "test-token")
 	os.Setenv("AWS_REGION", "us-east-1")
-	
+
 	defer func() {
 		os.Unsetenv("VAULT_ADDR")
-		os.Unsetenv("VAULT_TOKEN") 
+		os.Unsetenv("VAULT_TOKEN")
 		os.Unsetenv("AWS_REGION")
 	}()
 
@@ -214,7 +214,7 @@ func TestEngineFactory_ConcurrentCreation(t *testing.T) {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			
+
 			for j := 0; j < numIterations; j++ {
 				func() {
 					defer func() {
@@ -223,7 +223,7 @@ func TestEngineFactory_ConcurrentCreation(t *testing.T) {
 							return
 						}
 					}()
-					
+
 					engine := NewDefaultEngine()
 					engines <- engine
 				}()
@@ -250,7 +250,7 @@ func TestEngineFactory_ConcurrentCreation(t *testing.T) {
 		engineCount++
 		if engine != nil {
 			validEngines++
-			
+
 			// Verify essential operators are present
 			if _, grabExists := engine.GetOperator("grab"); !grabExists {
 				t.Errorf("engine missing grab operator")
@@ -265,7 +265,7 @@ func TestEngineFactory_ConcurrentCreation(t *testing.T) {
 	if engineCount != expectedEngines {
 		t.Errorf("expected %d engines, got %d", expectedEngines, engineCount)
 	}
-	
+
 	if validEngines != expectedEngines-errorCount {
 		t.Errorf("expected %d valid engines, got %d", expectedEngines-errorCount, validEngines)
 	}
@@ -277,7 +277,7 @@ func TestEngineFactory_ConcurrentCreation(t *testing.T) {
 
 func TestEngineFactory_NewMinimalEngine(t *testing.T) {
 	engine := NewMinimalEngine()
-	
+
 	if engine == nil {
 		t.Fatal("expected minimal engine to be created, got nil")
 	}
@@ -297,7 +297,7 @@ func TestEngineFactory_NewMinimalEngine(t *testing.T) {
 
 func TestEngineFactory_NewTestEngine(t *testing.T) {
 	engine := NewTestEngine()
-	
+
 	if engine == nil {
 		t.Fatal("expected test engine to be created, got nil")
 	}
@@ -321,7 +321,7 @@ func BenchmarkEngineFactory_CreateDefault(b *testing.B) {
 	}()
 
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		engine := NewDefaultEngine()
 		if engine == nil {
@@ -332,7 +332,7 @@ func BenchmarkEngineFactory_CreateDefault(b *testing.B) {
 
 func BenchmarkEngineFactory_CreateMinimal(b *testing.B) {
 	b.ResetTimer()
-	
+
 	for i := 0; i < b.N; i++ {
 		engine := NewMinimalEngine()
 		if engine == nil {
@@ -347,7 +347,7 @@ func BenchmarkEngineFactory_ConcurrentCreation(b *testing.B) {
 	defer os.Unsetenv("VAULT_ADDR")
 
 	b.ResetTimer()
-	
+
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			engine := NewDefaultEngine()

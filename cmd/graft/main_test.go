@@ -14,8 +14,8 @@ import (
 	"github.com/geofffranks/simpleyaml"
 	"github.com/geofffranks/yaml"
 
-	"github.com/wayneeseguin/graft/log"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wayneeseguin/graft/log"
 )
 
 func openFiles(paths []string) ([]YamlFile, error) {
@@ -2377,7 +2377,7 @@ key2:
 				stdout = ""
 				stderr = ""
 				rc = 256
-				
+
 				main()
 				So(rc, ShouldEqual, 1)
 				So(stderr, ShouldContainSubstring, "Invalid --color option: invalid")
@@ -2394,7 +2394,7 @@ key2:
 				stdout = ""
 				stderr = ""
 				rc = 256
-				
+
 				main()
 				So(rc, ShouldEqual, 2)
 				// Check for ANSI escape sequences in error output
@@ -2412,7 +2412,7 @@ key2:
 				stdout = ""
 				stderr = ""
 				rc = 256
-				
+
 				main()
 				So(rc, ShouldEqual, 2)
 				// Check that no ANSI escape sequences are in error output
@@ -2489,7 +2489,7 @@ func TestFan(t *testing.T) {
 	}
 	var stderr string
 	//Edit log stderr function
-log.PrintfStdErr = func(format string, args ...interface{}) {
+	log.PrintfStdErr = func(format string, args ...interface{}) {
 		stderr += fmt.Sprintf(format, args...)
 	}
 
@@ -2624,7 +2624,7 @@ func TestExamples(t *testing.T) {
 		stdout = fmt.Sprintf(format, args...)
 	}
 	var stderr string
-log.PrintfStdErr = func(format string, args ...interface{}) {
+	log.PrintfStdErr = func(format string, args ...interface{}) {
 		stderr += fmt.Sprintf(format, args...)
 	}
 

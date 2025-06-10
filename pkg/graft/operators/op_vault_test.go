@@ -3,8 +3,8 @@ package operators
 import (
 	"testing"
 
-	"github.com/wayneeseguin/graft/internal/utils/tree"
 	. "github.com/smartystreets/goconvey/convey"
+	"github.com/wayneeseguin/graft/internal/utils/tree"
 )
 
 func TestEnhancedVaultOperator(t *testing.T) {

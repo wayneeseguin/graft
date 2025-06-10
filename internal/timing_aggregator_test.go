@@ -11,12 +11,12 @@ import (
 func TestTimingAggregator(t *testing.T) {
 	t.Run("basic aggregation", func(t *testing.T) {
 		ta := NewTimingAggregator(1*time.Hour, 100)
-		
+
 		// Record some samples
 		ta.Record("operation1", 10*time.Millisecond)
 		ta.Record("operation1", 20*time.Millisecond)
 		ta.Record("operation1", 30*time.Millisecond)
-		
+
 		stats, exists := ta.GetStats("operation1")
 		if !exists {
 			t.Fatal("operation1 stats should exist")
@@ -51,7 +51,7 @@ func TestTimingAggregator(t *testing.T) {
 
 	t.Run("percentile calculations", func(t *testing.T) {
 		ta := NewTimingAggregator(1*time.Hour, 100)
-		
+
 		// Record samples for percentile testing (1ms to 100ms)
 		for i := 1; i <= 100; i++ {
 			ta.Record("percentile_test", time.Duration(i)*time.Millisecond)
@@ -85,7 +85,7 @@ func TestTimingAggregator(t *testing.T) {
 
 	t.Run("standard deviation calculation", func(t *testing.T) {
 		ta := NewTimingAggregator(1*time.Hour, 100)
-		
+
 		// Record samples with known std dev
 		// Values: 10, 20, 30, 40, 50 (mean = 30, population std dev = √200 ≈ 14.14)
 		ta.Record("stddev_test", 10*time.Millisecond)
@@ -101,7 +101,7 @@ func TestTimingAggregator(t *testing.T) {
 
 		expectedStdDev := 14.14 * float64(time.Millisecond)
 		actualStdDev := float64(stats.StdDev)
-		
+
 		// Allow 10% tolerance
 		tolerance := expectedStdDev * 0.1
 		if math.Abs(actualStdDev-expectedStdDev) > tolerance {
@@ -111,7 +111,7 @@ func TestTimingAggregator(t *testing.T) {
 
 	t.Run("multiple operations", func(t *testing.T) {
 		ta := NewTimingAggregator(1*time.Hour, 100)
-		
+
 		// Record different operations
 		ta.Record("parse", 5*time.Millisecond)
 		ta.Record("parse", 10*time.Millisecond)
@@ -141,7 +141,7 @@ func TestTimingAggregator(t *testing.T) {
 
 	t.Run("top operations", func(t *testing.T) {
 		ta := NewTimingAggregator(1*time.Hour, 100)
-		
+
 		// Record many operations
 		for i := 0; i < 10; i++ {
 			ta.Record("op1", time.Duration(i+1)*time.Millisecond)
@@ -168,7 +168,7 @@ func TestTimingAggregator(t *testing.T) {
 
 	t.Run("sample limit", func(t *testing.T) {
 		ta := NewTimingAggregator(1*time.Hour, 5) // limit to 5 samples
-		
+
 		// Record more samples than limit
 		for i := 1; i <= 10; i++ {
 			ta.Record("limited", time.Duration(i)*time.Millisecond)
@@ -193,7 +193,7 @@ func TestTimingAggregator(t *testing.T) {
 
 	t.Run("reset functionality", func(t *testing.T) {
 		ta := NewTimingAggregator(1*time.Hour, 100)
-		
+
 		ta.Record("operation", 10*time.Millisecond)
 		ta.Record("operation", 20*time.Millisecond)
 
@@ -222,7 +222,7 @@ func TestTimingAggregatorConcurrency(t *testing.T) {
 	t.Run("concurrent recording", func(t *testing.T) {
 		ta := NewTimingAggregator(1*time.Hour, 1000)
 		var wg sync.WaitGroup
-		
+
 		goroutines := 50
 		recordsPerGoroutine := 100
 
@@ -251,7 +251,7 @@ func TestTimingAggregatorConcurrency(t *testing.T) {
 
 	t.Run("concurrent stats retrieval", func(t *testing.T) {
 		ta := NewTimingAggregator(1*time.Hour, 100)
-		
+
 		// Prime with some data
 		for i := 0; i < 10; i++ {
 			ta.Record("test_op", time.Duration(i+1)*time.Millisecond)
@@ -265,7 +265,7 @@ func TestTimingAggregatorConcurrency(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				
+
 				// Try various read operations
 				_, exists := ta.GetStats("test_op")
 				if !exists {
@@ -299,9 +299,9 @@ func TestTimingAggregatorConcurrency(t *testing.T) {
 	t.Run("concurrent recording different operations", func(t *testing.T) {
 		ta := NewTimingAggregator(1*time.Hour, 100)
 		var wg sync.WaitGroup
-		
+
 		operations := []string{"parse", "eval", "cache", "io", "network"}
-		
+
 		for _, op := range operations {
 			wg.Add(1)
 			go func(operation string) {
@@ -332,16 +332,16 @@ func TestTimingAggregatorConcurrency(t *testing.T) {
 func TestTimingAggregatorSummary(t *testing.T) {
 	t.Run("basic summary", func(t *testing.T) {
 		ta := NewTimingAggregator(1*time.Hour, 100)
-		
+
 		// Record operations with known totals
 		ta.Record("parse", 10*time.Millisecond)
 		ta.Record("parse", 20*time.Millisecond) // total: 30ms, count: 2
 		ta.Record("eval", 15*time.Millisecond)
-		ta.Record("eval", 25*time.Millisecond)  // total: 40ms, count: 2
-		ta.Record("cache", 5*time.Millisecond)  // total: 5ms, count: 1
+		ta.Record("eval", 25*time.Millisecond) // total: 40ms, count: 2
+		ta.Record("cache", 5*time.Millisecond) // total: 5ms, count: 1
 
 		summary := ta.GetSummary()
-		
+
 		if summary.TotalOperations != 5 {
 			t.Errorf("expected total operations 5, got %d", summary.TotalOperations)
 		}
@@ -358,7 +358,7 @@ func TestTimingAggregatorSummary(t *testing.T) {
 
 	t.Run("categorization", func(t *testing.T) {
 		ta := NewTimingAggregator(1*time.Hour, 100)
-		
+
 		// Record operations that should be categorized
 		ta.Record("parse_yaml", 10*time.Millisecond)
 		ta.Record("parse_json", 15*time.Millisecond)
@@ -369,7 +369,7 @@ func TestTimingAggregatorSummary(t *testing.T) {
 		ta.Record("unknown_operation", 10*time.Millisecond)
 
 		summary := ta.GetSummary()
-		
+
 		// Check categories exist
 		if _, exists := summary.ByCategory["parse"]; !exists {
 			t.Error("parse category should exist")
@@ -410,10 +410,10 @@ func TestTimingAggregatorCleaning(t *testing.T) {
 	t.Run("window-based cleaning", func(t *testing.T) {
 		// Short window for testing
 		ta := NewTimingAggregator(50*time.Millisecond, 100)
-		
+
 		// Record operation
 		ta.Record("old_operation", 10*time.Millisecond)
-		
+
 		// Verify it exists
 		_, exists := ta.GetStats("old_operation")
 		if !exists {
@@ -422,7 +422,7 @@ func TestTimingAggregatorCleaning(t *testing.T) {
 
 		// Wait for window to expire
 		time.Sleep(60 * time.Millisecond)
-		
+
 		// Clean and verify removed
 		ta.Clean()
 		_, exists = ta.GetStats("old_operation")
@@ -433,25 +433,25 @@ func TestTimingAggregatorCleaning(t *testing.T) {
 
 	t.Run("recent operations preserved", func(t *testing.T) {
 		ta := NewTimingAggregator(100*time.Millisecond, 100)
-		
+
 		// Record old operation
 		ta.Record("old_operation", 10*time.Millisecond)
-		
+
 		// Wait a bit but not past window
 		time.Sleep(20 * time.Millisecond)
-		
+
 		// Record recent operation
 		ta.Record("recent_operation", 15*time.Millisecond)
-		
+
 		// Wait for old operation to expire
 		time.Sleep(90 * time.Millisecond)
-		
+
 		ta.Clean()
-		
+
 		// Old should be gone, recent should remain
 		_, oldExists := ta.GetStats("old_operation")
 		_, recentExists := ta.GetStats("recent_operation")
-		
+
 		if oldExists {
 			t.Error("old operation should be cleaned")
 		}
@@ -462,13 +462,13 @@ func TestTimingAggregatorCleaning(t *testing.T) {
 
 	t.Run("no cleaning with zero window", func(t *testing.T) {
 		ta := NewTimingAggregator(0, 100) // zero window = no cleaning
-		
+
 		ta.Record("persistent", 10*time.Millisecond)
-		
+
 		// Wait and clean
 		time.Sleep(50 * time.Millisecond)
 		ta.Clean()
-		
+
 		// Should still exist
 		_, exists := ta.GetStats("persistent")
 		if !exists {
@@ -483,7 +483,7 @@ func TestGlobalTimingAggregator(t *testing.T) {
 		// Reset global state for testing
 		globalTimingAggregator = nil
 		timingAggregatorOnce = sync.Once{}
-		
+
 		// First call should initialize
 		ta1 := GetTimingAggregator()
 		if ta1 == nil {
@@ -500,7 +500,7 @@ func TestGlobalTimingAggregator(t *testing.T) {
 	t.Run("global recording", func(t *testing.T) {
 		// Record through global function
 		RecordTiming("global_test", 25*time.Millisecond)
-		
+
 		ta := GetTimingAggregator()
 		stats, exists := ta.GetStats("global_test")
 		if !exists {
@@ -533,7 +533,7 @@ func TestTimingStatistics(t *testing.T) {
 		}
 
 		str := stats.String()
-		
+
 		// Should contain key information
 		if !contains(str, "test_op") {
 			t.Error("string should contain operation name")
@@ -549,7 +549,7 @@ func TestTimingStatistics(t *testing.T) {
 	t.Run("zero values", func(t *testing.T) {
 		stats := TimingStatistics{Name: "empty"}
 		str := stats.String()
-		
+
 		// Should not panic with zero values
 		if !contains(str, "empty") {
 			t.Error("string should contain name even with zero values")
@@ -567,5 +567,5 @@ func absInt64(a int64) int64 {
 
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && s[0:len(substr)] == substr ||
-		   len(s) > len(substr) && contains(s[1:], substr)
+		len(s) > len(substr) && contains(s[1:], substr)
 }

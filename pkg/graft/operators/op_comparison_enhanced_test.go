@@ -30,25 +30,25 @@ func TestComparisonOperators_Comprehensive(t *testing.T) {
 			{name: "equal nil", op: "==", a: nil, b: nil, expected: true},
 			{name: "nil vs value", op: "==", a: nil, b: "hello", expected: false},
 			{name: "value vs nil", op: "==", a: "hello", b: nil, expected: false},
-			
+
 			// Numeric type coercion
 			{name: "int64 vs float64", op: "==", a: int64(5), b: 5.0, expected: true},
 			{name: "float64 vs int64", op: "==", a: 5.0, b: int64(5), expected: true},
 			{name: "int vs int64", op: "==", a: int(5), b: int64(5), expected: true},
 			{name: "float32 vs float64", op: "==", a: float32(3.14), b: float64(3.14), expected: false}, // precision difference
-			
+
 			// Array equality
 			{name: "equal arrays", op: "==", a: []interface{}{1, 2, 3}, b: []interface{}{1, 2, 3}, expected: true},
 			{name: "unequal arrays", op: "==", a: []interface{}{1, 2, 3}, b: []interface{}{1, 2, 4}, expected: false},
 			{name: "arrays different length", op: "==", a: []interface{}{1, 2}, b: []interface{}{1, 2, 3}, expected: false},
 			{name: "empty arrays", op: "==", a: []interface{}{}, b: []interface{}{}, expected: true},
-			
+
 			// Map equality
 			{name: "equal maps", op: "==", a: map[interface{}]interface{}{"a": 1}, b: map[interface{}]interface{}{"a": 1}, expected: true},
 			{name: "unequal maps", op: "==", a: map[interface{}]interface{}{"a": 1}, b: map[interface{}]interface{}{"a": 2}, expected: false},
 			{name: "maps different keys", op: "==", a: map[interface{}]interface{}{"a": 1}, b: map[interface{}]interface{}{"b": 1}, expected: false},
 			{name: "empty maps", op: "==", a: map[interface{}]interface{}{}, b: map[interface{}]interface{}{}, expected: true},
-			
+
 			// Not equal tests
 			{name: "not equal integers", op: "!=", a: int64(5), b: int64(3), expected: true},
 			{name: "not equal same values", op: "!=", a: int64(5), b: int64(5), expected: false},
@@ -252,7 +252,7 @@ func TestComparisonOperators_SpecialValues(t *testing.T) {
 			b        interface{}
 			expected bool
 		}{
-			{name: "floating point precision", op: "==", a: 0.1 + 0.2, b: 0.3, expected: true}, // Go's float64 precision
+			{name: "floating point precision", op: "==", a: 0.1 + 0.2, b: 0.3, expected: true},       // Go's float64 precision
 			{name: "very close floats !=", op: "!=", a: 1.0000000000000001, b: 1.0, expected: false}, // within float64 precision
 			{name: "distinguishable floats", op: "!=", a: 1.1, b: 1.2, expected: true},
 		}
@@ -301,31 +301,31 @@ func TestComparisonOperators_SpecialValues(t *testing.T) {
 			expected bool
 		}{
 			{
-				name: "nested arrays equal",
-				op:   "==",
-				a:    []interface{}{[]interface{}{1, 2}, []interface{}{3, 4}},
-				b:    []interface{}{[]interface{}{1, 2}, []interface{}{3, 4}},
+				name:     "nested arrays equal",
+				op:       "==",
+				a:        []interface{}{[]interface{}{1, 2}, []interface{}{3, 4}},
+				b:        []interface{}{[]interface{}{1, 2}, []interface{}{3, 4}},
 				expected: true,
 			},
 			{
-				name: "nested arrays unequal",
-				op:   "!=",
-				a:    []interface{}{[]interface{}{1, 2}, []interface{}{3, 4}},
-				b:    []interface{}{[]interface{}{1, 2}, []interface{}{3, 5}},
+				name:     "nested arrays unequal",
+				op:       "!=",
+				a:        []interface{}{[]interface{}{1, 2}, []interface{}{3, 4}},
+				b:        []interface{}{[]interface{}{1, 2}, []interface{}{3, 5}},
 				expected: true,
 			},
 			{
-				name: "nested maps equal",
-				op:   "==",
-				a:    map[interface{}]interface{}{"nested": map[interface{}]interface{}{"key": "value"}},
-				b:    map[interface{}]interface{}{"nested": map[interface{}]interface{}{"key": "value"}},
+				name:     "nested maps equal",
+				op:       "==",
+				a:        map[interface{}]interface{}{"nested": map[interface{}]interface{}{"key": "value"}},
+				b:        map[interface{}]interface{}{"nested": map[interface{}]interface{}{"key": "value"}},
 				expected: true,
 			},
 			{
-				name: "mixed nested structures",
-				op:   "==",
-				a:    map[interface{}]interface{}{"array": []interface{}{1, 2, 3}},
-				b:    map[interface{}]interface{}{"array": []interface{}{1, 2, 3}},
+				name:     "mixed nested structures",
+				op:       "==",
+				a:        map[interface{}]interface{}{"array": []interface{}{1, 2, 3}},
+				b:        map[interface{}]interface{}{"array": []interface{}{1, 2, 3}},
 				expected: true,
 			},
 		}
@@ -469,11 +469,11 @@ func TestComparisonOperators_WithReferences(t *testing.T) {
 		}
 
 		tests := []struct {
-			name      string
-			op        string
-			aPath     string
-			bPath     string
-			expected  bool
+			name     string
+			op       string
+			aPath    string
+			bPath    string
+			expected bool
 		}{
 			{name: "a < b", op: "<", aPath: "a", bPath: "b", expected: true},
 			{name: "b > a", op: ">", aPath: "b", bPath: "a", expected: true},
@@ -500,16 +500,16 @@ func TestComparisonOperators_WithReferences(t *testing.T) {
 				}
 
 				ev := &Evaluator{Tree: data}
-				
+
 				args := make([]*Expr, 2)
-				
+
 				// First argument
 				cursor1, err := tree.ParseCursor(tt.aPath)
 				if err != nil {
 					t.Fatalf("failed to parse cursor: %v", err)
 				}
 				args[0] = &Expr{Type: Reference, Reference: cursor1}
-				
+
 				// Second argument
 				if tt.bPath != "" {
 					cursor2, err := tree.ParseCursor(tt.bPath)
@@ -542,20 +542,20 @@ func TestComparisonOperators_WithReferences(t *testing.T) {
 	t.Run("dependencies", func(t *testing.T) {
 		op := NewTypeAwareEqualOperator()
 		ev := &Evaluator{}
-		
+
 		cursor1, _ := tree.ParseCursor("foo.bar")
 		cursor2, _ := tree.ParseCursor("baz.qux")
-		
+
 		args := []*Expr{
 			{Type: Reference, Reference: cursor1},
 			{Type: Reference, Reference: cursor2},
 		}
-		
+
 		locs := []*tree.Cursor{}
 		auto := []*tree.Cursor{}
-		
+
 		deps := op.Dependencies(ev, args, locs, auto)
-		
+
 		// Should return auto dependencies (type-aware operators use auto deps)
 		if len(deps) != len(auto) {
 			t.Errorf("expected %d dependencies, got %d", len(auto), len(deps))

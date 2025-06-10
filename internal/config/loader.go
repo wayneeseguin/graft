@@ -41,7 +41,7 @@ func (l *Loader) applyEnvOverrides(v reflect.Value, prefix string) error {
 
 		// Get the env tag
 		envTag := fieldType.Tag.Get("env")
-		
+
 		// Build the environment variable name
 		var envName string
 		if envTag != "" {
@@ -129,11 +129,11 @@ func (l *Loader) loadFeaturesFromEnv(field reflect.Value, prefix string) {
 	// Look for environment variables like GRAFT_FEATURES_FEATURENAME=true
 	environ := os.Environ()
 	featurePrefix := prefix + "_"
-	
+
 	if field.IsNil() {
 		field.Set(reflect.MakeMap(field.Type()))
 	}
-	
+
 	for _, env := range environ {
 		if strings.HasPrefix(env, featurePrefix) {
 			parts := strings.SplitN(env, "=", 2)
@@ -150,17 +150,17 @@ func (l *Loader) loadFeaturesFromEnv(field reflect.Value, prefix string) {
 // MergeConfigs merges multiple configurations, with later configs taking precedence
 func MergeConfigs(base *Config, overlays ...*Config) *Config {
 	result := *base // Start with a copy of base
-	
+
 	for _, overlay := range overlays {
 		if overlay == nil {
 			continue
 		}
-		
+
 		// Merge each section
 		mergeEngine(&result.Engine, &overlay.Engine)
 		mergePerformance(&result.Performance, &overlay.Performance)
 		mergeLogging(&result.Logging, &overlay.Logging)
-		
+
 		// Merge features map
 		if overlay.Features != nil {
 			if result.Features == nil {
@@ -170,7 +170,7 @@ func MergeConfigs(base *Config, overlays ...*Config) *Config {
 				result.Features[k] = v
 			}
 		}
-		
+
 		// Override version and profile if set
 		if overlay.Version != "" {
 			result.Version = overlay.Version
@@ -179,7 +179,7 @@ func MergeConfigs(base *Config, overlays ...*Config) *Config {
 			result.Profile = overlay.Profile
 		}
 	}
-	
+
 	return &result
 }
 
@@ -193,13 +193,13 @@ func mergeEngine(base, overlay *EngineConfig) {
 	}
 	base.ColorOutput = overlay.ColorOutput
 	base.StrictMode = overlay.StrictMode
-	
+
 	// Merge Vault config
 	mergeVault(&base.Vault, &overlay.Vault)
-	
+
 	// Merge AWS config
 	mergeAWS(&base.AWS, &overlay.AWS)
-	
+
 	// Merge Parser config
 	mergeParser(&base.Parser, &overlay.Parser)
 }
@@ -256,16 +256,16 @@ func mergeParser(base, overlay *ParserConfig) {
 func mergePerformance(base, overlay *PerformanceConfig) {
 	base.EnableCaching = overlay.EnableCaching
 	base.EnableParallel = overlay.EnableParallel
-	
+
 	// Merge Cache config
 	mergeCache(&base.Cache, &overlay.Cache)
-	
+
 	// Merge Concurrency config
 	mergeConcurrency(&base.Concurrency, &overlay.Concurrency)
-	
+
 	// Merge Memory config
 	mergeMemory(&base.Memory, &overlay.Memory)
-	
+
 	// Merge I/O config
 	mergeIO(&base.IO, &overlay.IO)
 }
