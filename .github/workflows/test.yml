@@ -12,7 +12,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: stable
+          go-version: '1.24.4'
           check-latest: true
 
       - name: Build
@@ -36,7 +36,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: stable
+          go-version: '1.24.4'
           check-latest: true
 
       - name: Run go vet
@@ -47,6 +47,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.24.4'
+          check-latest: true
       
       - name: Run Gosec Security Scanner
         uses: securego/gosec@master
@@ -63,7 +69,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: stable
+          go-version: '1.24.4'
           check-latest: true
 
       - name: Run unit tests
@@ -79,7 +85,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: stable
+          go-version: '1.24.4'
           check-latest: true
 
       - name: Download graft binary
