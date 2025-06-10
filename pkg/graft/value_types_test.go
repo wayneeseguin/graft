@@ -1,7 +1,10 @@
 package graft
 
 import (
+	"math"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestValue(t *testing.T) {
@@ -233,5 +236,377 @@ func TestTypedResponse(t *testing.T) {
 		if str2 != "hello" {
 			t.Errorf("expected 'hello', got '%s'", str2)
 		}
+	})
+}
+
+// Additional comprehensive tests using GoConvey to improve coverage
+func TestValueType_String(t *testing.T) {
+	Convey("ValueType String method", t, func() {
+
+		Convey("should return correct string representations", func() {
+			So(NilValue.String(), ShouldEqual, "nil")
+			So(StringValue.String(), ShouldEqual, "string")
+			So(IntValue.String(), ShouldEqual, "int")
+			So(Int64Value.String(), ShouldEqual, "int64")
+			So(Float64Value.String(), ShouldEqual, "float64")
+			So(BoolValue.String(), ShouldEqual, "bool")
+			So(SliceValue.String(), ShouldEqual, "slice")
+			So(MapValue.String(), ShouldEqual, "map")
+			So(UnknownValue.String(), ShouldEqual, "unknown")
+		})
+
+		Convey("should return 'unknown' for undefined value types", func() {
+			// Test an out-of-range value type
+			invalidType := ValueType(999)
+			So(invalidType.String(), ShouldEqual, "unknown")
+		})
+	})
+}
+
+func TestValueImpl_String(t *testing.T) {
+	Convey("valueImpl String method", t, func() {
+
+		Convey("should return '<nil>' for nil values", func() {
+			nilValue := NewValue(nil)
+			So(nilValue.String(), ShouldEqual, "<nil>")
+		})
+
+		Convey("should return string representation for non-nil values", func() {
+			So(NewValue("test").String(), ShouldEqual, "test")
+			So(NewValue(42).String(), ShouldEqual, "42")
+			So(NewValue(true).String(), ShouldEqual, "true")
+			So(NewValue(3.14).String(), ShouldEqual, "3.14")
+		})
+	})
+}
+
+func TestNewValue_EdgeCases(t *testing.T) {
+	Convey("NewValue edge cases", t, func() {
+
+		Convey("should handle map[interface{}]interface{} with non-string keys", func() {
+			input := map[interface{}]interface{}{
+				123:    "numeric key",
+				"test": "string key",
+			}
+
+			value := NewValue(input)
+			So(value.Type(), ShouldEqual, UnknownValue)
+		})
+
+		Convey("should handle map[interface{}]interface{} with all string keys", func() {
+			input := map[interface{}]interface{}{
+				"key1": "value1",
+				"key2": "value2",
+			}
+
+			value := NewValue(input)
+			So(value.Type(), ShouldEqual, MapValue)
+
+			mapValue, err := value.AsMap()
+			So(err, ShouldBeNil)
+			So(mapValue["key1"], ShouldEqual, "value1")
+			So(mapValue["key2"], ShouldEqual, "value2")
+		})
+
+		Convey("should handle unknown types", func() {
+			type CustomType struct {
+				Field string
+			}
+
+			value := NewValue(CustomType{Field: "test"})
+			So(value.Type(), ShouldEqual, UnknownValue)
+		})
+	})
+}
+
+func TestValueImpl_AsString_EdgeCases(t *testing.T) {
+	Convey("AsString edge cases", t, func() {
+
+		Convey("should handle all value types", func() {
+			// Test conversions from all types
+			testCases := []struct {
+				input    interface{}
+				expected string
+			}{
+				{42, "42"},
+				{int64(42), "42"},
+				{3.14, "3.14"},
+				{true, "true"},
+				{false, "false"},
+			}
+
+			for _, tc := range testCases {
+				value := NewValue(tc.input)
+				result, err := value.AsString()
+				So(err, ShouldBeNil)
+				So(result, ShouldEqual, tc.expected)
+			}
+		})
+
+		Convey("should convert slice/map/unknown types to string", func() {
+			slice := []interface{}{"a", "b"}
+			value := NewValue(slice)
+			result, err := value.AsString()
+			So(err, ShouldBeNil)
+			So(result, ShouldNotBeEmpty)
+		})
+	})
+}
+
+func TestValueImpl_AsInt_EdgeCases(t *testing.T) {
+	Convey("AsInt edge cases", t, func() {
+
+		Convey("should handle int64 overflow", func() {
+			largeValue := NewValue(int64(math.MaxInt64))
+			_, err := largeValue.AsInt()
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "overflows int")
+		})
+
+		Convey("should handle int64 underflow", func() {
+			smallValue := NewValue(int64(math.MinInt64))
+			_, err := smallValue.AsInt()
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "overflows int")
+		})
+
+		Convey("should handle non-integer float64 values", func() {
+			floatValue := NewValue(3.14)
+			_, err := floatValue.AsInt()
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "is not an integer")
+		})
+
+		Convey("should handle string/bool/slice/map types", func() {
+			testCases := []interface{}{
+				"string",
+				true,
+				[]interface{}{1, 2, 3},
+				map[string]interface{}{"key": "value"},
+			}
+
+			for _, tc := range testCases {
+				value := NewValue(tc)
+				_, err := value.AsInt()
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "cannot convert")
+			}
+		})
+	})
+}
+
+func TestValueImpl_AsInt64_EdgeCases(t *testing.T) {
+	Convey("AsInt64 edge cases", t, func() {
+
+		Convey("should handle non-integer float64 values", func() {
+			floatValue := NewValue(3.14)
+			_, err := floatValue.AsInt64()
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "is not an integer")
+		})
+
+		Convey("should convert whole number floats correctly", func() {
+			floatValue := NewValue(42.0)
+			result, err := floatValue.AsInt64()
+			So(err, ShouldBeNil)
+			So(result, ShouldEqual, int64(42))
+		})
+
+		Convey("should handle unsupported types", func() {
+			testCases := []interface{}{
+				"string",
+				true,
+				[]interface{}{1, 2, 3},
+				map[string]interface{}{"key": "value"},
+			}
+
+			for _, tc := range testCases {
+				value := NewValue(tc)
+				_, err := value.AsInt64()
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "cannot convert")
+			}
+		})
+	})
+}
+
+func TestValueImpl_AsFloat64_EdgeCases(t *testing.T) {
+	Convey("AsFloat64 edge cases", t, func() {
+
+		Convey("should convert all numeric types", func() {
+			testCases := []struct {
+				input    interface{}
+				expected float64
+			}{
+				{42, 42.0},
+				{int64(42), 42.0},
+				{3.14, 3.14},
+			}
+
+			for _, tc := range testCases {
+				value := NewValue(tc.input)
+				result, err := value.AsFloat64()
+				So(err, ShouldBeNil)
+				So(result, ShouldEqual, tc.expected)
+			}
+		})
+
+		Convey("should handle unsupported types", func() {
+			testCases := []interface{}{
+				"string",
+				true,
+				[]interface{}{1, 2, 3},
+				map[string]interface{}{"key": "value"},
+			}
+
+			for _, tc := range testCases {
+				value := NewValue(tc)
+				_, err := value.AsFloat64()
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "cannot convert")
+			}
+		})
+	})
+}
+
+func TestValueImpl_AsBool_EdgeCases(t *testing.T) {
+	Convey("AsBool edge cases", t, func() {
+
+		Convey("should handle bool values", func() {
+			trueValue := NewValue(true)
+			result, err := trueValue.AsBool()
+			So(err, ShouldBeNil)
+			So(result, ShouldBeTrue)
+
+			falseValue := NewValue(false)
+			result, err = falseValue.AsBool()
+			So(err, ShouldBeNil)
+			So(result, ShouldBeFalse)
+		})
+
+		Convey("should handle unsupported types", func() {
+			testCases := []interface{}{
+				"string",
+				42,
+				[]interface{}{1, 2, 3},
+				map[string]interface{}{"key": "value"},
+			}
+
+			for _, tc := range testCases {
+				value := NewValue(tc)
+				_, err := value.AsBool()
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "cannot convert")
+			}
+		})
+	})
+}
+
+func TestValueImpl_AsSlice_EdgeCases(t *testing.T) {
+	Convey("AsSlice edge cases", t, func() {
+
+		Convey("should handle slice values", func() {
+			slice := []interface{}{"a", "b", "c"}
+			value := NewValue(slice)
+			result, err := value.AsSlice()
+			So(err, ShouldBeNil)
+			So(result, ShouldResemble, slice)
+		})
+
+		Convey("should handle unsupported types", func() {
+			testCases := []interface{}{
+				"string",
+				42,
+				true,
+				map[string]interface{}{"key": "value"},
+			}
+
+			for _, tc := range testCases {
+				value := NewValue(tc)
+				_, err := value.AsSlice()
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "cannot convert")
+			}
+		})
+	})
+}
+
+func TestValueImpl_AsMap_EdgeCases(t *testing.T) {
+	Convey("AsMap edge cases", t, func() {
+
+		Convey("should handle map values", func() {
+			mapData := map[string]interface{}{
+				"key1": "value1",
+				"key2": 42,
+			}
+			value := NewValue(mapData)
+			result, err := value.AsMap()
+			So(err, ShouldBeNil)
+			So(result, ShouldResemble, mapData)
+		})
+
+		Convey("should handle unsupported types", func() {
+			testCases := []interface{}{
+				"string",
+				42,
+				true,
+				[]interface{}{"a", "b"},
+			}
+
+			for _, tc := range testCases {
+				value := NewValue(tc)
+				_, err := value.AsMap()
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "cannot convert")
+			}
+		})
+	})
+}
+
+func TestValueImpl_NilHandling(t *testing.T) {
+	Convey("Nil value handling", t, func() {
+		nilValue := NewValue(nil)
+
+		Convey("should handle nil for AsString", func() {
+			_, err := nilValue.AsString()
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "cannot convert nil to string")
+		})
+
+		Convey("should handle nil for AsInt", func() {
+			_, err := nilValue.AsInt()
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "cannot convert nil to int")
+		})
+
+		Convey("should handle nil for AsInt64", func() {
+			_, err := nilValue.AsInt64()
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "cannot convert nil to int64")
+		})
+
+		Convey("should handle nil for AsFloat64", func() {
+			_, err := nilValue.AsFloat64()
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "cannot convert nil to float64")
+		})
+
+		Convey("should handle nil for AsBool", func() {
+			_, err := nilValue.AsBool()
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "cannot convert nil to bool")
+		})
+
+		Convey("should handle nil for AsSlice", func() {
+			_, err := nilValue.AsSlice()
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "cannot convert nil to slice")
+		})
+
+		Convey("should handle nil for AsMap", func() {
+			_, err := nilValue.AsMap()
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "cannot convert nil to map")
+		})
 	})
 }

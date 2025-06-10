@@ -297,6 +297,28 @@ func TestMixedTypeHandler(t *testing.T) {
 				So(handler.Priority(), ShouldEqual, 10)
 			})
 		})
+
+		Convey("Modulo", func() {
+			handler := &MixedTypeHandler{}
+
+			Convey("should return nil when left operand is nil", func() {
+				result, err := handler.Modulo(nil, 5)
+				So(err, ShouldBeNil)
+				So(result, ShouldBeNil)
+			})
+
+			Convey("should return error when right operand is nil", func() {
+				_, err := handler.Modulo(10, nil)
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "modulo by null")
+			})
+
+			Convey("should return not implemented error for mixed types", func() {
+				_, err := handler.Modulo("string", 5)
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "modulo operation not supported")
+			})
+		})
 	})
 }
 
@@ -378,5 +400,6 @@ func TestMixedTypeHelperFunctions(t *testing.T) {
 				So(convertToFloat64(nil), ShouldEqual, 0)
 			})
 		})
+
 	})
 }

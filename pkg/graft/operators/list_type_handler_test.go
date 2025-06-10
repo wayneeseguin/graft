@@ -304,6 +304,28 @@ func TestListTypeHandler(t *testing.T) {
 				So(handler.Priority(), ShouldEqual, 70)
 			})
 		})
+
+		Convey("Comparison operations error handling", func() {
+			handler := &ListTypeHandler{}
+
+			Convey("LessOrEqual should return not implemented error", func() {
+				listA := []interface{}{1, 2, 3}
+				listB := []interface{}{4, 5, 6}
+
+				_, err := handler.LessOrEqual(listA, listB)
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "lessOrEqual operation not supported")
+			})
+
+			Convey("GreaterOrEqual should return not implemented error", func() {
+				listA := []interface{}{1, 2, 3}
+				listB := []interface{}{4, 5, 6}
+
+				_, err := handler.GreaterOrEqual(listA, listB)
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "greaterOrEqual operation not supported")
+			})
+		})
 	})
 }
 
@@ -401,4 +423,5 @@ func TestConvertToInt(t *testing.T) {
 			So(ok, ShouldBeFalse)
 		})
 	})
+
 }

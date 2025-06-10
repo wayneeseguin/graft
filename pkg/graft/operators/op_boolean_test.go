@@ -134,6 +134,109 @@ func TestBooleanOperators(t *testing.T) {
 				So(resp.Value, ShouldEqual, "first")
 			})
 		})
+
+		Convey("Logical OR (||) operator", func() {
+			ev := &Evaluator{Tree: YAML(`{}`)}
+			op := NewTypeAwareOrOperator()
+
+			Convey("returns true when left operand is truthy (short-circuit)", func() {
+				resp, err := op.Run(ev, []*Expr{
+					&Expr{Type: Literal, Literal: true},
+					&Expr{Type: Literal, Literal: false},
+				})
+				So(err, ShouldBeNil)
+				So(resp.Value, ShouldEqual, true)
+
+				// Test with non-boolean truthy values
+				resp, err = op.Run(ev, []*Expr{
+					&Expr{Type: Literal, Literal: "hello"},
+					&Expr{Type: Literal, Literal: false},
+				})
+				So(err, ShouldBeNil)
+				So(resp.Value, ShouldEqual, true)
+
+				resp, err = op.Run(ev, []*Expr{
+					&Expr{Type: Literal, Literal: int64(42)},
+					&Expr{Type: Literal, Literal: nil},
+				})
+				So(err, ShouldBeNil)
+				So(resp.Value, ShouldEqual, true)
+			})
+
+			Convey("evaluates right operand when left is falsy", func() {
+				resp, err := op.Run(ev, []*Expr{
+					&Expr{Type: Literal, Literal: false},
+					&Expr{Type: Literal, Literal: true},
+				})
+				So(err, ShouldBeNil)
+				So(resp.Value, ShouldEqual, true)
+
+				resp, err = op.Run(ev, []*Expr{
+					&Expr{Type: Literal, Literal: nil},
+					&Expr{Type: Literal, Literal: "right side"},
+				})
+				So(err, ShouldBeNil)
+				So(resp.Value, ShouldEqual, true)
+
+				resp, err = op.Run(ev, []*Expr{
+					&Expr{Type: Literal, Literal: int64(0)},
+					&Expr{Type: Literal, Literal: 3.14},
+				})
+				So(err, ShouldBeNil)
+				So(resp.Value, ShouldEqual, true)
+			})
+
+			Convey("returns false when both operands are falsy", func() {
+				resp, err := op.Run(ev, []*Expr{
+					&Expr{Type: Literal, Literal: false},
+					&Expr{Type: Literal, Literal: false},
+				})
+				So(err, ShouldBeNil)
+				So(resp.Value, ShouldEqual, false)
+
+				resp, err = op.Run(ev, []*Expr{
+					&Expr{Type: Literal, Literal: nil},
+					&Expr{Type: Literal, Literal: int64(0)},
+				})
+				So(err, ShouldBeNil)
+				So(resp.Value, ShouldEqual, false)
+
+				resp, err = op.Run(ev, []*Expr{
+					&Expr{Type: Literal, Literal: 0.0},
+					&Expr{Type: Literal, Literal: ""},
+				})
+				So(err, ShouldBeNil)
+				So(resp.Value, ShouldEqual, false)
+			})
+
+			Convey("should short-circuit and not evaluate right operand when left is truthy", func() {
+				errorExpr := &Expr{Type: Reference, Reference: nil} // Invalid reference
+
+				resp, err := op.Run(ev, []*Expr{
+					&Expr{Type: Literal, Literal: true},
+					errorExpr,
+				})
+				So(err, ShouldBeNil) // No error because second operand not evaluated
+				So(resp.Value, ShouldEqual, true)
+			})
+
+			Convey("should handle wrong number of arguments", func() {
+				_, err := op.Run(ev, []*Expr{
+					&Expr{Type: Literal, Literal: true},
+				})
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "requires exactly 2 arguments")
+
+				_, err = op.Run(ev, []*Expr{
+					&Expr{Type: Literal, Literal: true},
+					&Expr{Type: Literal, Literal: false},
+					&Expr{Type: Literal, Literal: true},
+				})
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "requires exactly 2 arguments")
+			})
+
+		})
 	})
 }
 

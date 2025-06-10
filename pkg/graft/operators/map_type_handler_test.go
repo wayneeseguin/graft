@@ -281,6 +281,28 @@ func TestMapTypeHandler(t *testing.T) {
 				So(handler.Priority(), ShouldEqual, 70)
 			})
 		})
+
+		Convey("Comparison operations error handling", func() {
+			handler := &MapTypeHandler{}
+
+			Convey("LessOrEqual should return not implemented error", func() {
+				mapA := map[interface{}]interface{}{"a": 1, "b": 2}
+				mapB := map[interface{}]interface{}{"c": 3, "d": 4}
+
+				_, err := handler.LessOrEqual(mapA, mapB)
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "lessOrEqual operation not supported")
+			})
+
+			Convey("GreaterOrEqual should return not implemented error", func() {
+				mapA := map[interface{}]interface{}{"a": 1, "b": 2}
+				mapB := map[interface{}]interface{}{"c": 3, "d": 4}
+
+				_, err := handler.GreaterOrEqual(mapA, mapB)
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldContainSubstring, "greaterOrEqual operation not supported")
+			})
+		})
 	})
 }
 
@@ -317,4 +339,5 @@ func TestConvertToMap(t *testing.T) {
 			So(ok, ShouldBeFalse)
 		})
 	})
+
 }

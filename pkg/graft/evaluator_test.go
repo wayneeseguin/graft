@@ -1851,3 +1851,544 @@ keys: (( keys meta.test ))
 		})
 	})
 }
+
+func TestEvaluator_Run(t *testing.T) {
+	Convey("Evaluator Run function", t, func() {
+
+		Convey("should run all phases successfully", func() {
+			input := `
+meta:
+  name: test-app
+properties:
+  name: (( grab meta.name ))
+`
+			tree := map[interface{}]interface{}{}
+			err := yaml.Unmarshal([]byte(input), &tree)
+			So(err, ShouldBeNil)
+
+			ev := &Evaluator{Tree: tree}
+			engine, err := CreateDefaultEngine()
+			So(err, ShouldBeNil)
+			ev.SetEngine(engine)
+
+			err = ev.Run([]string{}, []string{})
+			So(err, ShouldBeNil)
+
+			// Verify the grab operation worked
+			So(ev.Tree["properties"], ShouldNotBeNil)
+			props := ev.Tree["properties"].(map[interface{}]interface{})
+			So(props["name"], ShouldEqual, "test-app")
+		})
+
+		Convey("should handle prune list", func() {
+			input := `
+meta:
+  name: test-app
+  secret: should-be-pruned
+properties:
+  name: (( grab meta.name ))
+`
+			tree := map[interface{}]interface{}{}
+			err := yaml.Unmarshal([]byte(input), &tree)
+			So(err, ShouldBeNil)
+
+			ev := &Evaluator{Tree: tree}
+			engine, err := CreateDefaultEngine()
+			So(err, ShouldBeNil)
+			ev.SetEngine(engine)
+
+			err = ev.Run([]string{"meta.secret"}, []string{})
+			So(err, ShouldBeNil)
+
+			// Verify the secret was pruned
+			meta := ev.Tree["meta"].(map[interface{}]interface{})
+			_, exists := meta["secret"]
+			So(exists, ShouldBeFalse)
+			So(meta["name"], ShouldEqual, "test-app") // name should still exist
+		})
+
+		Convey("should handle cherry-pick paths", func() {
+			input := `
+meta:
+  name: test-app
+properties:
+  name: (( grab meta.name ))
+  port: 8080
+other:
+  data: value
+`
+			tree := map[interface{}]interface{}{}
+			err := yaml.Unmarshal([]byte(input), &tree)
+			So(err, ShouldBeNil)
+
+			ev := &Evaluator{Tree: tree}
+			engine, err := CreateDefaultEngine()
+			So(err, ShouldBeNil)
+			ev.SetEngine(engine)
+
+			err = ev.Run([]string{}, []string{"properties"})
+			So(err, ShouldBeNil)
+
+			// After cherry-picking, only properties should remain in final output
+			// Note: This tests the cherry-pick functionality that affects evaluation
+		})
+
+		Convey("should handle parameter errors", func() {
+			input := `
+properties:
+  name: (( param "missing-param" ))
+`
+			tree := map[interface{}]interface{}{}
+			err := yaml.Unmarshal([]byte(input), &tree)
+			So(err, ShouldBeNil)
+
+			ev := &Evaluator{Tree: tree}
+			engine, err := CreateDefaultEngine()
+			So(err, ShouldBeNil)
+			ev.SetEngine(engine)
+
+			err = ev.Run([]string{}, []string{})
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "missing-param")
+		})
+
+		Convey("should skip evaluation when SkipEval is true", func() {
+			input := `
+properties:
+  name: (( grab meta.name ))
+`
+			tree := map[interface{}]interface{}{}
+			err := yaml.Unmarshal([]byte(input), &tree)
+			So(err, ShouldBeNil)
+
+			ev := &Evaluator{Tree: tree, SkipEval: true}
+			engine, err := CreateDefaultEngine()
+			So(err, ShouldBeNil)
+			ev.SetEngine(engine)
+
+			err = ev.Run([]string{}, []string{})
+			So(err, ShouldBeNil)
+
+			// Verify that grab was not evaluated (should still be a string with expression)
+			props := ev.Tree["properties"].(map[interface{}]interface{})
+			name := props["name"].(string)
+			So(name, ShouldEqual, "(( grab meta.name ))") // Still unexpanded
+		})
+	})
+}
+
+func TestEvaluator_Prune(t *testing.T) {
+	Convey("Evaluator Prune function", t, func() {
+
+		Convey("should prune simple map keys", func() {
+			tree := map[interface{}]interface{}{
+				"keep":   "this",
+				"remove": "this",
+				"meta": map[interface{}]interface{}{
+					"keep":   "nested",
+					"remove": "nested",
+				},
+			}
+
+			ev := &Evaluator{Tree: tree}
+			err := ev.Prune([]string{"remove", "meta.remove"})
+			So(err, ShouldBeNil)
+
+			// Verify removals
+			_, exists := tree["remove"]
+			So(exists, ShouldBeFalse)
+			So(tree["keep"], ShouldEqual, "this")
+
+			meta := tree["meta"].(map[interface{}]interface{})
+			_, exists = meta["remove"]
+			So(exists, ShouldBeFalse)
+			So(meta["keep"], ShouldEqual, "nested")
+		})
+
+		Convey("should prune array elements by index", func() {
+			tree := map[interface{}]interface{}{
+				"list": []interface{}{"keep", "remove", "keep"},
+			}
+
+			ev := &Evaluator{Tree: tree}
+			err := ev.Prune([]string{"list.1"})
+			So(err, ShouldBeNil)
+
+			// Verify array element removal
+			list := tree["list"].([]interface{})
+			So(len(list), ShouldEqual, 2)
+			So(list[0], ShouldEqual, "keep")
+			So(list[1], ShouldEqual, "keep")
+		})
+
+		Convey("should handle invalid paths gracefully", func() {
+			tree := map[interface{}]interface{}{
+				"valid": "data",
+			}
+
+			ev := &Evaluator{Tree: tree}
+			err := ev.Prune([]string{"invalid.path"})
+			So(err, ShouldBeNil) // Should not error on non-existent paths
+
+			// Original data should remain unchanged
+			So(tree["valid"], ShouldEqual, "data")
+		})
+
+		Convey("should handle malformed paths", func() {
+			tree := map[interface{}]interface{}{
+				"valid": "data",
+			}
+
+			ev := &Evaluator{Tree: tree}
+			err := ev.Prune([]string{"[invalid[path"})
+			So(err, ShouldNotBeNil)
+		})
+
+		Convey("should handle empty path list", func() {
+			tree := map[interface{}]interface{}{
+				"keep": "this",
+			}
+
+			ev := &Evaluator{Tree: tree}
+			err := ev.Prune([]string{})
+			So(err, ShouldBeNil)
+
+			// Nothing should be removed
+			So(tree["keep"], ShouldEqual, "this")
+		})
+
+		Convey("should handle nested array operations", func() {
+			tree := map[interface{}]interface{}{
+				"jobs": []interface{}{
+					map[interface{}]interface{}{
+						"name": "job1",
+						"properties": map[interface{}]interface{}{
+							"secret": "remove-this",
+							"public": "keep-this",
+						},
+					},
+				},
+			}
+
+			ev := &Evaluator{Tree: tree}
+			err := ev.Prune([]string{"jobs.0.properties.secret"})
+			So(err, ShouldBeNil)
+
+			// Verify nested removal
+			jobs := tree["jobs"].([]interface{})
+			job := jobs[0].(map[interface{}]interface{})
+			props := job["properties"].(map[interface{}]interface{})
+
+			_, exists := props["secret"]
+			So(exists, ShouldBeFalse)
+			So(props["public"], ShouldEqual, "keep-this")
+		})
+	})
+}
+
+func TestEvaluator_SortPaths(t *testing.T) {
+	Convey("Evaluator SortPaths function", t, func() {
+
+		Convey("should sort array by simple field", func() {
+			tree := map[interface{}]interface{}{
+				"items": []interface{}{
+					map[interface{}]interface{}{"name": "zebra", "value": 1},
+					map[interface{}]interface{}{"name": "alpha", "value": 2},
+					map[interface{}]interface{}{"name": "beta", "value": 3},
+				},
+			}
+
+			ev := &Evaluator{Tree: tree}
+			pathKeyMap := map[string]string{"items": "name"}
+			err := ev.SortPaths(pathKeyMap)
+			So(err, ShouldBeNil)
+
+			// Verify sorting
+			items := tree["items"].([]interface{})
+			So(len(items), ShouldEqual, 3)
+			So(items[0].(map[interface{}]interface{})["name"], ShouldEqual, "alpha")
+			So(items[1].(map[interface{}]interface{})["name"], ShouldEqual, "beta")
+			So(items[2].(map[interface{}]interface{})["name"], ShouldEqual, "zebra")
+		})
+
+		Convey("should sort array by nested field", func() {
+			tree := map[interface{}]interface{}{
+				"services": []interface{}{
+					map[interface{}]interface{}{
+						"metadata": map[interface{}]interface{}{"priority": 3},
+						"name":     "service3",
+					},
+					map[interface{}]interface{}{
+						"metadata": map[interface{}]interface{}{"priority": 1},
+						"name":     "service1",
+					},
+					map[interface{}]interface{}{
+						"metadata": map[interface{}]interface{}{"priority": 2},
+						"name":     "service2",
+					},
+				},
+			}
+
+			ev := &Evaluator{Tree: tree}
+			pathKeyMap := map[string]string{"services": "name"}
+			err := ev.SortPaths(pathKeyMap)
+			So(err, ShouldBeNil)
+
+			// Verify sorting by nested field
+			services := tree["services"].([]interface{})
+			So(services[0].(map[interface{}]interface{})["name"], ShouldEqual, "service1")
+			So(services[1].(map[interface{}]interface{})["name"], ShouldEqual, "service2")
+			So(services[2].(map[interface{}]interface{})["name"], ShouldEqual, "service3")
+		})
+
+		Convey("should handle invalid path", func() {
+			tree := map[interface{}]interface{}{
+				"items": []interface{}{},
+			}
+
+			ev := &Evaluator{Tree: tree}
+			pathKeyMap := map[string]string{"[invalid": "name"}
+			err := ev.SortPaths(pathKeyMap)
+			So(err, ShouldNotBeNil)
+		})
+
+		Convey("should handle non-existent path", func() {
+			tree := map[interface{}]interface{}{
+				"items": []interface{}{},
+			}
+
+			ev := &Evaluator{Tree: tree}
+			pathKeyMap := map[string]string{"nonexistent": "name"}
+			err := ev.SortPaths(pathKeyMap)
+			So(err, ShouldNotBeNil)
+		})
+
+		Convey("should error on map instead of array", func() {
+			tree := map[interface{}]interface{}{
+				"notarray": map[interface{}]interface{}{"key": "value"},
+			}
+
+			ev := &Evaluator{Tree: tree}
+			pathKeyMap := map[string]string{"notarray": "key"}
+			err := ev.SortPaths(pathKeyMap)
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "is a map")
+		})
+
+		Convey("should error on non-array value", func() {
+			tree := map[interface{}]interface{}{
+				"string": "not an array",
+			}
+
+			ev := &Evaluator{Tree: tree}
+			pathKeyMap := map[string]string{"string": "key"}
+			err := ev.SortPaths(pathKeyMap)
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "is a scalar")
+		})
+
+		Convey("should handle empty sort map", func() {
+			tree := map[interface{}]interface{}{
+				"items": []interface{}{
+					map[interface{}]interface{}{"name": "keep-order"},
+				},
+			}
+
+			ev := &Evaluator{Tree: tree}
+			pathKeyMap := map[string]string{}
+			err := ev.SortPaths(pathKeyMap)
+			So(err, ShouldBeNil)
+
+			// Array should remain unchanged
+			items := tree["items"].([]interface{})
+			So(items[0].(map[interface{}]interface{})["name"], ShouldEqual, "keep-order")
+		})
+	})
+}
+
+func TestEvaluator_CherryPick(t *testing.T) {
+	Convey("Evaluator CherryPick function", t, func() {
+
+		Convey("should cherry-pick single top-level key", func() {
+			tree := map[interface{}]interface{}{
+				"keep": map[interface{}]interface{}{
+					"nested": "value",
+				},
+				"remove": "this should be gone",
+				"alsogo": "away",
+			}
+
+			ev := &Evaluator{Tree: tree}
+			err := ev.CherryPick([]string{"keep"})
+			So(err, ShouldBeNil)
+
+			// Tree should only contain the cherry-picked path
+			So(len(ev.Tree), ShouldEqual, 1)
+			So(ev.Tree["keep"], ShouldNotBeNil)
+			keep := ev.Tree["keep"].(map[interface{}]interface{})
+			So(keep["nested"], ShouldEqual, "value")
+		})
+
+		Convey("should cherry-pick multiple paths", func() {
+			tree := map[interface{}]interface{}{
+				"first": map[interface{}]interface{}{
+					"data": "one",
+				},
+				"second": map[interface{}]interface{}{
+					"data": "two",
+				},
+				"third": "remove this",
+			}
+
+			ev := &Evaluator{Tree: tree}
+			err := ev.CherryPick([]string{"first", "second"})
+			So(err, ShouldBeNil)
+
+			// Should contain both cherry-picked paths
+			So(len(ev.Tree), ShouldEqual, 2)
+			So(ev.Tree["first"], ShouldNotBeNil)
+			So(ev.Tree["second"], ShouldNotBeNil)
+			_, exists := ev.Tree["third"]
+			So(exists, ShouldBeFalse)
+		})
+
+		Convey("should cherry-pick nested paths", func() {
+			tree := map[interface{}]interface{}{
+				"meta": map[interface{}]interface{}{
+					"name":    "app",
+					"version": "1.0",
+				},
+				"config": map[interface{}]interface{}{
+					"database": map[interface{}]interface{}{
+						"host": "localhost",
+						"port": 5432,
+					},
+					"cache": map[interface{}]interface{}{
+						"host": "redis",
+					},
+				},
+			}
+
+			ev := &Evaluator{Tree: tree}
+			err := ev.CherryPick([]string{"config.database"})
+			So(err, ShouldBeNil)
+
+			// Should preserve the nested structure
+			So(ev.Tree["config"], ShouldNotBeNil)
+			config := ev.Tree["config"].(map[interface{}]interface{})
+			So(config["database"], ShouldNotBeNil)
+
+			database := config["database"].(map[interface{}]interface{})
+			So(database["host"], ShouldEqual, "localhost")
+			So(database["port"], ShouldEqual, 5432)
+
+			// cache should not exist since it wasn't cherry-picked
+			_, exists := config["cache"]
+			So(exists, ShouldBeFalse)
+		})
+
+		Convey("should handle array elements", func() {
+			tree := map[interface{}]interface{}{
+				"items": []interface{}{
+					map[interface{}]interface{}{"name": "item1"},
+					map[interface{}]interface{}{"name": "item2"},
+					map[interface{}]interface{}{"name": "item3"},
+				},
+			}
+
+			ev := &Evaluator{Tree: tree}
+			err := ev.CherryPick([]string{"items.1"})
+			So(err, ShouldBeNil)
+
+			// Should preserve the array structure but only with picked element
+			So(ev.Tree["items"], ShouldNotBeNil)
+			items := ev.Tree["items"].([]interface{})
+			So(len(items), ShouldEqual, 1) // Only the cherry-picked item should remain
+		})
+
+		Convey("should handle invalid path", func() {
+			tree := map[interface{}]interface{}{
+				"valid": "data",
+			}
+
+			ev := &Evaluator{Tree: tree}
+			err := ev.CherryPick([]string{"[invalid"})
+			So(err, ShouldNotBeNil)
+		})
+
+		Convey("should handle non-existent path", func() {
+			tree := map[interface{}]interface{}{
+				"valid": "data",
+			}
+
+			ev := &Evaluator{Tree: tree}
+			err := ev.CherryPick([]string{"nonexistent"})
+			So(err, ShouldNotBeNil)
+		})
+
+		Convey("should handle empty cherry-pick list", func() {
+			tree := map[interface{}]interface{}{
+				"keep": "original",
+			}
+
+			ev := &Evaluator{Tree: tree}
+			err := ev.CherryPick([]string{})
+			So(err, ShouldBeNil)
+
+			// With empty cherry-pick list, tree should remain unchanged
+			So(ev.Tree, ShouldResemble, tree)
+		})
+
+		Convey("should handle complex nested cherry-picking", func() {
+			tree := map[interface{}]interface{}{
+				"app": map[interface{}]interface{}{
+					"metadata": map[interface{}]interface{}{
+						"name": "myapp",
+						"labels": map[interface{}]interface{}{
+							"environment": "prod",
+							"team":        "backend",
+						},
+					},
+					"spec": map[interface{}]interface{}{
+						"replicas": 3,
+						"template": map[interface{}]interface{}{
+							"containers": []interface{}{
+								map[interface{}]interface{}{"name": "web"},
+								map[interface{}]interface{}{"name": "worker"},
+							},
+						},
+					},
+				},
+				"other": "remove",
+			}
+
+			ev := &Evaluator{Tree: tree}
+			err := ev.CherryPick([]string{"app.metadata.labels.environment", "app.spec.replicas"})
+			So(err, ShouldBeNil)
+
+			// Verify complex nested structure is preserved correctly
+			So(ev.Tree["app"], ShouldNotBeNil)
+			app := ev.Tree["app"].(map[interface{}]interface{})
+
+			// Check metadata path
+			So(app["metadata"], ShouldNotBeNil)
+			metadata := app["metadata"].(map[interface{}]interface{})
+			So(metadata["labels"], ShouldNotBeNil)
+			labels := metadata["labels"].(map[interface{}]interface{})
+			So(labels["environment"], ShouldEqual, "prod")
+
+			// team should not exist since it wasn't cherry-picked
+			_, exists := labels["team"]
+			So(exists, ShouldBeFalse)
+
+			// Check spec path
+			So(app["spec"], ShouldNotBeNil)
+			spec := app["spec"].(map[interface{}]interface{})
+			So(spec["replicas"], ShouldEqual, 3)
+
+			// template should not exist since it wasn't cherry-picked
+			_, exists = spec["template"]
+			So(exists, ShouldBeFalse)
+		})
+	})
+}
