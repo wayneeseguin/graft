@@ -24,9 +24,10 @@ func NewShardedLockManager(numShards int) *ShardedLockManager {
 	if numShards <= 0 {
 		numShards = 32 // Default number of shards
 	}
-	// Ensure numShards doesn't exceed uint32 max
-	if numShards > 4294967295 { // Max uint32
-		numShards = 4294967295
+	// Cap at a reasonable maximum to prevent excessive memory allocation
+	const maxShards = 65536 // 64K shards is more than enough for practical use
+	if numShards > maxShards {
+		numShards = maxShards
 	}
 
 	shards := make([]shard, numShards)

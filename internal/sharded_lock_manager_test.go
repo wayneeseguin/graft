@@ -35,14 +35,14 @@ func TestShardedLockManager_NewShardedLockManager(t *testing.T) {
 			expectedShards: 1024,
 		},
 		{
-			name:           "max uint32 boundary",
-			numShards:      4294967295,
-			expectedShards: 4294967295,
+			name:           "exceeds max shards",
+			numShards:      100000,
+			expectedShards: 65536,
 		},
 		{
-			name:           "exceeds uint32 max",
-			numShards:      4294967296,
-			expectedShards: 4294967295,
+			name:           "at max shards",
+			numShards:      65536,
+			expectedShards: 65536,
 		},
 	}
 
