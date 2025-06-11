@@ -19,7 +19,7 @@ INSTALL_PATH ?= /usr/local/bin
 .PHONY: integration integration-nats integration-vault integration-aws integration-debug
 .PHONY: test-nats-recovery test-nats-monitor test-nats-load
 .PHONY: debug-vault test-vault-auth test-vault-kv test-vault-load
-.PHONY: fmt vet security gosec trivy coverage coverage-text
+.PHONY: fmt vet security gosec trivy vuln coverage coverage-text
 .PHONY: bench bench-full
 .PHONY: deps check ci install-tools
 .PHONY: test-color
@@ -172,7 +172,7 @@ vet: ## Run go vet for static analysis
 	@echo "Running go vet..."
 	@go vet ./...
 
-security: gosec trivy ## Run all security checks (gosec + trivy)
+security: gosec trivy vuln ## Run all security checks (gosec + trivy + govulncheck)
 
 gosec: ## Run gosec security scanner
 	@echo "Running gosec..."
@@ -189,6 +189,15 @@ trivy: ## Run trivy vulnerability scanner
 		trivy fs --security-checks vuln,config .; \
 	else \
 		echo "trivy not installed. Run 'make install-tools' first."; \
+		exit 1; \
+	fi
+
+vuln: ## Run govulncheck for Go vulnerability scanning
+	@echo "Running govulncheck..."
+	@if command -v govulncheck >/dev/null 2>&1; then \
+		govulncheck ./...; \
+	else \
+		echo "govulncheck not installed. Run 'make install-tools' first."; \
 		exit 1; \
 	fi
 
@@ -231,6 +240,7 @@ ci: vet test-unit build test-cli ## Run full CI pipeline (vet, test, build, test
 install-tools: ## Install development tools
 	@echo "Installing development tools..."
 	@go install github.com/securego/gosec/v2/cmd/gosec@latest
+	@go install golang.org/x/vuln/cmd/govulncheck@latest
 	@echo "Installing trivy..."
 	@if [[ "$$(uname)" == "Darwin" ]]; then \
 		brew install aquasecurity/trivy/trivy; \
