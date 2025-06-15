@@ -1,0 +1,12 @@
+network_data:
+  ip_address: "192.168.1.100"
+  subnet_mask: "255.255.255.0"
+  mac_address: "00:1B:44:11:3A:B7"
+  
+  # Split IP address on dots (escaped in regex)
+  ip_octets: (( split "/\\." network_data.ip_address ))
+  # Expected: ["192", "168", "1", "100"]
+  
+  # Split MAC address on colons
+  mac_parts: (( split ":" network_data.mac_address ))
+  # Expected: ["00", "1B", "44", "11", "3A", "B7"]

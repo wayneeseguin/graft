@@ -1,0 +1,12 @@
+unicode_processing:
+  multilingual: "Hello→World•Test★Done"
+  emoji_text: "Task 1 ✓ Task 2 ✗ Task 3 ⏳"
+  mixed_delimiters: "apple|banana;cherry,date:fig"
+  
+  # Split on Unicode characters
+  unicode_split: (( split "/[→•★]" unicode_processing.multilingual ))
+  # Expected: ["Hello", "World", "Test", "Done"]
+  
+  # Split on multiple delimiter types
+  multi_delim: (( split "/[|;,:]" unicode_processing.mixed_delimiters ))
+  # Expected: ["apple", "banana", "cherry", "date", "fig"]

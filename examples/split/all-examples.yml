@@ -1,0 +1,94 @@
+---
+network_data:
+  ip_address: "192.168.1.100"
+  subnet_mask: "255.255.255.0"
+  mac_address: "00:1B:44:11:3A:B7"
+  
+  # Split IP address on dots (escaped in regex)
+  ip_octets: (( split "/\\." network_data.ip_address ))
+  # Expected: ["192", "168", "1", "100"]
+  
+  # Split MAC address on colons
+  mac_parts: (( split ":" network_data.mac_address ))
+  # Expected: ["00", "1B", "44", "11", "3A", "B7"]
+
+---
+csv_advanced:
+  simple: "name,age,city"
+  with_spaces: "John Doe, 30, New York"
+  with_empty: "Alice,,London"
+  quoted: "\"Smith, John\",42,\"New York, NY\""
+  
+  # Handle empty fields
+  empty_aware: (( split "," csv_advanced.with_empty ))
+  # Expected: ["Alice", "", "London"]
+  
+  # Split considering quotes (simplified - real CSV parsing is more complex)
+  # This splits on commas not inside quotes
+  quoted_split: (( split "," csv_advanced.quoted ))
+  # Note: This is a simplified example - full CSV parsing requires more complex logic
+
+---
+data_extraction:
+  json_like: "{name:john,age:30,city:newyork}"
+  key_value: "host=localhost&port=8080&ssl=true&timeout=30"
+  nested_path: "users[0].address.street.name"
+  
+  # Extract JSON-like fields
+  json_fields: (( split "/[{},]" data_extraction.json_like ))
+  # Expected: ["", "name:john", "age:30", "city:newyork", ""]
+  
+  # Split URL parameters
+  params: (( split "&" data_extraction.key_value ))
+  # Expected: ["host=localhost", "port=8080", "ssl=true", "timeout=30"]
+  
+  # Split nested path notation
+  path_parts: (( split "/\\.|\[|\]" data_extraction.nested_path ))
+  # Expected: ["users", "0", "", "address", "street", "name"]
+
+---
+version_parsing:
+  semver: "2.1.3-beta.1+build.456"
+  maven: "1.0.0-SNAPSHOT"
+  complex: "v2023.10.15-rc1-g1234567"
+  
+  # Split semantic version
+  version_parts: (( split "/[-+.]" version_parsing.semver ))
+  # Expected: ["2", "1", "3", "beta", "1", "build", "456"]
+  
+  # Extract major.minor.patch
+  base_version: (( split "/[-+]" version_parsing.semver ))
+  # Expected: ["2.1.3", "beta.1", "build.456"]
+
+---
+unicode_processing:
+  multilingual: "Hello→World•Test★Done"
+  emoji_text: "Task 1 ✓ Task 2 ✗ Task 3 ⏳"
+  mixed_delimiters: "apple|banana;cherry,date:fig"
+  
+  # Split on Unicode characters
+  unicode_split: (( split "/[→•★]" unicode_processing.multilingual ))
+  # Expected: ["Hello", "World", "Test", "Done"]
+  
+  # Split on multiple delimiter types
+  multi_delim: (( split "/[|;,:]" unicode_processing.mixed_delimiters ))
+  # Expected: ["apple", "banana", "cherry", "date", "fig"]
+
+---
+advanced_regex:
+  camelCase: "firstName,lastName,phoneNumber,emailAddress"
+  snake_case: "first_name__last_name___phone_number"
+  mixed_separators: "item1::item2;;item3||item4"
+  
+  # Split camelCase into words (at uppercase letters)
+  # Note: Using a comma-separated list of camelCase words
+  camel_words: (( split "/(?=[A-Z])" advanced_regex.camelCase ))
+  # Expected: ["first", "Name,last", "Name,phone", "Number,email", "Address"]
+  
+  # Split on multiple underscores
+  snake_parts: (( split "/_+" advanced_regex.snake_case ))
+  # Expected: ["first", "name", "last", "name", "phone", "number"]
+  
+  # Split on different repeated separators
+  multi_sep: (( split "/::?|;;?|\\|\\|?" advanced_regex.mixed_separators ))
+  # Expected: ["item1", "item2", "item3", "item4"]

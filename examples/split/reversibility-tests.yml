@@ -1,0 +1,144 @@
+# Tests for reversibility between split and join operators
+# Demonstrates cases where join(split(x)) = x and split(join(y)) = y
+# Also shows edge cases where reversibility doesn't hold
+
+# Perfect reversibility cases
+perfect_reversibility:
+  # Simple comma-separated values
+  original_csv: "apple,banana,cherry"
+  split_csv: (( split "," perfect_reversibility.original_csv ))
+  rejoin_csv: (( join "," perfect_reversibility.split_csv ))
+  # rejoin_csv should equal original_csv: "apple,banana,cherry"
+  
+  # Array to string and back
+  original_array: ["red", "green", "blue"]
+  joined_array: (( join "|" perfect_reversibility.original_array ))
+  resplit_array: (( split "|" perfect_reversibility.joined_array ))
+  # resplit_array should equal original_array: ["red", "green", "blue"]
+  
+  # Path components
+  path_string: "/home/user/documents"
+  path_parts: (( split "/" perfect_reversibility.path_string ))
+  rebuilt_path: (( join "/" perfect_reversibility.path_parts ))
+  # rebuilt_path should equal path_string: "/home/user/documents"
+  
+  # Multi-character delimiter
+  custom_string: "one<=>two<=>three"
+  custom_parts: (( split "<=>" perfect_reversibility.custom_string ))
+  custom_rebuilt: (( join "<=>" perfect_reversibility.custom_parts ))
+  # custom_rebuilt should equal custom_string: "one<=>two<=>three"
+
+# Edge cases with empty strings
+empty_string_cases:
+  # Empty elements preserved
+  with_empties: "a,,b,,,c"
+  split_empties: (( split "," empty_string_cases.with_empties ))
+  # Expected: ["a", "", "b", "", "", "c"]
+  rejoin_empties: (( join "," empty_string_cases.split_empties ))
+  # Should equal original: "a,,b,,,c"
+  
+  # Leading/trailing delimiters
+  boundaries: ",start,middle,end,"
+  split_boundaries: (( split "," empty_string_cases.boundaries ))
+  # Expected: ["", "start", "middle", "end", ""]
+  rejoin_boundaries: (( join "," empty_string_cases.split_boundaries ))
+  # Should equal original: ",start,middle,end,"
+  
+  # Array with empty strings
+  empty_array: ["", "a", "", "b", ""]
+  joined_empty: (( join "-" empty_string_cases.empty_array ))
+  # Expected: "-a--b-"
+  resplit_empty: (( split "-" empty_string_cases.joined_empty ))
+  # Should equal original array: ["", "a", "", "b", ""]
+
+# Cases where reversibility breaks
+broken_reversibility:
+  # Delimiter appears in content
+  tricky_content: ["hello,world", "foo", "bar,baz"]
+  joined_tricky: (( join "," broken_reversibility.tricky_content ))
+  # Result: "hello,world,foo,bar,baz"
+  resplit_tricky: (( split "," broken_reversibility.joined_tricky ))
+  # Result: ["hello", "world", "foo", "bar", "baz"] - NOT equal to original!
+  
+  # Using regex split (can't reverse with join)
+  regex_split_text: "CamelCaseText"
+  regex_parts: (( split "/(?=[A-Z])/" broken_reversibility.regex_split_text ))
+  # Result: ["", "Camel", "Case", "Text"]
+  # Can't use join to recreate original without losing information
+  
+  # Information loss with character split
+  char_split_text: "hello"
+  chars: (( split "" broken_reversibility.char_split_text ))
+  # Result: ["h", "e", "l", "l", "o"]
+  joined_chars: (( join "" broken_reversibility.chars ))
+  # Result: "hello" - this one actually works!
+
+# Special character handling
+special_characters:
+  # Unicode preservation
+  unicode_text: "Hello→World•Test★Done"
+  unicode_parts: (( split "•" special_characters.unicode_text ))
+  unicode_rebuilt: (( join "•" special_characters.unicode_parts ))
+  # Should preserve unicode: "Hello→World•Test★Done"
+  
+  # Tab and newline preservation
+  whitespace_text: "col1	col2
+row2	data"
+  tab_split: (( split "	" special_characters.whitespace_text ))
+  tab_rebuilt: (( join "	" special_characters.tab_split ))
+  # Should preserve tabs and newlines
+  
+  # Escape sequences
+  escaped_text: "path\\to\\file"
+  escape_parts: (( split "\\" special_characters.escaped_text ))
+  escape_rebuilt: (( join "\\" special_characters.escape_parts ))
+  # Should equal original: "path\\to\\file"
+
+# Numeric type conversions
+numeric_conversions:
+  # Integer to string and back
+  int_array: [1, 2, 3, 4, 5]
+  joined_ints: (( join "-" numeric_conversions.int_array ))
+  # Result: "1-2-3-4-5"
+  split_ints: (( split "-" numeric_conversions.joined_ints ))
+  # Result: ["1", "2", "3", "4", "5"] - strings, not integers!
+  
+  # Float precision
+  float_array: [1.1, 2.2, 3.3]
+  joined_floats: (( join "," numeric_conversions.float_array ))
+  split_floats: (( split "," numeric_conversions.joined_floats ))
+  # Precision should be preserved in string form
+
+# Real-world reversibility examples
+real_world:
+  # Environment variables
+  path_var: "/usr/local/bin:/usr/bin:/bin"
+  path_dirs: (( split ":" real_world.path_var ))
+  rebuilt_path: (( join ":" real_world.path_dirs ))
+  # Perfect reversibility for PATH variable
+  
+  # Configuration values
+  config_array: ["timeout=30", "retries=3", "debug=true"]
+  config_string: (( join ";" real_world.config_array ))
+  config_parsed: (( split ";" real_world.config_string ))
+  # Perfect reversibility for config strings
+  
+  # Tags and labels
+  tags: ["production", "web", "frontend", "v2"]
+  tag_string: (( join "," real_world.tags ))
+  parsed_tags: (( split "," real_world.tag_string ))
+  # Perfect reversibility for tag lists
+
+# Performance considerations
+performance_notes:
+  # Large arrays
+  note1: "Split/join on very large strings/arrays is memory intensive"
+  
+  # Regex performance
+  note2: "Regex split cannot be reversed with simple join"
+  
+  # Type conversions
+  note3: "Type information is lost during string conversion"
+  
+  # Delimiter choice
+  note4: "Choose delimiters that don't appear in your data for perfect reversibility"

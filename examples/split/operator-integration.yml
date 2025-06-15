@@ -1,0 +1,128 @@
+# Integration tests showing split operator working with other graft operators
+
+# Integration with grab operator
+grab_integration:
+  config:
+    database:
+      connection: "host=localhost;port=5432;user=admin;password=secret"
+    servers:
+      - "web1.example.com"
+      - "web2.example.com"
+      - "web3.example.com"
+  
+  # First grab the connection string, then split it
+  connection_string: (( grab grab_integration.config.database.connection ))
+  connection_params: (( split ";" grab_integration.connection_string ))
+  # Expected: ["host=localhost", "port=5432", "user=admin", "password=secret"]
+  
+  # Grab first server and split by dots
+  first_server: (( grab grab_integration.config.servers.0 ))
+  server_parts: (( split "." grab_integration.first_server ))
+  # Expected: ["web1", "example", "com"]
+
+# Integration with concat operator
+concat_integration:
+  # Split then concat back
+  original: "apple,banana,cherry"
+  split_fruits: (( split "," concat_integration.original ))
+  # Join back with different delimiter
+  rejoined: (( concat concat_integration.split_fruits.0 " | " concat_integration.split_fruits.1 " | " concat_integration.split_fruits.2 ))
+  # Expected: "apple | banana | cherry"
+  
+  # Build a string then split it
+  prefix: "item"
+  separator: "-"
+  suffix: "001,002,003"
+  combined: (( concat concat_integration.prefix concat_integration.separator concat_integration.suffix ))
+  codes: (( split "," concat_integration.combined ))
+  # Expected: ["item-001", "002", "003"]
+
+# Integration with environment variables
+env_integration:
+  # Assuming PATH environment variable exists
+  path_var: (( grab $PATH || "/usr/bin:/bin" ))
+  path_dirs: (( split ":" env_integration.path_var ))
+  # Result will be array of directories in PATH
+  
+  # Custom environment variable with default
+  custom_list: (( grab $CUSTOM_LIST || "default1,default2,default3" ))
+  custom_items: (( split "," env_integration.custom_list ))
+  # Expected: ["default1", "default2", "default3"] if CUSTOM_LIST not set
+
+# Integration with static_ips
+network_integration:
+  # Example of splitting a static IP address
+  example_ip: "10.0.1.10"
+  ip_octets: (( split "." network_integration.example_ip ))
+  # Expected: ["10", "0", "1", "10"]
+  
+  # Note: static_ips operator requires proper network configuration
+  # which is complex to set up in a simple example
+
+# Complex nested operations
+complex_operations:
+  data:
+    users:
+      - "john.doe@example.com:admin:active"
+      - "jane.smith@example.com:user:inactive"
+      - "bob.wilson@example.com:user:active"
+  
+  # For each user, split and extract email domain
+  user1_data: (( split ":" complex_operations.data.users.0 ))
+  user1_email: (( grab complex_operations.user1_data.0 ))
+  user1_domain: (( split "@" complex_operations.user1_email ))
+  # Expected user1_domain: ["john.doe", "example.com"]
+  
+  # Extract all domains (manual for example)
+  domains:
+    - (( grab complex_operations.user1_domain.1 ))
+    # Would need to repeat for other users
+
+# Merge operations with split
+merge_operations:
+  base:
+    tags: "production,web,frontend"
+    config: "timeout=30;retries=3"
+  
+  overlay:
+    tags: (( concat merge_operations.base.tags ",https" ))
+    config: "timeout=60;retries=5;debug=true"
+  
+  # Split the merged result
+  merged_tags: (( split "," merge_operations.overlay.tags ))
+  # Expected: ["production", "web", "frontend", "https"]
+  
+  merged_config: (( split ";" merge_operations.overlay.config ))
+  # Expected: ["timeout=60", "retries=5", "debug=true"]
+
+# Real-world application configuration
+app_config:
+  database:
+    url: "postgresql://user:pass@localhost:5432/myapp?sslmode=disable"
+  
+  redis:
+    nodes: "redis1.local:6379,redis2.local:6379,redis3.local:6379"
+  
+  features:
+    enabled: "feature-a,feature-b,feature-x"
+    disabled: "feature-legacy,feature-experimental"
+  
+  # Parse database URL
+  db_parts: (( split "://" app_config.database.url ))
+  db_protocol: (( grab app_config.db_parts.0 ))
+  # Expected: "postgresql"
+  
+  # Parse Redis nodes
+  redis_servers: (( split "," app_config.redis.nodes ))
+  # Expected: ["redis1.local:6379", "redis2.local:6379", "redis3.local:6379"]
+  
+  # Parse first Redis node
+  first_redis: (( grab app_config.redis_servers.0 ))
+  redis_host_port: (( split ":" app_config.first_redis ))
+  # Expected: ["redis1.local", "6379"]
+  
+  # Feature flags
+  enabled_features: (( split "," app_config.features.enabled ))
+  disabled_features: (( split "," app_config.features.disabled ))
+  # Expected enabled: ["feature-a", "feature-b", "feature-x"]
+  # Expected disabled: ["feature-legacy", "feature-experimental"]

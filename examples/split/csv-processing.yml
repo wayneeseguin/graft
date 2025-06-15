@@ -1,0 +1,17 @@
+csv_advanced:
+  simple: "name,age,city"
+  with_spaces: "John Doe, 30, New York"
+  with_empty: "Alice,,London"
+  quoted: "\"Smith, John\",42,\"New York, NY\""
+  
+  # Handle empty fields
+  empty_aware: (( split "," csv_advanced.with_empty ))
+  # Expected: ["Alice", "", "London"]
+  
+  # Simple split on comma (doesn't handle quoted fields properly)
+  # Note: Full CSV parsing with quoted fields requires more complex logic
+  simple_split: (( split "," csv_advanced.quoted ))
+  # Result will incorrectly split the quoted comma
+  
+  # The quoted_split field referenced in all-examples.yml was missing
+  quoted_split: (( split "," csv_advanced.quoted ))

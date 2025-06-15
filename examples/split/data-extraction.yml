@@ -1,0 +1,16 @@
+data_extraction:
+  json_like: "{name:john,age:30,city:newyork}"
+  key_value: "host=localhost&port=8080&ssl=true&timeout=30"
+  nested_path: "users[0].address.street.name"
+  
+  # Extract JSON-like fields
+  json_fields: (( split "/[{},]" data_extraction.json_like ))
+  # Expected: ["", "name:john", "age:30", "city:newyork", ""]
+  
+  # Split URL parameters
+  params: (( split "&" data_extraction.key_value ))
+  # Expected: ["host=localhost", "port=8080", "ssl=true", "timeout=30"]
+  
+  # Split nested path notation
+  path_parts: (( split "/\\.|\\[|\\]" data_extraction.nested_path ))
+  # Expected: ["users", "0", "", "address", "street", "name"]

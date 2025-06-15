@@ -59,6 +59,10 @@ github.com/cloudfoundry-community/vaultkv
 # github.com/cppforlife/go-patch v0.2.0
 ## explicit
 github.com/cppforlife/go-patch/patch
+# github.com/dlclark/regexp2 v1.11.5
+## explicit; go 1.13
+github.com/dlclark/regexp2
+github.com/dlclark/regexp2/syntax
 # github.com/geofffranks/simpleyaml v0.0.0-20161109204137-c9320f076de5
 ## explicit
 github.com/geofffranks/simpleyaml

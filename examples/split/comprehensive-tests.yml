@@ -1,0 +1,134 @@
+# Comprehensive tests for split operator covering all basic functionality and edge cases
+
+# Basic splitting tests
+basic_tests:
+  # Simple delimiter tests
+  comma_string: "apple,banana,cherry"
+  comma_split: (( split "," basic_tests.comma_string ))
+  # Expected: ["apple", "banana", "cherry"]
+  
+  colon_string: "key:value:data"
+  colon_split: (( split ":" basic_tests.colon_string ))
+  # Expected: ["key", "value", "data"]
+  
+  dot_string: "192.168.1.100"
+  dot_split: (( split "." basic_tests.dot_string ))
+  # Expected: ["192", "168", "1", "100"]
+  
+  # Empty delimiter (split into characters)
+  hello_string: "Hello"
+  char_split: (( split "" basic_tests.hello_string ))
+  # Expected: ["H", "e", "l", "l", "o"]
+  
+  # Empty string input
+  empty_string: ""
+  empty_split: (( split "," basic_tests.empty_string ))
+  # Expected: [""]
+  
+  # Single element (no delimiter found)
+  single_item: "nodelimiter"
+  single_split: (( split "," basic_tests.single_item ))
+  # Expected: ["nodelimiter"]
+  
+  # Multi-character delimiter
+  multi_delim_string: "one<->two<->three"
+  multi_delim_split: (( split "<->" basic_tests.multi_delim_string ))
+  # Expected: ["one", "two", "three"]
+  
+  # Consecutive delimiters
+  consecutive_string: "a,,b,,,c"
+  consecutive_split: (( split "," basic_tests.consecutive_string ))
+  # Expected: ["a", "", "b", "", "", "c"]
+
+# Edge cases
+edge_cases:
+  # Numeric value (should convert to string)
+  numeric_value: 12345
+  numeric_split: (( split "2" edge_cases.numeric_value ))
+  # Expected: ["1", "345"]
+  
+  # Unicode delimiter
+  unicode_string: "Hello→World→Test"
+  unicode_split: (( split "→" edge_cases.unicode_string ))
+  # Expected: ["Hello", "World", "Test"]
+  
+  # Tab delimiter
+  tab_string: "col1	col2	col3"
+  tab_split: (( split "	" edge_cases.tab_string ))
+  # Expected: ["col1", "col2", "col3"]
+  
+  # Newline delimiter
+  newline_string: "line1
+line2
+line3"
+  newline_split: (( split "\n" edge_cases.newline_string ))
+  # Expected: ["line1", "line2", "line3"]
+  
+  # Space at boundaries
+  space_boundaries: " a b c "
+  space_split: (( split " " edge_cases.space_boundaries ))
+  # Expected: ["", "a", "b", "c", ""]
+  
+  # Boolean conversion
+  bool_value: true
+  bool_split: (( split "r" edge_cases.bool_value ))
+  # Expected: ["t", "ue"]
+  
+  # Float conversion
+  float_value: 3.14159
+  float_split: (( split "." edge_cases.float_value ))
+  # Expected: ["3", "14159"]
+
+# Special cases
+special_cases:
+  # Delimiter at start
+  start_delim: ",first,second"
+  start_split: (( split "," special_cases.start_delim ))
+  # Expected: ["", "first", "second"]
+  
+  # Delimiter at end
+  end_delim: "first,second,"
+  end_split: (( split "," special_cases.end_delim ))
+  # Expected: ["first", "second", ""]
+  
+  # Only delimiters
+  only_delims: ",,,"
+  only_split: (( split "," special_cases.only_delims ))
+  # Expected: ["", "", "", ""]
+  
+  # Mixed whitespace
+  mixed_ws: "  item1  ,  item2  ,  item3  "
+  mixed_split: (( split "," special_cases.mixed_ws ))
+  # Expected: ["  item1  ", "  item2  ", "  item3  "]
+  
+  # Escaped characters in content
+  escaped_content: "path\\to\\file"
+  escaped_split: (( split "\\" special_cases.escaped_content ))
+  # Expected: ["path", "to", "file"]
+
+# Practical examples
+practical_examples:
+  # CSV parsing
+  csv_row: "John Doe,30,Engineer,New York"
+  csv_fields: (( split "," practical_examples.csv_row ))
+  # Expected: ["John Doe", "30", "Engineer", "New York"]
+  
+  # File path parsing
+  file_path: "/home/user/documents/report.pdf"
+  path_parts: (( split "/" practical_examples.file_path ))
+  # Expected: ["", "home", "user", "documents", "report.pdf"]
+  
+  # URL query parameters
+  query_string: "name=John&age=30&city=NYC"
+  query_params: (( split "&" practical_examples.query_string ))
+  # Expected: ["name=John", "age=30", "city=NYC"]
+  
+  # Email address
+  email: "user.name+tag@example.com"
+  email_parts: (( split "@" practical_examples.email ))
+  # Expected: ["user.name+tag", "example.com"]
+  
+  # Configuration line
+  config_line: "database.host=localhost:5432"
+  config_split: (( split "=" practical_examples.config_line ))
+  # Expected: ["database.host", "localhost:5432"]

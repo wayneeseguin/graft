@@ -1,0 +1,17 @@
+advanced_regex:
+  camelCase: "firstName,lastName,phoneNumber,emailAddress"
+  snake_case: "first_name__last_name___phone_number"
+  mixed_separators: "item1::item2;;item3||item4"
+  
+  # Split camelCase into words (at uppercase letters)
+  # Note: Using a comma-separated list of camelCase words
+  camel_words: (( split "/(?=[A-Z])" advanced_regex.camelCase ))
+  # Expected: ["first", "Name,last", "Name,phone", "Number,email", "Address"]
+  
+  # Split on multiple underscores
+  snake_parts: (( split "/_+" advanced_regex.snake_case ))
+  # Expected: ["first", "name", "last", "name", "phone", "number"]
+  
+  # Split on different repeated separators
+  multi_sep: (( split "/::?|;;?|\\|\\|?" advanced_regex.mixed_separators ))
+  # Expected: ["item1", "item2", "item3", "item4"]

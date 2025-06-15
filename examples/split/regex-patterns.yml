@@ -1,0 +1,141 @@
+# Comprehensive regex pattern tests for split operator
+# Uses PCRE regex when pattern starts with /
+
+# Basic regex patterns
+basic_regex:
+  # Split on dots (escaped)
+  ip_address: "192.168.1.100"
+  ip_octets: (( split "/\\." basic_regex.ip_address ))
+  # Expected: ["192", "168", "1", "100"]
+  
+  # Split on comma OR semicolon
+  mixed_list: "apple,banana;cherry,date;fig"
+  mixed_split: (( split "/[,;]" basic_regex.mixed_list ))
+  # Expected: ["apple", "banana", "cherry", "date", "fig"]
+  
+  # Split on whitespace (spaces, tabs, newlines)
+  whitespace_text: "hello world	tab
+newline"
+  words: (( split "/\\s+" basic_regex.whitespace_text ))
+  # Expected: ["hello", "world", "tab", "newline"]
+  
+  # Split on word boundaries
+  camel_case: "getUserByEmail"
+  word_boundary_split: (( split "/(?=[A-Z])" basic_regex.camel_case ))
+  # Expected: ["get", "User", "By", "Email"]
+  
+  # Split on non-word characters
+  special_chars: "hello-world_test@example.com"
+  word_parts: (( split "/\\W+" basic_regex.special_chars ))
+  # Expected: ["hello", "world_test", "example", "com"]
+
+# PCRE-specific features
+pcre_features:
+  # Lookahead assertion - split before capitals
+  pascal_case: "PascalCaseExample"
+  lookahead_split: (( split "/(?=[A-Z])" pcre_features.pascal_case ))
+  # Expected: ["", "Pascal", "Case", "Example"]
+  
+  # Lookbehind assertion - split after digits
+  mixed_text: "abc123def456ghi"
+  lookbehind_split: (( split "/(?<=\\d)(?=\\D)" pcre_features.mixed_text ))
+  # Expected: ["abc123", "def456", "ghi"]
+  
+  # Negative lookahead - split on commas NOT followed by space
+  comma_list: "a,b, c,d, e"
+  neg_lookahead: (( split "/,(?!\\s)" pcre_features.comma_list ))
+  # Expected: ["a", "b, c", "d, e"]
+  
+  # Non-capturing groups
+  repeated_pattern: "abc--def--ghi"
+  non_capturing: (( split "/(?:--)+" pcre_features.repeated_pattern ))
+  # Expected: ["abc", "def", "ghi"]
+  
+  # Atomic groups for performance
+  complex_pattern: "data:123,info:456,meta:789"
+  atomic_split: (( split "/(?>,|:)" pcre_features.complex_pattern ))
+  # Expected: ["data", "123", "info", "456", "meta", "789"]
+
+# Complex patterns
+complex_patterns:
+  # Email parsing - simple email split
+  simple_email: 'user.name@example.com'
+  email_split: (( split "@" complex_patterns.simple_email ))
+  # Expected: ["user.name", "example.com"]
+  # Note: Complex quoted email parsing requires escaping that may not work well in YAML
+  
+  # Version string parsing
+  version: "v2.1.3-beta.1+build.456"
+  version_parts: (( split "/[.\\-+]" complex_patterns.version ))
+  # Expected: ["v2", "1", "3", "beta", "1", "build", "456"]
+  
+  # Log entry parsing
+  log_entry: "2024-01-15T10:30:45.123Z [INFO] UserService - User logged in: user123"
+  log_parts: (( split "/ (?=\\[)|\\] | - " complex_patterns.log_entry ))
+  # Expected: ["2024-01-15T10:30:45.123Z", "[INFO", "UserService", "User logged in: user123"]
+  
+  # URL parsing
+  url: "https://user:pass@example.com:8080/path/to/resource?query=1&test=2#section"
+  url_major_parts: (( split "/:\\/\\/|@|:|\\/" complex_patterns.url ))
+  # Note: This is simplified - real URL parsing is more complex
+
+# Practical regex examples
+practical_regex:
+  # Snake case to words
+  snake_case: "convert_snake_case_to_words"
+  snake_words: (( split "/_" practical_regex.snake_case ))
+  # Expected: ["convert", "snake", "case", "to", "words"]
+  
+  # CSV with quoted fields (simplified)
+  csv_complex: 'name,age,"city, state",country'
+  csv_basic_split: (( split "/," practical_regex.csv_complex ))
+  # Note: This doesn't handle quoted commas properly
+  
+  # Key-value pairs
+  config_string: "host=localhost port=5432 user='db_user' debug=true"
+  config_items: (( split "/ +(?=\\w+=)" practical_regex.config_string ))
+  # Expected: ["host=localhost", "port=5432", "user='db_user'", "debug=true"]
+  
+  # Path components (Unix and Windows)
+  mixed_path: "/home/user\\documents\\file.txt"
+  path_components: (( split "/[\\/\\\\]" practical_regex.mixed_path ))
+  # Expected: ["", "home", "user", "documents", "file.txt"]
+
+# Edge cases and limitations
+regex_edge_cases:
+  # Empty matches
+  repeated_chars: "aaabbbccc"
+  between_chars: (( split "/(?<=a)(?=a)|(?<=b)(?=b)|(?<=c)(?=c)" regex_edge_cases.repeated_chars ))
+  # Will include empty strings between identical characters
+  
+  # Greedy vs non-greedy
+  html_tag: "<p>Hello</p><p>World</p>"
+  greedy_split: (( split "/<.*?>" regex_edge_cases.html_tag ))
+  # Expected: ["", "", ""]
+  
+  # Unicode in regex
+  unicode_text: "Hello🌍World🌎Test"
+  emoji_split: (( split "/🌍|🌎" regex_edge_cases.unicode_text ))
+  # Expected: ["Hello", "World", "Test"]
+  
+  # Case sensitivity (PCRE is case-sensitive by default)
+  mixed_case: "ABCdefGHIjkl"
+  case_split: (( split "/[a-z]+" regex_edge_cases.mixed_case ))
+  # Expected: ["ABC", "GHI", ""]
+
+# Performance considerations
+performance_patterns:
+  # Prefer character classes over alternation
+  delimiters1: "a,b;c:d|e"
+  efficient: (( split "/[,;:|]" performance_patterns.delimiters1 ))
+  # More efficient than "/,|;|:|\\|/"
+  
+  # Avoid backtracking with atomic groups
+  repeated: "aaaabbbbcccc"
+  atomic_pattern: (( split "/(?>a+|b+|c+)" performance_patterns.repeated ))
+  # Prevents catastrophic backtracking
+  
+  # Use anchors when appropriate
+  line_text: "start middle end"
+  anchored: (( split "/^start | end$" performance_patterns.line_text ))
+  # More specific than just splitting on the words
